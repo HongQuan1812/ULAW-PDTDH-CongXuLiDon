@@ -106,7 +106,12 @@ export function AppLayout() {
         {/* JUST FOR DEMO: END */}
 
         <div className={styles.foot}>
-          <Avatar name={user.name} />
+          {/* Màn hình rộng: bấm avatar thì thả đúng menu như màn hình hẹp. Màn hình hẹp: chỉ hiện hình (thanh trên cùng đã có menu) */}
+          {narrow ? (
+            <Avatar name={user.name} />
+          ) : (
+            <AccountMenu user={user} onLogout={() => logout.mutate()} logoutPending={logout.isPending} />
+          )}
           <div className={styles.account}>
             <strong>{user.name}</strong>
             <span>{user.email}</span>
