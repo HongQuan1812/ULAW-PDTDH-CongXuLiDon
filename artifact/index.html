@@ -1,0 +1,397 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Cổng xử lí đơn</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap">
+<!-- ?v=… là số phiên bản: tăng mỗi lần cập nhật để trình duyệt tải lại CSS/JS mới thay vì dùng bản cũ trong cache -->
+<link rel="stylesheet" href="styles.css?v=244">
+
+<!-- ============ MÀN HÌNH 1: ĐĂNG NHẬP ============ -->
+<main id="vLogin" class="login">
+  <section class="login-panel">
+    <div class="signin">
+      <img class="signin-logo" src="assets/logo.png" alt="Logo Trường Đại học Luật TP. Hồ Chí Minh">
+      <p class="school">Trường Đại học Luật TP. Hồ Chí Minh</p>
+      <h1>Cổng xử lí đơn</h1>
+      <p class="lead">Đăng nhập để đăng ký xét miễn môn học và theo dõi trạng thái đơn của bạn.</p>
+      <button class="gbtn" id="gLogin" type="button">
+        <svg width="20" height="20" viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.6 5.4 2.7 13.3l7.9 6.1C12.5 13.6 17.8 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.6 3-2.3 5.5-4.8 7.2l7.7 6c4.5-4.2 6.9-10.3 6.9-17.7z"/><path fill="#FBBC05" d="M10.6 28.6c-.5-1.4-.8-3-.8-4.6s.3-3.2.8-4.6l-7.9-6.1C1 16.6 0 20.2 0 24s1 7.4 2.7 10.7l7.9-6.1z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.7-6c-2.1 1.4-4.9 2.3-8.2 2.3-6.2 0-11.5-4.1-13.4-9.9l-7.9 6.1C6.6 42.6 14.6 48 24 48z"/></svg>
+        Đăng nhập bằng email trường
+      </button>
+      <p class="hint">Dùng tài khoản Google do trường cấp (@hcmulaw.edu.vn).</p>
+      <p class="msg" id="loginMsg" hidden role="alert"></p>
+      <ul class="signin-points">
+        <li>Nộp đơn trực tuyến, không cần đến phòng Đào tạo</li>
+        <li>Theo dõi trạng thái đơn mọi lúc</li>
+        <li>Nhận yêu cầu bổ sung và kết quả ngay trên cổng</li>
+      </ul>
+      <!-- JUST FOR DEMO: START · chọn vai trò khi đăng nhập; bản thật: vai trò do máy chủ trả về theo tài khoản -->
+      <fieldset class="role-pick">
+        <legend>Bản thử nghiệm · đăng nhập với vai trò</legend>
+        <label><input type="radio" name="loginRole" value="nop" checked><span>Người nộp đơn</span></label>
+        <label><input type="radio" name="loginRole" value="xuly"><span>Người xử lí đơn</span></label>
+        <label><input type="radio" name="loginRole" value="admin"><span>Admin</span></label>
+      </fieldset>
+      <!-- JUST FOR DEMO: END -->
+    </div>
+  </section>
+</main>
+
+<!-- ============ MÀN HÌNH 2: BỔ SUNG THÔNG TIN LẦN ĐẦU ============ -->
+<div id="vOnb" class="onb-screen" hidden>
+  <header class="onb-top">
+    <img src="assets/logo.png" alt="">
+    <div><p class="school">Trường Đại học Luật TP. Hồ Chí Minh</p><p class="app-name">Cổng xử lí đơn</p></div>
+  </header>
+  <form class="onb" id="onbForm" novalidate>
+    <ol class="steps" aria-label="Các bước">
+      <li class="done">Đăng nhập</li>
+      <li class="cur" aria-current="step">Bổ sung thông tin</li>
+      <li>Bắt đầu sử dụng</li>
+    </ol>
+    <section class="card">
+      <h2>Bổ sung thông tin</h2>
+      <p class="muted">Lần đầu đăng nhập, bạn cần xác nhận họ và tên. CCCD và số điện thoại có thể bổ sung sau ở trang Thông tin cá nhân.</p>
+      <label class="f">Email<input id="oEmail" readonly></label>
+      <label class="f">Họ và tên<small>Ghi đầy đủ, có dấu, đúng như trên CCCD</small><input id="oName" autocomplete="name"><span class="ferr" hidden></span></label>
+      <div class="grid2">
+        <label class="f"><span>Số CCCD <span class="opt">(không bắt buộc)</span></span><input id="oCccd" inputmode="numeric" maxlength="12" autocomplete="off" placeholder="VD: 079206001234"><span class="ferr" hidden></span></label>
+        <label class="f"><span>Số điện thoại <span class="opt">(không bắt buộc)</span></span><input id="oPhone" inputmode="tel" maxlength="10" autocomplete="tel" placeholder="VD: 0901234567"><span class="ferr" hidden></span></label>
+      </div>
+      <div class="row-end"><button type="button" class="btn ghost" id="onbBack">Đăng xuất</button><button class="btn primary" type="submit">Lưu và tiếp tục</button></div>
+    </section>
+  </form>
+</div>
+
+<!-- ============ KHUNG ỨNG DỤNG (sau khi đăng nhập) ============ -->
+<div id="shell" class="shell" hidden>
+  <!-- thanh trên cùng: chỉ hiện trên màn hình hẹp -->
+  <header class="topbar">
+    <button type="button" class="menu-btn js-menu-btn" aria-label="Mở menu" aria-controls="drawer" aria-expanded="false"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
+    <img src="assets/logo.png" alt="">
+    <span class="app-name">Cổng xử lí đơn</span>
+    <span class="avatar sm js-avatar" aria-hidden="true"></span>
+  </header>
+  <div class="drawer-bg" id="drawerBg" hidden></div>
+
+  <!-- thanh điều hướng: nằm ngang trên cùng ở màn hình rộng, trượt ra từ bên trái ở màn hình hẹp -->
+  <aside class="drawer" id="drawer" aria-label="Menu">
+    <div class="drawer-top">
+      <img src="assets/logo.png" alt="Logo Trường Đại học Luật TP. Hồ Chí Minh">
+      <div><p class="school">Trường ĐH Luật TP.HCM</p><p class="app-name">Cổng xử lí đơn</p></div>
+      <button type="button" class="icon-btn drawer-x" id="drawerClose" aria-label="Đóng menu"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+    </div>
+    <nav class="drawer-nav" aria-label="Điều hướng">
+      <button type="button" data-go="profile"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg><span>Thông tin cá nhân</span></button>
+      <button type="button" data-go="apps"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h6"/></svg><span>Quản lí đơn</span></button>
+      <button type="button" data-go="forms"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg><span>Quản lí loại đơn</span></button>
+      <button type="button" data-go="accounts"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c0-3.6 3-5.5 6.5-5.5s6.5 1.9 6.5 5.5"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18 14.8c2.2.6 3.5 2.4 3.5 5.2"/></svg><span>Quản lí tài khoản</span></button>
+    </nav>
+    <div class="drawer-spacer"></div>
+    <!-- JUST FOR DEMO: START · đổi vai trò để thử -->
+    <div class="drawer-role">
+      <label for="drawerRole">Vai trò (thử nghiệm)</label>
+      <select id="drawerRole"><option value="nop">Người nộp đơn</option><option value="xuly">Người xử lí đơn</option><option value="admin">Admin</option></select>
+    </div>
+    <!-- JUST FOR DEMO: END -->
+    <div class="drawer-foot">
+      <span class="avatar js-avatar" aria-hidden="true"></span>
+      <div class="acc"><strong class="js-name"></strong><span id="drawerEmail"></span></div>
+      <button type="button" class="icon-btn js-logout" aria-label="Đăng xuất" title="Đăng xuất"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3"/><path d="M10 17l-5-5 5-5M5 12h11"/></svg></button>
+    </div>
+  </aside>
+
+  <div class="main">
+
+    <!-- ===== Thông tin cá nhân / hồ sơ người nộp đơn ===== -->
+    <div id="vProfile" class="page" hidden>
+      <button type="button" class="back" id="pBack" hidden></button>
+
+      <section class="card id-card" aria-labelledby="h1s">
+        <div class="id-head">
+          <span class="avatar xl" id="pAvatar" aria-hidden="true"></span>
+          <div class="id-title">
+            <h1 id="h1s">Thông tin cá nhân</h1>
+            <p class="id-name" id="pNameBig"></p>
+          </div>
+          <button class="btn" id="editBtn" type="button"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg>Sửa thông tin</button>
+        </div>
+        <dl class="info">
+          <div><dt>Họ và tên</dt><dd id="pName"></dd></div>
+          <div><dt>Email</dt><dd id="pEmail"></dd></div>
+          <div><dt>Số điện thoại</dt><dd id="pPhone"></dd></div>
+          <div><dt>Số CCCD</dt><dd><span id="pCccd"></span><button class="reveal" id="revealBtn" type="button">Hiện</button></dd></div>
+        </dl>
+        <!-- Thông tin sinh viên: lấy từ database trường, chỉ xem; không có dữ liệu thì ẩn -->
+        <div class="stu" id="pStudent" hidden>
+          <dl class="info" id="pStudentDl"></dl>
+        </div>
+      </section>
+
+      <section class="card tcard" aria-labelledby="h2s" id="secSubmitted">
+        <div class="sec-head"><h2 id="h2s">Đơn đã nộp</h2><button class="btn primary" type="button" id="newBtn" aria-haspopup="dialog"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Nộp đơn mới</button></div>
+        <div class="tools">
+          <label class="search"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="pSearch" type="search" placeholder="Tìm theo mã đơn, loại đơn, ngày nộp, trạng thái" aria-label="Tìm đơn đã nộp"></label>
+          <div class="tool-btns">
+            <div class="pop-wrap"><button type="button" class="btn tb" id="pSortBtn" aria-haspopup="true" aria-expanded="false"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 4v16M3 16l4 4 4-4M17 20V4M13 8l4-4 4 4"/></svg>Sắp xếp<span class="cnt" id="pSortCnt" hidden></span></button>
+              <div class="pop" id="pSortPop" hidden role="dialog" aria-label="Sắp xếp"></div></div>
+            <div class="pop-wrap"><button type="button" class="btn tb" id="pFiltBtn" aria-haspopup="true" aria-expanded="false"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 5h18l-7 8v6l-4 2v-8z"/></svg>Lọc<span class="cnt" id="pFiltCnt" hidden></span></button>
+              <div class="pop" id="pFiltPop" hidden role="dialog" aria-label="Lọc"></div></div>
+          </div>
+        </div>
+        <div class="tbl-wrap"><table><thead><tr id="pHead"></tr></thead><tbody id="tb"></tbody></table></div>
+        <div class="pager" id="pager"></div>
+      </section>
+
+      <!-- Đơn mà người đang xem là người tiếp nhận / xử lí (chỉ cán bộ) -->
+      <section class="card tcard" aria-labelledby="h3s" id="secHandled" hidden>
+        <div class="sec-head"><h2 id="h3s">Đơn phụ trách</h2></div>
+        <div class="tools">
+          <label class="search"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="mSearch" type="search" placeholder="Tìm theo mã đơn, trạng thái, người tiếp nhận, người xử lí" aria-label="Tìm đơn phụ trách"></label>
+          <div class="tool-btns">
+            <div class="pop-wrap"><button type="button" class="btn tb" id="mSortBtn" aria-haspopup="true" aria-expanded="false"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 4v16M3 16l4 4 4-4M17 20V4M13 8l4-4 4 4"/></svg>Sắp xếp<span class="cnt" id="mSortCnt" hidden></span></button>
+              <div class="pop" id="mSortPop" hidden role="dialog" aria-label="Sắp xếp"></div></div>
+            <div class="pop-wrap"><button type="button" class="btn tb" id="mFiltBtn" aria-haspopup="true" aria-expanded="false"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 5h18l-7 8v6l-4 2v-8z"/></svg>Lọc<span class="cnt" id="mFiltCnt" hidden></span></button>
+              <div class="pop" id="mFiltPop" hidden role="dialog" aria-label="Lọc"></div></div>
+          </div>
+        </div>
+        <div class="tbl-wrap"><table><thead><tr id="mHead"></tr></thead><tbody id="mtb"></tbody></table></div>
+        <div class="pager" id="mPager"></div>
+      </section>
+    </div>
+
+    <!-- ===== Đơn: nộp mới / xem chi tiết ===== -->
+    <div id="vForm" class="page page-form" hidden>
+      <form id="xmmForm" novalidate>
+        <button type="button" class="back" id="formBack">‹ Quay lại</button>
+        <div class="page-head">
+          <div class="ph-text"><h1 class="form-title" id="fTitle">Xét miễn môn</h1></div>
+          <div class="ph-acts">
+            <button type="button" class="btn side-tg" id="sideToggle" aria-controls="fSide" aria-expanded="true" title="Hiện / ẩn khung thông tin đơn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M15 4v16"/></svg>Thông tin đơn</button>
+            <span class="new-wrap"><button type="button" class="btn" id="fPrint" hidden><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>Xuất file</button><div class="pop new-pop" id="printPop" hidden role="menu" aria-label="Chọn mẫu"></div></span>
+            <button type="button" class="btn primary" id="fReceive" hidden>Tiếp nhận</button>
+          </div>
+        </div>
+        <div class="notice" id="fNotice" hidden></div>
+
+        <div class="form-grid">
+          <div class="form-main">
+            <!-- các phần của nội dung đơn: vẽ bằng JS từ TYPES[loại].sections (js/config.js + js/sections.js) -->
+            <div id="fSections" class="f-sections"></div>
+          </div>
+
+          <!-- khung thông tin đơn: màn hình rộng nằm bên phải, ẩn được thành nút "Thông tin đơn"; màn hình hẹp trượt ra từ bên phải -->
+          <aside class="form-side" id="fSide" aria-label="Thông tin đơn">
+            <section class="card side-card" id="fInfo">
+              <div class="side-head"><h2>Thông tin đơn</h2><button type="button" class="icon-btn" id="sideClose" aria-label="Ẩn khung thông tin đơn" title="Ẩn"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></button></div>
+              <div class="info-sub" id="fMeta" hidden></div>
+              <div class="info-sub">
+                <div class="sub-head"><h3>Người nộp đơn</h3><button type="button" class="link-btn" id="toProfile">Xem hồ sơ ›</button></div>
+                <dl class="meta">
+                  <div><dt>Họ và tên</dt><dd id="fName"></dd></div>
+                  <div><dt>Email</dt><dd id="fEmail"></dd></div>
+                </dl>
+              </div>
+              <div class="info-sub" id="fReceiver" hidden>
+                <div class="sub-head"><h3>Người tiếp nhận</h3></div>
+                <dl class="meta">
+                  <div><dt>Họ và tên</dt><dd id="rName"></dd></div>
+                  <div><dt>Tiếp nhận lúc</dt><dd id="rAt"></dd></div>
+                </dl>
+              </div>
+              <div class="info-sub" id="fHandler" hidden>
+                <div class="sub-head"><h3>Người xử lí</h3><button type="button" class="link-btn" id="hTransfer" hidden>Chuyển giao</button></div>
+                <dl class="meta">
+                  <div><dt>Họ và tên</dt><dd id="hName"></dd></div>
+                  <div><dt>Phụ trách từ</dt><dd id="hSince"></dd></div>
+                </dl>
+              </div>
+            </section>
+          </aside>
+        </div>
+
+        <!-- thanh thao tác dính ở cuối màn hình -->
+        <div class="submit-row">
+          <label class="commit"><input type="checkbox" id="cam"><span>Tôi cam đoan các thông tin và minh chứng trên là đúng sự thật.</span></label>
+          <div class="sr-btns">
+            <button type="button" class="btn ghost" id="formCancel">Hủy</button>
+            <div class="decide" id="fDecide" hidden>
+              <button type="button" class="btn d-bs" data-decide="bs">Yêu cầu bổ sung</button>
+              <button type="button" class="btn d-tc" data-decide="tc">Từ chối</button>
+              <button type="button" class="btn d-duyet" data-decide="duyet">Duyệt</button>
+            </div>
+            <button type="submit" class="btn primary" id="fSubmit">Gửi đơn</button>
+          </div>
+          <p class="msg" id="formMsg" hidden role="alert"></p>
+        </div>
+      </form>
+    </div>
+
+    <!-- ===== Quản lí đơn (phòng Đào tạo) ===== -->
+    <div id="vApps" class="page page-wide" hidden>
+      <div class="page-head"><div class="ph-text"><h1>Quản lí đơn</h1><p>Tất cả đơn đã nộp. Bấm vào một dòng để mở chi tiết, bấm › để xem nhanh nội dung.</p></div></div>
+      <!-- Thống kê: theo trạng thái và theo loại đơn; bấm một mục để lọc bảng bên dưới (js/applications-page.js) -->
+      <div class="stats" id="aStats"></div>
+      <section class="card tcard">
+        <div class="tools">
+          <label class="search"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="aSearch" type="search" placeholder="Tìm theo mã đơn, trạng thái, tên, CCCD, SĐT, email" aria-label="Tìm đơn"></label>
+          <div class="tool-btns">
+            <div class="pop-wrap"><button type="button" class="btn tb" id="aSortBtn" aria-haspopup="true" aria-expanded="false"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 4v16M3 16l4 4 4-4M17 20V4M13 8l4-4 4 4"/></svg>Sắp xếp<span class="cnt" id="aSortCnt" hidden></span></button>
+              <div class="pop" id="aSortPop" hidden role="dialog" aria-label="Sắp xếp"></div></div>
+            <div class="pop-wrap"><button type="button" class="btn tb" id="aFiltBtn" aria-haspopup="true" aria-expanded="false"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 5h18l-7 8v6l-4 2v-8z"/></svg>Lọc<span class="cnt" id="aFiltCnt" hidden></span></button>
+              <div class="pop" id="aFiltPop" hidden role="dialog" aria-label="Lọc"></div></div>
+            <button type="button" class="btn tb" id="aReveal" aria-pressed="false">Hiện CCCD</button>
+          </div>
+        </div>
+        <div class="tbl-wrap"><table class="atbl"><thead><tr id="aHead"></tr></thead><tbody id="aTb"></tbody></table></div>
+        <div class="pager" id="aPager"></div>
+      </section>
+    </div>
+
+    <!-- ===== Quản lí tài khoản (Admin) ===== -->
+    <div id="vAccounts" class="page page-wide" hidden>
+      <div class="page-head">
+        <div class="ph-text"><h1>Quản lí tài khoản</h1><p>Tạo tài khoản, sửa thông tin và phân vai trò cho người dùng cổng.</p></div>
+        <div class="ph-acts"><button type="button" class="btn primary" id="uNew"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Tạo tài khoản</button></div>
+      </div>
+      <section class="card tcard">
+        <div class="tools">
+          <label class="search"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="uSearch" type="search" placeholder="Tìm theo tên, email, vai trò, SĐT, CCCD" aria-label="Tìm tài khoản"></label>
+          <div class="tool-btns">
+            <div class="pop-wrap"><button type="button" class="btn tb" id="uSortBtn" aria-haspopup="true" aria-expanded="false"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 4v16M3 16l4 4 4-4M17 20V4M13 8l4-4 4 4"/></svg>Sắp xếp<span class="cnt" id="uSortCnt" hidden></span></button>
+              <div class="pop" id="uSortPop" hidden role="dialog" aria-label="Sắp xếp"></div></div>
+            <div class="pop-wrap"><button type="button" class="btn tb" id="uFiltBtn" aria-haspopup="true" aria-expanded="false"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 5h18l-7 8v6l-4 2v-8z"/></svg>Lọc<span class="cnt" id="uFiltCnt" hidden></span></button>
+              <div class="pop" id="uFiltPop" hidden role="dialog" aria-label="Lọc"></div></div>
+            <button type="button" class="btn tb" id="uReveal" aria-pressed="false">Hiện CCCD</button>
+          </div>
+        </div>
+        <div class="tbl-wrap"><table class="atbl utbl"><thead><tr id="uHead"></tr></thead><tbody id="uTb"></tbody></table></div>
+        <div class="pager" id="uPager"></div>
+      </section>
+    </div>
+
+    <!-- ===== Quản lí loại đơn ===== -->
+    <div id="vForms" class="page page-wide" hidden>
+      <div class="page-head">
+        <div class="ph-text"><h1>Quản lí loại đơn</h1><p>Các mẫu đơn người nộp có thể chọn. Chỉ loại đơn “Đang mở” mới nhận đơn mới.</p></div>
+        <div class="ph-acts"><button type="button" class="btn primary" id="fmNew"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Tạo loại đơn</button></div>
+      </div>
+      <section class="card tcard">
+        <div class="tools">
+          <label class="search"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="fmSearch" type="search" placeholder="Tìm theo tên loại đơn, mã đơn, người cập nhật" aria-label="Tìm loại đơn"></label>
+          <div class="tool-btns">
+            <div class="pop-wrap"><button type="button" class="btn tb" id="fmSortBtn" aria-haspopup="true" aria-expanded="false"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 4v16M3 16l4 4 4-4M17 20V4M13 8l4-4 4 4"/></svg>Sắp xếp<span class="cnt" id="fmSortCnt" hidden></span></button>
+              <div class="pop" id="fmSortPop" hidden role="dialog" aria-label="Sắp xếp"></div></div>
+            <div class="pop-wrap"><button type="button" class="btn tb" id="fmFiltBtn" aria-haspopup="true" aria-expanded="false"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 5h18l-7 8v6l-4 2v-8z"/></svg>Lọc<span class="cnt" id="fmFiltCnt" hidden></span></button>
+              <div class="pop" id="fmFiltPop" hidden role="dialog" aria-label="Lọc"></div></div>
+          </div>
+        </div>
+        <div class="tbl-wrap"><table class="atbl ftbl-list"><thead><tr id="fmHead"></tr></thead><tbody id="fmTb"></tbody></table></div>
+        <div class="pager" id="fmPager"></div>
+      </section>
+    </div>
+
+    <!-- ===== Trình soạn loại đơn ===== -->
+    <div id="vFormEdit" class="page page-editor" hidden>
+      <button type="button" class="back" id="feBack">‹ Quay lại Quản lí loại đơn</button>
+      <div class="page-head fe-top">
+        <div class="ph-text"><h1 class="form-title" id="feTitle">Soạn loại đơn</h1></div>
+        <div class="ph-acts fe-actions">
+          <div class="tabs" role="tablist" aria-label="Chế độ">
+            <button type="button" role="tab" class="tab" id="feTabEdit" aria-selected="true">Soạn</button>
+            <button type="button" role="tab" class="tab" id="feTabPreview" aria-selected="false">Xem trước</button>
+          </div>
+          <span class="fe-dirty" id="feDirty" hidden>Chưa lưu</span>
+          <button type="button" class="btn primary" id="feSave">Lưu</button>
+        </div>
+      </div>
+      <p class="msg box" id="feMsg" hidden role="alert"></p>
+      <div id="feEdit" class="fe-edit"></div>
+      <div id="fePreview" class="fe-preview" hidden></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ============ HỘP THOẠI ============ -->
+<!-- Tạo / sửa tài khoản -->
+<div class="modal-bg" id="uModal" hidden>
+  <form class="modal" id="uForm" novalidate role="dialog" aria-modal="true" aria-labelledby="uTitle">
+    <h2 id="uTitle"></h2>
+    <p class="sub" id="uSub"></p>
+    <div class="grid2">
+      <label class="f">Họ và tên<input id="uName" autocomplete="off"><span class="ferr" hidden></span></label>
+      <label class="f">Email<input id="uEmail" type="email" autocomplete="off"><span class="ferr" hidden></span><small>Dùng để đăng nhập, không đổi được sau khi tạo.</small></label>
+      <label class="f"><span>Số CCCD <span class="opt">(không bắt buộc)</span></span><input id="uCccd" inputmode="numeric" maxlength="12" autocomplete="off"><span class="ferr" hidden></span></label>
+      <label class="f"><span>Số điện thoại <span class="opt">(không bắt buộc)</span></span><input id="uPhone" inputmode="tel" maxlength="10" autocomplete="off"><span class="ferr" hidden></span></label>
+    </div>
+    <fieldset class="role-pick u-role"><legend>Vai trò</legend><label><input type="radio" name="uRole" value="nop"><span>Người nộp đơn</span></label><label><input type="radio" name="uRole" value="xuly"><span>Người xử lí đơn</span></label><label><input type="radio" name="uRole" value="admin"><span>Admin</span></label></fieldset>
+    <p class="hint" id="uRoleHint" hidden>Bạn không thể tự đổi vai trò của chính mình.</p>
+    <div class="row-end"><button type="button" class="btn ghost" id="uCancel">Hủy</button><button type="submit" class="btn primary" id="uOk"></button></div>
+  </form>
+</div>
+<!-- Yêu cầu bổ sung / Từ chối -->
+<div class="modal-bg" id="dModal" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="dTitle">
+    <h2 id="dTitle"></h2>
+    <p class="sub" id="dSub"></p>
+    <label class="f" for="dNote">Lí do <small>Không bắt buộc. Người nộp đơn sẽ thấy nội dung này.</small></label>
+    <textarea id="dNote" rows="4" placeholder="Nhập lí do (có thể bỏ trống)"></textarea>
+    <div class="row-end"><button type="button" class="btn ghost" id="dCancel">Hủy</button><button type="button" class="btn primary" id="dOk"></button></div>
+  </div>
+</div>
+<!-- Chọn loại đơn -->
+<div class="modal-bg" id="nModal" hidden>
+  <div class="modal n-modal" role="dialog" aria-modal="true" aria-labelledby="nTitle">
+    <div class="n-head"><h2 id="nTitle">Chọn loại đơn</h2><button type="button" class="icon-btn" id="nClose" aria-label="Đóng"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
+    <label class="search"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="nSearch" type="search" placeholder="Tìm theo tên, mã đơn, mô tả" aria-label="Tìm loại đơn" autocomplete="off"></label>
+    <div class="n-list" id="nList" role="listbox" aria-label="Các loại đơn đang nhận đơn"></div>
+    <p class="n-count" id="nCount"></p>
+  </div>
+</div>
+<!-- Chuyển giao -->
+<div class="modal-bg" id="tModal" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="tTitle">
+    <h2 id="tTitle"></h2>
+    <p class="sub">Người xử lí hiện tại: <b id="tCurrent"></b></p>
+    <label class="pick-lbl" for="tSearch">Chuyển cho</label>
+    <div class="combo">
+      <input id="tSearch" role="combobox" aria-expanded="false" aria-controls="tTo" aria-autocomplete="list" autocomplete="off" placeholder="Chọn hoặc tìm theo tên, email">
+      <svg class="combo-caret" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+      <ul class="combo-list" id="tTo" role="listbox" hidden></ul>
+    </div>
+    <div class="row-end"><button type="button" class="btn ghost" id="tCancel">Hủy</button><button type="button" class="btn primary" id="tOk">Chuyển giao</button></div>
+  </div>
+</div>
+<!-- Xem tệp -->
+<div class="pv" id="pv" hidden role="dialog" aria-modal="true" aria-labelledby="pvName">
+  <div class="pv-bar"><span class="pv-name" id="pvName"></span><span class="pv-meta" id="pvMeta"></span><a class="btn primary pv-dl" id="pvDl" hidden>Tải file Word</a><button type="button" class="icon-btn pv-close" id="pvClose" aria-label="Đóng xem tệp"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
+  <div class="pv-body" id="pvBody"></div>
+</div>
+<div class="side-bg" id="sideBg" hidden></div>
+<div class="toast" id="toast" hidden role="status"></div>
+
+<script src="js/utils.js?v=245"></script>
+<script src="js/config.js?v=246"></script>
+<script src="js/state.js?v=245"></script>
+<!-- JUST FOR DEMO: START · dữ liệu mẫu; bản thật: lấy đơn và hồ sơ từ API -->
+<script src="js/sample-data.js?v=245"></script>
+<!-- JUST FOR DEMO: END -->
+<script src="js/table-tools.js?v=245"></script>
+<script src="js/auth.js?v=245"></script>
+<script src="js/profile.js?v=246"></script>
+<script src="js/sections.js?v=245"></script>
+<script src="js/file-preview.js?v=245"></script>
+<script src="js/application-form.js?v=245"></script>
+<script src="js/applications-page.js?v=245"></script>
+<script src="js/accounts-page.js?v=245"></script>
+<script src="js/forms-page.js?v=245"></script>
+<script src="js/print-templates.js?v=246"></script>
+<!-- JUST FOR DEMO: START · mẫu xuất file mẫu cho loại đơn Xét miễn môn; bản thật lấy mẫu xuất file từ máy chủ -->
+<script src="js/sample-template.js?v=200"></script>
+<!-- JUST FOR DEMO: END -->
+<script src="js/nav.js?v=245"></script>
+<script src="js/collapse.js?v=245"></script>
+
+</body></html>
