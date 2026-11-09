@@ -157,6 +157,10 @@ pnpm test
 - Giao diện, thông báo, comment viết **tiếng Việt có dấu**. Tên biến, hàm, tệp viết **tiếng Anh**.
   Mã trạng thái giữ như bản mẫu (`nop`, `xet`, `bs`, `bsg`, `duyet`, `tc`).
 - Viết "xử lí" theo cách bản mẫu đang dùng.
+- **Đặt tên biến, tham số, hàm cho có nghĩa, đọc là hiểu** nó chứa gì hoặc làm gì, không phải đoán.
+  Tránh tên chung chung như `values`, `value`, `data`, `item`, `result`, `update`, `temp`.
+  Vd: `values` → `profileInput` (dữ liệu người dùng nhập ở form hồ sơ), `update` → `updateProfile` (lệnh lưu hồ sơ).
+  Chỉ riêng biến đếm vòng lặp ngắn (`i`) hoặc tham số của hàm một dòng quá rõ nghĩa mới được viết tắt.
 - **Comment cho hàm**: mỗi hàm có comment ngắn gọn, đủ ý, ghi rõ **mục đích**, **đầu vào**, **đầu ra**.
   Trong thân hàm, gom các dòng code liên quan thành nhóm; mỗi nhóm có một dòng comment ở trên, các nhóm cách nhau 1 dòng trống.
 - **API giả**: mọi handler chờ 2 giây trước khi trả kết quả (`await delay(MOCK_DELAY_MS)`), để thấy giao diện lúc đang tải.

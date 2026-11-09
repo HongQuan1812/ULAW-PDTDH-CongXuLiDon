@@ -36,7 +36,7 @@ function OnboardingForm({ session }: { session: Session }) {
   const { user } = session;
   const toast = useToast();
   const logout = useLogout();
-  const update = useUpdateProfile();
+  const updateProfile = useUpdateProfile();
   const {
     register,
     handleSubmit,
@@ -54,9 +54,9 @@ function OnboardingForm({ session }: { session: Session }) {
   };
 
   // Gửi lên máy chủ; thành công thì phiên đổi sang "đã bổ sung" và trang tự chuyển vào ứng dụng
-  const onSubmit = handleSubmit(async (values) => {
+  const onSubmit = handleSubmit(async (profileInput) => {
     try {
-      await update.mutateAsync(values);
+      await updateProfile.mutateAsync(profileInput);
       toast(PROFILE_MESSAGES[200]);
     } catch (error) {
       // CCCD trùng: báo ngay dưới ô CCCD; lỗi khác: báo chung phía trên nút
@@ -135,8 +135,8 @@ function OnboardingForm({ session }: { session: Session }) {
             <Button variant="ghost" disabled={logout.isPending} onClick={() => logout.mutate()}>
               Đăng xuất
             </Button>
-            <Button variant="primary" type="submit" disabled={update.isPending}>
-              {update.isPending ? 'Đang lưu…' : 'Lưu và tiếp tục'}
+            <Button variant="primary" type="submit" disabled={updateProfile.isPending}>
+              {updateProfile.isPending ? 'Đang lưu…' : 'Lưu và tiếp tục'}
             </Button>
           </div>
         </section>

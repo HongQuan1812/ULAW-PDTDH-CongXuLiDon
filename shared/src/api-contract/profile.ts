@@ -18,8 +18,8 @@ export const PROFILE_ENDPOINTS = {
  */
 export const UpdateProfileRequestSchema = z.object({
   name: z.string().trim().refine(isFullName, VALIDATION_MESSAGES.fullName),
-  cccd: z.string().trim().refine((value) => value === '' || CCCD_PATTERN.test(value), VALIDATION_MESSAGES.cccd),
-  phone: z.string().trim().refine((value) => value === '' || PHONE_PATTERN.test(value), VALIDATION_MESSAGES.phone),
+  cccd: z.string().trim().refine((cccdText) => cccdText === '' || CCCD_PATTERN.test(cccdText), VALIDATION_MESSAGES.cccd),
+  phone: z.string().trim().refine((phoneText) => phoneText === '' || PHONE_PATTERN.test(phoneText), VALIDATION_MESSAGES.phone),
 });
 export type UpdateProfileRequest = z.infer<typeof UpdateProfileRequestSchema>;
 
