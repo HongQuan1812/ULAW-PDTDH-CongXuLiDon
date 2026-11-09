@@ -111,9 +111,18 @@ export function AppLayout() {
             <strong>{user.name}</strong>
             <span>{user.email}</span>
           </div>
+          {/* Chỉ hiện trong menu trượt (màn hình hẹp): hàng riêng, rộng hết chiều ngang, nằm dưới avatar + tên + email */}
           <button
             type="button"
-            className={styles.iconButton}
+            className={styles.logoutText}
+            disabled={logout.isPending}
+            onClick={() => logout.mutate()}
+          >
+            {logout.isPending ? 'Đang đăng xuất…' : 'Đăng xuất'}
+          </button>
+          <button
+            type="button"
+            className={`${styles.iconButton} ${styles.logoutIcon}`}
             aria-label="Đăng xuất"
             title="Đăng xuất"
             disabled={logout.isPending}

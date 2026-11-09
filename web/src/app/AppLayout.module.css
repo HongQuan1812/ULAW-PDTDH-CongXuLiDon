@@ -25,6 +25,7 @@
 .account{min-width:0;display:grid;line-height:1.25;max-width:180px}
 .account strong{color:var(--side-strong);font-size:13.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .account span{display:none}
+.logoutText{display:none}
 .backdrop{position:fixed;inset:0;background:rgba(14,22,19,.35);z-index:35}
 @media (max-width:1180px){.account{display:none}}
 
@@ -47,7 +48,13 @@
   .nav a{height:44px;border-radius:12px;gap:12px}
   .nav a svg{display:block;flex:none;opacity:.8}
   .spacer{min-height:20px}
-  .foot{margin:0;padding:14px 12px 18px 16px;border-left:0;border-top:1px solid var(--side-line)}
+  .foot{margin:0;padding:14px 12px 18px 16px;border-left:0;border-top:1px solid var(--side-line);align-items:flex-start;flex-wrap:wrap}
   .account{display:grid;flex:1;max-width:none}
   .account span{display:block;font-size:12px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  /* nút đăng xuất bằng chữ nằm dưới email, bỏ biểu tượng bên phải */
+  .logoutIcon{display:none}
+  /* cùng kiểu với nút Đăng xuất trong menu avatar (AccountMenu.module.css → .logout) */
+  .logoutText{display:block;flex:0 0 100%;min-height:40px;border:1px solid var(--line-2);border-radius:999px;background:var(--surface);color:var(--fg);font-weight:500;font-size:14px;cursor:pointer}
+  .logoutText:hover{background:var(--hover)}
+  .logoutText:disabled{opacity:.6;cursor:progress}
 }
