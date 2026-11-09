@@ -5,6 +5,7 @@ import { Navigate, NavLink, Outlet, useLocation } from 'react-router';
 import { PAGES, canSeePage, type Page } from '@ulaw/shared';
 import { useLogout, useSession } from '../api/auth';
 import { Avatar } from '../components/Avatar';
+import { AccountMenu } from './AccountMenu';
 import { DemoRoleSwitch } from '../features/auth/DemoRoleSwitch';
 import { SHOW_DEMO } from '../lib/env';
 import { useMediaQuery } from '../lib/useMediaQuery';
@@ -72,7 +73,7 @@ export function AppLayout() {
         </button>
         <img src="/assets/logo.png" alt="" />
         <span className={styles.appName}>Cổng xử lí đơn</span>
-        <Avatar name={user.name} size="sm" />
+        <AccountMenu user={user} onLogout={() => logout.mutate()} logoutPending={logout.isPending} />
       </header>
       {drawerOpen && <div className={styles.backdrop} onClick={closeDrawer} />}
 
