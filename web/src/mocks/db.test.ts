@@ -48,9 +48,9 @@ describe('isCccdTaken', () => {
 
 describe('toSession', () => {
   test('phản ánh họ tên mới và trạng thái đã bổ sung thông tin', () => {
-    expect(toSession('nguoi-nop-don').profileCompleted).toBe(false);
+    expect(toSession('nguoiNopDon').profileCompleted).toBe(false);
     saveProfile('sv-1', { name: 'Nguyễn Minh Anh Thư', cccd: '', phone: '' });
-    const session = toSession('nguoi-nop-don');
+    const session = toSession('nguoiNopDon');
     expect(session.profileCompleted).toBe(true);
     expect(session.user.name).toBe('Nguyễn Minh Anh Thư');
   });

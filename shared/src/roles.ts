@@ -29,7 +29,7 @@ export const PAGES = [
 ] as const;
 export type Page = (typeof PAGES)[number];
 
-export const ROLE_IDS = ['nguoi-nop-don', 'nguoi-xu-li-don', 'admin'] as const;
+export const ROLE_IDS = ['nguoiNopDon', 'nguoiXuLiDon', 'admin'] as const;
 export type RoleId = (typeof ROLE_IDS)[number];
 
 export interface Role {
@@ -42,13 +42,13 @@ export interface Role {
 }
 
 export const ROLES: Record<RoleId, Role> = {
-  'nguoi-nop-don': {
+  nguoiNopDon: {
     name: 'Người nộp đơn',
     pages: ['profile'],
     home: 'profile',
     permissions: ['submit', 'editOwn'],
   },
-  'nguoi-xu-li-don': {
+  nguoiXuLiDon: {
     name: 'Người xử lí đơn',
     pages: ['profile', 'forms', 'formTypes'],
     home: 'forms',

@@ -22,7 +22,7 @@ export function LoginPage() {
   const session = useSession();
   const login = useDevLogin();
   const location = useLocation();
-  const [role, setRole] = useState<RoleId>('nguoi-nop-don');
+  const [role, setRole] = useState<RoleId>('nguoiNopDon');
 
   // Đang kiểm tra phiên: chưa vẽ gì, tránh nháy trang đăng nhập
   if (session.isPending) return null;
