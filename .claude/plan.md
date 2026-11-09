@@ -19,7 +19,7 @@ Mỗi bước làm trên một nhánh riêng. Xong thì tạo Pull Request vào 
 
 ### Làm một màn hình
 
-1. Khai báo endpoint và schema (Zod) trong `shared/src/api.ts`.
+1. Khai báo endpoint và schema (Zod) trong `shared/src/api-contract/<nhóm>.ts`.
 2. Viết API giả trong `web/src/mocks/handlers/`.
 3. Viết hook gọi API trong `web/src/api/`.
 4. Làm giao diện, đối chiếu với bản mẫu.
@@ -34,5 +34,5 @@ Mỗi bước làm trên một nhánh riêng. Xong thì tạo Pull Request vào 
 
 ## Giai đoạn 2: Backend
 
-Làm `api/` (NestJS + Prisma + PostgreSQL) theo đúng hợp đồng trong `shared/src/api.ts`.
+Làm `api/` (NestJS + Prisma + PostgreSQL) theo đúng hợp đồng trong `shared/src/api-contract/`.
 Xong nhóm API nào thì tắt API giả của nhóm đó. Giao diện không phải sửa.

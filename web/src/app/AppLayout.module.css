@@ -1,0 +1,53 @@
+/* Khung ứng dụng (như .shell, .topbar, .drawer của bản mẫu). */
+.shell{min-height:100vh}
+.main{min-width:0}
+.error{padding:40px 16px;text-align:center;color:var(--danger)}
+.school{display:none;font-size:12px;color:var(--muted);font-weight:500}
+.appName{font-weight:600;font-size:15px;letter-spacing:-.01em;color:var(--side-strong);white-space:nowrap}
+.iconButton{display:inline-grid;place-items:center;width:36px;height:36px;border-radius:50%;border:0;background:transparent;color:var(--side-fg);cursor:pointer;flex:none}
+.iconButton:hover{background:var(--side-2);color:var(--side-strong)}
+.iconButton:disabled{opacity:.35;cursor:not-allowed}
+
+/* ---------- màn hình rộng: menu nằm ngang trên cùng ---------- */
+.topbar{display:none}
+.drawer{position:sticky;top:0;z-index:40;height:var(--nav-h);display:flex;align-items:center;gap:6px;padding:0 20px 0 24px;
+  background:color-mix(in srgb,var(--surface) 92%,transparent);backdrop-filter:saturate(1.4) blur(10px);border-bottom:1px solid var(--line);color:var(--side-fg)}
+.brand{display:flex;align-items:center;gap:10px;margin-right:18px;flex:none}
+.brand img{width:34px;height:34px;flex:none}
+.close{display:none;margin-left:auto}
+.nav{display:flex;gap:2px;align-items:center;min-width:0}
+.nav a{display:flex;align-items:center;gap:8px;height:38px;padding:0 14px;border-radius:999px;color:var(--side-fg);font-weight:500;font-size:14px;white-space:nowrap;text-decoration:none;transition:background .12s,color .12s}
+.nav a svg{display:none}
+.nav a:hover{background:var(--side-2);color:var(--side-strong)}
+.nav a[aria-current="page"]{background:var(--accent-soft);color:var(--accent);font-weight:600}
+.spacer{flex:1;min-width:12px}
+.foot{display:flex;align-items:center;gap:10px;flex:none;padding-left:14px;margin-left:8px;border-left:1px solid var(--side-line)}
+.account{min-width:0;display:grid;line-height:1.25;max-width:180px}
+.account strong{color:var(--side-strong);font-size:13.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.account span{display:none}
+.backdrop{position:fixed;inset:0;background:rgba(14,22,19,.35);z-index:35}
+@media (max-width:1180px){.account{display:none}}
+
+/* ---------- màn hình hẹp: thanh trên cùng + menu trượt từ trái ---------- */
+@media (max-width:960px){
+  .topbar{display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:30;min-height:58px;padding:8px 16px 8px 10px;
+    background:color-mix(in srgb,var(--surface) 94%,transparent);backdrop-filter:blur(10px);border-bottom:1px solid var(--line);color:var(--fg)}
+  .topbar img{width:30px;height:30px}
+  .topbar .appName{flex:1;color:var(--fg)}
+  .menuButton{display:grid;place-items:center;width:40px;height:40px;border:0;border-radius:50%;background:transparent;color:var(--fg);cursor:pointer}
+  .menuButton:hover{background:var(--hover)}
+
+  .drawer{position:fixed;inset:0 auto 0 0;height:auto;width:min(300px,86vw);flex-direction:column;align-items:stretch;gap:0;padding:0;
+    background:var(--surface);backdrop-filter:none;border-bottom:0;box-shadow:var(--shadow-lg);overflow-y:auto;transform:translateX(-102%);transition:transform .22s ease}
+  .drawer.open{transform:none}
+  .brand{margin:0;padding:20px 16px 16px}
+  .school{display:block}
+  .close{display:inline-grid}
+  .nav{flex-direction:column;align-items:stretch;padding:4px 12px;gap:2px}
+  .nav a{height:44px;border-radius:12px;gap:12px}
+  .nav a svg{display:block;flex:none;opacity:.8}
+  .spacer{min-height:20px}
+  .foot{margin:0;padding:14px 12px 18px 16px;border-left:0;border-top:1px solid var(--side-line)}
+  .account{display:grid;flex:1;max-width:none}
+  .account span{display:block;font-size:12px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+}

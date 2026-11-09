@@ -1,0 +1,11 @@
+/* JUST FOR DEMO: START · ô đổi vai trò trong menu (như .drawer-role của bản mẫu). */
+.roleSwitch{display:flex;align-items:center;gap:8px;flex:none}
+.roleSwitch label{font-size:12px;font-weight:500;color:var(--faint);white-space:nowrap}
+.roleSwitch select{min-height:34px;width:auto;padding:4px 30px 4px 12px;border-radius:999px;background:var(--surface-2);border-color:transparent;color:var(--side-strong);font-size:13px}
+@media (max-width:1180px){.roleSwitch label{display:none}}
+@media (max-width:960px){
+  .roleSwitch{flex-direction:column;align-items:stretch;gap:6px;margin:0 16px 14px}
+  .roleSwitch label{display:block}
+  .roleSwitch select{width:100%;border-radius:var(--r)}
+}
+/* JUST FOR DEMO: END */

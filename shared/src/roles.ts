@@ -24,7 +24,7 @@ export type Permission = (typeof PERMISSIONS)[number];
 export const PAGES = [
   'profile', //    Trang thông tin (hồ sơ cá nhân, đơn của mình)
   'forms', //      Quản lí đơn (tất cả đơn)
-  'form-types', // Quản lí loại đơn
+  'formTypes', // Quản lí loại đơn
   'accounts', //   Quản lí tài khoản
 ] as const;
 export type Page = (typeof PAGES)[number];
@@ -50,13 +50,13 @@ export const ROLES: Record<RoleId, Role> = {
   },
   'nguoi-xu-li-don': {
     name: 'Người xử lí đơn',
-    pages: ['profile', 'forms', 'form-types'],
+    pages: ['profile', 'forms', 'formTypes'],
     home: 'forms',
     permissions: ['submit', 'editOwn', 'viewAll', 'receive', 'viewApplicant', 'decide', 'transfer', 'manageFormTypes'],
   },
   admin: {
     name: 'Admin',
-    pages: ['profile', 'forms', 'form-types', 'accounts'],
+    pages: ['profile', 'forms', 'formTypes', 'accounts'],
     home: 'forms',
     permissions: [
       'manageFormTypes', 'submit', 'editOwn', 'viewAll', 'receive', 'viewApplicant', 'editApplicant',

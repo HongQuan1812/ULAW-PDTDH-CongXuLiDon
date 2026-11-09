@@ -128,7 +128,7 @@ Cổng xử lí đơn/
 │       ├── roles.ts              # ROLES, danh sách quyền, can()
 │       ├── question-types.ts     # các kiểu câu hỏi của trình soạn form
 │       ├── schemas.ts            # Zod: hồ sơ, loại đơn, câu trả lời đơn, tài khoản
-│       ├── api.ts                # HỢP ĐỒNG API: endpoint + kiểu request/response (MSW, FE, BE cùng theo)
+│       ├── api-contract/         # HỢP ĐỒNG API, mỗi nhóm một file (auth.ts, forms.ts…): endpoint + schema request/response + câu thông báo (MSW, FE, BE cùng theo)
 │       └── validators.ts         # CCCD, SĐT, email trường
 │
 ├── docker-compose.yml            # postgres
@@ -159,6 +159,7 @@ pnpm test
 - Viết "xử lí" theo cách bản mẫu đang dùng.
 - **Comment cho hàm**: mỗi hàm có comment ngắn gọn, đủ ý, ghi rõ **mục đích**, **đầu vào**, **đầu ra**.
   Trong thân hàm, gom các dòng code liên quan thành nhóm; mỗi nhóm có một dòng comment ở trên, các nhóm cách nhau 1 dòng trống.
+- **API giả**: mọi handler chờ 2 giây trước khi trả kết quả (`await delay(MOCK_DELAY_MS)`), để thấy giao diện lúc đang tải.
 - Khi nghiệp vụ thay đổi: cập nhật `shared/` trước, sau đó sửa backend và frontend.
 - Việc còn treo: xác nhận tên miền email thật của sinh viên và cán bộ; cách kết nối với database sinh viên của trường.
 

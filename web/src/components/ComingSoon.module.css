@@ -1,0 +1,5 @@
+/* Khung trang chung (như .page, .card của bản mẫu). */
+.page{display:grid;gap:24px;max-width:1320px;margin:0 auto;padding:40px 16px 64px}
+.page h1{font-size:clamp(24px,2.6vw,30px);line-height:1.2;letter-spacing:-.03em}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);padding:28px;color:var(--muted)}
+@media (min-width:961px){.page{padding-left:32px;padding-right:32px}}

@@ -1,0 +1,5 @@
+/* Chữ cái đại diện (như .avatar của bản mẫu). */
+.avatar{display:inline-grid;place-items:center;flex:none;border-radius:50%;background:var(--accent);color:var(--on-accent);font-weight:600}
+.sm{width:32px;height:32px;font-size:13px}
+.md{width:34px;height:34px;font-size:14px}
+.xl{width:64px;height:64px;font-size:24px}
