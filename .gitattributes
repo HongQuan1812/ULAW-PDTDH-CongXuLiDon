@@ -1,0 +1,6 @@
+# Lưu mọi tệp văn bản với xuống dòng LF (tránh cảnh báo CRLF trên Windows)
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.pdf binary
+*.docx binary

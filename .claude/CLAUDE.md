@@ -3,18 +3,18 @@
 Ứng dụng web để **sinh viên nộp đơn trực tuyến** và **Phòng Đào tạo Đại học tiếp nhận, xử lí, quản lí đơn**.
 Loại đơn đầu tiên là **Xét miễn môn**. Cán bộ tự tạo thêm loại đơn mới bằng trình soạn form kiểu Google Form.
 
-## Tình trạng hiện tại
+## Bản mẫu và bản thật
 
 - `artifact/` là **bản mẫu** (HTML/CSS/JS thuần, không có máy chủ), tải về từ artifact "Cổng xử lí đơn"
   (https://claude.ai/artifact/BPDWzSeHQzFtPNAtHbUXoM). Đây là **đặc tả sống** của giao diện và nghiệp vụ:
   - `artifact/README.md`: mô tả nghiệp vụ chi tiết (trạng thái, thông báo, trình soạn loại đơn, xuất file, phân quyền…).
   - `artifact/js/config.js`: trạng thái đơn, vai trò, quyền, loại đơn mẫu.
 - Code trong khối `JUST FOR DEMO: START … END` chỉ dùng cho bản mẫu. Bản thật **không mang sang**, thay bằng API.
-- Bản thật (thư mục `web/`, `api/`, `shared/`) **chưa bắt đầu**. Khi làm bản thật, giao diện và hành vi bám theo bản mẫu.
+- Bản thật nằm ở `web/`, `api/`, `shared/`. Giao diện và hành vi bám theo bản mẫu.
 
 ## Kế hoạch
 
-Làm frontend trước (`web/` + `shared/`), API giả bằng MSW. Backend (`api/`) làm sau. Chi tiết: @plan.md
+Xem @plan.md
 
 ## Nghiệp vụ cốt lõi (tóm tắt)
 
@@ -71,7 +71,7 @@ Như vậy luật nghiệp vụ chỉ viết một lần.
 ### Nguyên tắc thiết kế
 
 - **Máy chủ là nơi quyết định.** Giao diện ẩn hoặc hiện nút theo quyền, nhưng mọi quyền và mọi bước chuyển trạng thái đều phải được kiểm tra lại ở API.
-- **Chuyển trạng thái đơn đi qua một chỗ duy nhất** (`applications/workflow.service.ts`). Mỗi bước được ghi vào bảng lịch sử: ai làm, lúc nào, lí do.
+- **Chuyển trạng thái đơn đi qua một chỗ duy nhất** (`forms/workflow.service.ts`). Mỗi bước được ghi vào bảng lịch sử: ai làm, lúc nào, lí do.
 - **Đơn lưu kèm bản chụp cấu trúc loại đơn lúc nộp.** Vì vậy sửa loại đơn sau này không làm hỏng các đơn cũ.
 - **Mã đơn sinh ở máy chủ**, đánh số tăng dần theo từng tiền tố và từng năm, trong transaction.
 - **CCCD là dữ liệu nhạy cảm**: mặc định trả về dạng che, chỉ trả số đầy đủ khi người dùng có quyền và yêu cầu.
@@ -95,20 +95,20 @@ Cổng xử lí đơn/
 │       ├── main.tsx
 │       ├── app/                  # router, providers (Query, Auth), layout khung (thanh menu, drawer)
 │       ├── pages/                # mỗi trang một thư mục:
-│       │                         #   login · onboarding · profile · application (nộp / chi tiết / xử lí)
-│       │                         #   applications (Quản lí đơn) · form-types · form-editor · accounts
+│       │                         #   login · onboarding · profile · form (nộp / chi tiết / xử lí)
+│       │                         #   forms (Quản lí đơn) · form-types · form-editor · accounts
 │       ├── features/             # logic dùng lại giữa các trang:
 │       │                         #   auth (useAuth, useCan) · form-renderer (≈ sections.js)
 │       │                         #   file-preview · export · transfer
 │       ├── components/           # UI chung: DataTable, Sort/FilterPopover, Modal, Toast, StatusPill, Avatar…
 │       ├── api/                  # client gọi API, các hook TanStack Query
-│       ├── mocks/                # MSW: browser.ts · db.ts (dữ liệu giả trong bộ nhớ) · handlers/ (auth, applications, form-types, users, files…)
+│       ├── mocks/                # MSW: browser.ts · db.ts (dữ liệu giả trong bộ nhớ) · handlers/ (auth, forms, form-types, users, files…)
 │       ├── lib/                  # định dạng ngày giờ, SĐT, che CCCD…
 │       └── styles/               # tokens.css (biến màu, cỡ chữ), global.css
 │
 ├── api/                          # ===== BACKEND (NestJS) =====
 │   ├── prisma/                   # schema.prisma · migrations/ · seed.ts
-│   │                             #   bảng: User, StudentInfo, FormType, Application, ApplicationEvent, FileObject, ExportTemplate
+│   │                             #   bảng: User, StudentInfo, FormType, Form, FormEvent, FileObject, ExportTemplate
 │   ├── src/
 │   │   ├── main.ts · app.module.ts
 │   │   ├── common/               # PrismaService, guard quyền (@RequirePerm), lọc lỗi, phân trang
@@ -116,7 +116,7 @@ Cổng xử lí đơn/
 │   │   ├── users/                # hồ sơ cá nhân, Quản lí tài khoản, phân vai trò
 │   │   ├── student-directory/    # đọc thông tin sinh viên từ database trường
 │   │   ├── form-types/           # CRUD loại đơn, mở / đóng, kiểm tra cấu trúc
-│   │   ├── applications/         # nộp, sửa, tìm kiếm, lọc + workflow.service.ts (tiếp nhận, bổ sung, duyệt, từ chối, chuyển giao)
+│   │   ├── forms/                # nộp, sửa, tìm kiếm, lọc + workflow.service.ts (tiếp nhận, bổ sung, duyệt, từ chối, chuyển giao)
 │   │   ├── files/                # tải lên / tải về tệp minh chứng
 │   │   ├── exports/              # mẫu Word, docxtemplater
 │   │   └── stats/                # số liệu theo trạng thái, theo loại đơn
@@ -124,7 +124,7 @@ Cổng xử lí đơn/
 │
 ├── shared/                       # ===== DÙNG CHUNG FE + BE =====
 │   └── src/
-│       ├── status.ts             # STATUS, EDITABLE, RECEIVABLE, TRANSFERABLE, DECIDABLE
+│       ├── status.ts             # FORM_STATUSES, FORM_TYPE_STATUSES, EDITABLE, RECEIVABLE, TRANSFERABLE, DECIDABLE
 │       ├── roles.ts              # ROLES, danh sách quyền, can()
 │       ├── question-types.ts     # các kiểu câu hỏi của trình soạn form
 │       ├── schemas.ts            # Zod: hồ sơ, loại đơn, câu trả lời đơn, tài khoản
@@ -157,6 +157,8 @@ pnpm test
 - Giao diện, thông báo, comment viết **tiếng Việt có dấu**. Tên biến, hàm, tệp viết **tiếng Anh**.
   Mã trạng thái giữ như bản mẫu (`nop`, `xet`, `bs`, `bsg`, `duyet`, `tc`).
 - Viết "xử lí" theo cách bản mẫu đang dùng.
+- **Comment cho hàm**: mỗi hàm có comment ngắn gọn, đủ ý, ghi rõ **mục đích**, **đầu vào**, **đầu ra**.
+  Trong thân hàm, gom các dòng code liên quan thành nhóm; mỗi nhóm có một dòng comment ở trên, các nhóm cách nhau 1 dòng trống.
 - Khi nghiệp vụ thay đổi: cập nhật `shared/` trước, sau đó sửa backend và frontend.
 - Việc còn treo: xác nhận tên miền email thật của sinh viên và cán bộ; cách kết nối với database sinh viên của trường.
 

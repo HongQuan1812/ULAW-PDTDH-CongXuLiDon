@@ -1,0 +1,9 @@
+/* Tình trạng đơn: chấm màu + chữ trên nền nhạt (như .pill của bản mẫu). */
+.pill{display:inline-flex;align-items:center;gap:7px;padding:3px 11px 3px 9px;border-radius:999px;font-size:12.5px;font-weight:500;white-space:nowrap}
+.pill::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
+.nop{background:var(--s-nop-bg);color:var(--s-nop-fg)}
+.xet{background:var(--s-xet-bg);color:var(--s-xet-fg)}
+.bs{background:var(--s-bs-bg);color:var(--s-bs-fg)}
+.bsg{background:var(--s-bsg-bg);color:var(--s-bsg-fg)}
+.duyet{background:var(--s-duyet-bg);color:var(--s-duyet-fg)}
+.tc{background:var(--s-tc-bg);color:var(--s-tc-fg)}

@@ -1,0 +1,59 @@
+/* Biến màu, cỡ chữ, bo góc… chuyển nguyên từ artifact/styles.css (bản mẫu).
+   Có chế độ tối theo hệ điều hành, hoặc ép bằng <html data-theme="light|dark">. */
+:root{
+  --bg:#F6F7FA; --surface:#FFFFFF; --surface-2:#F0F3F8; --hover:#E9EEF5;
+  --line:#E1E6EE; --line-2:#CCD4E1;
+  --fg:#141B2D; --muted:#576074; --faint:#8E97A8;
+  --accent:#0A7CC6; --accent-ink:#065D96; --accent-soft:#E2F1FB; --on-accent:#FFFFFF;   /* xanh da trời */
+  --side:#FFFFFF; --side-2:#F0F3F8; --side-fg:#4B5468; --side-strong:#141B2D; --side-line:#E1E6EE;
+  --focus:#0A7CC6;
+  --danger:#B4412F; --danger-soft:#FBEEEB;
+  --ok:#16705B;
+  --mark:#FBE9A0;
+  --inverse-bg:#141B2D; --inverse-fg:#FFFFFF;
+  --s-nop-bg:#DFF4F8; --s-nop-fg:#0A6A82;   /* Đã nộp: xanh lơ (chờ tiếp nhận) */
+  --s-xet-bg:#E6EFFC; --s-xet-fg:#1F5FBF;   /* Đang xét: xanh dương */
+  --s-bs-bg:#FAF1D6; --s-bs-fg:#8A6510;     /* Cần bổ sung: vàng */
+  --s-bsg-bg:#F2EFF7; --s-bsg-fg:#665092;
+  --s-duyet-bg:#E6F2EE; --s-duyet-fg:#16705B;
+  --s-tc-bg:#FBEEEB; --s-tc-fg:#A93C2C;
+  --shadow-sm:0 1px 2px rgba(16,24,40,.05);
+  --shadow:0 1px 2px rgba(16,24,40,.04),0 8px 24px -12px rgba(16,24,40,.14);
+  --shadow-lg:0 24px 60px -20px rgba(16,24,40,.28);
+  --font:"Be Vietnam Pro",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --font-display:var(--font);
+  --r:10px; --r-lg:16px; --nav-h:64px; --side-w:0px;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0F131A; --surface:#161C26; --surface-2:#1C2330; --hover:#232B3A;
+  --line:#262F3E; --line-2:#344055;
+  --fg:#E5EAF2; --muted:#9AA5B8; --faint:#6B7689;
+  --accent:#5CBDF3; --accent-ink:#93D3F8; --accent-soft:#13304A; --on-accent:#06182A;
+  --side:#131922; --side-2:#1C2330; --side-fg:#A2ADBF; --side-strong:#EEF2F8; --side-line:#262F3E;
+  --focus:#5CBDF3; --danger:#EC8B7C; --danger-soft:#33201C; --ok:#5CC3A6; --mark:#5A4E17;
+  --inverse-bg:#E5EAF2; --inverse-fg:#141B2D;
+  --s-nop-bg:#123139; --s-nop-fg:#74CFE4;
+  --s-xet-bg:#1A2940; --s-xet-fg:#8CB8F2;
+  --s-bs-bg:#332B15; --s-bs-fg:#E8C66A;
+  --s-bsg-bg:#2A2536; --s-bsg-fg:#BFAEE3;
+  --s-duyet-bg:#1C3530; --s-duyet-fg:#7FD3B9;
+  --s-tc-bg:#33201C; --s-tc-fg:#EE9586;
+  --shadow-sm:0 1px 2px rgba(0,0,0,.25); --shadow:0 1px 2px rgba(0,0,0,.2),0 8px 24px -12px rgba(0,0,0,.5); --shadow-lg:0 24px 60px -20px rgba(0,0,0,.65);
+  color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0F131A; --surface:#161C26; --surface-2:#1C2330; --hover:#232B3A;
+  --line:#262F3E; --line-2:#344055;
+  --fg:#E5EAF2; --muted:#9AA5B8; --faint:#6B7689;
+  --accent:#5CBDF3; --accent-ink:#93D3F8; --accent-soft:#13304A; --on-accent:#06182A;
+  --side:#131922; --side-2:#1C2330; --side-fg:#A2ADBF; --side-strong:#EEF2F8; --side-line:#262F3E;
+  --focus:#5CBDF3; --danger:#EC8B7C; --danger-soft:#33201C; --ok:#5CC3A6; --mark:#5A4E17;
+  --inverse-bg:#E5EAF2; --inverse-fg:#141B2D;
+  --s-nop-bg:#123139; --s-nop-fg:#74CFE4;
+  --s-xet-bg:#1A2940; --s-xet-fg:#8CB8F2;
+  --s-bs-bg:#332B15; --s-bs-fg:#E8C66A;
+  --s-bsg-bg:#2A2536; --s-bsg-fg:#BFAEE3;
+  --s-duyet-bg:#1C3530; --s-duyet-fg:#7FD3B9;
+  --s-tc-bg:#33201C; --s-tc-fg:#EE9586;
+  --shadow-sm:0 1px 2px rgba(0,0,0,.25); --shadow:0 1px 2px rgba(0,0,0,.2),0 8px 24px -12px rgba(0,0,0,.5); --shadow-lg:0 24px 60px -20px rgba(0,0,0,.65);
+  color-scheme:dark}
+
