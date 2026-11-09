@@ -9,7 +9,7 @@ import { AccountMenu } from './AccountMenu';
 import { DemoRoleSwitch } from '../features/auth/DemoRoleSwitch';
 import { SHOW_DEMO } from '../lib/env';
 import { useMediaQuery } from '../lib/useMediaQuery';
-import { LOGIN_PATH, PAGE_LABEL, PAGE_PATH } from './paths';
+import { LOGIN_PATH, ONBOARDING_PATH, PAGE_LABEL, PAGE_PATH } from './paths';
 import styles from './AppLayout.module.css';
 
 /**
@@ -48,6 +48,8 @@ export function AppLayout() {
     const from = logout.isIdle ? location.pathname : undefined;
     return <Navigate to={LOGIN_PATH} replace state={from ? { from } : null} />;
   }
+  // Lần đầu đăng nhập, chưa xác nhận họ tên: sang màn Bổ sung thông tin
+  if (!session.data.profileCompleted) return <Navigate to={ONBOARDING_PATH} replace />;
   const { user, role } = session.data;
 
   /** Đóng menu trượt và trả con trỏ bàn phím về nút mở menu. */

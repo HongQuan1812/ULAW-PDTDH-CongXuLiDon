@@ -1,0 +1,29 @@
+/* Màn Bổ sung thông tin lần đầu (như .onb-screen, .onb, .steps của bản mẫu). */
+.screen{min-height:100vh;padding-block:32px 56px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
+  background:radial-gradient(1200px 500px at 50% -10%,var(--accent-soft),transparent 70%),var(--bg)}
+.top{display:flex;align-items:center;gap:12px;max-width:600px;margin:0 auto 32px}
+.top img{width:40px;height:40px}
+.school{font-size:12px;color:var(--muted);font-weight:500}
+.appName{font-weight:600;font-size:15px;letter-spacing:-.01em;color:var(--side-strong);white-space:nowrap}
+.onb{max-width:600px;margin:0 auto;display:grid;gap:20px}
+
+/* các bước: Đăng nhập → Bổ sung thông tin → Bắt đầu sử dụng */
+.steps{list-style:none;margin:0;padding:0;display:flex;gap:4px;flex-wrap:wrap;counter-reset:st}
+.steps li{counter-increment:st;display:flex;align-items:center;gap:8px;font-size:13px;color:var(--faint);font-weight:500;padding:4px 12px 4px 4px;border-radius:999px}
+.steps li::before{content:counter(st);display:grid;place-items:center;width:24px;height:24px;border-radius:50%;background:var(--surface-2);font-size:12px;font-weight:600}
+.steps li.done{color:var(--muted)}
+.steps li.done::before{content:"✓";background:var(--accent-soft);color:var(--accent)}
+.steps li.current{color:var(--fg);font-weight:600;background:var(--surface);box-shadow:var(--shadow-sm)}
+.steps li.current::before{background:var(--accent);color:var(--on-accent)}
+
+.card{display:grid;gap:18px;padding:32px;min-width:0;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);box-shadow:var(--shadow)}
+.card h2{font-size:22px}
+.muted{color:var(--muted)}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}
+.formError{color:var(--danger);font-size:13.5px;font-weight:500}
+.actions{display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap}
+
+@media (max-width:620px){
+  .card{padding:22px}
+  .grid2{grid-template-columns:minmax(0,1fr)}
+}

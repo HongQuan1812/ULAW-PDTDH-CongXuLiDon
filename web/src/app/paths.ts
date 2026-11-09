@@ -2,6 +2,7 @@
 import { ROLES, type Page, type RoleId } from '@ulaw/shared';
 
 export const LOGIN_PATH = '/dang-nhap';
+export const ONBOARDING_PATH = '/bo-sung-thong-tin';
 
 export const PAGE_PATH: Record<Page, string> = {
   profile: '/thong-tin-ca-nhan',

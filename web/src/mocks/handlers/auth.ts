@@ -7,7 +7,7 @@ import {
   isSchoolEmail,
   type Session,
 } from '@ulaw/shared';
-import { DEMO_USERS, readSession, writeSession } from '../db';
+import { DEMO_USERS, readSession, toSession, writeSession } from '../db';
 import { MOCK_DELAY_MS, api, apiError } from '../http';
 
 export const authHandlers = [
@@ -33,7 +33,7 @@ export const authHandlers = [
 
     // Lưu phiên và trả về
     writeSession(parsed.data.role);
-    return HttpResponse.json<Session>({ user, role: parsed.data.role });
+    return HttpResponse.json<Session>(toSession(parsed.data.role));
   }),
 
   // Đăng xuất

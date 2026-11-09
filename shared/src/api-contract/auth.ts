@@ -31,6 +31,8 @@ export type SessionUser = z.infer<typeof SessionUserSchema>;
 export const SessionSchema = z.object({
   user: SessionUserSchema,
   role: z.enum(ROLE_IDS),
+  /** false = lần đầu đăng nhập, chưa xác nhận họ tên: giao diện chuyển sang màn Bổ sung thông tin */
+  profileCompleted: z.boolean(),
 });
 export type Session = z.infer<typeof SessionSchema>;
 
