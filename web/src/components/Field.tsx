@@ -5,9 +5,11 @@ import styles from './Field.module.css';
 interface FieldProps {
   /** Tên ô, vd "Họ và tên" */
   label: string;
+  /** Ô bắt buộc: hiện dấu * màu đỏ cạnh tên ô */
+  required?: boolean;
   /** Hiện "(không bắt buộc)" cạnh tên ô */
   optional?: boolean;
-  /** Dòng ghi chú nhỏ dưới tên ô */
+  /** Dòng ghi chú nhỏ dưới ô nhập */
   hint?: string;
   /** Câu báo lỗi; có thì hiện màu đỏ dưới ô và ô nhập viền đỏ (ô nhập cần aria-invalid) */
   error?: string;
@@ -16,18 +18,23 @@ interface FieldProps {
 }
 
 /**
- * Bọc một ô nhập: nhãn ở trên, ghi chú, ô nhập, rồi câu báo lỗi. Bấm vào nhãn thì con trỏ vào ô nhập.
+ * Bọc một ô nhập: nhãn ở trên, ô nhập, ghi chú, rồi câu báo lỗi. Bấm vào nhãn thì con trỏ vào ô nhập.
  * @returns  thẻ <label> chứa toàn bộ
  */
-export function Field({ label, optional = false, hint, error, children }: FieldProps) {
+export function Field({ label, required = false, optional = false, hint, error, children }: FieldProps) {
   return (
     <label className={styles.field}>
       <span>
         {label}
+        {required && (
+          <span className={styles.required} aria-hidden="true">
+            {' '}*
+          </span>
+        )}
         {optional && <span className={styles.optional}> (không bắt buộc)</span>}
       </span>
-      {hint && <small>{hint}</small>}
       {children}
+      {hint && <small>{hint}</small>}
       {error && (
         <span className={styles.error} role="alert">
           {error}

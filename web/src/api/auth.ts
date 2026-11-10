@@ -51,10 +51,12 @@ export function useLogout() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: () => apiFetch<void>(ENDPOINTS.auth.logout, { method: 'POST' }),
-    // Xóa mọi dữ liệu đã lưu của người vừa đăng xuất, rồi đánh dấu chưa đăng nhập
+    // Đánh dấu chưa đăng nhập (trang đang theo dõi phiên thấy ngay và chuyển về Đăng nhập),
+    // rồi xóa mọi dữ liệu khác của người vừa đăng xuất. Không dùng clear(): nó gỡ luôn phiên
+    // đang được theo dõi, nên trang không nhận được giá trị null và đứng yên.
     onSuccess: () => {
-      queryClient.clear();
       queryClient.setQueryData(SESSION_KEY, null);
+      queryClient.removeQueries({ predicate: (query) => query.queryKey[0] !== SESSION_KEY[0] });
     },
   });
 }

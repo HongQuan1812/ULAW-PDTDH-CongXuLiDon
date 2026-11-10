@@ -94,12 +94,12 @@ function OnboardingForm({ session }: { session: Session }) {
             Lần đầu đăng nhập, bạn cần xác nhận họ và tên. CCCD và số điện thoại có thể bổ sung sau ở trang Thông tin cá nhân.
           </p>
 
-          <Field label="Email">
-            <input value={user.email} readOnly />
+          <Field label="Email" required hint="Lấy từ tài khoản Google, không sửa được">
+            <input value={user.email} readOnly aria-required="true" />
           </Field>
 
-          <Field label="Họ và tên" hint="Ghi đầy đủ, có dấu, đúng như trên CCCD" error={errors.name?.message}>
-            <input autoComplete="name" aria-invalid={!!errors.name} {...register('name')} />
+          <Field label="Họ và tên" required hint="Ghi đầy đủ, có dấu, đúng như trên CCCD" error={errors.name?.message}>
+            <input autoComplete="name" aria-required="true" aria-invalid={!!errors.name} {...register('name')} />
           </Field>
 
           <div className={styles.grid2}>
