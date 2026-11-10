@@ -732,6 +732,21 @@ export function updateForm(code: string, answers: FormAnswers, filesByTempId: Re
   return toDetail(form);
 }
 
+/**
+ * Tiếp nhận một lá đơn: chuyển sang Đang xét, cán bộ bấm thành người tiếp nhận và người xử lí,
+ * xóa lí do của lần Yêu cầu bổ sung trước (bắt đầu lượt xét mới). Quyền và trạng thái đã được kiểm tra trước (canReceiveForm).
+ * @param code     mã đơn
+ * @param staffId  id cán bộ bấm Tiếp nhận
+ * @returns        lá đơn sau khi tiếp nhận; không có đơn thì null
+ */
+export function receiveForm(code: string, staffId: string): FormDetail | null {
+  const form = FORMS.find((candidate) => candidate.code === code);
+  if (!form) return null;
+  const receivedAt = vietnamNow();
+  Object.assign(form, { status: 'xet', note: '', receiverId: staffId, receivedAt, handlerId: staffId, handlerSince: receivedAt });
+  return toDetail(form);
+}
+
 /* ---------- Tệp minh chứng ---------- */
 
 /** Tệp đính kèm trong API giả: thông tin trả cho giao diện, nội dung, mã đơn chứa tệp. */

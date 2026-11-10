@@ -3,7 +3,7 @@
    Quy ước tên: form = lá đơn sinh viên nộp · form type = loại đơn (mẫu do cán bộ soạn). */
 import type { Page, Permission, RoleId } from '../aux-schema/accounts--roles';
 import type { FormStatus } from '../aux-schema/forms--statuses';
-import { isDecidable, isEditable } from './forms--statuses';
+import { isDecidable, isEditable, isReceivable } from './forms--statuses';
 
 export interface Role {
   name: string;
@@ -104,4 +104,14 @@ export function canEditForm(
 ): boolean {
   if (!user || !isEditable(form.status)) return false;
   return (form.applicantId === user.id && can(user.role, 'editOwn')) || can(user.role, 'editAnyForm');
+}
+
+/**
+ * Kiểm tra người dùng có được bấm "Tiếp nhận" một lá đơn hay không.
+ * @param role    vai trò người dùng; null / undefined = chưa đăng nhập
+ * @param status  trạng thái lá đơn
+ * @returns       true khi có quyền receive và đơn đang chờ tiếp nhận (Đã nộp / Đã bổ sung)
+ */
+export function canReceiveForm(role: RoleId | null | undefined, status: FormStatus): boolean {
+  return can(role, 'receive') && isReceivable(status);
 }

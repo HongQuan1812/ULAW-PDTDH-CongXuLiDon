@@ -1,9 +1,10 @@
 /* Hook gọi API lá đơn. */
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   ENDPOINTS,
   SUBMIT_FORM_FIELDS,
   formDetailPath,
+  formReceivePath,
   type FormDetail,
   type FormSummary,
   type HandledFormsResponse,
@@ -11,7 +12,7 @@ import {
   type SubmitFormRequest,
   type UpdateFormRequest,
 } from '@ulaw/shared';
-import { apiFetch } from './client';
+import { ApiError, apiFetch } from './client';
 
 /** Khóa lưu tạm danh sách đơn của mình trong TanStack Query. */
 export const MY_FORMS_KEY = ['forms', 'mine'] as const;
@@ -59,6 +60,29 @@ export function useFormDetail(code: string) {
   return useQuery({
     queryKey: formDetailKey(code),
     queryFn: () => apiFetch<FormDetail>(formDetailPath(code)),
+  });
+}
+
+/**
+ * Tiếp nhận một lá đơn (cán bộ). Thành công thì trang chi tiết dùng ngay lá đơn máy chủ trả về, các bảng đơn tải lại.
+ * Đơn không còn chờ tiếp nhận (vd cán bộ khác vừa tiếp nhận) hoặc không còn thì tải lại đơn để trang hiện đúng trạng thái.
+ * @param code  mã đơn
+ * @returns     kết quả useMutation; gọi mutate(). data = lá đơn sau khi tiếp nhận
+ */
+export function useReceiveForm(code: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => apiFetch<FormDetail>(formReceivePath(code), { method: 'POST' }),
+    onSuccess: (receivedForm) => {
+      queryClient.setQueryData(formDetailKey(code), receivedForm);
+      void queryClient.invalidateQueries({ queryKey: MY_FORMS_KEY });
+      void queryClient.invalidateQueries({ queryKey: HANDLED_FORMS_KEY });
+    },
+    onError: (error) => {
+      if (error instanceof ApiError && (error.status === 409 || error.status === 404)) {
+        void queryClient.invalidateQueries({ queryKey: formDetailKey(code) });
+      }
+    },
   });
 }
 

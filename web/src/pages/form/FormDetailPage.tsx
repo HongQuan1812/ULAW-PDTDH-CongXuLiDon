@@ -2,11 +2,12 @@
    Gồm: tiêu đề, khung thông báo theo trạng thái, nội dung đơn, khung "Thông tin đơn" bên phải
    (trạng thái, ngày nộp, người nộp đơn, người tiếp nhận, người xử lí).
    Nội dung đơn sửa được khi canEditForm (đơn của mình hoặc Admin, đơn Đã nộp / Cần bổ sung / Đã bổ sung), còn lại chỉ xem.
-   Tiếp nhận, Yêu cầu bổ sung / Duyệt / Từ chối, Chuyển giao: thêm ở các phần sau của bước 5. */
+   Cán bộ có quyền receive thấy nút "Tiếp nhận" ở đầu trang khi đơn Đã nộp / Đã bổ sung.
+   Yêu cầu bổ sung / Duyệt / Từ chối, Chuyển giao: thêm ở các phần sau của bước 5. */
 import { useState, type FormEvent } from 'react';
 import { Link, useParams } from 'react-router';
-import { FORM_MESSAGES, canEditForm, type FormDetail, type FormStatus } from '@ulaw/shared';
-import { useFormDetail } from '../../api/forms';
+import { FORM_MESSAGES, canEditForm, canReceiveForm, type FormDetail, type FormStatus } from '@ulaw/shared';
+import { useFormDetail, useReceiveForm } from '../../api/forms';
 import { PAGE_PATH, type ReturnState } from '../../app/paths';
 import { Button } from '../../components/Button';
 import { LoadError, loadErrorMessage } from '../../components/LoadError';
@@ -29,6 +30,9 @@ const LOAD_FAILED_TEXT = 'Không tải được đơn.';
 
 /** Câu báo khi lưu thay đổi lỗi mà không có câu báo nào (vd mất mạng). */
 const SAVE_FAILED_TEXT = 'Chưa lưu được thay đổi. Kiểm tra kết nối mạng rồi bấm Lưu thay đổi lại.';
+
+/** Câu báo khi tiếp nhận lỗi mà không có câu báo nào (vd mất mạng). */
+const RECEIVE_FAILED_TEXT = 'Chưa tiếp nhận được đơn. Kiểm tra kết nối mạng rồi bấm Tiếp nhận lại.';
 
 /* Câu thông báo theo trạng thái (như STATUS_MSG của bản mẫu, xem "Câu thông báo trên trang chi tiết đơn" trong artifact/README.md).
    Giống nhau với mọi vai trò, không đổi theo người xem. */
@@ -90,7 +94,10 @@ function FormDetailView({ form, onLeave }: { form: FormDetail; onLeave: () => vo
         <div className={styles.headText}>
           <h1 className={styles.title}>Chi tiết đơn {form.code}</h1>
         </div>
-        <FormInfoPanelToggle panel={infoPanel} />
+        <div className={styles.headActions}>
+          <FormInfoPanelToggle panel={infoPanel} />
+          {canReceiveForm(role, form.status) && <ReceiveButton form={form} />}
+        </div>
       </div>
 
       <StatusNotice form={form} />
@@ -198,6 +205,31 @@ function FormEditor({ form, onCancel, onSaved }: { form: FormDetail; onCancel: (
         </Button>
       </SubmitBar>
     </form>
+  );
+}
+
+/**
+ * Nút "Tiếp nhận" ở đầu trang (như #fReceive của bản mẫu). Bấm thì đơn chuyển sang Đang xét,
+ * mình thành người tiếp nhận và người xử lí; trang vẽ lại theo lá đơn mới, toast ghi giờ tiếp nhận.
+ * @param form  lá đơn đang chờ tiếp nhận
+ * @returns     nút bấm; đang gửi thì khóa nút
+ */
+function ReceiveButton({ form }: { form: FormDetail }) {
+  const toast = useToast();
+  const receive = useReceiveForm(form.code);
+
+  /** Bấm Tiếp nhận: gửi lên máy chủ, xong thì báo giờ tiếp nhận; lỗi thì báo câu máy chủ gửi. */
+  const receiveForm = () =>
+    receive.mutate(undefined, {
+      onSuccess: (receivedForm) =>
+        toast(FORM_MESSAGES.received(receivedForm.code, formatDateTime(receivedForm.receivedAt ?? receivedForm.updatedAt)), 'success'),
+      onError: (error) => toast(error.message || RECEIVE_FAILED_TEXT, 'error'),
+    });
+
+  return (
+    <Button variant="primary" className={styles.headButton} onClick={receiveForm} disabled={receive.isPending}>
+      {receive.isPending ? 'Đang tiếp nhận…' : 'Tiếp nhận'}
+    </Button>
   );
 }
 

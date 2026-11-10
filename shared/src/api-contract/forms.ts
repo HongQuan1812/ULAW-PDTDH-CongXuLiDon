@@ -25,6 +25,10 @@ export const FORM_ENDPOINTS = {
       Tệp đã lưu mà không còn trong câu trả lời là tệp bị gỡ: máy chủ XÓA HẲN (cả nội dung trên ổ đĩa), sau khi đơn lưu xong.
       Sai một chỗ thì không lưu gì. Đơn Cần bổ sung sau khi lưu chuyển sang Đã bổ sung */
   update: '/forms/:code',
+  /** POST (không có body) → FormDetail: Tiếp nhận đơn. Được tiếp nhận khi canReceiveForm (quyền receive, đơn Đã nộp / Đã bổ sung).
+      Đơn chuyển sang Đang xét; người bấm thành người tiếp nhận và người xử lí (từ lúc tiếp nhận);
+      lí do của lần Yêu cầu bổ sung trước được xóa (bắt đầu lượt xét mới) */
+  receive: '/forms/:code/receive',
 } as const;
 
 /**
@@ -34,6 +38,15 @@ export const FORM_ENDPOINTS = {
  */
 export function formDetailPath(code: string): string {
   return FORM_ENDPOINTS.detail.replace(':code', encodeURIComponent(code));
+}
+
+/**
+ * Đường dẫn API Tiếp nhận một lá đơn.
+ * @param code  mã đơn
+ * @returns     vd '/forms/XMM-2026-00001/receive'
+ */
+export function formReceivePath(code: string): string {
+  return FORM_ENDPOINTS.receive.replace(':code', encodeURIComponent(code));
 }
 
 /* ---------- Dữ liệu gửi / nhận ---------- */
@@ -150,6 +163,12 @@ export const FORM_MESSAGES = {
   editForbidden: 'Bạn không có quyền sửa đơn này.',
   /** PUT /forms/:code khi đơn đã được tiếp nhận hoặc đã có kết quả (409) */
   notEditable: 'Đơn đã được tiếp nhận hoặc đã có kết quả, không sửa được nữa.',
+  /** POST /forms/:code/receive khi vai trò không có quyền receive (403) */
+  receiveForbidden: 'Bạn không có quyền tiếp nhận đơn.',
+  /** POST /forms/:code/receive khi đơn không còn chờ tiếp nhận, vd cán bộ khác vừa tiếp nhận (409) */
+  notReceivable: 'Đơn không còn chờ tiếp nhận (có thể đã được tiếp nhận).',
+  /** Tiếp nhận xong (toast), vd "Đã tiếp nhận đơn XMM-2026-01521 lúc 09:30 · 10/11/2026." */
+  received: (code: string, timeText: string) => `Đã tiếp nhận đơn ${code} lúc ${timeText}.`,
   /** Bấm Lưu thay đổi mà câu trả lời vẫn như đã lưu (toast) */
   noChanges: 'Không có thay đổi nào để lưu.',
   /** Lưu thay đổi xong (toast), vd "Đã lưu thay đổi lúc 09:30 · 10/11/2026." */

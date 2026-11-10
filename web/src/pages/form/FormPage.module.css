@@ -9,6 +9,7 @@
 /* đầu trang: tiêu đề bên trái, nút "Thông tin đơn" bên phải */
 .head{display:flex;align-items:flex-end;justify-content:space-between;gap:16px 24px;flex-wrap:wrap;margin-bottom:6px}
 .headText{display:grid;gap:6px;min-width:0;max-width:68ch}
+.headActions{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
 .title{font-size:clamp(24px,2.6vw,30px);line-height:1.2;font-weight:600;letter-spacing:-.03em}
 
 /* nội dung đơn; khung Thông tin đơn đang nằm bên phải thì chia 2 cột */
@@ -41,6 +42,8 @@
 .buttons{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;margin-left:auto}
 
 @media (max-width:620px){
+  .headActions{width:100%}
+  .headButton{flex:1}
   .submitRow{padding:12px;border-radius:18px}
   .buttons{width:100%}
   .buttons>*{flex:1}

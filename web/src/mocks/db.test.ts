@@ -16,6 +16,7 @@ import {
   saveMainStudent,
   saveProfile,
   toSession,
+  receiveForm,
   updateForm,
 } from './db';
 
@@ -236,5 +237,21 @@ describe('sửa đơn', () => {
     updateForm(code, { ...answers, files: [keptFile!] }, new Map());
     expect(getFilesOfForm(code)).toEqual([keptFile]);
     expect(getSavedFileIds(code).has(removedFile!.id)).toBe(false);
+  });
+});
+
+describe('tiếp nhận đơn', () => {
+  test('đơn Đã bổ sung: thành Đang xét, cán bộ bấm là người tiếp nhận và người xử lí, lí do cũ được xóa', () => {
+    const supplementedCode = getFormsOf('sv-1').find((form) => form.status === 'bsg')!.code;
+    const before = getFormDetail(supplementedCode, { id: 'cb-1', role: 'nguoiXuLiDon' })!;
+    expect(before.note).not.toBe('');
+
+    const received = receiveForm(supplementedCode, 'cb-1')!;
+    expect(received.status).toBe('xet');
+    expect(received.note).toBe('');
+    expect(received.receiver?.id).toBe('cb-1');
+    expect(received.handler?.id).toBe('cb-1');
+    expect(received.handlerSince).toBe(received.receivedAt);
+    expect(received.updatedAt).toBe(before.updatedAt);
   });
 });

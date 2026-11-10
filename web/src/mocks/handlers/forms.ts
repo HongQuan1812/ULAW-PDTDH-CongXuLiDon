@@ -1,4 +1,4 @@
-/* API giả: lá đơn (nộp đơn mới, danh sách đơn của mình, đơn phụ trách, chi tiết một đơn, sửa đơn). */
+/* API giả: lá đơn (nộp đơn mới, danh sách đơn của mình, đơn phụ trách, chi tiết một đơn, sửa đơn, tiếp nhận). */
 import { delay, http, HttpResponse } from 'msw';
 import {
   ANSWER_MESSAGES,
@@ -10,6 +10,7 @@ import {
   can,
   canEditForm,
   isEditable,
+  isReceivable,
   validateAnswers,
   validateSentFiles,
   type FormDetail,
@@ -17,7 +18,7 @@ import {
   type HandledFormsResponse,
   type MyFormsResponse,
 } from '@ulaw/shared';
-import { addForm, getFormDetail, getFormType, getFormsHandledBy, getFormsOf, getSavedFileIds, readSession, updateForm } from '../db';
+import { addForm, getFormDetail, getFormType, getFormsHandledBy, getFormsOf, getSavedFileIds, readSession, receiveForm, updateForm } from '../db';
 import { MOCK_DELAY_MS, api, apiError } from '../http';
 
 /**
@@ -148,5 +149,21 @@ export const formHandlers = [
 
     // Đúng hết: lưu nội dung và tệp mới cùng lúc
     return HttpResponse.json<FormDetail>(updateForm(code, answers, multipart.filesByTempId)!);
+  }),
+
+  // Tiếp nhận đơn: Đã nộp / Đã bổ sung → Đang xét, người bấm thành người tiếp nhận và người xử lí
+  http.post(api(ENDPOINTS.forms.receive), async ({ params }) => {
+    await delay(MOCK_DELAY_MS);
+    const session = readSession();
+    if (!session) return apiError(401, FORM_MESSAGES[401]);
+
+    // Không xem được đơn thì 404; không có quyền receive thì 403; đơn không còn chờ tiếp nhận thì 409
+    const code = String(params.code);
+    const form = getFormDetail(code, { id: session.user.id, role: session.role });
+    if (!form) return apiError(404, FORM_MESSAGES.notFound);
+    if (!can(session.role, 'receive')) return apiError(403, FORM_MESSAGES.receiveForbidden);
+    if (!isReceivable(form.status)) return apiError(409, FORM_MESSAGES.notReceivable);
+
+    return HttpResponse.json<FormDetail>(receiveForm(code, session.user.id)!);
   }),
 ];
