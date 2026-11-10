@@ -1,6 +1,6 @@
 /* Tệp người nộp đơn vừa chọn, chưa tải lên máy chủ.
    Câu trả lời của câu hỏi tải tệp chỉ lưu FileRef (id, tên, dung lượng); nội dung tệp giữ ở đây theo id,
-   để lúc gửi đơn tải lên máy chủ, hoặc để xem lại tệp trước khi gửi. Tải lại trang thì mất. */
+   để lúc bấm Gửi đơn gửi kèm cùng câu trả lời, hoặc để xem lại tệp trước khi gửi. Tải lại trang thì mất. */
 import type { FileRef } from '@ulaw/shared';
 
 /** Tiền tố id của tệp chưa tải lên, để phân biệt với tệp đã có ở máy chủ. */

@@ -1,9 +1,9 @@
 /* Trang nộp đơn mới của một loại đơn (#/nop-don/<mã loại đơn>), mở sau khi chọn trong hộp "Chọn loại đơn".
    Gồm: nội dung đơn theo cấu trúc loại đơn, khung "Thông tin đơn" bên phải, hàng nút dính đáy có ô cam đoan.
-   Gửi đơn lên máy chủ làm ở bước sau. */
+   Gửi đơn: tải tệp lên, gửi câu trả lời; xong thì về trang Thông tin cá nhân, đơn mới nằm trong "Đơn đã nộp". */
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { Link, useLocation, useNavigate, useNavigationType, useParams } from 'react-router';
-import { ANSWER_MESSAGES, ROLES, type FormType } from '@ulaw/shared';
+import { ANSWER_MESSAGES, FORM_MESSAGES, ROLES, type FormType } from '@ulaw/shared';
 import { useFormType } from '../../api/form-types';
 import { useMyProfile } from '../../api/profile';
 import { homePath, PAGE_LABEL, PAGE_PATH, readPreviousPageLabel, type ReturnState } from '../../app/paths';
@@ -13,8 +13,9 @@ import { RefreshButton } from '../../components/RefreshButton';
 import { useToast } from '../../components/Toast';
 import { useAuth } from '../../features/auth/useAuth';
 import { FormSections, focusFirstError } from '../../features/form-renderer/FormSections';
-import { keepNewFormDraft, readNewFormDraft } from '../../features/form-renderer/newFormDrafts';
+import { discardNewFormDraft, keepNewFormDraft, readNewFormDraft } from '../../features/form-renderer/newFormDrafts';
 import { useFormAnswers } from '../../features/form-renderer/useFormAnswers';
+import { useSubmitNewForm } from '../../features/form-renderer/useSubmitNewForm';
 import { SHOW_DEMO } from '../../lib/env';
 import { FormInfoPanel, FormInfoPanelToggle, FormInfoSection, useFormInfoPanel } from './FormInfoPanel';
 import styles from './NewFormPage.module.css';
@@ -22,22 +23,34 @@ import styles from './NewFormPage.module.css';
 /** Câu báo khi không tải được loại đơn mà máy chủ không gửi kèm câu báo lỗi (vd mất mạng). */
 const LOAD_FAILED_TEXT = 'Không tải được loại đơn.';
 
+/** Câu báo khi gửi đơn lỗi mà không có câu báo nào (vd mất mạng). */
+const SUBMIT_FAILED_TEXT = 'Chưa gửi được đơn. Kiểm tra kết nối mạng rồi bấm Gửi đơn lại.';
+
 /** Câu cam đoan ở cuối lá đơn (như #cam của bản mẫu). */
 const COMMITMENT_TEXT = 'Tôi cam đoan các thông tin và minh chứng trên là đúng sự thật.';
 
 /**
- * Nút quay lại của trang (như goBack và nhãn #formBack của artifact/js/nav.js).
- * Trang trước có gửi kèm tên (vd mở từ Thông tin cá nhân) thì về trang đó như nút Back;
+ * Các cách rời trang (như goBack, nhãn #formBack của artifact/js/nav.js và đoạn cuối phần gửi đơn của application-form.js).
+ * Quay lại: trang trước có gửi kèm tên (vd mở từ Thông tin cá nhân) thì về trang đó như nút Back;
  * mở thẳng đường dẫn (không có trang trước) thì về trang chính của vai trò.
- * @returns  backLabel: tên trang sẽ về, vd 'Thông tin cá nhân' · goBack: hàm quay lại
+ * Gửi đơn xong: về trang Thông tin cá nhân; trang trước chính là trang đó thì lùi lại như nút Back,
+ * không thì thay trang nộp đơn trong lịch sử, để bấm Back không mở lại lá đơn đã gửi.
+ * @returns  backLabel: tên trang sẽ về, vd 'Thông tin cá nhân' · goBack: hàm quay lại · leaveAfterSubmit: hàm rời trang sau khi gửi
  */
-function useGoBack() {
+function useLeavePage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { role } = useAuth();
   const previousPageLabel = location.key === 'default' ? undefined : readPreviousPageLabel(location.state);
-  if (previousPageLabel) return { backLabel: previousPageLabel, goBack: () => navigate(-1) };
-  return { backLabel: PAGE_LABEL[ROLES[role].home], goBack: () => navigate(homePath(role), { replace: true }) };
+  const leaveAfterSubmit = () =>
+    previousPageLabel === PAGE_LABEL.profile ? navigate(-1) : navigate(PAGE_PATH.profile, { replace: true });
+
+  if (previousPageLabel) return { backLabel: previousPageLabel, goBack: () => navigate(-1), leaveAfterSubmit };
+  return {
+    backLabel: PAGE_LABEL[ROLES[role].home],
+    goBack: () => navigate(homePath(role), { replace: true }),
+    leaveAfterSubmit,
+  };
 }
 
 /**
@@ -47,7 +60,7 @@ function useGoBack() {
 export function NewFormPage() {
   const { formTypeId = '' } = useParams();
   const formTypeQuery = useFormType(formTypeId);
-  const { backLabel, goBack } = useGoBack();
+  const { backLabel, goBack, leaveAfterSubmit } = useLeavePage();
 
   return (
     <div className={styles.page}>
@@ -57,7 +70,7 @@ export function NewFormPage() {
       {formTypeQuery.isPending ? (
         <p className={styles.muted}>Đang tải loại đơn…</p>
       ) : formTypeQuery.data ? (
-        <NewForm key={formTypeQuery.data.id} formType={formTypeQuery.data} onCancel={goBack} />
+        <NewForm key={formTypeQuery.data.id} formType={formTypeQuery.data} onCancel={goBack} onSubmitted={leaveAfterSubmit} />
       ) : (
         <section className={styles.errorCard}>
           <LoadError message={loadErrorMessage(formTypeQuery) ?? LOAD_FAILED_TEXT} />
@@ -71,13 +84,16 @@ export function NewFormPage() {
 /**
  * Lá đơn mới: tiêu đề, các phần câu hỏi, khung "Thông tin đơn", hàng nút có ô cam đoan.
  * Bấm Gửi đơn: kiểm tra mọi câu và ô cam đoan; lỗi thì báo dưới từng câu và bằng toast, đưa con trỏ tới chỗ lỗi đầu tiên.
+ * Hợp lệ thì gửi lên máy chủ; xong thì bỏ nháp, báo mã đơn mới và rời trang.
  * Quay lại trang này bằng nút Quay lại / Back (vd từ "Xem hồ sơ ›") thì giữ câu đã điền; mở bằng "Nộp đơn mới" thì đơn trống.
- * @param formType  loại đơn đủ cấu trúc
- * @param onCancel  bấm Hủy: rời trang
- * @returns         thẻ <form>
+ * @param formType     loại đơn đủ cấu trúc
+ * @param onCancel     bấm Hủy: rời trang
+ * @param onSubmitted  gửi đơn xong: rời trang
+ * @returns            thẻ <form>
  */
-function NewForm({ formType, onCancel }: { formType: FormType; onCancel: () => void }) {
+function NewForm({ formType, onCancel, onSubmitted }: { formType: FormType; onCancel: () => void; onSubmitted: () => void }) {
   const toast = useToast();
+  const submitNewForm = useSubmitNewForm(formType);
   const infoPanel = useFormInfoPanel();
   const navigationType = useNavigationType();
   const [savedDraft] = useState(() => (navigationType === 'POP' ? readNewFormDraft(formType.id) : undefined));
@@ -93,16 +109,16 @@ function NewForm({ formType, onCancel }: { formType: FormType; onCancel: () => v
   /**
    * Bấm Gửi đơn. Còn lỗi thì: lỗi hiện dưới từng câu, ô cam đoan tô đỏ nếu chưa đánh dấu,
    * toast đỏ ghi các phần cần xem lại (và nhắc cam đoan), con trỏ tới chỗ lỗi đầu tiên.
+   * Hợp lệ thì gửi lên máy chủ (đang gửi thì bỏ qua lần bấm thêm).
    * @param event  sự kiện gửi form (chặn để trang không tải lại)
    */
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (submitNewForm.isPending) return;
 
     // Kiểm tra câu trả lời và ô cam đoan
     const validation = validate();
-    const invalidSectionTitles = formType.sections
-      .filter((section) => section.questions.some((question) => question.id in validation.questionErrors))
-      .map((section) => section.title);
+    const { invalidSectionTitles } = validation;
     setShowCommitmentError(!committed);
 
     // Có lỗi: gộp các câu báo vào một toast, đưa con trỏ tới câu lỗi đầu tiên (không có thì tới ô cam đoan)
@@ -117,7 +133,18 @@ function NewForm({ formType, onCancel }: { formType: FormType; onCancel: () => v
       return;
     }
 
-    toast('Các câu trả lời đã hợp lệ. Phần gửi đơn lên máy chủ sẽ làm ở bước tiếp theo.', 'info');
+    // Hợp lệ: gửi lên máy chủ; xong thì bỏ nháp, rời trang, báo mã đơn
+    submitNewForm.mutate(
+      { answers, committed },
+      {
+        onSuccess: (newForm) => {
+          discardNewFormDraft(formType.id);
+          onSubmitted();
+          toast(FORM_MESSAGES.submitted(newForm.code), 'success');
+        },
+        onError: (error) => toast(error.message || SUBMIT_FAILED_TEXT, 'error'),
+      },
+    );
   };
 
   /**
@@ -172,11 +199,11 @@ function NewForm({ formType, onCancel }: { formType: FormType; onCancel: () => v
                 <span>{COMMITMENT_TEXT}</span>
               </label>
               <div className={styles.buttons}>
-                <Button variant="ghost" onClick={onCancel}>
+                <Button variant="ghost" onClick={onCancel} disabled={submitNewForm.isPending}>
                   Hủy
                 </Button>
-                <Button variant="primary" type="submit">
-                  Gửi đơn
+                <Button variant="primary" type="submit" disabled={submitNewForm.isPending}>
+                  {submitNewForm.isPending ? 'Đang gửi…' : 'Gửi đơn'}
                 </Button>
               </div>
             </div>

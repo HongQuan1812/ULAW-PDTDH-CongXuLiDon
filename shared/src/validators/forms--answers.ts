@@ -13,6 +13,10 @@ export const ANSWER_MESSAGES = {
   notNumber: 'Nhập một số.',
   invalidDate: 'Ngày không hợp lệ.',
   fileRequired: 'Tải lên ít nhất một tệp.',
+  /** Nộp đơn: câu trả lời có tệp mà máy chủ không nhận được nội dung, vd "bang-diem.pdf: không nhận được tệp. Gỡ tệp này rồi chọn lại." */
+  fileMissing: (fileName: string) => `${fileName}: không nhận được tệp. Gỡ tệp này rồi chọn lại.`,
+  /** Nộp đơn: có tệp gửi kèm không thuộc câu hỏi nào */
+  unexpectedFiles: 'Có tệp gửi kèm không thuộc câu hỏi nào.',
   /** Tệp sai định dạng, vd "a.exe: định dạng không hỗ trợ, hãy dùng PDF · JPG · PNG." */
   fileType: (fileName: string, acceptedText: string) => `${fileName}: định dạng không hỗ trợ, hãy dùng ${acceptedText}.`,
   /** Tệp quá lớn, vd "a.pdf: 12.4 MB, vượt quá 10 MB." */
@@ -93,6 +97,43 @@ export function validateFile(question: QuestionOf<'file'>, fileName: string, siz
   return '';
 }
 
+/** Thông tin một tệp gửi kèm khi nộp đơn, đủ để kiểm tra. */
+export interface SentFileInfo {
+  name: string;
+  sizeBytes: number;
+}
+
+/**
+ * Kiểm tra các tệp gửi kèm khi nộp đơn (máy chủ dùng): mỗi tệp trong câu trả lời phải có nội dung gửi kèm,
+ * đúng định dạng và dung lượng của câu hỏi; không có tệp gửi kèm nào thừa.
+ * @param sections      các phần của loại đơn
+ * @param answers       câu trả lời theo id câu hỏi; tệp mang id tạm
+ * @param sentFiles     tệp gửi kèm theo id tạm (tên, dung lượng lấy từ tệp thật)
+ * @returns             "" nếu mọi tệp đều được, ngược lại là câu báo lỗi đầu tiên
+ */
+export function validateSentFiles(
+  sections: readonly FormSection[],
+  answers: FormAnswers,
+  sentFiles: ReadonlyMap<string, SentFileInfo>,
+): string {
+  const referencedIds = new Set<string>();
+  for (const question of sections.flatMap((section) => section.questions)) {
+    const answer = answers[question.id];
+    if (question.type !== 'file' || !isFileList(answer)) continue;
+    for (const file of answer) {
+      // Tệp trong câu trả lời phải có nội dung gửi kèm, đúng định dạng, không quá dung lượng
+      const sentFile = sentFiles.get(file.id);
+      if (!sentFile || referencedIds.has(file.id)) return ANSWER_MESSAGES.fileMissing(file.name);
+      const message = validateFile(question, sentFile.name, sentFile.sizeBytes);
+      if (message) return message;
+      referencedIds.add(file.id);
+    }
+  }
+
+  // Tệp gửi kèm mà không thuộc câu trả lời nào
+  return [...sentFiles.keys()].every((id) => referencedIds.has(id)) ? '' : ANSWER_MESSAGES.unexpectedFiles;
+}
+
 /* ---------- Câu trả lời ---------- */
 
 /** Chuỗi hay không. */
@@ -171,17 +212,20 @@ export interface AnswersValidation {
   questionErrors: Record<string, string>;
   /** Câu báo chung cho từng phần có lỗi, theo thứ tự phần */
   sectionErrors: string[];
+  /** Tiêu đề các phần có lỗi, theo thứ tự phần (ghép thành câu bằng ANSWER_MESSAGES.sectionsToCheck) */
+  invalidSectionTitles: string[];
 }
 
 /**
  * Kiểm tra mọi câu trả lời của lá đơn theo cấu trúc loại đơn.
  * @param sections  các phần của loại đơn
  * @param answers   câu trả lời theo id câu hỏi
- * @returns         lỗi từng câu và câu báo chung từng phần; không có lỗi thì cả hai đều trống
+ * @returns         lỗi từng câu, câu báo chung và tiêu đề từng phần có lỗi; không có lỗi thì đều trống
  */
 export function validateAnswers(sections: readonly FormSection[], answers: FormAnswers): AnswersValidation {
   const questionErrors: Record<string, string> = {};
   const sectionErrors: string[] = [];
+  const invalidSectionTitles: string[] = [];
 
   sections.forEach((section) => {
     let sectionHasError = false;
@@ -191,8 +235,10 @@ export function validateAnswers(sections: readonly FormSection[], answers: FormA
       questionErrors[question.id] = message;
       sectionHasError = true;
     });
-    if (sectionHasError) sectionErrors.push(ANSWER_MESSAGES.section(section.title));
+    if (!sectionHasError) return;
+    sectionErrors.push(ANSWER_MESSAGES.section(section.title));
+    invalidSectionTitles.push(section.title);
   });
 
-  return { questionErrors, sectionErrors };
+  return { questionErrors, sectionErrors, invalidSectionTitles };
 }

@@ -1,5 +1,7 @@
 /* Dữ liệu giả của API giả, giữ trong bộ nhớ trình duyệt. */
 import type {
+  FileRef,
+  FormAnswers,
   FormStatus,
   FormSummary,
   FormType,
@@ -12,7 +14,7 @@ import type {
   StudentInfo,
   UpdateProfileRequest,
 } from '@ulaw/shared';
-import { FormTypeSchema } from '@ulaw/shared';
+import { FormTypeSchema, isAnswerable, nextFormCode } from '@ulaw/shared';
 
 /* Tài khoản mẫu để đăng nhập thử: mỗi vai trò một người (lấy từ artifact/js/auth.js và sample-data.js). */
 export const DEMO_USERS: Record<RoleId, SessionUser> = {
@@ -320,11 +322,14 @@ const twoDigits = (number: number) => String(number).padStart(2, '0');
 /** Ngày dạng 'YYYY-MM-DD' theo giờ máy. */
 const dateText = (day: Date) => `${day.getFullYear()}-${twoDigits(day.getMonth() + 1)}-${twoDigits(day.getDate())}`;
 
-/** Lá đơn trong API giả: dòng tóm tắt, kèm id người nộp, người tiếp nhận, người xử lí (null = chưa tiếp nhận). */
+/** Lá đơn trong API giả: dòng tóm tắt, kèm id người nộp, người tiếp nhận, người xử lí (null = chưa tiếp nhận).
+    Đơn nộp qua POST /forms có thêm câu trả lời và bản chụp cấu trúc loại đơn lúc nộp; đơn mẫu chưa có. */
 interface MockForm extends FormSummary {
   ownerId: string;
   receiverId: string | null;
   handlerId: string | null;
+  answers?: FormAnswers;
+  formTypeSnapshot?: FormType;
 }
 
 /** Lá đơn chưa gán cán bộ. */
@@ -407,16 +412,16 @@ function assignStaff(forms: UnassignedForm[]): MockForm[] {
   });
 }
 
-/* Mọi lá đơn. Chỉ đọc ở bước này; nộp, sửa, xử lí đơn làm ở các bước sau. */
+/* Mọi lá đơn, đơn mới nộp đứng đầu. Sửa, xử lí đơn làm ở các bước sau. */
 const FORMS: MockForm[] = assignStaff([...seedStudentForms(), ...seedOtherStudentForms()]);
 
 /**
- * Bỏ các id nội bộ, chỉ giữ phần trả về cho giao diện.
+ * Chỉ giữ phần trả về cho bảng đơn (bỏ id nội bộ, câu trả lời, bản chụp loại đơn).
  * @param form  lá đơn trong API giả
  * @returns     dòng tóm tắt theo FormSummarySchema
  */
-function toSummary({ ownerId: _ownerId, receiverId: _receiverId, handlerId: _handlerId, ...summary }: MockForm): FormSummary {
-  return summary;
+function toSummary({ code, formTypeId, formTypeName, submittedAt, status }: MockForm): FormSummary {
+  return { code, formTypeId, formTypeName, submittedAt, status };
 }
 
 /**
@@ -448,6 +453,89 @@ export function getFormsHandledBy(staffId: string): HandledFormSummary[] {
     receiver: staffOf(form.receiverId),
     handler: staffOf(form.handlerId),
   }));
+}
+
+/**
+ * Thời điểm hiện tại theo giờ Việt Nam (UTC+7), không phụ thuộc múi giờ của máy.
+ * @returns  vd '2026-11-10T16:05'
+ */
+function vietnamNow(): string {
+  return new Date(Date.now() + 7 * 3_600_000).toISOString().slice(0, 16);
+}
+
+/**
+ * Lưu một lá đơn mới nộp cùng các tệp của nó, trong một bước: sinh mã đơn, trạng thái Đã nộp, chưa ai tiếp nhận.
+ * Câu trả lời và tệp đã được kiểm tra trước (validateAnswers, validateFile); hàm này không trả lỗi giữa chừng.
+ * @param ownerId        id người nộp
+ * @param formType       loại đơn lúc nộp (lưu bản chụp, để sửa loại đơn sau này không làm hỏng đơn cũ)
+ * @param answers        câu trả lời theo id câu hỏi; tệp mang id tạm của trình duyệt
+ * @param filesByTempId  nội dung tệp theo id tạm
+ * @returns              dòng tóm tắt của đơn mới, có mã đơn
+ */
+export function addForm(ownerId: string, formType: FormType, answers: FormAnswers, filesByTempId: ReadonlyMap<string, File>): FormSummary {
+  const submittedAt = vietnamNow();
+  const code = nextFormCode(formType.prefix, Number(submittedAt.slice(0, 4)), FORMS.map((form) => form.code));
+
+  // Chỉ giữ câu trả lời của câu hỏi có trong loại đơn; tệp được lưu với id mới, tên và dung lượng theo tệp thật
+  const keptAnswers: FormAnswers = {};
+  formType.sections.forEach((section) =>
+    section.questions.filter(isAnswerable).forEach((question) => {
+      const answer = answers[question.id];
+      if (answer === undefined) return;
+      keptAnswers[question.id] =
+        question.type === 'file' && Array.isArray(answer)
+          ? (answer as FileRef[]).map((file) => saveFile(filesByTempId.get(file.id)!, code))
+          : answer;
+    }),
+  );
+
+  // Lưu đơn, đơn mới đứng đầu
+  FORMS.unshift({
+    ownerId,
+    code,
+    formTypeId: formType.id,
+    formTypeName: formType.name,
+    submittedAt,
+    status: 'nop',
+    receiverId: null,
+    handlerId: null,
+    answers: keptAnswers,
+    formTypeSnapshot: structuredClone(formType),
+  });
+  return toSummary(FORMS[0]!);
+}
+
+/* ---------- Tệp minh chứng ---------- */
+
+/** Tệp đính kèm trong API giả: thông tin trả cho giao diện, nội dung, mã đơn chứa tệp. */
+interface MockFile {
+  ref: FileRef;
+  content: File;
+  formCode: string;
+}
+
+/** Các tệp đính kèm của mọi đơn, theo id. Giữ trong bộ nhớ, tải lại trang là mất. */
+const FILES = new Map<string, MockFile>();
+
+/**
+ * Lưu một tệp của một đơn.
+ * @param content   nội dung tệp
+ * @param formCode  mã đơn chứa tệp
+ * @returns         FileRef có id ở máy chủ
+ */
+function saveFile(content: File, formCode: string): FileRef {
+  const ref: FileRef = { id: `file-${crypto.randomUUID()}`, name: content.name, sizeBytes: content.size };
+  FILES.set(ref.id, { ref, content, formCode });
+  return ref;
+}
+
+/**
+ * Các tệp đính kèm của một đơn (dùng trong test; trang chi tiết đơn dùng ở bước sau).
+ * @param formCode  mã đơn
+ * @returns         FileRef các tệp; không có thì []
+ */
+export function getFilesOfForm(formCode: string): FileRef[] {
+  return [...FILES.values()].filter((file) => file.formCode === formCode).map((file) => file.ref);
 }
 
 /** Đưa hồ sơ về ban đầu (dùng trong test). */

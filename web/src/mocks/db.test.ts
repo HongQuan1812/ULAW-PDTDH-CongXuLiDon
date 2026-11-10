@@ -1,11 +1,13 @@
 import { beforeEach, describe, expect, test } from 'vitest';
 import { QUESTION_TYPES } from '@ulaw/shared';
 import {
+  addForm,
   getFormsHandledBy,
   getFormsOf,
   getFormType,
   getOpenFormTypes,
   getProfile,
+  getFilesOfForm,
   getStudents,
   isCccdTaken,
   resetMockDb,
@@ -139,5 +141,34 @@ describe('đơn phụ trách', () => {
     const transferred = handledByStaff.flat().filter((form) => form.receiver?.id !== form.handler?.id);
     expect(transferred.length).toBeGreaterThan(0);
     expect(getFormsHandledBy('sv-1')).toEqual([]);
+  });
+});
+
+describe('nộp đơn mới', () => {
+  test('sinh mã kế tiếp của tiền tố và năm, trạng thái Đã nộp, đứng đầu bảng Đơn đã nộp; tệp lưu cùng đơn với id mới', () => {
+    const xmm = getFormType('xmm', false)!;
+    const bangDiem = new File(['%PDF'], 'bang-diem.pdf');
+    const answers = { mon: [['Triết học', 3, 'Triết học', 'ĐH KHXH&NV']], files: [{ id: 'local-1', name: 'bang-diem.pdf', sizeBytes: 4 }] };
+
+    // Mã lớn nhất hiện có của XMM cùng năm
+    const year = new Date().getFullYear();
+    const sameYearSequences = getFormsOf('sv-1')
+      .concat(...['cb-1', 'cb-2', 'cb-3'].map((staffId) => getFormsHandledBy(staffId)))
+      .map((form) => form.code)
+      .filter((code) => code.startsWith(`XMM-${year}-`))
+      .map((code) => Number(code.slice(-5)));
+
+    // Nộp xong: mã kế tiếp, Đã nộp, đứng đầu bảng
+    const newForm = addForm('sv-1', xmm, answers, new Map([['local-1', bangDiem]]));
+    expect(newForm.code).toMatch(new RegExp(`^XMM-${year}-[0-9]{5}$`));
+    expect(Number(newForm.code.slice(-5))).toBeGreaterThan(Math.max(0, ...sameYearSequences));
+    expect(newForm.status).toBe('nop');
+    expect(getFormsOf('sv-1')[0]).toEqual(newForm);
+
+    // Tệp được lưu cùng đơn, id do máy chủ đặt
+    const savedFiles = getFilesOfForm(newForm.code);
+    expect(savedFiles).toHaveLength(1);
+    expect(savedFiles[0]).toMatchObject({ name: 'bang-diem.pdf', sizeBytes: 4 });
+    expect(savedFiles[0]!.id).not.toBe('local-1');
   });
 });

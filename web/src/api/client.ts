@@ -20,15 +20,16 @@ export class ApiError extends Error {
 /**
  * Gọi API và trả về dữ liệu đã đọc từ JSON.
  * @param path  đường dẫn sau /api, vd "/forms"
- * @param init  tùy chọn của fetch (method, body, headers…)
+ * @param init  tùy chọn của fetch (method, body, headers…); body là FormData khi gửi tệp
  * @returns     dữ liệu trả về; lỗi HTTP thì ném ApiError để TanStack Query bắt
  */
 export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
-  // Gửi request dạng JSON, kèm cookie phiên đăng nhập
+  // Gửi request dạng JSON (gửi tệp bằng FormData thì để trình duyệt tự đặt kiểu multipart), kèm cookie phiên đăng nhập
+  const sendsFormData = init?.body instanceof FormData;
   const res = await fetch(`/api${path}`, {
     credentials: 'include',
     ...init,
-    headers: { 'Content-Type': 'application/json', ...init?.headers },
+    headers: { ...(sendsFormData ? {} : { 'Content-Type': 'application/json' }), ...init?.headers },
   });
 
   // Đọc body (204 thì không có body; body không phải JSON thì bỏ qua)

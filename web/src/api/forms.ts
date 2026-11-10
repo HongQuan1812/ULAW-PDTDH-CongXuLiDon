@@ -1,6 +1,13 @@
 /* Hook gọi API lá đơn. */
 import { useQuery } from '@tanstack/react-query';
-import { ENDPOINTS, type HandledFormsResponse, type MyFormsResponse } from '@ulaw/shared';
+import {
+  ENDPOINTS,
+  SUBMIT_FORM_FIELDS,
+  type FormSummary,
+  type HandledFormsResponse,
+  type MyFormsResponse,
+  type SubmitFormRequest,
+} from '@ulaw/shared';
 import { apiFetch } from './client';
 
 /** Khóa lưu tạm danh sách đơn của mình trong TanStack Query. */
@@ -31,4 +38,17 @@ export function useHandledForms() {
     queryFn: () => apiFetch<HandledFormsResponse>(ENDPOINTS.forms.handled),
     select: (response) => response.forms,
   });
+}
+
+/**
+ * Gửi đơn mới lên máy chủ: câu trả lời và mọi tệp trong một lần; máy chủ sai một chỗ thì không lưu gì.
+ * @param request        loại đơn, câu trả lời (tệp mang id tạm), ô cam đoan
+ * @param filesByTempId  nội dung các tệp theo id tạm trong câu trả lời
+ * @returns              dòng tóm tắt của đơn mới, có mã đơn; lỗi thì ném ApiError kèm câu báo
+ */
+export function submitForm(request: SubmitFormRequest, filesByTempId: ReadonlyMap<string, File>): Promise<FormSummary> {
+  const body = new FormData();
+  body.append(SUBMIT_FORM_FIELDS.request, JSON.stringify(request));
+  filesByTempId.forEach((file, tempId) => body.append(tempId, file, file.name));
+  return apiFetch<FormSummary>(ENDPOINTS.forms.submit, { method: 'POST', body });
 }

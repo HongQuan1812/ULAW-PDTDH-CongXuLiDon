@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { QuestionSchema, type AnswerableQuestion } from '../aux-schema/form-types--question-types';
 import { FormSectionSchema } from '../aux-schema/form-types--sections';
 import { emptyAnswer } from '../aux-schema/forms--answers';
-import { ANSWER_MESSAGES, formatFileSize, validateAnswer, validateAnswers, validateFile } from './forms--answers';
+import { ANSWER_MESSAGES, formatFileSize, validateAnswer, validateAnswers, validateFile, validateSentFiles } from './forms--answers';
 
 /* Cấu trúc Xét miễn môn như TYPES.xmm trong artifact/js/config.js. */
 const XMM_SECTIONS = [
@@ -105,6 +105,7 @@ describe('validateAnswers', () => {
     const result = validateAnswers(XMM_SECTIONS, { mon: [['Triết học', 3, 'Triết học', 'ĐH KHXH&NV']], files: [] });
     expect(result.questionErrors).toEqual({ files: ANSWER_MESSAGES.fileRequired });
     expect(result.sectionErrors).toEqual(['Kiểm tra lại phần “Bảng điểm minh chứng”.']);
+    expect(result.invalidSectionTitles).toEqual(['Bảng điểm minh chứng']);
     expect(ANSWER_MESSAGES.sectionsToCheck(['Bảng điểm minh chứng'])).toBe('Kiểm tra lại phần “Bảng điểm minh chứng”.');
     expect(ANSWER_MESSAGES.sectionsToCheck(['Đăng ký miễn môn', 'Bảng điểm minh chứng'])).toBe(
       'Kiểm tra lại các phần “Đăng ký miễn môn”, “Bảng điểm minh chứng”.',
@@ -116,7 +117,7 @@ describe('validateAnswers', () => {
       mon: [['Triết học', 3, 'Triết học', 'ĐH KHXH&NV']],
       files: [{ id: 'file-1', name: 'bang-diem.pdf', sizeBytes: 120_000 }],
     });
-    expect(result).toEqual({ questionErrors: {}, sectionErrors: [] });
+    expect(result).toEqual({ questionErrors: {}, sectionErrors: [], invalidSectionTitles: [] });
   });
 });
 
@@ -141,5 +142,28 @@ describe('validateFile', () => {
     expect(formatFileSize(500)).toBe('1 KB');
     expect(formatFileSize(820 * 1024)).toBe('820 KB');
     expect(formatFileSize(1.5 * 1024 * 1024)).toBe('1.5 MB');
+  });
+});
+
+describe('validateSentFiles', () => {
+  const answers = {
+    mon: [['Triết học', 3, 'Triết học', 'ĐH KHXH&NV']],
+    files: [{ id: 'local-1', name: 'bang-diem.pdf', sizeBytes: 4 }],
+  };
+
+  it('mỗi tệp trong câu trả lời có nội dung gửi kèm, đúng định dạng: hợp lệ', () => {
+    expect(validateSentFiles(XMM_SECTIONS, answers, new Map([['local-1', { name: 'bang-diem.pdf', sizeBytes: 4 }]]))).toBe('');
+  });
+
+  it('thiếu tệp, tệp sai định dạng, hoặc thừa tệp: báo lỗi', () => {
+    expect(validateSentFiles(XMM_SECTIONS, answers, new Map())).toBe(ANSWER_MESSAGES.fileMissing('bang-diem.pdf'));
+    expect(validateSentFiles(XMM_SECTIONS, answers, new Map([['local-1', { name: 'virus.exe', sizeBytes: 4 }]]))).toContain(
+      'virus.exe: định dạng không hỗ trợ',
+    );
+    const extraFile = new Map([
+      ['local-1', { name: 'bang-diem.pdf', sizeBytes: 4 }],
+      ['local-2', { name: 'them.pdf', sizeBytes: 4 }],
+    ]);
+    expect(validateSentFiles(XMM_SECTIONS, answers, extraFile)).toBe(ANSWER_MESSAGES.unexpectedFiles);
   });
 });
