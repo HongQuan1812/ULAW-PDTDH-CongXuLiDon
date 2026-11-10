@@ -27,9 +27,9 @@ export const authHandlers = [
     const parsed = DevLoginRequestSchema.safeParse(await request.json().catch(() => null));
     if (!parsed.success) return apiError(422, AUTH_MESSAGES[422]);
 
-    // Chỉ cho email trường vào (backend thật cũng kiểm tra lại như vậy)
-    const user = DEMO_USERS[parsed.data.role];
-    if (!isSchoolEmail(user.email)) return apiError(403, AUTH_MESSAGES[403](user.email));
+    // Chỉ cho email trường vào (backend thật cũng kiểm tra lại như vậy); có email thử thì kiểm tra email đó
+    const email = parsed.data.email ?? DEMO_USERS[parsed.data.role].email;
+    if (!isSchoolEmail(email)) return apiError(403, AUTH_MESSAGES[403](email));
 
     // Lưu phiên và trả về
     writeSession(parsed.data.role);

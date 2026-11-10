@@ -9,6 +9,10 @@
   --focus:#0A7CC6;
   --danger:#B4412F; --danger-soft:#FBEEEB;
   --ok:#16705B;
+  /* toast thành công / lỗi: nền nhạt, chữ đậm cùng màu, viền tươi; dùng chung cho giao diện sáng và tối.
+     Xanh lá hẳn (không lẫn xanh da trời của nút, avatar) */
+  --toast-ok-bg:#BBF7D0; --toast-ok-fg:#14532D; --toast-ok-line:#22C55E;
+  --toast-error-bg:#FECACA; --toast-error-fg:#7F1D1D; --toast-error-line:#EF4444;
   --mark:#FBE9A0;
   --inverse-bg:#141B2D; --inverse-fg:#FFFFFF;
   --s-nop-bg:#DFF4F8; --s-nop-fg:#0A6A82;   /* Đã nộp: xanh lơ (chờ tiếp nhận) */

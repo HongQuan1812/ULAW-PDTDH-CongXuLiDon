@@ -3,12 +3,13 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { Navigate } from 'react-router';
 import { PROFILE_MESSAGES, UpdateProfileRequestSchema, type Session, type UpdateProfileRequest } from '@ulaw/shared';
-import { useLogout, useSession } from '../../api/auth';
+import { useSession } from '../../api/auth';
 import { ApiError } from '../../api/client';
 import { useUpdateProfile } from '../../api/profile';
 import { LOGIN_PATH, homePath } from '../../app/paths';
 import { Button } from '../../components/Button';
 import { Field } from '../../components/Field';
+import { useLogoutAction } from '../../features/auth/useLogoutAction';
 import { useToast } from '../../components/Toast';
 import styles from './OnboardingPage.module.css';
 
@@ -35,7 +36,7 @@ export function OnboardingPage() {
 function OnboardingForm({ session }: { session: Session }) {
   const { user } = session;
   const toast = useToast();
-  const logout = useLogout();
+  const logout = useLogoutAction();
   const updateProfile = useUpdateProfile();
   const {
     register,
@@ -57,7 +58,7 @@ function OnboardingForm({ session }: { session: Session }) {
   const onSubmit = handleSubmit(async (profileInput) => {
     try {
       await updateProfile.mutateAsync(profileInput);
-      toast(PROFILE_MESSAGES[200]);
+      toast(PROFILE_MESSAGES[200], 'success');
     } catch (error) {
       // CCCD trùng: báo ngay dưới ô CCCD; lỗi khác: báo chung phía trên nút
       if (error instanceof ApiError && error.status === 409) {
@@ -132,7 +133,7 @@ function OnboardingForm({ session }: { session: Session }) {
           )}
 
           <div className={styles.actions}>
-            <Button variant="ghost" disabled={logout.isPending} onClick={() => logout.mutate()}>
+            <Button variant="ghost" disabled={logout.isPending} onClick={logout.logOut}>
               Đăng xuất
             </Button>
             <Button variant="primary" type="submit" disabled={updateProfile.isPending}>

@@ -193,10 +193,10 @@ function StudentPicker({ profile, onPicked }: { profile: Profile; onPicked: () =
     }
     try {
       await setMainStudent.mutateAsync({ studentId });
-      toast(MAIN_STUDENT_MESSAGES[200](studentId));
+      toast(MAIN_STUDENT_MESSAGES[200](studentId), 'success');
       onPicked();
     } catch (error) {
-      toast(error instanceof Error ? error.message : MAIN_STUDENT_MESSAGES[422]);
+      toast(error instanceof Error ? error.message : MAIN_STUDENT_MESSAGES[422], 'error');
     }
   };
 

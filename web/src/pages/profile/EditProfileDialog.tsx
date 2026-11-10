@@ -88,7 +88,7 @@ function EditProfileForm({ profile, fullCccd, onClose }: { profile: Profile; ful
   const onSubmit = handleSubmit(async (profileInput) => {
     try {
       await updateProfile.mutateAsync(profileInput);
-      toast(UPDATED_TEXT);
+      toast(UPDATED_TEXT, 'success');
       onClose();
     } catch (error) {
       // CCCD trùng: báo ngay dưới ô CCCD; lỗi khác: báo chung phía trên nút

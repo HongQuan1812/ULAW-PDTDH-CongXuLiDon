@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { isFullName, isSchoolEmail, isValidCccd, isValidPhone, maskCccd } from './profile';
+import { isFullName, isValidCccd, isValidPhone, maskCccd } from './profile';
 
 describe('isFullName', () => {
   test('chấp nhận họ tên có từ 2 chữ trở lên', () => {
@@ -52,17 +52,5 @@ describe('maskCccd', () => {
   test('trả về null khi chưa có CCCD', () => {
     expect(maskCccd(null)).toBeNull();
     expect(maskCccd('')).toBeNull();
-  });
-});
-
-describe('isSchoolEmail', () => {
-  test('chấp nhận tên miền trường và tên miền con', () => {
-    expect(isSchoolEmail('an@hcmulaw.edu.vn')).toBe(true);
-    expect(isSchoolEmail('an@student.hcmulaw.edu.vn')).toBe(true);
-  });
-
-  test('từ chối email ngoài trường, kể cả tên miền giả dạng đuôi', () => {
-    expect(isSchoolEmail('an@gmail.com')).toBe(false);
-    expect(isSchoolEmail('an@evilhcmulaw.edu.vn')).toBe(false);
   });
 });

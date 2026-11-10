@@ -2,8 +2,10 @@
    Chỉ hiện khi VITE_APP_ENV = "dev". Bản thật: không có, vai trò do máy chủ quyết định. */
 import { useId } from 'react';
 import { useNavigate } from 'react-router';
-import { ROLES, ROLE_IDS, type RoleId } from '@ulaw/shared';
+import { AUTH_MESSAGES, ROLES, ROLE_IDS, type RoleId } from '@ulaw/shared';
 import { useDevLogin } from '../../api/auth';
+import { ApiError } from '../../api/client';
+import { useToast } from '../../components/Toast';
 import { homePath } from '../../app/paths';
 import { useAuth } from './useAuth';
 import styles from './DemoRoleSwitch.module.css';
@@ -18,9 +20,10 @@ export function DemoRoleSwitch({ onSwitched }: { onSwitched?: () => void }) {
   const selectId = useId(); // có thể có 2 ô cùng lúc (menu trượt, menu tài khoản) nên id phải riêng
   const login = useDevLogin();
   const navigate = useNavigate();
+  const toast = useToast();
 
   /**
-   * Đăng nhập lại với vai trò mới, xong thì về trang chính của vai trò đó.
+   * Đăng nhập lại với vai trò mới, xong thì về trang chính của vai trò đó; lỗi thì hiện toast đỏ, giữ vai trò cũ.
    * @param next  vai trò vừa chọn
    */
   function switchRole(next: RoleId) {
@@ -31,6 +34,8 @@ export function DemoRoleSwitch({ onSwitched }: { onSwitched?: () => void }) {
           navigate(homePath(next));
           onSwitched?.();
         },
+        onError: (error) =>
+          toast(error instanceof ApiError ? error.message : AUTH_MESSAGES.roleSwitchFailed, 'error'),
       },
     );
   }

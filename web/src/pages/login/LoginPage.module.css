@@ -28,6 +28,11 @@
 .rolePick input:checked+span{border-color:var(--accent);color:var(--accent);background:var(--accent-soft)}
 .rolePick input:focus-visible+span{outline:2px solid var(--focus);outline-offset:2px}
 
+/* nút thử đăng nhập bằng email ngoài trường (bản thử nghiệm) */
+.personalEmailButton{width:100%;margin-top:4px;border:0;background:none;color:var(--accent);font-size:12.5px;font-weight:500;cursor:pointer;padding:4px}
+.personalEmailButton:hover{text-decoration:underline;text-underline-offset:3px}
+.personalEmailButton:disabled{color:var(--muted);cursor:progress;text-decoration:none}
+
 /* logo, tên trường, tên ứng dụng, câu giới thiệu căn giữa */
 .logo{margin-inline:auto}
 .school,.signin h1,.lead{text-align:center}

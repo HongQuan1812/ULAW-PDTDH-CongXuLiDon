@@ -1,3 +1,11 @@
 /* Thông báo ngắn (như .toast của bản mẫu), hiện ở giữa phía trên màn hình. */
-.toast{position:fixed;left:50%;top:calc(24px + env(safe-area-inset-top,0px));transform:translateX(-50%);z-index:90;max-width:min(520px,calc(100vw - 32px));background:var(--inverse-bg);color:var(--inverse-fg);padding:12px 20px;border-radius:999px;font-weight:500;font-size:14px;box-shadow:var(--shadow-lg);animation:toast .2s ease-out}
+.toast{position:fixed;left:50%;top:calc(24px + env(safe-area-inset-top,0px));transform:translateX(-50%);z-index:90;max-width:min(520px,calc(100vw - 32px));display:flex;align-items:center;gap:10px;background:var(--inverse-bg);color:var(--inverse-fg);padding:12px 18px;border-radius:var(--r);font-weight:500;font-size:14px;box-shadow:var(--shadow-lg);animation:toast .2s ease-out}
+.toast svg{flex:none}
+/* nền hơi trong suốt (88%) để thấy phía sau; viền màu đặc để khung rõ */
+/* thông tin: nền tối như bản mẫu */
+.info{background:color-mix(in srgb,var(--inverse-bg) 88%,transparent);border:2px solid var(--inverse-bg);color:var(--inverse-fg)}
+/* thành công: nền xanh lá */
+.success{background:color-mix(in srgb,var(--toast-ok-bg) 88%,transparent);border:2px solid var(--toast-ok-line);color:var(--toast-ok-fg)}
+/* lỗi: nền đỏ */
+.error{background:color-mix(in srgb,var(--toast-error-bg) 88%,transparent);border:2px solid var(--toast-error-line);color:var(--toast-error-fg)}
 @keyframes toast{from{opacity:0;transform:translate(-50%,-8px)}}

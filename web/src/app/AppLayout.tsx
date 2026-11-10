@@ -3,10 +3,11 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Navigate, NavLink, Outlet, useLocation } from 'react-router';
 import { PAGES, canSeePage, type Page } from '@ulaw/shared';
-import { useLogout, useSession } from '../api/auth';
+import { useSession } from '../api/auth';
 import { Avatar } from '../components/Avatar';
 import { AccountMenu } from './AccountMenu';
 import { DemoRoleSwitch } from '../features/auth/DemoRoleSwitch';
+import { useLogoutAction } from '../features/auth/useLogoutAction';
 import { SHOW_DEMO } from '../lib/env';
 import { useMediaQuery } from '../lib/useMediaQuery';
 import { LOGIN_PATH, ONBOARDING_PATH, PAGE_LABEL, PAGE_PATH } from './paths';
@@ -18,7 +19,7 @@ import styles from './AppLayout.module.css';
  */
 export function AppLayout() {
   const session = useSession();
-  const logout = useLogout();
+  const logout = useLogoutAction();
   const location = useLocation();
 
   // Menu trượt chỉ có ở màn hình hẹp; màn hình rộng menu luôn hiện
@@ -75,7 +76,7 @@ export function AppLayout() {
         </button>
         <img src="/assets/logo.png" alt="" />
         <span className={styles.appName}>Cổng xử lí đơn</span>
-        <AccountMenu user={user} onLogout={() => logout.mutate()} logoutPending={logout.isPending} />
+        <AccountMenu user={user} onLogout={logout.logOut} logoutPending={logout.isPending} />
       </header>
       {drawerOpen && <div className={styles.backdrop} onClick={closeDrawer} />}
 
@@ -112,7 +113,7 @@ export function AppLayout() {
           {narrow ? (
             <Avatar name={user.name} />
           ) : (
-            <AccountMenu user={user} onLogout={() => logout.mutate()} logoutPending={logout.isPending} />
+            <AccountMenu user={user} onLogout={logout.logOut} logoutPending={logout.isPending} />
           )}
           <div className={styles.account}>
             <strong>{user.name}</strong>
@@ -123,7 +124,7 @@ export function AppLayout() {
             type="button"
             className={styles.logoutText}
             disabled={logout.isPending}
-            onClick={() => logout.mutate()}
+            onClick={logout.logOut}
           >
             {logout.isPending ? 'Đang đăng xuất…' : 'Đăng xuất'}
           </button>
@@ -133,7 +134,7 @@ export function AppLayout() {
             aria-label="Đăng xuất"
             title="Đăng xuất"
             disabled={logout.isPending}
-            onClick={() => logout.mutate()}
+            onClick={logout.logOut}
           >
             <LogoutIcon />
           </button>

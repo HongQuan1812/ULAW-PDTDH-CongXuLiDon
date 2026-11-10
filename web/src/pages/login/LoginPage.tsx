@@ -7,6 +7,10 @@ import { homePath } from '../../app/paths';
 import { SHOW_DEMO } from '../../lib/env';
 import styles from './LoginPage.module.css';
 
+/* JUST FOR DEMO: START · email ngoài trường để thử câu báo khi đăng nhập sai tài khoản */
+const PERSONAL_DEMO_EMAIL = 'minhanh.nguyen@gmail.com';
+/* JUST FOR DEMO: END */
+
 const POINTS = [
   'Nộp đơn trực tuyến, không cần đến phòng Đào tạo',
   'Theo dõi trạng thái đơn mọi lúc',
@@ -85,6 +89,14 @@ export function LoginPage() {
                 <span>{ROLES[id].name}</span>
               </label>
             ))}
+            <button
+              type="button"
+              className={styles.personalEmailButton}
+              disabled={login.isPending}
+              onClick={() => login.mutate({ role, email: PERSONAL_DEMO_EMAIL })}
+            >
+              Thử đăng nhập bằng email cá nhân ({PERSONAL_DEMO_EMAIL})
+            </button>
           </fieldset>
         )}
         {/* JUST FOR DEMO: END */}
