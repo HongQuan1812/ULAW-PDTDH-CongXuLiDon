@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, test } from 'vitest';
-import { getProfile, isCccdTaken, resetMockDb, saveProfile, toSession } from './db';
+import { getProfile, getStudents, isCccdTaken, resetMockDb, saveMainStudent, saveProfile, toSession } from './db';
 
 beforeEach(() => {
   resetMockDb();
@@ -21,7 +21,13 @@ describe('hồ sơ ban đầu', () => {
 describe('saveProfile', () => {
   test('lưu họ tên, CCCD, SĐT và đánh dấu đã bổ sung thông tin', () => {
     const saved = saveProfile('sv-1', { name: 'Nguyễn Minh Anh', cccd: '079206001234', phone: '0901234567' });
-    expect(saved).toEqual({ name: 'Nguyễn Minh Anh', cccd: '079206001234', phone: '0901234567', completed: true });
+    expect(saved).toEqual({
+      name: 'Nguyễn Minh Anh',
+      cccd: '079206001234',
+      phone: '0901234567',
+      completed: true,
+      mainStudentId: null,
+    });
     expect(getProfile('sv-1')).toEqual(saved);
   });
 
@@ -30,6 +36,20 @@ describe('saveProfile', () => {
     const saved = saveProfile('sv-1', { name: 'Nguyễn Minh Anh', cccd: '', phone: '' });
     expect(saved.cccd).toBeNull();
     expect(saved.phone).toBeNull();
+  });
+});
+
+describe('MSSV', () => {
+  test('sinh viên mẫu có 2 MSSV, cán bộ không có MSSV nào', () => {
+    expect(getStudents('sv-1')).toHaveLength(2);
+    expect(getStudents('cb-1')).toEqual([]);
+  });
+
+  test('lưu MSSV chính, và lưu hồ sơ sau đó không làm mất MSSV chính', () => {
+    saveMainStudent('sv-1', '2523801040017');
+    expect(getProfile('sv-1').mainStudentId).toBe('2523801040017');
+    saveProfile('sv-1', { name: 'Nguyễn Minh Anh', cccd: '', phone: '' });
+    expect(getProfile('sv-1').mainStudentId).toBe('2523801040017');
   });
 });
 

@@ -1,9 +1,234 @@
-import { ComingSoon } from '../../components/ComingSoon';
+/* Trang Thông tin cá nhân (bước 3): phần thông tin cá nhân và thông tin sinh viên.
+   Bảng "Đơn đã nộp" làm sau, ở bước Nộp đơn. */
+import { useCallback, useState } from 'react';
+import { MAIN_STUDENT_MESSAGES, STUDENT_INFO_LABELS, type Profile, type StudentInfo } from '@ulaw/shared';
+import { useMyFullCccd, useMyProfile, useSetMainStudent } from '../../api/profile';
+import { Avatar } from '../../components/Avatar';
+import { Button } from '../../components/Button';
+import { Sheet } from '../../components/Sheet';
+import { useToast } from '../../components/Toast';
+import { EMPTY_TEXT, formatPhone } from '../../lib/format';
+import { EditProfileDialog } from './EditProfileDialog';
+import styles from './ProfilePage.module.css';
+
+/** Câu báo khi không tải được hồ sơ mà máy chủ không gửi kèm câu báo lỗi (vd mất mạng). */
+const LOAD_FAILED_TEXT = 'Không tải được thông tin cá nhân. Hãy thử tải lại trang.';
 
 /**
- * Trang Thông tin cá nhân (tạm, làm ở bước 3).
- * @returns  giao diện trang
+ * Tải hồ sơ của mình rồi vẽ trang.
+ * @returns  giao diện trang (đang tải / lỗi / thông tin)
  */
 export function ProfilePage() {
-  return <ComingSoon title="Thông tin cá nhân" step={3} />;
+  const profileQuery = useMyProfile();
+
+  return (
+    <div className={styles.page}>
+      <h1 className="sr-only">Thông tin cá nhân</h1>
+      {profileQuery.isPending ? (
+        <section className={styles.card}>
+          <p className={styles.muted}>Đang tải thông tin…</p>
+        </section>
+      ) : profileQuery.isError ? (
+        <section className={styles.card}>
+          <p className={styles.error} role="alert">
+            {profileQuery.error.message || LOAD_FAILED_TEXT}
+          </p>
+        </section>
+      ) : (
+        <IdentityCard profile={profileQuery.data} />
+      )}
+    </div>
+  );
+}
+
+/**
+ * Thẻ thông tin cá nhân: ảnh đại diện, họ tên, email, SĐT, CCCD (che, bấm Hiện để xem đủ)
+ * và thông tin của MSSV chính. Có MSSV thì có nút "Thông tin sinh viên" mở khung chọn MSSV chính;
+ * nút "Sửa thông tin" mở hộp thoại sửa họ tên, CCCD, SĐT.
+ * @param profile  hồ sơ của mình
+ * @returns        thẻ thông tin
+ */
+function IdentityCard({ profile }: { profile: Profile }) {
+  const [studentSheetOpen, setStudentSheetOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const closeEdit = useCallback(() => setEditOpen(false), []);
+  const mainStudent = profile.students.find((student) => student.studentId === profile.mainStudentId) ?? null;
+
+  return (
+    <section className={`${styles.card} ${styles.idCard}`}>
+      <div className={styles.idHead}>
+        <Avatar name={profile.name} size="xl" />
+        <p className={styles.idName}>{profile.name}</p>
+        {mainStudent && (
+          <Button aria-haspopup="dialog" onClick={() => setStudentSheetOpen(true)}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <rect x="3" y="4" width="18" height="16" rx="2" />
+              <path d="M15 4v16" />
+            </svg>
+            Thông tin sinh viên
+          </Button>
+        )}
+        <Button aria-haspopup="dialog" onClick={() => setEditOpen(true)}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M4 20h4L19 9l-4-4L4 16z" />
+          </svg>
+          Sửa thông tin
+        </Button>
+      </div>
+
+      <dl className={styles.info}>
+        <div className={styles.readOnly}>
+          <dt>Email</dt>
+          <dd>{profile.email}</dd>
+        </div>
+        <div>
+          <dt>Số điện thoại</dt>
+          <dd>{formatPhone(profile.phone)}</dd>
+        </div>
+        <div>
+          <dt>Số CCCD</dt>
+          <dd>
+            <CccdValue maskedCccd={profile.maskedCccd} />
+          </dd>
+        </div>
+      </dl>
+
+      {mainStudent && <StudentRow student={mainStudent} />}
+
+      {mainStudent && (
+        <Sheet open={studentSheetOpen} onClose={() => setStudentSheetOpen(false)} title="Thông tin sinh viên">
+          <StudentPicker profile={profile} onPicked={() => setStudentSheetOpen(false)} />
+        </Sheet>
+      )}
+
+      <EditProfileDialog open={editOpen} onClose={closeEdit} profile={profile} />
+    </section>
+  );
+}
+
+/**
+ * Số CCCD: mặc định hiện dạng che. Bấm "Hiện" thì mới gọi API lấy số đầy đủ; bấm "Ẩn" thì che lại.
+ * @param maskedCccd  CCCD đã che; null = chưa có CCCD (hiện "—", không có nút Hiện)
+ * @returns           số CCCD và nút Hiện / Ẩn
+ */
+function CccdValue({ maskedCccd }: { maskedCccd: string | null }) {
+  const [revealed, setRevealed] = useState(false);
+  const fullCccdQuery = useMyFullCccd(revealed);
+
+  if (!maskedCccd) return <>{EMPTY_TEXT}</>;
+
+  // Đang hiện và đã có số đầy đủ thì hiện số đầy đủ; còn lại hiện dạng che.
+  // "Đang tải…" chỉ khi chưa có số nào (lần đầu bấm Hiện); lấy lại ngầm sau khi sửa thông tin thì không hiện
+  const fullCccd = revealed ? fullCccdQuery.data?.cccd : undefined;
+  const loading = revealed && fullCccdQuery.isPending;
+
+  return (
+    <>
+      <span>{fullCccd ?? maskedCccd}</span>
+      <button type="button" className={styles.reveal} disabled={loading} onClick={() => setRevealed((value) => !value)}>
+        {loading ? 'Đang tải…' : revealed ? 'Ẩn' : 'Hiện'}
+      </button>
+      {revealed && fullCccdQuery.isError && (
+        <span className={styles.error} role="alert">
+          {fullCccdQuery.error.message}
+        </span>
+      )}
+    </>
+  );
+}
+
+/**
+ * Lấy giá trị một mục của MSSV để hiện; mục trống thì "—".
+ * @param student  thông tin một MSSV
+ * @param key      tên mục, vd 'className'
+ * @returns        giá trị đã cắt khoảng trắng, hoặc "—"
+ */
+function studentValue(student: StudentInfo, key: keyof StudentInfo): string {
+  return student[key]?.trim() || EMPTY_TEXT;
+}
+
+/**
+ * Hàng 6 mục của MSSV chính (MSSV, Lớp, Hình thức đào tạo, Ngành, Khóa học hiện tại, Khóa học gốc).
+ * Lấy từ database trường, không sửa được nên nền xám. Mục database trường không có thì ghi "—".
+ * @param student  MSSV chính
+ * @returns        hàng thông tin sinh viên
+ */
+function StudentRow({ student }: { student: StudentInfo }) {
+  return (
+    <dl className={`${styles.info} ${styles.studentRow}`}>
+      {STUDENT_INFO_LABELS.map(({ key, label }) => (
+        <div key={key} className={styles.readOnly}>
+          <dt>{label}</dt>
+          <dd>{studentValue(student, key)}</dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
+
+/**
+ * Danh sách mọi MSSV trong khung "Thông tin sinh viên". MSSV chính có nhãn "Đang dùng";
+ * bấm MSSV khác thì lưu làm MSSV chính, báo thành công rồi đóng khung.
+ * @param profile   hồ sơ của mình (các MSSV và MSSV chính)
+ * @param onPicked  gọi sau khi đã chọn xong (để đóng khung)
+ * @returns         đoạn giới thiệu + danh sách MSSV
+ */
+function StudentPicker({ profile, onPicked }: { profile: Profile; onPicked: () => void }) {
+  const toast = useToast();
+  const setMainStudent = useSetMainStudent();
+  const savingStudentId = setMainStudent.isPending ? setMainStudent.variables?.studentId : undefined;
+
+  // Bấm MSSV đang dùng thì chỉ đóng khung; MSSV khác thì lưu lên máy chủ
+  const pick = async (studentId: string) => {
+    if (studentId === profile.mainStudentId) {
+      onPicked();
+      return;
+    }
+    try {
+      await setMainStudent.mutateAsync({ studentId });
+      toast(MAIN_STUDENT_MESSAGES[200](studentId));
+      onPicked();
+    } catch (error) {
+      toast(error instanceof Error ? error.message : MAIN_STUDENT_MESSAGES[422]);
+    }
+  };
+
+  return (
+    <>
+      <p className={styles.sheetIntro}>
+        Chọn MSSV dùng làm thông tin chính. MSSV này hiện trên trang thông tin và được điền vào file Word khi xuất đơn.
+      </p>
+      <div className={styles.studentList} role="radiogroup" aria-label="Chọn MSSV chính">
+        {profile.students.map((student) => {
+          const isMain = student.studentId === profile.mainStudentId;
+          const isSaving = student.studentId === savingStudentId;
+          return (
+            <button
+              key={student.studentId}
+              type="button"
+              role="radio"
+              aria-checked={isMain}
+              className={styles.studentOption}
+              disabled={setMainStudent.isPending}
+              onClick={() => pick(student.studentId)}
+            >
+              <span className={styles.optionTop}>
+                <span className={styles.optionId}>{student.studentId}</span>
+                {isMain && <span className={styles.optionTag}>Đang dùng</span>}
+                {isSaving && <span className={styles.optionSaving}>Đang lưu…</span>}
+              </span>
+              <span className={styles.optionGrid}>
+                {STUDENT_INFO_LABELS.filter(({ key }) => key !== 'studentId').map(({ key, label }) => (
+                  <span key={key}>
+                    <span className={styles.optionLabel}>{label}</span>
+                    <span className={styles.optionValue}>{studentValue(student, key)}</span>
+                  </span>
+                ))}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </>
+  );
 }

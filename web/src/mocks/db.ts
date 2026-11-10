@@ -1,5 +1,5 @@
 /* Dữ liệu giả của API giả, giữ trong bộ nhớ trình duyệt. */
-import type { RoleId, Session, SessionUser, UpdateProfileRequest } from '@ulaw/shared';
+import type { RoleId, Session, SessionUser, StudentInfo, UpdateProfileRequest } from '@ulaw/shared';
 
 /* Tài khoản mẫu để đăng nhập thử: mỗi vai trò một người (lấy từ artifact/js/auth.js và sample-data.js). */
 export const DEMO_USERS: Record<RoleId, SessionUser> = {
@@ -10,20 +10,22 @@ export const DEMO_USERS: Record<RoleId, SessionUser> = {
 
 /* ---------- Hồ sơ cá nhân ---------- */
 
-/** Hồ sơ lưu trong API giả: họ tên, SĐT, CCCD (null = chưa có) và đã bổ sung thông tin lần đầu hay chưa. */
+/** Hồ sơ lưu trong API giả: họ tên, SĐT, CCCD (null = chưa có), đã bổ sung thông tin lần đầu hay chưa,
+    và MSSV chính người dùng đã chọn (null = chưa chọn, dùng MSSV đầu). */
 export interface MockProfile {
   name: string;
   phone: string | null;
   cccd: string | null;
   completed: boolean;
+  mainStudentId: string | null;
 }
 
 /* Hồ sơ ban đầu, khóa theo id người dùng. Sinh viên chưa bổ sung thông tin (để thấy màn Bổ sung thông tin
    lần đầu); cán bộ có sẵn hồ sơ và CCCD (để thử báo trùng CCCD). Số liệu tổng hợp, không phải dữ liệu thật. */
 const SEED_PROFILES: Record<string, MockProfile> = {
-  'sv-1': { name: 'Nguyễn Minh Anh', phone: null, cccd: null, completed: false },
-  'cb-1': { name: 'Phạm Thu Hà', phone: '0912345678', cccd: '079188001122', completed: true },
-  'cb-3': { name: 'Lê Ngọc Diệp', phone: '0987654321', cccd: '079190003344', completed: true },
+  'sv-1': { name: 'Nguyễn Minh Anh', phone: null, cccd: null, completed: false, mainStudentId: null },
+  'cb-1': { name: 'Phạm Thu Hà', phone: '0912345678', cccd: '079188001122', completed: true, mainStudentId: null },
+  'cb-3': { name: 'Lê Ngọc Diệp', phone: '0987654321', cccd: '079190003344', completed: true, mainStudentId: null },
 };
 
 /* Hồ sơ đã sửa, lưu trong sessionStorage để tải lại trang không phải bổ sung thông tin lại
@@ -86,6 +88,7 @@ export function getProfile(userId: string): MockProfile {
  */
 export function saveProfile(userId: string, input: UpdateProfileRequest): MockProfile {
   const saved: MockProfile = {
+    ...getProfile(userId),
     name: input.name,
     cccd: input.cccd || null,
     phone: input.phone || null,
@@ -97,6 +100,16 @@ export function saveProfile(userId: string, input: UpdateProfileRequest): MockPr
 }
 
 /**
+ * Lưu MSSV chính của một tài khoản.
+ * @param userId     id tài khoản
+ * @param studentId  MSSV đã kiểm tra là thuộc tài khoản này
+ */
+export function saveMainStudent(userId: string, studentId: string): void {
+  profiles = { ...profiles, [userId]: { ...getProfile(userId), mainStudentId: studentId } };
+  persistProfiles(profiles);
+}
+
+/**
  * CCCD đã thuộc tài khoản khác chưa (mỗi CCCD chỉ một tài khoản).
  * @param cccd          số CCCD cần kiểm tra
  * @param exceptUserId  tài khoản của chính người đang lưu, không tính là trùng
@@ -104,6 +117,38 @@ export function saveProfile(userId: string, input: UpdateProfileRequest): MockPr
  */
 export function isCccdTaken(cccd: string, exceptUserId: string): boolean {
   return Object.entries(profiles).some(([id, profile]) => id !== exceptUserId && profile.cccd === cccd);
+}
+
+/* Các MSSV "lấy từ database trường" theo email (lấy từ artifact/js/auth.js), chỉ đọc nên không lưu lại.
+   Sinh viên mẫu có 2 MSSV (học thêm văn bằng 2), MSSV trùng email đứng đầu. Cán bộ không có MSSV. */
+const STUDENT_DIRECTORY: Record<string, StudentInfo[]> = {
+  'sv-1': [
+    {
+      studentId: '2253801010001',
+      className: '47-LTM-A',
+      trainingMode: 'Chính quy',
+      major: 'Luật Thương mại quốc tế',
+      currentCohort: 'K47 (2022–2026)',
+      originalCohort: 'K47 (2022–2026)',
+    },
+    {
+      studentId: '2523801040017',
+      className: 'VB2-25B',
+      trainingMode: 'Văn bằng 2',
+      major: 'Luật',
+      currentCohort: 'VB2 K25',
+      originalCohort: 'VB2 K25',
+    },
+  ],
+};
+
+/**
+ * Lấy các MSSV của một tài khoản.
+ * @param userId  id tài khoản
+ * @returns       danh sách MSSV (MSSV trùng email đứng đầu); không có thì []
+ */
+export function getStudents(userId: string): StudentInfo[] {
+  return STUDENT_DIRECTORY[userId] ?? [];
 }
 
 /** Đưa hồ sơ về ban đầu (dùng trong test). */
