@@ -147,7 +147,7 @@ export function SortPanel<Row>({ fields, sorting, onChange, defaultNote }: SortP
               </span>
               <button
                 type="button"
-                className={styles.iconButton}
+                className={`${styles.iconButton} ${styles.removeButton}`}
                 aria-label="Bỏ dòng sắp xếp"
                 onClick={() => onChange(sorting.filter((_, i) => i !== index))}
               >

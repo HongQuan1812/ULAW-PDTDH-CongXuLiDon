@@ -71,7 +71,7 @@ export function FilterPanel<Row>({ fields, rows, filterRules, onChange, defaultF
               <FilterValueInputs field={field} rows={rows} rule={rule} onChange={(changes) => updateRule(rule.id, changes)} />
               <button
                 type="button"
-                className={styles.iconButton}
+                className={`${styles.iconButton} ${styles.removeButton}`}
                 aria-label="Bỏ điều kiện lọc"
                 onClick={() => onChange(filterRules.filter((current) => current.id !== rule.id))}
               >

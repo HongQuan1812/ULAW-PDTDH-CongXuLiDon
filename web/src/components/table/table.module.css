@@ -27,6 +27,9 @@
 .iconButton{display:inline-grid;place-items:center;width:30px;height:30px;border-radius:50%;border:0;background:transparent;color:var(--muted);cursor:pointer;flex:none}
 .iconButton:hover{background:var(--hover);color:var(--fg)}
 .iconButton:disabled{opacity:.35;cursor:not-allowed;background:transparent}
+/* nút × bỏ một dòng sắp xếp / điều kiện lọc: chữ đỏ cho dễ thấy */
+.removeButton{color:var(--danger);font-size:16px}
+.removeButton:hover{background:var(--danger-soft);color:var(--danger)}
 .dragging{opacity:.4}
 .dropAbove{box-shadow:0 -2px 0 var(--accent)}
 .dropBelow{box-shadow:0 2px 0 var(--accent)}
