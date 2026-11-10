@@ -2,13 +2,16 @@
 import { delay, http, HttpResponse } from 'msw';
 import {
   ANSWER_MESSAGES,
+  DecideFormRequestSchema,
   ENDPOINTS,
   FORM_MESSAGES,
   SUBMIT_FORM_FIELDS,
   SubmitFormRequestSchema,
   UpdateFormRequestSchema,
   can,
+  canDecideOn,
   canEditForm,
+  isDecidable,
   isEditable,
   isReceivable,
   validateAnswers,
@@ -18,7 +21,18 @@ import {
   type HandledFormsResponse,
   type MyFormsResponse,
 } from '@ulaw/shared';
-import { addForm, getFormDetail, getFormType, getFormsHandledBy, getFormsOf, getSavedFileIds, readSession, receiveForm, updateForm } from '../db';
+import {
+  addForm,
+  decideForm,
+  getFormDetail,
+  getFormType,
+  getFormsHandledBy,
+  getFormsOf,
+  getSavedFileIds,
+  readSession,
+  receiveForm,
+  updateForm,
+} from '../db';
 import { MOCK_DELAY_MS, api, apiError } from '../http';
 
 /**
@@ -165,5 +179,27 @@ export const formHandlers = [
     if (!isReceivable(form.status)) return apiError(409, FORM_MESSAGES.notReceivable);
 
     return HttpResponse.json<FormDetail>(receiveForm(code, session.user.id)!);
+  }),
+
+  // Ra quyết định: đơn Đang xét → Cần bổ sung / Đã duyệt / Từ chối (kèm lí do, không bắt buộc)
+  http.post(api(ENDPOINTS.forms.decide), async ({ params, request }) => {
+    await delay(MOCK_DELAY_MS);
+    const session = readSession();
+    if (!session) return apiError(401, FORM_MESSAGES[401]);
+
+    // Không xem được đơn thì 404; body sai thì 422
+    const code = String(params.code);
+    const form = getFormDetail(code, { id: session.user.id, role: session.role });
+    if (!form) return apiError(404, FORM_MESSAGES.notFound);
+    const decideRequest = DecideFormRequestSchema.safeParse(await request.json().catch(() => null));
+    if (!decideRequest.success) return apiError(422, FORM_MESSAGES.invalidBody);
+
+    // Không có quyền decide thì 403; đơn không còn Đang xét thì 409; đơn người khác phụ trách (không có decideAny) thì 403
+    if (!can(session.role, 'decide')) return apiError(403, FORM_MESSAGES.decideForbidden);
+    if (!isDecidable(form.status)) return apiError(409, FORM_MESSAGES.notDecidable);
+    if (!canDecideOn({ email: session.user.email, role: session.role }, form)) return apiError(403, FORM_MESSAGES.decideForbidden);
+
+    const { decision, note } = decideRequest.data;
+    return HttpResponse.json<FormDetail>(decideForm(code, decision, note)!);
   }),
 ];

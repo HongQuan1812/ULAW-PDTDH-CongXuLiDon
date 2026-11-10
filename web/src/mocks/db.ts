@@ -3,6 +3,7 @@ import type {
   ApplicantRef,
   FileRef,
   FormAnswers,
+  FormDecision,
   FormDetail,
   FormSection,
   FormStatus,
@@ -744,6 +745,21 @@ export function receiveForm(code: string, staffId: string): FormDetail | null {
   if (!form) return null;
   const receivedAt = vietnamNow();
   Object.assign(form, { status: 'xet', note: '', receiverId: staffId, receivedAt, handlerId: staffId, handlerSince: receivedAt });
+  return toDetail(form);
+}
+
+/**
+ * Ra quyết định về một đơn Đang xét: chuyển sang Cần bổ sung, Đã duyệt hoặc Từ chối. Quyền và trạng thái đã được kiểm tra trước (canDecideOn).
+ * Không đổi người xử lí và lần lưu gần nhất (updatedAt, là lần người nộp đơn lưu).
+ * @param code      mã đơn
+ * @param decision  quyết định: 'bs' · 'duyet' · 'tc' (cũng là trạng thái mới của đơn)
+ * @param note      lí do (đã bỏ khoảng trắng đầu cuối, "" nếu không ghi); Duyệt thì bỏ qua lí do và xóa lí do cũ
+ * @returns         lá đơn sau khi ra quyết định; không có đơn thì null
+ */
+export function decideForm(code: string, decision: FormDecision, note: string): FormDetail | null {
+  const form = FORMS.find((candidate) => candidate.code === code);
+  if (!form) return null;
+  Object.assign(form, { status: decision, note: decision === 'duyet' ? '' : note });
   return toDetail(form);
 }
 

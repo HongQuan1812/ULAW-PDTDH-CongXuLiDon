@@ -1,0 +1,16 @@
+/* Ba nút quyết định và hộp thoại lí do (như .decide, .d-bs / .d-tc / .d-duyet, #dModal của bản mẫu).
+   Ba nút dùng màu trạng thái đơn chuyển sang. */
+.needSupplement,.reject,.approve{font-weight:600}
+button.needSupplement{background:var(--s-bs-bg);color:var(--s-bs-fg);border-color:color-mix(in srgb,var(--s-bs-fg) 40%,transparent)}
+button.needSupplement:hover{background:color-mix(in srgb,var(--s-bs-fg) 18%,var(--s-bs-bg))}
+button.reject{background:var(--s-tc-bg);color:var(--s-tc-fg);border-color:color-mix(in srgb,var(--s-tc-fg) 40%,transparent)}
+button.reject:hover{background:color-mix(in srgb,var(--s-tc-fg) 18%,var(--s-tc-bg))}
+button.approve{background:var(--s-duyet-bg);color:var(--s-duyet-fg);border-color:color-mix(in srgb,var(--s-duyet-fg) 40%,transparent)}
+button.approve:hover{background:color-mix(in srgb,var(--s-duyet-fg) 18%,var(--s-duyet-bg))}
+
+/* nút xác nhận trong hộp thoại: nền đặc màu của quyết định */
+button.confirmNeedSupplement,button.confirmNeedSupplement:hover{background:var(--s-bs-fg);border-color:var(--s-bs-fg);color:var(--on-accent)}
+button.confirmReject,button.confirmReject:hover{background:var(--danger);border-color:var(--danger);color:var(--on-accent)}
+
+.dialogSubtitle{color:var(--muted);font-size:14px}
+.dialogButtons{display:flex;justify-content:flex-end;gap:8px}

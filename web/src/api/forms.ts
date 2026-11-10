@@ -3,8 +3,10 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   ENDPOINTS,
   SUBMIT_FORM_FIELDS,
+  formDecisionPath,
   formDetailPath,
   formReceivePath,
+  type DecideFormRequest,
   type FormDetail,
   type FormSummary,
   type HandledFormsResponse,
@@ -75,6 +77,30 @@ export function useReceiveForm(code: string) {
     mutationFn: () => apiFetch<FormDetail>(formReceivePath(code), { method: 'POST' }),
     onSuccess: (receivedForm) => {
       queryClient.setQueryData(formDetailKey(code), receivedForm);
+      void queryClient.invalidateQueries({ queryKey: MY_FORMS_KEY });
+      void queryClient.invalidateQueries({ queryKey: HANDLED_FORMS_KEY });
+    },
+    onError: (error) => {
+      if (error instanceof ApiError && (error.status === 409 || error.status === 404)) {
+        void queryClient.invalidateQueries({ queryKey: formDetailKey(code) });
+      }
+    },
+  });
+}
+
+/**
+ * Ra quyết định về một đơn Đang xét (cán bộ): Yêu cầu bổ sung, Duyệt hoặc Từ chối. Thành công thì trang chi tiết dùng ngay lá đơn
+ * máy chủ trả về, các bảng đơn tải lại. Đơn không còn Đang xét (vd cán bộ khác vừa xử lí) hoặc không còn thì tải lại đơn để trang hiện đúng trạng thái.
+ * @param code  mã đơn
+ * @returns     kết quả useMutation; gọi mutate({ decision, note }). data = lá đơn sau khi ra quyết định
+ */
+export function useDecideForm(code: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (decideRequest: DecideFormRequest) =>
+      apiFetch<FormDetail>(formDecisionPath(code), { method: 'POST', body: JSON.stringify(decideRequest) }),
+    onSuccess: (decidedForm) => {
+      queryClient.setQueryData(formDetailKey(code), decidedForm);
       void queryClient.invalidateQueries({ queryKey: MY_FORMS_KEY });
       void queryClient.invalidateQueries({ queryKey: HANDLED_FORMS_KEY });
     },

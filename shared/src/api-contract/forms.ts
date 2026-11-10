@@ -29,6 +29,10 @@ export const FORM_ENDPOINTS = {
       Đơn chuyển sang Đang xét; người bấm thành người tiếp nhận và người xử lí (từ lúc tiếp nhận);
       lí do của lần Yêu cầu bổ sung trước được xóa (bắt đầu lượt xét mới) */
   receive: '/forms/:code/receive',
+  /** POST DecideFormRequest → FormDetail: Yêu cầu bổ sung / Duyệt / Từ chối đơn Đang xét. Được làm khi canDecideOn
+      (quyền decide và mình là người xử lí của đơn, hoặc quyền decideAny). Đơn chuyển sang trạng thái của quyết định;
+      lí do lưu vào đơn (Duyệt thì xóa lí do). Không đổi người xử lí, không đổi lần lưu gần nhất của đơn */
+  decide: '/forms/:code/decision',
 } as const;
 
 /**
@@ -47,6 +51,15 @@ export function formDetailPath(code: string): string {
  */
 export function formReceivePath(code: string): string {
   return FORM_ENDPOINTS.receive.replace(':code', encodeURIComponent(code));
+}
+
+/**
+ * Đường dẫn API Ra quyết định (Yêu cầu bổ sung / Duyệt / Từ chối) về một lá đơn.
+ * @param code  mã đơn
+ * @returns     vd '/forms/XMM-2026-00001/decision'
+ */
+export function formDecisionPath(code: string): string {
+  return FORM_ENDPOINTS.decide.replace(':code', encodeURIComponent(code));
 }
 
 /* ---------- Dữ liệu gửi / nhận ---------- */
@@ -144,6 +157,20 @@ export const SUBMIT_FORM_FIELDS = {
   request: 'request',
 } as const;
 
+/** Các quyết định cán bộ ra cho đơn Đang xét: mã trùng mã trạng thái đơn chuyển sang (Cần bổ sung, Đã duyệt, Từ chối). */
+export const FORM_DECISIONS = ['bs', 'duyet', 'tc'] as const;
+export type FormDecision = (typeof FORM_DECISIONS)[number];
+
+/**
+ * Body của POST /forms/:code/decision. Lí do không bắt buộc (gửi chuỗi rỗng "" nếu không có);
+ * người nộp đơn thấy lí do khi đơn Cần bổ sung hoặc Từ chối. Duyệt thì lí do bị bỏ qua.
+ */
+export const DecideFormRequestSchema = z.object({
+  decision: z.enum(FORM_DECISIONS),
+  note: z.string().trim(),
+});
+export type DecideFormRequest = z.infer<typeof DecideFormRequestSchema>;
+
 /* ---------- Câu thông báo ---------- */
 
 export const FORM_MESSAGES = {
@@ -169,6 +196,16 @@ export const FORM_MESSAGES = {
   notReceivable: 'Đơn không còn chờ tiếp nhận (có thể đã được tiếp nhận).',
   /** Tiếp nhận xong (toast), vd "Đã tiếp nhận đơn XMM-2026-01521 lúc 09:30 · 10/11/2026." */
   received: (code: string, timeText: string) => `Đã tiếp nhận đơn ${code} lúc ${timeText}.`,
+  /** POST /forms/:code/decision khi mình không được ra quyết định về đơn này: không có quyền decide, hoặc đơn do người khác phụ trách (403) */
+  decideForbidden: 'Bạn không có quyền xử lí đơn này.',
+  /** POST /forms/:code/decision khi đơn không còn Đang xét, vd cán bộ khác vừa xử lí xong (409) */
+  notDecidable: 'Đơn không còn ở trạng thái Đang xét (có thể đã được xử lí).',
+  /** Ra quyết định xong (toast), vd "Đã duyệt đơn XMM-2026-01521." */
+  decided: {
+    bs: (code: string) => `Đã yêu cầu bổ sung đơn ${code}.`,
+    duyet: (code: string) => `Đã duyệt đơn ${code}.`,
+    tc: (code: string) => `Đã từ chối đơn ${code}.`,
+  },
   /** Bấm Lưu thay đổi mà câu trả lời vẫn như đã lưu (toast) */
   noChanges: 'Không có thay đổi nào để lưu.',
   /** Lưu thay đổi xong (toast), vd "Đã lưu thay đổi lúc 09:30 · 10/11/2026." */

@@ -3,10 +3,11 @@
    (trạng thái, ngày nộp, người nộp đơn, người tiếp nhận, người xử lí).
    Nội dung đơn sửa được khi canEditForm (đơn của mình hoặc Admin, đơn Đã nộp / Cần bổ sung / Đã bổ sung), còn lại chỉ xem.
    Cán bộ có quyền receive thấy nút "Tiếp nhận" ở đầu trang khi đơn Đã nộp / Đã bổ sung.
-   Yêu cầu bổ sung / Duyệt / Từ chối, Chuyển giao: thêm ở các phần sau của bước 5. */
+   Đơn Đang xét mà mình được ra quyết định (canDecideOn) thì có hàng nút Yêu cầu bổ sung / Từ chối / Duyệt ở đáy trang.
+   Chuyển giao, lịch sử: thêm ở các phần sau của bước 5. */
 import { useState, type FormEvent } from 'react';
 import { Link, useParams } from 'react-router';
-import { FORM_MESSAGES, canEditForm, canReceiveForm, type FormDetail, type FormStatus } from '@ulaw/shared';
+import { FORM_MESSAGES, canDecideOn, canEditForm, canReceiveForm, type FormDetail, type FormStatus } from '@ulaw/shared';
 import { useFormDetail, useReceiveForm } from '../../api/forms';
 import { PAGE_PATH, type ReturnState } from '../../app/paths';
 import { Button } from '../../components/Button';
@@ -20,6 +21,7 @@ import { answersChanged } from '../../features/form-renderer/formAnswers';
 import { useFormAnswers } from '../../features/form-renderer/useFormAnswers';
 import { useSaveFormChanges } from '../../features/form-renderer/useSaveFormChanges';
 import { EMPTY_TEXT, formatDateTime } from '../../lib/format';
+import { DecideBar } from './DecideBar';
 import { FormInfoPanel, FormInfoPanelToggle, FormInfoSection, useFormInfoPanel } from './FormInfoPanel';
 import styles from './FormPage.module.css';
 import { SubmitBar, checkBeforeSending, useCommitment } from './SubmitBar';
@@ -109,6 +111,7 @@ function FormDetailView({ form, onLeave }: { form: FormDetail; onLeave: () => vo
         ) : (
           <div className={styles.main}>
             <FormSections sections={form.sections} answers={form.answers} readOnly />
+            {canDecideOn({ email: user.email, role }, form) && <DecideBar form={form} />}
           </div>
         )}
         <FormInfoPanel panel={infoPanel}>

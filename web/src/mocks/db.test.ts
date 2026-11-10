@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, test } from 'vitest';
 import { QUESTION_TYPES, type FileRef } from '@ulaw/shared';
 import {
   addForm,
+  decideForm,
   getFormDetail,
   getFormsHandledBy,
   getFormsOf,
@@ -253,5 +254,40 @@ describe('tiếp nhận đơn', () => {
     expect(received.handler?.id).toBe('cb-1');
     expect(received.handlerSince).toBe(received.receivedAt);
     expect(received.updatedAt).toBe(before.updatedAt);
+  });
+});
+
+describe('ra quyết định về đơn', () => {
+  /** Mã một đơn Đang xét của sinh viên mẫu. */
+  const underReviewCode = () => getFormsOf('sv-1').find((form) => form.status === 'xet')!.code;
+
+  test('Yêu cầu bổ sung: chuyển sang Cần bổ sung và lưu lí do', () => {
+    const decidedForm = decideForm(underReviewCode(), 'bs', 'Thiếu bảng điểm')!;
+    expect(decidedForm.status).toBe('bs');
+    expect(decidedForm.note).toBe('Thiếu bảng điểm');
+  });
+
+  test('Từ chối: chuyển sang Từ chối và lưu lí do', () => {
+    const decidedForm = decideForm(underReviewCode(), 'tc', 'Không đủ điều kiện')!;
+    expect(decidedForm.status).toBe('tc');
+    expect(decidedForm.note).toBe('Không đủ điều kiện');
+  });
+
+  test('Duyệt: chuyển sang Đã duyệt và xóa lí do', () => {
+    const decidedForm = decideForm(underReviewCode(), 'duyet', 'ghi chú cũ')!;
+    expect(decidedForm.status).toBe('duyet');
+    expect(decidedForm.note).toBe('');
+  });
+
+  test('không đổi người xử lí và lần lưu gần nhất của đơn', () => {
+    const code = underReviewCode();
+    const before = getFormDetail(code, { id: 'cb-3', role: 'admin' })!;
+    const decidedForm = decideForm(code, 'bs', '')!;
+    expect(decidedForm.handler).toEqual(before.handler);
+    expect(decidedForm.updatedAt).toBe(before.updatedAt);
+  });
+
+  test('trả về null khi không có đơn', () => {
+    expect(decideForm('XMM-0000-00000', 'duyet', '')).toBeNull();
   });
 });
