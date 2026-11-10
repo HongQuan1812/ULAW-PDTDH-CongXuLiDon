@@ -1,7 +1,9 @@
 /* Trạng thái của ứng dụng trong trình duyệt. Khi có backend, user/profile/apps sẽ lấy từ API. */
 const state={
   user:null, role:null, profile:null, showCccd:false,
-  student:null, /* thông tin sinh viên của người đăng nhập (Lớp, Khóa, Hình thức đào tạo, Ngành), lấy từ database trường; null = không có */
+  students:[], /* thông tin sinh viên của người đăng nhập (MSSV, Lớp, Khóa, Hình thức đào tạo, Ngành), lấy từ database trường.
+                  Một email có thể gắn với nhiều MSSV: MSSV trùng phần trước @ của email đứng đầu. [] = không có */
+  mainMssv:null, /* MSSV người đăng nhập chọn làm thông tin chính (hiện trên trang thông tin, điền vào file Word); null = MSSV đầu danh sách */
   viewing:null, /* người nộp đơn đang được cán bộ xem trên trang hồ sơ; null = xem hồ sơ của chính mình */
   /* bảng Đơn đã nộp: tìm kiếm, sắp xếp, lọc */
   pQuery:"", pSort:[], pFilters:[],

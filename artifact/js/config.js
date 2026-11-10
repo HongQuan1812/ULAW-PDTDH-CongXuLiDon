@@ -40,8 +40,10 @@ const openTypes=()=>Object.keys(TYPES).filter(k=>TYPES[k].status==="open");
    TODO: xác nhận lại tên miền email thật của sinh viên và cán bộ. */
 const SCHOOL_EMAIL_DOMAINS=["hcmulaw.edu.vn"];
 const isSchoolEmail=e=>{const d=String(e).toLowerCase().split('@')[1]||"";return SCHOOL_EMAIL_DOMAINS.some(x=>d===x||d.endsWith("."+x))};
-/* Mục "Thông tin sinh viên" trên trang thông tin: lấy từ database trường (person.student), chỉ xem.
-   Có ít nhất 1 mục thì hiện đủ các mục, mục trống ghi "—"; không có mục nào thì ẩn cả phần. */
+/* Mục "Thông tin sinh viên" trên trang thông tin: lấy từ database trường (person.students), chỉ xem.
+   Một email có thể gắn với nhiều MSSV; trang thông tin chỉ hiện MSSV chính (person.mainMssv, mặc định MSSV đầu),
+   các MSSV khác xem và chọn trong khung "Mã số sinh viên" trượt từ phải ra. Có ít nhất 1 mục thì hiện đủ các mục,
+   mục trống ghi "—"; không có MSSV nào thì ẩn cả phần. */
 const STUDENT_FIELDS=[{k:"mssv",t:"MSSV"},{k:"lop",t:"Lớp"},{k:"hinhThuc",t:"Hình thức đào tạo"},{k:"nganh",t:"Ngành"},{k:"khoa",t:"Khóa học hiện tại"},{k:"khoaGoc",t:"Khóa học gốc"}];
 const PER=8;
 const EDITABLE=["nop","bs","bsg"];  /* đơn ở các trạng thái này sinh viên mới được sửa */

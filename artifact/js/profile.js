@@ -7,14 +7,14 @@ function renderAccount(){
 /* người đang hiển thị trên trang hồ sơ: chính mình, hoặc người nộp đơn mà cán bộ đang xem */
 function viewedPerson(){
   if(state.viewing)return {...state.viewing,mine:false};
-  return {name:state.profile.name,cccd:state.profile.cccd,phone:state.profile.phone,email:state.user.email,student:state.student,apps:state.apps,mine:true};
+  return {name:state.profile.name,cccd:state.profile.cccd,phone:state.profile.phone,email:state.user.email,students:state.students,mainMssv:state.mainMssv,apps:state.apps,mine:true};
 }
 function renderProfile(){
   const p=viewedPerson();
   $('pName').textContent=p.name;$('pNameBig').textContent=p.name;{const w=p.name.trim().split(/\s+/);$('pAvatar').textContent=(w[w.length-1][0]||'?').toUpperCase()}$('pPhone').textContent=fmtP(p.phone);$('pEmail').textContent=p.email;
   $('pCccd').textContent=state.showCccd&&p.cccd?p.cccd:maskC(p.cccd);$('revealBtn').textContent=state.showCccd?"Ẩn":"Hiện";
   $('revealBtn').hidden=!p.cccd; /* chưa có CCCD thì không có nút Hiện */
-  renderStudentInfo(p.student);
+  renderStudentInfo(p);
   $('h1s').textContent=p.mine?"Thông tin cá nhân":"Thông tin người nộp đơn";
   /* hồ sơ của mình: sửa + nộp đơn theo quyền submit; hồ sơ người khác: chỉ vai trò có editApplicant / submitForApplicant */
   $('editBtn').hidden=!(p.mine||can('editApplicant'));
@@ -22,14 +22,62 @@ function renderProfile(){
   renderAccount();
   renderTable();
 }
-/* Thông tin sinh viên: 6 mục đi cùng nhau. Có ít nhất 1 mục thì hiện đủ 6 ô, ô trống ghi "—" (như SĐT, CCCD);
-   không có mục nào thì ẩn cả phần */
-function renderStudentInfo(st){
-  const val=f=>st&&st[f.k]!=null?String(st[f.k]).trim():"";
-  const any=STUDENT_FIELDS.some(f=>val(f)!=="");
-  $('pStudentDl').innerHTML=any?STUDENT_FIELDS.map(f=>`<div><dt>${f.t}</dt><dd>${val(f)?esc(val(f)):"—"}</dd></div>`).join(''):'';
-  $('pStudent').hidden=!any;
+/* ---------- Thông tin sinh viên ----------
+   Một email có thể gắn với nhiều MSSV (MSSV trùng phần trước @ của email đứng đầu).
+   Trang thông tin chỉ hiện 1 hàng 6 mục: MSSV chính (person.mainMssv, mặc định MSSV đầu). MSSV chính cũng là
+   thông tin điền vào file Word khi xuất đơn. Có ít nhất 1 MSSV thì có nút "Thông tin sinh viên" (cạnh "Sửa thông tin"),
+   mở khung trượt từ phải ra để chọn.
+   Trong một hàng: có ít nhất 1 mục thì hiện đủ 6 ô, ô trống ghi "—" (như SĐT, CCCD). */
+const studentVal=(st,k)=>st&&st[k]!=null?String(st[k]).trim():"";
+const hasStudentData=st=>STUDENT_FIELDS.some(f=>studentVal(st,f.k)!=="");
+const studentsOf=p=>(p.students||[]).filter(hasStudentData);
+/* MSSV chính của một người: MSSV đã chọn; chưa chọn (hoặc không còn) thì MSSV đầu; không có thì null */
+function mainStudentOf(p){const list=studentsOf(p);return list.find(st=>st.mssv===p.mainMssv)||list[0]||null}
+/* đổi được MSSV chính: hồ sơ của mình, hoặc Admin (quyền editApplicant) */
+const canPickMssv=p=>p.mine||can('editApplicant');
+function renderStudentInfo(p){
+  const main=mainStudentOf(p);
+  $('stuPick').hidden=!main; /* lấy được ít nhất 1 MSSV thì có nút */
+  if(!main){$('pStudent').innerHTML='';$('pStudent').hidden=true;return}
+  $('pStudent').innerHTML=`<dl class="info">${STUDENT_FIELDS.map(f=>`<div><dt>${f.t}</dt><dd>${studentVal(main,f.k)?esc(studentVal(main,f.k)):"—"}</dd></div>`).join('')}</dl>`;
+  $('pStudent').hidden=false;
 }
+/* Khung "Thông tin sinh viên": danh sách mọi MSSV, MSSV chính có nhãn "Đang dùng"; bấm MSSV khác để chọn làm MSSV chính */
+function renderStuList(){
+  const p=viewedPerson(),main=mainStudentOf(p),editable=canPickMssv(p);
+  $('stuSheetSub').textContent=editable
+    ?'Chọn MSSV dùng làm thông tin chính. MSSV này hiện trên trang thông tin và được điền vào file Word khi xuất đơn.'
+    :'MSSV "Đang dùng" là thông tin chính khi xuất file. Chỉ người nộp đơn hoặc Admin mới đổi được.';
+  $('stuList').innerHTML=studentsOf(p).map(st=>{
+    const on=st===main,v=k=>studentVal(st,k)?esc(studentVal(st,k)):'—';
+    return `<button type="button" role="radio" class="stu-opt" aria-checked="${on}" data-mssv="${esc(studentVal(st,'mssv'))}"${editable?'':' disabled'}>
+      <span class="stu-opt-top"><span class="stu-opt-id">${v('mssv')}</span>${on?'<span class="stu-opt-tag">Đang dùng</span>':''}</span>
+      <span class="stu-opt-grid">${STUDENT_FIELDS.filter(f=>f.k!=='mssv').map(f=>`<span><span class="k">${f.t}</span><span class="v">${v(f.k)}</span></span>`).join('')}</span>
+    </button>`;
+  }).join('');
+  $('stuList').querySelectorAll('.stu-opt').forEach(b=>b.onclick=()=>b.getAttribute('aria-checked')==='true'?closeStuSheet():setMainMssv(b.dataset.mssv));
+}
+/* chọn MSSV chính: lưu vào người đang xem (mình hoặc người khác), vẽ lại hàng thông tin sinh viên */
+function setMainMssv(mssv){
+  if(viewedPerson().mine)state.mainMssv=mssv;else state.viewing.mainMssv=mssv;
+  closeStuSheet();renderStudentInfo(viewedPerson());
+  toast(`Đã chọn MSSV ${mssv} làm thông tin chính`);
+}
+function openStuSheet(){
+  renderStuList();
+  $('stuSheet').classList.add('open');$('stuSheet').inert=false;$('stuSheetBg').hidden=false;
+  ($('stuList').querySelector('[aria-checked="true"]')||$('stuSheetClose')).focus({preventScroll:true});
+}
+function closeStuSheet(){
+  if(!$('stuSheet').classList.contains('open'))return;
+  $('stuSheet').classList.remove('open');$('stuSheet').inert=true;$('stuSheetBg').hidden=true;
+  if(!$('vProfile').hidden&&!$('stuPick').hidden)$('stuPick').focus({preventScroll:true});
+}
+$('stuPick').onclick=openStuSheet;
+$('stuSheetClose').onclick=closeStuSheet;
+$('stuSheetBg').onclick=closeStuSheet;
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeStuSheet()});
+window.addEventListener('hashchange',closeStuSheet);
 $('revealBtn').onclick=()=>{state.showCccd=!state.showCccd;renderProfile()};
 /* Sửa thông tin: mở cùng popup với trang Quản lí tài khoản (js/accounts-page.js); Admin thấy cả phần Vai trò, vai trò khác thì không */
 $('editBtn').onclick=e=>{const u=state.viewing||allAccounts().find(x=>x.me);openAccount(u,e.currentTarget,{fromProfile:true})};

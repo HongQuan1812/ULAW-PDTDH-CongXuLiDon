@@ -5,7 +5,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap">
 <!-- ?v=… là số phiên bản: tăng mỗi lần cập nhật để trình duyệt tải lại CSS/JS mới thay vì dùng bản cũ trong cache -->
-<link rel="stylesheet" href="styles.css?v=244">
+<link rel="stylesheet" href="styles.css?v=247">
 
 <!-- ============ MÀN HÌNH 1: ĐĂNG NHẬP ============ -->
 <main id="vLogin" class="login">
@@ -115,6 +115,8 @@
             <h1 id="h1s">Thông tin cá nhân</h1>
             <p class="id-name" id="pNameBig"></p>
           </div>
+          <!-- có ít nhất 1 MSSV mới hiện: mở khung "Thông tin sinh viên" để chọn MSSV chính (giống nút "Thông tin đơn") -->
+          <button class="btn side-tg" id="stuPick" type="button" aria-haspopup="dialog" aria-controls="stuSheet" hidden><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M15 4v16"/></svg>Thông tin sinh viên</button>
           <button class="btn" id="editBtn" type="button"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg>Sửa thông tin</button>
         </div>
         <dl class="info">
@@ -124,9 +126,8 @@
           <div><dt>Số CCCD</dt><dd><span id="pCccd"></span><button class="reveal" id="revealBtn" type="button">Hiện</button></dd></div>
         </dl>
         <!-- Thông tin sinh viên: lấy từ database trường, chỉ xem; không có dữ liệu thì ẩn -->
-        <div class="stu" id="pStudent" hidden>
-          <dl class="info" id="pStudentDl"></dl>
-        </div>
+        <!-- chỉ hiện MSSV chính; có MSSV thì nút "Thông tin sinh viên" ở trên mở khung #stuSheet (js/profile.js) -->
+        <div class="stu" id="pStudent" hidden></div>
       </section>
 
       <section class="card tcard" aria-labelledby="h2s" id="secSubmitted">
@@ -370,24 +371,31 @@
   <div class="pv-body" id="pvBody"></div>
 </div>
 <div class="side-bg" id="sideBg" hidden></div>
+<!-- Thông tin sinh viên: khung trượt từ phải ra, chọn MSSV làm thông tin chính (js/profile.js) -->
+<div class="sheet-bg" id="stuSheetBg" hidden></div>
+<aside class="sheet" id="stuSheet" role="dialog" aria-modal="true" aria-labelledby="stuSheetTitle" inert>
+  <div class="side-head"><h2 id="stuSheetTitle">Thông tin sinh viên</h2><button type="button" class="icon-btn" id="stuSheetClose" aria-label="Đóng"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
+  <p class="sheet-sub" id="stuSheetSub"></p>
+  <div class="stu-list" id="stuList" role="radiogroup" aria-labelledby="stuSheetTitle"></div>
+</aside>
 <div class="toast" id="toast" hidden role="status"></div>
 
 <script src="js/utils.js?v=245"></script>
-<script src="js/config.js?v=246"></script>
-<script src="js/state.js?v=245"></script>
+<script src="js/config.js?v=248"></script>
+<script src="js/state.js?v=248"></script>
 <!-- JUST FOR DEMO: START · dữ liệu mẫu; bản thật: lấy đơn và hồ sơ từ API -->
-<script src="js/sample-data.js?v=245"></script>
+<script src="js/sample-data.js?v=248"></script>
 <!-- JUST FOR DEMO: END -->
 <script src="js/table-tools.js?v=245"></script>
-<script src="js/auth.js?v=245"></script>
-<script src="js/profile.js?v=246"></script>
+<script src="js/auth.js?v=248"></script>
+<script src="js/profile.js?v=250"></script>
 <script src="js/sections.js?v=245"></script>
 <script src="js/file-preview.js?v=245"></script>
 <script src="js/application-form.js?v=245"></script>
 <script src="js/applications-page.js?v=245"></script>
 <script src="js/accounts-page.js?v=245"></script>
 <script src="js/forms-page.js?v=245"></script>
-<script src="js/print-templates.js?v=246"></script>
+<script src="js/print-templates.js?v=248"></script>
 <!-- JUST FOR DEMO: START · mẫu xuất file mẫu cho loại đơn Xét miễn môn; bản thật lấy mẫu xuất file từ máy chủ -->
 <script src="js/sample-template.js?v=200"></script>
 <!-- JUST FOR DEMO: END -->

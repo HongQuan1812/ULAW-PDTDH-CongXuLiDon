@@ -37,9 +37,13 @@ for p in glob.glob('**/*.*', recursive=True):
   bỏ trống thì trang thông tin hiện "—" và có thể bổ sung sau bằng nút Sửa thông tin.
 - **Tạo tài khoản ở trang Quản lí tài khoản:** email cũng phải là email trường.
 - **Thông tin sinh viên** (MSSV, Lớp, Hình thức đào tạo, Ngành, Khóa học hiện tại, Khóa học gốc; khóa gốc khác khóa hiện tại khi sinh viên bảo lưu hoặc học lại khóa sau; mã xuất file `{khoa_hoc}` · `{khoa_hoc_goc}`): lấy từ **database trường**, chỉ xem, không sửa trên cổng này.
-  Hiện thành một phần riêng trong thẻ "Thông tin cá nhân". Các mục đi cùng nhau: có ít nhất 1 mục thì hiện đủ tất cả, mục trống ghi "—" (giống SĐT, CCCD); không có mục nào
-  (ví dụ tài khoản cán bộ) thì ẩn cả phần, không báo lỗi. Danh sách mục khai báo ở `STUDENT_FIELDS` (`js/config.js`),
-  dữ liệu nằm ở `person.student` (người khác) và `state.student` (người đăng nhập).
+  Hiện thành một phần riêng trong thẻ "Thông tin cá nhân". Một email trường có thể gắn với **nhiều MSSV** (vd học thêm văn bằng 2;
+  MSSV trùng phần trước @ của email đứng đầu). Trang thông tin chỉ hiện **MSSV chính**: mặc định MSSV đầu, người dùng đổi được.
+  MSSV chính cũng là thông tin điền vào file Word khi xuất đơn. Có ít nhất 1 MSSV thì có nút **Thông tin sinh viên** (cạnh "Sửa thông tin", giống nút "Thông tin đơn"), mở khung "Thông tin sinh viên"
+  trượt từ phải ra: liệt kê mọi MSSV, MSSV chính có nhãn "Đang dùng", bấm MSSV khác để chọn. Chỉ chính người đó hoặc Admin đổi được; người khác chỉ xem.
+  Trong một hàng, các mục đi cùng nhau: có ít nhất 1 mục thì hiện đủ tất cả, mục trống ghi "—" (giống SĐT, CCCD; database trường có MSSV thiếu ngành, khóa hoặc lớp).
+  Không có MSSV nào (ví dụ tài khoản cán bộ) thì ẩn cả phần, không báo lỗi. Danh sách mục khai báo ở `STUDENT_FIELDS` (`js/config.js`),
+  dữ liệu nằm ở `person.students` (người khác) và `state.students` (người đăng nhập), đều là danh sách; MSSV chính ở `person.mainMssv` / `state.mainMssv`.
 
 # Câu thông báo trên trang chi tiết đơn
 

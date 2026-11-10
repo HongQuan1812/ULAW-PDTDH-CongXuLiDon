@@ -37,10 +37,11 @@ function knownTags(T){
 const dmy=iso=>iso?fmtD(iso.slice(0,10)):"";
 function personOf(hit){
   const mine=hit.p.apps===state.apps;
-  return mine?{name:state.profile.name,email:state.user.email,phone:state.profile.phone,cccd:state.profile.cccd,student:state.student}:hit.p;
+  return mine?{name:state.profile.name,email:state.user.email,phone:state.profile.phone,cccd:state.profile.cccd,students:state.students,mainMssv:state.mainMssv}:hit.p;
 }
 function buildPrintData(a,person,T){
-  const st=person.student||{},sub=a.submittedAt||a.date||"";
+  /* thông tin sinh viên: MSSV người dùng chọn làm thông tin chính ở trang thông tin (js/profile.js) */
+  const st=mainStudentOf(person)||{},sub=a.submittedAt||a.date||"";
   const d={ho_ten:person.name||"",mssv:st.mssv||"",lop:st.lop||"",khoa_hoc:st.khoa||"",khoa_hoc_goc:st.khoaGoc||"",hinh_thuc:st.hinhThuc||"",nganh:st.nganh||"",
     email:person.email||"",sdt:person.phone?fmtP(person.phone):"",cccd:person.cccd||"",
     ma_don:a.code||"",loai_don:T.name||"",ngay_nop:dmy(sub),gio_nop:sub.includes('T')?sub.slice(11,16):"",

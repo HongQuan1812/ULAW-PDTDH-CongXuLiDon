@@ -16,10 +16,11 @@ document.querySelectorAll('input').forEach(i=>i.addEventListener('input',()=>{i.
 $('gLogin').onclick=()=>{
   /* JUST FOR DEMO: START · mô phỏng đăng nhập Google bằng email trường + chọn vai trò.
      Bản thật: chạy Google OAuth (giới hạn tên miền trường), máy chủ kiểm tra lại tên miền rồi trả về
-     {user:{email,name}, role, profile|null, student|null}; student lấy từ database trường. */
+     {user:{email,name}, role, profile|null, students:[]}; students lấy từ database trường (0, 1 hoặc 2 MSSV). */
   state.user={email:"minhanh.nguyen@hcmulaw.edu.vn",name:"Nguyễn Minh Anh"};
   state.role=(document.querySelector('input[name="loginRole"]:checked')||{}).value||"nop";
-  state.student=state.role==="nop"?{mssv:"2253801010001",lop:"47-LTM-A",khoa:"K47 (2022–2026)",khoaGoc:"K47 (2022–2026)",hinhThuc:"Chính quy",nganh:"Luật Thương mại quốc tế"}:null; /* cán bộ thường không có thông tin sinh viên */
+  /* sinh viên mẫu có 2 MSSV (học thêm văn bằng 2) để thấy cách hiện nhiều MSSV; cán bộ thường không có thông tin sinh viên */
+  state.students=state.role==="nop"?[{mssv:"2253801010001",lop:"47-LTM-A",khoa:"K47 (2022–2026)",khoaGoc:"K47 (2022–2026)",hinhThuc:"Chính quy",nganh:"Luật Thương mại quốc tế"},{mssv:"2523801040017",lop:"VB2-25B",khoa:"VB2 K25",khoaGoc:"VB2 K25",hinhThuc:"Văn bằng 2",nganh:"Luật"}]:[];
   /* JUST FOR DEMO: END */
   if(!isSchoolEmail(state.user.email)){ /* không phải email trường: không cho vào */
     const m=$('loginMsg');m.textContent=`Hãy đăng nhập bằng email trường (@${SCHOOL_EMAIL_DOMAINS[0]}). Email ${state.user.email} không được dùng cho cổng này.`;m.hidden=false;
@@ -38,5 +39,5 @@ $('onbForm').addEventListener('submit',e=>{
 });
 $('onbBack').onclick=logout;
 /* screen 3 */
-function logout(){if(typeof closeDrawer==='function')closeDrawer();if(typeof resetProfileCollapse==='function')resetProfileCollapse();['uModal','dModal','tModal','pv'].forEach(id=>{const m=$(id);if(m)m.hidden=true}); /* đóng mọi popup đang mở */state.user=null;state.role=null;state.student=null;state.viewing=null;state.showCccd=false;leaveApp();show('vLogin');toast("Đã đăng xuất")}
+function logout(){if(typeof closeDrawer==='function')closeDrawer();if(typeof resetProfileCollapse==='function')resetProfileCollapse();['uModal','dModal','tModal','pv'].forEach(id=>{const m=$(id);if(m)m.hidden=true}); /* đóng mọi popup đang mở */state.user=null;state.role=null;if(typeof closeStuSheet==='function')closeStuSheet();state.students=[];state.mainMssv=null;state.viewing=null;state.showCccd=false;leaveApp();show('vLogin');toast("Đã đăng xuất")}
 document.querySelectorAll('.js-logout').forEach(b=>b.onclick=logout);
