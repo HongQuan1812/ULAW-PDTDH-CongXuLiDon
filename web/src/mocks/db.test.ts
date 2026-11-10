@@ -5,6 +5,7 @@ import {
   decideForm,
   getAllForms,
   getApplicantCccds,
+  getFileContent,
   getFormDetail,
   getFormsHandledBy,
   getFormsOf,
@@ -377,5 +378,41 @@ describe('mọi đơn (Quản lí đơn)', () => {
     const cccds = getApplicantCccds();
     expect(cccds['sv-1']).toBe('079200001234');
     expect(cccds['sv-2']).toBeUndefined();
+  });
+});
+
+describe('nội dung tệp đính kèm', () => {
+  const student = { id: 'sv-1', role: 'nguoiNopDon' } as const;
+  const otherStudent = { id: 'sv-2', role: 'nguoiNopDon' } as const;
+  const staff = { id: 'cb-1', role: 'nguoiXuLiDon' } as const;
+
+  /** Tệp mẫu (không có nội dung thật) của đơn có sẵn XMM-2026-01437 của sv-1. */
+  const sampleFile = () => {
+    const detail = getFormDetail('XMM-2026-01437', student)!;
+    return (detail.answers.files as FileRef[])[0]!;
+  };
+
+  test('tệp mẫu có sẵn của đơn thì trả về một PDF mẫu cùng tên, người nộp xem được', () => {
+    const file = sampleFile();
+    const content = getFileContent(file.id, student);
+    expect(content?.name).toBe(file.name);
+    expect(content?.type).toBe('application/pdf');
+  });
+
+  test('tệp người nộp vừa tải lên thì trả về đúng nội dung đã lưu', async () => {
+    const newForm = addForm('sv-1', getFormType('xmm', false)!, { files: [{ id: 'local-1', name: 'ghi-chu.png', sizeBytes: 3 }] }, new Map([['local-1', new File(['abc'], 'ghi-chu.png')]]));
+    const savedFile = getFilesOfForm(newForm.code)[0]!;
+    expect(await getFileContent(savedFile.id, student)?.text()).toBe('abc');
+  });
+
+  test('người nộp khác không xem được tệp của người khác; cán bộ xem được', () => {
+    const file = sampleFile();
+    expect(getFileContent(file.id, otherStudent)).toBeNull();
+    expect(getFileContent(file.id, staff)).not.toBeNull();
+  });
+
+  test('không có tệp thì null', () => {
+    expect(getFileContent('khong-co', staff)).toBeNull();
+    expect(getFileContent('seed-XMM-0000-00000', staff)).toBeNull();
   });
 });

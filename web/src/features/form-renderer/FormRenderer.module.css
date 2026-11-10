@@ -83,7 +83,9 @@
 .fileList{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:minmax(0,1fr);gap:8px}
 .fileList li{display:flex;align-items:center;gap:10px;min-height:46px;padding:6px 8px 6px 14px;border:1px solid var(--line);border-radius:var(--r)}
 .fileType{display:inline-grid;place-items:center;min-width:38px;height:22px;padding:0 7px;border-radius:6px;background:var(--surface-2);color:var(--muted);font-size:10.5px;font-weight:600;letter-spacing:.05em}
-.fileName{flex:1;min-width:0;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fileName{flex:1;min-width:0;font:inherit;font-weight:500;color:var(--fg);text-align:left;background:none;border:0;padding:0;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fileName:hover{color:var(--accent);text-decoration:underline}
+.fileName:focus-visible{outline:2px solid var(--focus);outline-offset:2px;border-radius:4px}
 .fileSize{font-size:12.5px;color:var(--muted);white-space:nowrap}
 
 @media (max-width:640px){

@@ -1,6 +1,7 @@
 /* Ô trả lời tải tệp (như QUESTION_UI.file của artifact/js/sections.js). */
-import { useId, useRef, useState, type DragEvent, type KeyboardEvent } from 'react';
+import { useCallback, useId, useRef, useState, type DragEvent, type KeyboardEvent } from 'react';
 import { acceptedExtensions, acceptedExtensionsText, formatFileSize, validateFile, type FileRef } from '@ulaw/shared';
+import { FilePreview } from '../file-preview/FilePreview';
 import type { AnswerProps } from './answerProps';
 import { keepLocalFile } from './localFiles';
 import styles from './FormRenderer.module.css';
@@ -58,6 +59,8 @@ export function FileAnswer({
   const rejectedId = useId();
   const [rejectedMessages, setRejectedMessages] = useState<string[]>([]);
   const [draggingOver, setDraggingOver] = useState(false);
+  const [previewedFile, setPreviewedFile] = useState<FileRef | null>(null);
+  const closePreview = useCallback(() => setPreviewedFile(null), []);
 
   /**
    * Thêm các tệp vừa chọn: bỏ tệp sai định dạng / quá dung lượng (ghi lí do), bỏ tệp trùng tên đã có.
@@ -157,9 +160,15 @@ export function FileAnswer({
           {files.map((file) => (
             <li key={file.id}>
               <span className={styles.fileType}>{fileExtensionLabel(file.name)}</span>
-              <span className={styles.fileName} title={file.name}>
+              <button
+                type="button"
+                className={styles.fileName}
+                title={`Xem trước ${file.name}`}
+                aria-label={`Xem trước tệp ${file.name}`}
+                onClick={() => setPreviewedFile(file)}
+              >
                 {file.name}
-              </span>
+              </button>
               <span className={styles.fileSize}>{formatFileSize(file.sizeBytes)}</span>
               {!readOnly && (
                 <button
@@ -180,6 +189,8 @@ export function FileAnswer({
       ) : (
         <p className={styles.emptyValue}>Chưa có tệp nào.</p>
       )}
+
+      <FilePreview file={previewedFile} onClose={closePreview} />
 
       {!readOnly && rejectedMessages.length > 0 && (
         <p id={rejectedId} className={styles.error} role="alert">

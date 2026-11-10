@@ -21,6 +21,7 @@ import type {
   UpdateProfileRequest,
 } from '@ulaw/shared';
 import { FormTypeSchema, can, isAnswerable, maskCccd, nextFormCode } from '@ulaw/shared';
+import { buildSamplePdf } from './samplePdf';
 
 /* Tài khoản mẫu để đăng nhập thử: mỗi vai trò một người (lấy từ artifact/js/auth.js và sample-data.js). */
 export const DEMO_USERS: Record<RoleId, SessionUser> = {
@@ -392,6 +393,9 @@ const SAMPLE_SUBJECTS: TableCell[][] = [
 ];
 
 /* Lí do mẫu Phòng Đào tạo ghi khi Yêu cầu bổ sung / Từ chối (như N trong sample-data.js); trạng thái khác không có lí do. */
+/** Tiền tố id của tệp mẫu có sẵn trong đơn mẫu; sau tiền tố là mã đơn chứa tệp. */
+const SEED_FILE_ID_PREFIX = 'seed-';
+
 const SUPPLEMENT_NOTE = 'Bảng điểm chưa có dấu xác nhận của cơ sở đào tạo. Vui lòng nộp lại bản có xác nhận.';
 const SAMPLE_NOTES: Partial<Record<FormStatus, string>> = {
   bs: SUPPLEMENT_NOTE,
@@ -408,7 +412,7 @@ const SAMPLE_NOTES: Partial<Record<FormStatus, string>> = {
  */
 function sampleAnswers(code: string, subjects: TableCell[][], fileName: string): FormAnswers {
   const sizeBytes = 150_000 + (Number(code.slice(-5)) * 7_919) % 900_000;
-  return { mon: subjects.map((row) => [...row]), files: [{ id: `seed-${code}`, name: fileName, sizeBytes }] };
+  return { mon: subjects.map((row) => [...row]), files: [{ id: `${SEED_FILE_ID_PREFIX}${code}`, name: fileName, sizeBytes }] };
 }
 
 /** Bản chụp loại đơn Xét miễn môn cho đơn mẫu. */
@@ -881,6 +885,25 @@ function saveFile(content: File, formCode: string): FileRef {
  */
 export function getFilesOfForm(formCode: string): FileRef[] {
   return [...FILES.values()].filter((file) => file.formCode === formCode).map((file) => file.ref);
+}
+
+/**
+ * Nội dung một tệp, nếu người hỏi được xem: là người nộp đơn chứa tệp, hoặc được xem mọi đơn.
+ * Tệp mẫu có sẵn (id 'seed-<mã đơn>') không có nội dung thật nên trả một PDF mẫu ghi tên tệp.
+ * @param fileId  id tệp ở máy chủ
+ * @param viewer  id và vai trò người đang đăng nhập
+ * @returns       tệp; không có, hoặc không được xem, thì null
+ */
+export function getFileContent(fileId: string, viewer: { id: string; role: RoleId }): File | null {
+  const stored = FILES.get(fileId);
+  const seedCode = fileId.startsWith(SEED_FILE_ID_PREFIX) ? fileId.slice(SEED_FILE_ID_PREFIX.length) : null;
+  const form = FORMS.find((candidate) => candidate.code === (stored?.formCode ?? seedCode));
+  if (!form || (form.ownerId !== viewer.id && !can(viewer.role, 'viewAll'))) return null;
+  if (stored) return stored.content;
+
+  // Tệp mẫu: tìm tên tệp trong câu trả lời của đơn
+  const sampleRef = fileRefsIn(form.formTypeSnapshot.sections, form.answers).find((file) => file.id === fileId);
+  return sampleRef ? buildSamplePdf(sampleRef.name) : null;
 }
 
 /** Đưa hồ sơ, lá đơn, tệp về ban đầu (dùng trong test). */
