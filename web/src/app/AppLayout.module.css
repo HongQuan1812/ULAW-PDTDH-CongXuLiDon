@@ -1,7 +1,7 @@
 /* Khung ứng dụng (như .shell, .topbar, .drawer của bản mẫu). */
 .shell{min-height:100vh}
 .main{min-width:0}
-.error{padding:40px 16px;text-align:center;color:var(--danger)}
+.error{padding:80px 16px;display:grid;justify-items:center;gap:14px}
 .school{display:none;font-size:12px;color:var(--muted);font-weight:500}
 .appName{font-weight:600;font-size:15px;letter-spacing:-.01em;color:var(--side-strong);white-space:nowrap}
 .iconButton{display:inline-grid;place-items:center;width:36px;height:36px;border-radius:50%;border:0;background:transparent;color:var(--side-fg);cursor:pointer;flex:none}

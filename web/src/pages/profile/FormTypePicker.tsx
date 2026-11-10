@@ -4,6 +4,7 @@ import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from 
 import { useNavigate } from 'react-router';
 import type { OpenFormType } from '@ulaw/shared';
 import { newFormPath } from '../../app/paths';
+import { LoadError } from '../../components/LoadError';
 import { Modal } from '../../components/Modal';
 import { Highlight } from '../../components/table/Highlight';
 import { SearchIcon } from '../../components/table/icons';
@@ -16,7 +17,7 @@ interface FormTypePickerProps {
   onClose: () => void;
   /** Các loại đơn đang mở; undefined = chưa tải xong */
   formTypes: OpenFormType[] | undefined;
-  /** Câu báo lỗi khi không tải được danh sách; null = không lỗi */
+  /** Câu báo khi không tải được danh sách (đóng hộp rồi mở lại để tải lại); null = không lỗi */
   loadError: string | null;
 }
 
@@ -31,9 +32,7 @@ export function FormTypePicker({ open, onClose, formTypes, loadError }: FormType
       {formTypes ? (
         <FormTypeList formTypes={formTypes} />
       ) : loadError ? (
-        <p className={styles.error} role="alert">
-          {loadError}
-        </p>
+        <LoadError message={`${loadError} Đóng hộp này rồi bấm “Nộp đơn mới” lại để tải lại.`} />
       ) : (
         <p className={styles.count}>Đang tải danh sách loại đơn…</p>
       )}

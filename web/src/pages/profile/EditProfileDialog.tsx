@@ -8,6 +8,7 @@ import { useMyFullCccd, useUpdateProfile } from '../../api/profile';
 import { ApiError } from '../../api/client';
 import { Button } from '../../components/Button';
 import { Field } from '../../components/Field';
+import { LoadError, loadErrorMessage } from '../../components/LoadError';
 import { Modal } from '../../components/Modal';
 import { useToast } from '../../components/Toast';
 import styles from './EditProfileDialog.module.css';
@@ -25,6 +26,7 @@ const UPDATED_TEXT = 'Đã cập nhật thông tin';
 export function EditProfileDialog({ open, onClose, profile }: { open: boolean; onClose: () => void; profile: Profile }) {
   const hasCccd = profile.maskedCccd !== null;
   const fullCccdQuery = useMyFullCccd(open && hasCccd);
+  const fullCccdError = loadErrorMessage(fullCccdQuery);
 
   // Chờ số CCCD đầy đủ (nếu có CCCD) rồi mới vẽ form, để ô CCCD có sẵn giá trị đúng
   const cccdReady = !hasCccd || fullCccdQuery.isSuccess;
@@ -37,11 +39,9 @@ export function EditProfileDialog({ open, onClose, profile }: { open: boolean; o
           fullCccd={hasCccd ? (fullCccdQuery.data?.cccd ?? '') : ''}
           onClose={onClose}
         />
-      ) : fullCccdQuery.isError ? (
+      ) : fullCccdError ? (
         <>
-          <p className={styles.formError} role="alert">
-            {fullCccdQuery.error.message}
-          </p>
+          <LoadError message={`${fullCccdError} Đóng hộp này rồi mở lại để tải lại.`} />
           <div className={styles.actions}>
             <Button variant="ghost" onClick={onClose}>
               Đóng

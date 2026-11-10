@@ -7,6 +7,8 @@ import { useMyForms } from '../../api/forms';
 import { Button } from '../../components/Button';
 import { useToast } from '../../components/Toast';
 import { useCan } from '../../features/auth/useAuth';
+import { loadErrorMessage } from '../../components/LoadError';
+import { RefreshButton } from '../../components/RefreshButton';
 import { BASE_FORM_FIELDS, FormTable } from './FormTable';
 import { FormTypePicker } from './FormTypePicker';
 import styles from './ProfilePage.module.css';
@@ -28,8 +30,9 @@ export function SubmittedForms() {
   const closePicker = useCallback(() => setPickerOpen(false), []);
 
   // Nộp đơn mới: không có loại đơn nào đang mở thì chỉ báo; còn lại mở hộp chọn loại đơn
-  // (chưa tải xong hoặc lỗi thì hộp hiện đang tải / câu báo lỗi)
+  // (chưa tải xong hoặc lỗi thì hộp hiện đang tải / câu báo lỗi; lần trước lỗi thì tải lại khi mở)
   const openPicker = () => {
+    if (openFormTypesQuery.isError) void openFormTypesQuery.refetch();
     if (openFormTypesQuery.isSuccess && openFormTypesQuery.data.length === 0) {
       toast(FORM_TYPE_MESSAGES.noneOpen);
       return;
@@ -49,6 +52,7 @@ export function SubmittedForms() {
             Nộp đơn mới
           </Button>
         )}
+        <RefreshButton query={formsQuery} label="Đơn đã nộp" />
       </div>
 
       <FormTable
@@ -56,7 +60,7 @@ export function SubmittedForms() {
         fields={BASE_FORM_FIELDS}
         rows={formsQuery.data ?? NO_FORMS}
         isPending={formsQuery.isPending}
-        errorMessage={formsQuery.isError ? formsQuery.error.message : null}
+        errorMessage={loadErrorMessage(formsQuery)}
         searchPlaceholder="Tìm theo mã đơn, loại đơn, ngày nộp, trạng thái"
         searchLabel="Tìm đơn đã nộp"
         emptyText={canSubmit ? 'Chưa có đơn nào. Bấm “Nộp đơn mới” để tạo đơn.' : 'Chưa có đơn nào.'}
@@ -67,7 +71,7 @@ export function SubmittedForms() {
           open={pickerOpen}
           onClose={closePicker}
           formTypes={openFormTypesQuery.data}
-          loadError={openFormTypesQuery.isError ? openFormTypesQuery.error.message : null}
+          loadError={loadErrorMessage(openFormTypesQuery)}
         />
       )}
     </section>

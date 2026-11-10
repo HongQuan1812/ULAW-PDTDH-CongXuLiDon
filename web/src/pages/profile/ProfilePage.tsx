@@ -7,6 +7,8 @@ import { Avatar } from '../../components/Avatar';
 import { Button } from '../../components/Button';
 import { Sheet } from '../../components/Sheet';
 import { useToast } from '../../components/Toast';
+import { LoadError, loadErrorMessage } from '../../components/LoadError';
+import { RefreshButton } from '../../components/RefreshButton';
 import { EMPTY_TEXT, formatPhone } from '../../lib/format';
 import { useCan } from '../../features/auth/useAuth';
 import { EditProfileDialog } from './EditProfileDialog';
@@ -15,10 +17,11 @@ import { SubmittedForms } from './SubmittedForms';
 import styles from './ProfilePage.module.css';
 
 /** Câu báo khi không tải được hồ sơ mà máy chủ không gửi kèm câu báo lỗi (vd mất mạng). */
-const LOAD_FAILED_TEXT = 'Không tải được thông tin cá nhân. Hãy thử tải lại trang.';
+const LOAD_FAILED_TEXT = 'Không tải được thông tin cá nhân.';
 
 /**
  * Tải hồ sơ của mình rồi vẽ trang. Các bảng đơn tải riêng, không chờ hồ sơ.
+ * Đã có hồ sơ thì luôn hiện hồ sơ, kể cả khi lần tải lại sau đó bị lỗi (lỗi đó báo bằng toast).
  * @returns  giao diện trang: thẻ thông tin (đang tải / lỗi / thông tin), mục Đơn đã nộp,
  *           và mục Đơn phụ trách nếu vai trò có quyền decide
  */
@@ -33,14 +36,13 @@ export function ProfilePage() {
         <section className={styles.card}>
           <p className={styles.muted}>Đang tải thông tin…</p>
         </section>
-      ) : profileQuery.isError ? (
-        <section className={styles.card}>
-          <p className={styles.error} role="alert">
-            {profileQuery.error.message || LOAD_FAILED_TEXT}
-          </p>
-        </section>
-      ) : (
+      ) : profileQuery.data ? (
         <IdentityCard profile={profileQuery.data} />
+      ) : (
+        <section className={`${styles.card} ${styles.errorCard}`}>
+          <LoadError message={loadErrorMessage(profileQuery) ?? LOAD_FAILED_TEXT} />
+          <RefreshButton query={profileQuery} label="thông tin cá nhân" />
+        </section>
       )}
       <SubmittedForms />
       {canHandleForms && <HandledForms />}
@@ -59,6 +61,7 @@ function IdentityCard({ profile }: { profile: Profile }) {
   const [studentSheetOpen, setStudentSheetOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const closeEdit = useCallback(() => setEditOpen(false), []);
+  const profileQuery = useMyProfile();
   const mainStudent = profile.students.find((student) => student.studentId === profile.mainStudentId) ?? null;
 
   return (
@@ -81,6 +84,9 @@ function IdentityCard({ profile }: { profile: Profile }) {
           </svg>
           Sửa thông tin
         </Button>
+        <span className={styles.refresh}>
+          <RefreshButton query={profileQuery} label="thông tin cá nhân" />
+        </span>
       </div>
 
       <dl className={styles.info}>
@@ -121,6 +127,7 @@ function IdentityCard({ profile }: { profile: Profile }) {
 function CccdValue({ maskedCccd }: { maskedCccd: string | null }) {
   const [revealed, setRevealed] = useState(false);
   const fullCccdQuery = useMyFullCccd(revealed);
+  const fullCccdError = loadErrorMessage(fullCccdQuery);
 
   if (!maskedCccd) return <>{EMPTY_TEXT}</>;
 
@@ -135,11 +142,7 @@ function CccdValue({ maskedCccd }: { maskedCccd: string | null }) {
       <button type="button" className={styles.reveal} disabled={loading} onClick={() => setRevealed((value) => !value)}>
         {loading ? 'Đang tải…' : revealed ? 'Ẩn' : 'Hiện'}
       </button>
-      {revealed && fullCccdQuery.isError && (
-        <span className={styles.error} role="alert">
-          {fullCccdQuery.error.message}
-        </span>
-      )}
+      {revealed && fullCccdError && <LoadError message={fullCccdError} compact />}
     </>
   );
 }

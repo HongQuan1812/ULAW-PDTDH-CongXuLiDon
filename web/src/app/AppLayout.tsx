@@ -5,6 +5,8 @@ import { Navigate, NavLink, Outlet, useLocation } from 'react-router';
 import { PAGES, canSeePage, type Page } from '@ulaw/shared';
 import { useSession } from '../api/auth';
 import { Avatar } from '../components/Avatar';
+import { LoadError } from '../components/LoadError';
+import { RefreshButton } from '../components/RefreshButton';
 import { AccountMenu } from './AccountMenu';
 import { DemoRoleSwitch } from '../features/auth/DemoRoleSwitch';
 import { useLogoutAction } from '../features/auth/useLogoutAction';
@@ -42,7 +44,14 @@ export function AppLayout() {
 
   // Đang kiểm tra phiên, hoặc lỗi khi gọi API
   if (session.isPending) return null;
-  if (session.isError) return <p className={styles.error}>Không tải được phiên đăng nhập: {session.error.message}</p>;
+  if (session.isError) {
+    return (
+      <div className={styles.error}>
+        <LoadError message={`Không tải được phiên đăng nhập. ${session.error.message}`} />
+        <RefreshButton query={session} label="phiên đăng nhập" />
+      </div>
+    );
+  }
 
   // Chưa đăng nhập: về trang Đăng nhập, gửi kèm trang đang mở (vừa bấm Đăng xuất thì không nhớ trang cũ)
   if (!session.data) {

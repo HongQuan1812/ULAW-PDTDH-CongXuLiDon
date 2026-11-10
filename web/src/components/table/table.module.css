@@ -60,7 +60,6 @@
 .goLabel{display:inline-flex;align-items:center;color:var(--faint);font-weight:500;font-size:13px}
 .rowLink:hover .goLabel{color:var(--accent)}
 .table td.messageCell{text-align:center;color:var(--muted);padding:56px 20px;white-space:normal}
-.table td.errorCell{color:var(--danger);font-weight:500}
 
 /* ---------- phân trang ---------- */
 .pager{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:14px 24px;border-top:1px solid var(--line);font-size:13px;color:var(--muted)}

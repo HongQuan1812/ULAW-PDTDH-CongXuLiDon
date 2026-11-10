@@ -4,6 +4,8 @@
 import type { HandledFormSummary } from '@ulaw/shared';
 import { useHandledForms } from '../../api/forms';
 import type { TableField } from '../../components/table/tableTools';
+import { loadErrorMessage } from '../../components/LoadError';
+import { RefreshButton } from '../../components/RefreshButton';
 import { BASE_FORM_FIELDS, FormTable } from './FormTable';
 import styles from './ProfilePage.module.css';
 
@@ -40,6 +42,7 @@ export function HandledForms() {
     <section className={`${styles.card} ${styles.tableCard}`} aria-labelledby="handled-forms-title">
       <div className={styles.sectionHead}>
         <h2 id="handled-forms-title">Đơn phụ trách</h2>
+        <RefreshButton query={formsQuery} label="Đơn phụ trách" />
       </div>
 
       <FormTable
@@ -47,7 +50,7 @@ export function HandledForms() {
         fields={HANDLED_FORM_FIELDS}
         rows={formsQuery.data ?? NO_FORMS}
         isPending={formsQuery.isPending}
-        errorMessage={formsQuery.isError ? formsQuery.error.message : null}
+        errorMessage={loadErrorMessage(formsQuery)}
         searchPlaceholder="Tìm theo mã đơn, trạng thái, người tiếp nhận, người xử lí"
         searchLabel="Tìm đơn phụ trách"
         emptyText="Bạn chưa tiếp nhận hay phụ trách đơn nào."

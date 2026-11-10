@@ -1,0 +1,4 @@
+/* Câu báo lỗi tải dữ liệu. */
+.block{color:var(--danger);font-weight:500;font-size:13.5px;text-align:center}
+/* dạng một dòng, đặt cạnh ô thông tin (vd số CCCD) */
+.compact{display:inline;color:var(--danger);font-size:12.5px;font-weight:500}

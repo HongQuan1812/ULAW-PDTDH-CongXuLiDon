@@ -7,6 +7,7 @@ import { useNavigate } from 'react-router';
 import { FORM_STATUSES, FORM_STATUS_LABEL, type FormSummary } from '@ulaw/shared';
 import { formPath } from '../../app/paths';
 import { StatusPill } from '../../components/StatusPill';
+import { LoadError } from '../../components/LoadError';
 import { HeaderCell } from '../../components/table/HeaderCell';
 import { Highlight } from '../../components/table/Highlight';
 import { Pager } from '../../components/table/Pager';
@@ -55,7 +56,7 @@ interface FormTableProps<Row extends FormSummary> {
   rows: readonly Row[];
   /** Đang tải lần đầu */
   isPending: boolean;
-  /** Câu báo lỗi khi không tải được; null = không lỗi */
+  /** Câu báo khi chưa tải được đơn nào (lấy bằng loadErrorMessage()); null = không lỗi */
   errorMessage: string | null;
   /** Gợi ý trong ô tìm kiếm */
   searchPlaceholder: string;
@@ -179,12 +180,12 @@ export function FormTable<Row extends FormSummary>({
           <tbody>
             {isPending ? (
               <MessageRow columnCount={columnCount} text="Đang tải danh sách đơn…" />
-            ) : errorMessage !== null ? (
-              <MessageRow
-                columnCount={columnCount}
-                text={errorMessage || 'Không tải được danh sách đơn. Hãy thử tải lại trang.'}
-                isError
-              />
+            ) : errorMessage ? (
+              <tr>
+                <td colSpan={columnCount} className={tableStyles.messageCell}>
+                  <LoadError message={errorMessage} />
+                </td>
+              </tr>
             ) : pageRows.length === 0 ? (
               <MessageRow
                 columnCount={columnCount}
@@ -223,20 +224,15 @@ export function FormTable<Row extends FormSummary>({
 }
 
 /**
- * Một dòng chữ chiếm cả bề ngang bảng: đang tải, lỗi, hoặc không có đơn.
+ * Một dòng chữ chiếm cả bề ngang bảng: đang tải, hoặc không có đơn.
  * @param columnCount  số cột của bảng
  * @param text         câu cần hiện
- * @param isError      true thì chữ màu lỗi và được đọc ngay cho trình đọc màn hình
  * @returns            thẻ <tr>
  */
-function MessageRow({ columnCount, text, isError = false }: { columnCount: number; text: string; isError?: boolean }) {
+function MessageRow({ columnCount, text }: { columnCount: number; text: string }) {
   return (
     <tr>
-      <td
-        colSpan={columnCount}
-        className={`${tableStyles.messageCell} ${isError ? tableStyles.errorCell : ''}`}
-        role={isError ? 'alert' : undefined}
-      >
+      <td colSpan={columnCount} className={tableStyles.messageCell}>
         {text}
       </td>
     </tr>
