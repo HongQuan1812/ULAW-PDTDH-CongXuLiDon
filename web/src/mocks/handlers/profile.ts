@@ -6,12 +6,24 @@ import {
   PROFILE_MESSAGES,
   SetMainStudentRequestSchema,
   UpdateProfileRequestSchema,
+  can,
   maskCccd,
   type FullCccdResponse,
+  type MyFormsResponse,
   type Profile,
   type Session,
 } from '@ulaw/shared';
-import { getProfile, getStudents, isCccdTaken, readSession, saveMainStudent, saveProfile, toSession } from '../db';
+import {
+  findPerson,
+  getFormsOf,
+  getProfile,
+  getStudents,
+  isCccdTaken,
+  readSession,
+  saveMainStudent,
+  saveProfile,
+  toSession,
+} from '../db';
 import { MOCK_DELAY_MS, api, apiError } from '../http';
 
 /**
@@ -35,6 +47,20 @@ function toProfile(session: Session): Profile {
     students,
     mainStudentId,
   };
+}
+
+/**
+ * Tìm người dùng mà người đang đăng nhập được xem hồ sơ (quyền viewApplicant).
+ * @param userId  id người dùng cần xem (từ đường dẫn)
+ * @returns       person: người cần xem · errorResponse: câu trả lỗi nếu chưa đăng nhập (401), không có quyền (403) hoặc không có người đó (404)
+ */
+function personToView(userId: string) {
+  const session = readSession();
+  if (!session) return { errorResponse: apiError(401, PROFILE_MESSAGES[401]) };
+  if (!can(session.role, 'viewApplicant')) return { errorResponse: apiError(403, PROFILE_MESSAGES[403]) };
+  const person = findPerson(userId);
+  if (!person) return { errorResponse: apiError(404, PROFILE_MESSAGES[404]) };
+  return { person };
 }
 
 export const profileHandlers = [
@@ -92,5 +118,39 @@ export const profileHandlers = [
     // Lưu rồi trả phiên mới để giao diện cập nhật họ tên và bỏ màn Bổ sung thông tin
     saveProfile(session.user.id, parsed.data);
     return HttpResponse.json<Session>(toSession(session.role));
+  }),
+
+  // Hồ sơ của người khác (chỉ xem, CCCD che). Đặt sau các đường dẫn /profile/me để 'me' không bị hiểu là id
+  http.get(api(ENDPOINTS.profile.person), async ({ params }) => {
+    await delay(MOCK_DELAY_MS);
+    const { person, errorResponse } = personToView(String(params.userId));
+    if (!person) return errorResponse;
+
+    // MSSV chính: MSSV đã chọn nếu còn trong danh sách, không thì MSSV đầu
+    const mainStudent = person.students.find((student) => student.studentId === person.mainStudentId) ?? person.students[0];
+    return HttpResponse.json<Profile>({
+      name: person.name,
+      email: person.email,
+      phone: person.phone,
+      maskedCccd: maskCccd(person.cccd),
+      students: person.students,
+      mainStudentId: mainStudent?.studentId ?? null,
+    });
+  }),
+
+  // Số CCCD đầy đủ của người khác (người xem bấm "Hiện")
+  http.get(api(ENDPOINTS.profile.personCccd), async ({ params }) => {
+    await delay(MOCK_DELAY_MS);
+    const { person, errorResponse } = personToView(String(params.userId));
+    if (!person) return errorResponse;
+    return HttpResponse.json<FullCccdResponse>({ cccd: person.cccd });
+  }),
+
+  // Các đơn người khác đã nộp
+  http.get(api(ENDPOINTS.profile.personForms), async ({ params }) => {
+    await delay(MOCK_DELAY_MS);
+    const { person, errorResponse } = personToView(String(params.userId));
+    if (!person) return errorResponse;
+    return HttpResponse.json<MyFormsResponse>({ forms: getFormsOf(String(params.userId)) });
   }),
 ];

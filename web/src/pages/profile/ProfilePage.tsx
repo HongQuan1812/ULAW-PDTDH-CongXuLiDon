@@ -3,7 +3,7 @@
 import { useCallback, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router';
 import { MAIN_STUDENT_MESSAGES, STUDENT_INFO_LABELS, type Profile, type StudentInfo } from '@ulaw/shared';
-import { useMyFullCccd, useMyProfile, useSetMainStudent } from '../../api/profile';
+import { useMyFullCccd, useMyProfile, usePersonFullCccd, useSetMainStudent } from '../../api/profile';
 import { Avatar } from '../../components/Avatar';
 import { Button } from '../../components/Button';
 import { Sheet } from '../../components/Sheet';
@@ -132,11 +132,14 @@ function IdentityCard({ profile }: { profile: Profile }) {
 /**
  * Số CCCD: mặc định hiện dạng che. Bấm "Hiện" thì mới gọi API lấy số đầy đủ; bấm "Ẩn" thì che lại.
  * @param maskedCccd  CCCD đã che; null = chưa có CCCD (hiện "—", không có nút Hiện)
+ * @param userId      id người được xem; bỏ trống = CCCD của chính mình
  * @returns           số CCCD và nút Hiện / Ẩn
  */
-function CccdValue({ maskedCccd }: { maskedCccd: string | null }) {
+export function CccdValue({ maskedCccd, userId }: { maskedCccd: string | null; userId?: string }) {
   const [revealed, setRevealed] = useState(false);
-  const fullCccdQuery = useMyFullCccd(revealed);
+  const myCccdQuery = useMyFullCccd(revealed && !userId);
+  const personCccdQuery = usePersonFullCccd(userId ?? '', revealed && !!userId);
+  const fullCccdQuery = userId ? personCccdQuery : myCccdQuery;
   const fullCccdError = loadErrorMessage(fullCccdQuery);
 
   if (!maskedCccd) return <>{EMPTY_TEXT}</>;
@@ -173,7 +176,7 @@ function studentValue(student: StudentInfo, key: keyof StudentInfo): string {
  * @param student  MSSV chính
  * @returns        hàng thông tin sinh viên
  */
-function StudentRow({ student }: { student: StudentInfo }) {
+export function StudentRow({ student }: { student: StudentInfo }) {
   return (
     <dl className={`${styles.info} ${styles.studentRow}`}>
       {STUDENT_INFO_LABELS.map(({ key, label }) => (

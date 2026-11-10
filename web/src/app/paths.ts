@@ -32,6 +32,18 @@ export function formPath(code: string): string {
   return `/don/${encodeURIComponent(code)}`;
 }
 
+/** Trang hồ sơ người nộp đơn (chỉ xem), khai báo trong router: /ho-so/<id người dùng>. */
+export const PERSON_PROFILE_ROUTE = '/ho-so/:userId';
+
+/**
+ * Đường dẫn trang hồ sơ của một người nộp đơn.
+ * @param userId  id người dùng
+ * @returns       vd '/ho-so/sv-2'
+ */
+export function personProfilePath(userId: string): string {
+  return `/ho-so/${encodeURIComponent(userId)}`;
+}
+
 /** state gửi kèm khi chuyển trang, để trang mới có nút "‹ Quay lại <trang trước>" (như routeLabel của artifact/js/nav.js). */
 export interface ReturnState {
   /** tên trang trước, vd 'Thông tin cá nhân', 'đơn đang soạn' */

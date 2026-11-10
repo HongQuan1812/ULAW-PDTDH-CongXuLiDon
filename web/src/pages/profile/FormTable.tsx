@@ -66,6 +66,8 @@ interface FormTableProps<Row extends FormSummary> {
   emptyText: string;
   /** Cột mở đầu nhóm cột bên phải, có đường kẻ dọc ngăn cách (như trang Quản lí đơn), vd 'receiver' */
   groupStartKey?: string;
+  /** Tên trang này trong nút quay lại của trang đơn ("‹ Quay lại …"); bỏ trống = Thông tin cá nhân */
+  pageLabel?: string;
 }
 
 /**
@@ -83,6 +85,7 @@ export function FormTable<Row extends FormSummary>({
   searchLabel,
   emptyText,
   groupStartKey,
+  pageLabel = PAGE_LABEL.profile,
 }: FormTableProps<Row>) {
   const navigate = useNavigate();
   const { table, query, setQuery, sorting, setSorting, filterRules, setFilterRules, matchedCount, hasCriteria } =
@@ -98,9 +101,9 @@ export function FormTable<Row extends FormSummary>({
   const columnCount = fields.length + 1;
   const groupClass = (key: string) => (key === groupStartKey ? tableStyles.groupStart : '');
 
-  // Bấm dòng hoặc nhấn Enter khi dòng đang được chọn: mở trang chi tiết đơn (trang đó có nút "‹ Quay lại Thông tin cá nhân")
+  // Bấm dòng hoặc nhấn Enter khi dòng đang được chọn: mở trang chi tiết đơn (trang đó có nút "‹ Quay lại <pageLabel>")
   const openForm = (code: string) =>
-    navigate(formPath(code), { state: { previousPageLabel: PAGE_LABEL.profile } satisfies ReturnState });
+    navigate(formPath(code), { state: { previousPageLabel: pageLabel } satisfies ReturnState });
   const openOnEnter = (event: KeyboardEvent<HTMLTableRowElement>, code: string) => {
     if (event.target !== event.currentTarget || event.key !== 'Enter') return;
     event.preventDefault();

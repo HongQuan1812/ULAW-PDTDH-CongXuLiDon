@@ -12,6 +12,7 @@ import {
   getFilesOfForm,
   getSavedFileIds,
   getStudents,
+  findPerson,
   getTransferTargets,
   transferForm,
   isCccdTaken,
@@ -325,5 +326,26 @@ describe('chuyển giao đơn', () => {
     expect(transferForm('XMM-0000-00000', 'cb-2')).toBeNull();
     expect(transferForm(code, 'khong-co')).toBeNull();
     expect(getTransferTargets('XMM-0000-00000')).toBeNull();
+  });
+});
+
+describe('tìm người dùng theo id', () => {
+  test('thấy sinh viên đăng nhập thử (họ tên theo hồ sơ), cán bộ và sinh viên khác', () => {
+    expect(findPerson('sv-1')).toMatchObject({ name: 'Nguyễn Minh Anh', email: 'minhanh.nguyen@hcmulaw.edu.vn' });
+    expect(findPerson('cb-2')).toMatchObject({ name: 'Trần Quốc Việt' });
+    expect(findPerson('sv-2')?.email).toBe('baongoc.tran@hcmulaw.edu.vn');
+  });
+
+  test('người chưa có hồ sơ riêng (sinh viên khác) chưa có SĐT, CCCD, MSSV', () => {
+    expect(findPerson('sv-2')).toMatchObject({ phone: null, cccd: null, students: [] });
+  });
+
+  test('có hồ sơ riêng thì lấy SĐT, CCCD, MSSV từ đó', () => {
+    expect(findPerson('cb-1')).toMatchObject({ phone: '0912345678', cccd: '079188001122' });
+    expect(findPerson('sv-1')?.students).toHaveLength(2);
+  });
+
+  test('trả về null khi không có người dùng', () => {
+    expect(findPerson('khong-co')).toBeNull();
   });
 });

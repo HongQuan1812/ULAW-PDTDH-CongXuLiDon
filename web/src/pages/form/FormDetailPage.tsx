@@ -7,9 +7,9 @@
    Lịch sử: thêm ở phần sau của bước 5. */
 import { useState, type FormEvent } from 'react';
 import { Link, useParams } from 'react-router';
-import { FORM_MESSAGES, canDecideOn, canEditForm, canReceiveForm, canTransferForm, type FormDetail, type FormStatus } from '@ulaw/shared';
+import { FORM_MESSAGES, can, canDecideOn, canEditForm, canReceiveForm, canTransferForm, type FormDetail, type FormStatus } from '@ulaw/shared';
 import { useFormDetail, useReceiveForm } from '../../api/forms';
-import { PAGE_PATH, type ReturnState } from '../../app/paths';
+import { PAGE_PATH, personProfilePath, type ReturnState } from '../../app/paths';
 import { Button } from '../../components/Button';
 import { LoadError, loadErrorMessage } from '../../components/LoadError';
 import { RefreshButton } from '../../components/RefreshButton';
@@ -261,20 +261,22 @@ function StatusNotice({ form }: { form: FormDetail }) {
 
 /**
  * Mục "Người nộp đơn" trong khung Thông tin đơn: họ tên, email.
- * Đơn của mình thì có liên kết "Xem hồ sơ ›" sang trang Thông tin cá nhân (ở đó có nút quay lại đơn này).
- * Trang thông tin của người nộp đơn khác chưa có (làm ở bước Quản lí tài khoản), nên đơn người khác chưa có liên kết.
+ * Có liên kết "Xem hồ sơ ›" (ở trang đó có nút quay lại đơn này): đơn của mình thì sang trang Thông tin cá nhân,
+ * đơn người khác thì sang hồ sơ người nộp (chỉ xem), khi có quyền viewApplicant.
  * @param form  lá đơn
  * @returns     khối mục
  */
 function ApplicantInfo({ form }: { form: FormDetail }) {
-  const { user } = useAuth();
+  const { user, role } = useAuth();
   const isMine = form.applicant.id === user.id;
+  // Hồ sơ của mình, hoặc hồ sơ người nộp (cán bộ có quyền viewApplicant)
+  const profileLink = isMine ? PAGE_PATH.profile : can(role, 'viewApplicant') ? personProfilePath(form.applicant.id) : null;
   return (
     <FormInfoSection
       title="Người nộp đơn"
       action={
-        isMine && (
-          <Link to={PAGE_PATH.profile} state={{ previousPageLabel: `đơn ${form.code}` } satisfies ReturnState}>
+        profileLink && (
+          <Link to={profileLink} state={{ previousPageLabel: `đơn ${form.code}` } satisfies ReturnState}>
             Xem hồ sơ ›
           </Link>
         )

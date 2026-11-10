@@ -554,6 +554,37 @@ function applicantOf(userId: string): ApplicantRef {
   return OTHER_STUDENTS.find((student) => student.id === userId) ?? { id: userId, name: userId, email: '' };
 }
 
+/** Một người dùng trong API giả: họ tên, email, SĐT và CCCD (null = chưa có), các MSSV. */
+export interface MockPerson {
+  name: string;
+  email: string;
+  phone: string | null;
+  cccd: string | null;
+  students: StudentInfo[];
+  mainStudentId: string | null;
+}
+
+/**
+ * Tìm một người dùng theo id: sinh viên đăng nhập thử, cán bộ hoặc sinh viên khác.
+ * Người có hồ sơ riêng thì lấy SĐT, CCCD từ đó; sinh viên khác chưa có hồ sơ riêng nên chưa có SĐT, CCCD, MSSV.
+ * @param userId  id người dùng
+ * @returns       thông tin người dùng; không có thì null
+ */
+export function findPerson(userId: string): MockPerson | null {
+  const person: ApplicantRef | undefined =
+    Object.values(DEMO_USERS).find((user) => user.id === userId) ?? staffOf(userId) ?? OTHER_STUDENTS.find((student) => student.id === userId);
+  if (!person) return null;
+  const profile = profiles[userId];
+  return {
+    name: profile?.name ?? person.name,
+    email: person.email,
+    phone: profile?.phone ?? null,
+    cccd: profile?.cccd ?? null,
+    students: getStudents(userId),
+    mainStudentId: profile?.mainStudentId ?? null,
+  };
+}
+
 /**
  * Lấy các đơn một tài khoản đã nộp.
  * @param userId  id tài khoản

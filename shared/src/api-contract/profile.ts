@@ -13,7 +13,41 @@ export const PROFILE_ENDPOINTS = {
   myCccd: '/profile/me/cccd',
   /** PUT SetMainStudentRequest → Profile: chọn MSSV chính (hiện trên trang thông tin, điền vào file Word khi xuất đơn) */
   myMainStudent: '/profile/me/main-student',
+  /** GET → Profile: hồ sơ của người khác (CCCD đã che), chỉ xem. Cần quyền viewApplicant; không có người dùng thì 404.
+      Đặt sau /profile/me để 'me' không bị hiểu là id người dùng */
+  person: '/profile/:userId',
+  /** GET → FullCccdResponse: số CCCD đầy đủ của người khác (chỉ gọi khi người xem bấm "Hiện"). Cần quyền viewApplicant */
+  personCccd: '/profile/:userId/cccd',
+  /** GET → MyFormsResponse: các đơn người đó đã nộp. Cần quyền viewApplicant */
+  personForms: '/profile/:userId/forms',
 } as const;
+
+/**
+ * Đường dẫn API hồ sơ của một người dùng khác.
+ * @param userId  id người dùng
+ * @returns       vd '/profile/sv-2'
+ */
+export function profilePath(userId: string): string {
+  return PROFILE_ENDPOINTS.person.replace(':userId', encodeURIComponent(userId));
+}
+
+/**
+ * Đường dẫn API số CCCD đầy đủ của một người dùng khác.
+ * @param userId  id người dùng
+ * @returns       vd '/profile/sv-2/cccd'
+ */
+export function profileCccdPath(userId: string): string {
+  return PROFILE_ENDPOINTS.personCccd.replace(':userId', encodeURIComponent(userId));
+}
+
+/**
+ * Đường dẫn API các đơn đã nộp của một người dùng khác.
+ * @param userId  id người dùng
+ * @returns       vd '/profile/sv-2/forms'
+ */
+export function profileFormsPath(userId: string): string {
+  return PROFILE_ENDPOINTS.personForms.replace(':userId', encodeURIComponent(userId));
+}
 
 /* ---------- Dữ liệu gửi / nhận ---------- */
 
@@ -87,6 +121,10 @@ export const PROFILE_MESSAGES = {
   /** PUT /profile/me thành công */
   200: 'Đã lưu thông tin cá nhân',
   401: 'Bạn chưa đăng nhập.',
+  /** GET /profile/:userId (và /cccd, /forms) khi không có quyền viewApplicant */
+  403: 'Bạn không có quyền xem hồ sơ người khác.',
+  /** GET /profile/:userId (và /cccd, /forms) khi không có người dùng này */
+  404: 'Không có người dùng này.',
   /** PUT /profile/me: CCCD đã thuộc tài khoản khác */
   409: 'Số CCCD này đã thuộc tài khoản khác.',
   /** PUT /profile/me: body sai định dạng */

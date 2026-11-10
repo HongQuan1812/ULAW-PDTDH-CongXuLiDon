@@ -2,6 +2,10 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   ENDPOINTS,
+  profileCccdPath,
+  profileFormsPath,
+  profilePath,
+  type MyFormsResponse,
   type FullCccdResponse,
   type Profile,
   type Session,
@@ -39,6 +43,47 @@ export function useMyFullCccd(enabled: boolean) {
     enabled,
     // Dữ liệu nhạy cảm: không giữ lại lâu sau khi người dùng bấm "Ẩn"
     gcTime: 0,
+  });
+}
+
+/**
+ * Hồ sơ của người khác (cán bộ có quyền viewApplicant xem hồ sơ người nộp đơn). CCCD đã che.
+ * @param userId  id người dùng cần xem
+ * @returns       kết quả useQuery; data = hồ sơ; không có quyền hoặc không có người đó thì lỗi 403 / 404
+ */
+export function usePersonProfile(userId: string) {
+  return useQuery({
+    queryKey: ['profile', 'person', userId] as const,
+    queryFn: () => apiFetch<Profile>(profilePath(userId)),
+  });
+}
+
+/**
+ * Số CCCD đầy đủ của người khác. Chỉ gọi API khi `enabled` là true (người xem bấm "Hiện").
+ * @param userId   id người dùng cần xem
+ * @param enabled  true thì tải số đầy đủ
+ * @returns        kết quả useQuery; data.cccd = số đầy đủ
+ */
+export function usePersonFullCccd(userId: string, enabled: boolean) {
+  return useQuery({
+    queryKey: ['profile', 'person', userId, 'cccd'] as const,
+    queryFn: () => apiFetch<FullCccdResponse>(profileCccdPath(userId)),
+    enabled,
+    // Dữ liệu nhạy cảm: không giữ lại lâu sau khi người xem bấm "Ẩn"
+    gcTime: 0,
+  });
+}
+
+/**
+ * Các đơn một người khác đã nộp.
+ * @param userId  id người dùng cần xem
+ * @returns       kết quả useQuery; data = mảng đơn (FormSummary[])
+ */
+export function usePersonForms(userId: string) {
+  return useQuery({
+    queryKey: ['profile', 'person', userId, 'forms'] as const,
+    queryFn: () => apiFetch<MyFormsResponse>(profileFormsPath(userId)),
+    select: (response) => response.forms,
   });
 }
 
