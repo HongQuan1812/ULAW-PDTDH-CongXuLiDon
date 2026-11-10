@@ -8,8 +8,8 @@ Mỗi bước làm trên một nhánh riêng. Xong thì tạo Pull Request vào 
 |---|---|---|---|---|
 | 0 | Nền móng | `setup` | pnpm workspace, Vite + React, Router, TanStack Query, MSW | ✓ |
 | 1 | Giao diện chung, luật dùng chung | `setup` | màu, font từ bản mẫu · `shared/` trạng thái, vai trò, quyền | ✓ |
-| 2 | Đăng nhập, khung trang | `dang-nhap` | đăng nhập giả theo vai trò · thanh menu theo quyền · đăng xuất | |
-| 3 | Hồ sơ cá nhân | `ho-so` | lần đầu đăng nhập xác nhận họ tên · trang thông tin, sửa CCCD / SĐT | |
+| 2 | Đăng nhập, khung trang | `dang-nhap` | đăng nhập giả theo vai trò · thanh menu theo quyền · đăng xuất | ✓ |
+| 3 | Hồ sơ cá nhân | `ho-so` | lần đầu đăng nhập xác nhận họ tên · trang thông tin, sửa CCCD / SĐT | ✓ |
 | 4 | Nộp đơn | `nop-don` | form theo cấu trúc loại đơn (Xét miễn môn) · bảng · tải tệp · sửa đơn | |
 | 5 | Chi tiết, xử lí đơn | `xu-li-don` | tiếp nhận · yêu cầu bổ sung · duyệt · từ chối · chuyển giao · lịch sử · câu thông báo | |
 | 6 | Quản lí đơn | `quan-li-don` | bảng tìm, lọc, sắp xếp, phân trang · xem nhanh · thống kê | |
