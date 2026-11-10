@@ -124,7 +124,7 @@ Cổng xử lí đơn/
 │
 ├── shared/                       # ===== DÙNG CHUNG FE + BE =====
 │   └── src/
-│       ├── api-contract/         # SCHEMA CHÍNH, mỗi nhóm một file (auth.ts, forms.ts…): endpoint + schema request/response + câu thông báo (MSW, FE, BE cùng theo)
+│       ├── api-contract/         # SCHEMA CHÍNH, mỗi nhóm một file (auth.ts, form.ts, forms.ts…): endpoint + schema request/response + câu thông báo (MSW, FE, BE cùng theo)
 │       ├── aux-schema/           # SCHEMA PHỤ dựng nên schema chính: ví dụ, vai trò, trạng thái, câu hỏi, các phần, câu trả lời
 │       ├── business-rules/       # LUẬT NGHIỆP VỤ: ví dụ, ROLES + can(), trạng thái nào sửa / tiếp nhận / chuyển giao / ra quyết định được
 │       └── validators/           # KIỂM TRA DỮ LIỆU: ví dụ, CCCD, SĐT, email trường, câu trả lời của lá đơn

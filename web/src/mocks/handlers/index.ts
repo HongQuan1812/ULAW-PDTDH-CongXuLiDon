@@ -1,6 +1,7 @@
 import { authHandlers } from './auth';
 import { formTypeHandlers } from './form-types';
-import { formHandlers } from './forms';
+import { formHandlers } from './form';
+import { formsHandlers } from './forms';
 import { healthHandlers } from './health';
 import { profileHandlers } from './profile';
 import { randomFailureHandlers } from './random-failure';
@@ -9,6 +10,8 @@ import { randomFailureHandlers } from './random-failure';
 export const handlers = [
   ...randomFailureHandlers,
   ...authHandlers,
+  // forms trước form: /forms/mine, /forms/handled, /forms/cccds phải được xét trước /forms/:code
+  ...formsHandlers,
   ...formHandlers,
   ...formTypeHandlers,
   ...healthHandlers,

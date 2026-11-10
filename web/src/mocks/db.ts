@@ -10,6 +10,7 @@ import type {
   FormSummary,
   FormType,
   HandledFormSummary,
+  ManagedFormSummary,
   OpenFormType,
   RoleId,
   Session,
@@ -19,7 +20,7 @@ import type {
   TableCell,
   UpdateProfileRequest,
 } from '@ulaw/shared';
-import { FormTypeSchema, can, isAnswerable, nextFormCode } from '@ulaw/shared';
+import { FormTypeSchema, can, isAnswerable, maskCccd, nextFormCode } from '@ulaw/shared';
 
 /* Tài khoản mẫu để đăng nhập thử: mỗi vai trò một người (lấy từ artifact/js/auth.js và sample-data.js). */
 export const DEMO_USERS: Record<RoleId, SessionUser> = {
@@ -605,6 +606,35 @@ export function getFormsHandledBy(staffId: string): HandledFormSummary[] {
     receiver: staffOf(form.receiverId),
     handler: staffOf(form.handlerId),
   }));
+}
+
+/**
+ * Lấy mọi đơn của mọi người nộp, cho bảng Quản lí đơn.
+ * @returns  các đơn kèm lúc tiếp nhận và người nộp (SĐT, CCCD che; chưa có thì null)
+ */
+export function getAllForms(): ManagedFormSummary[] {
+  return FORMS.map((form) => {
+    const person = findPerson(form.ownerId);
+    const applicant = applicantOf(form.ownerId);
+    return {
+      ...toSummary(form),
+      receivedAt: form.receivedAt,
+      applicant: { ...applicant, phone: person?.phone ?? null, maskedCccd: maskCccd(person?.cccd ?? null) },
+    };
+  });
+}
+
+/**
+ * Lấy CCCD đầy đủ của những người đã nộp đơn (cho nút "Hiện CCCD").
+ * @returns  CCCD theo id người nộp; người chưa có CCCD thì không có mặt
+ */
+export function getApplicantCccds(): Record<string, string> {
+  const cccds: Record<string, string> = {};
+  for (const form of FORMS) {
+    const cccd = findPerson(form.ownerId)?.cccd;
+    if (cccd) cccds[form.ownerId] = cccd;
+  }
+  return cccds;
 }
 
 /**

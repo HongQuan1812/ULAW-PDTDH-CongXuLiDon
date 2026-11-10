@@ -2,7 +2,7 @@
    Duyệt thực hiện ngay; Yêu cầu bổ sung và Từ chối mở hộp thoại ghi lí do (không bắt buộc). */
 import { useState } from 'react';
 import { FORM_MESSAGES, type FormDecision, type FormDetail } from '@ulaw/shared';
-import { useDecideForm } from '../../api/forms';
+import { useDecideForm } from '../../api/form';
 import { Button } from '../../components/Button';
 import { Field } from '../../components/Field';
 import { Modal } from '../../components/Modal';

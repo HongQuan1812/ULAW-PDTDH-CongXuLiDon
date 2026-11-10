@@ -8,7 +8,7 @@
 import { useState, type FormEvent } from 'react';
 import { Link, useParams } from 'react-router';
 import { FORM_MESSAGES, can, canDecideOn, canEditForm, canReceiveForm, canTransferForm, type FormDetail, type FormStatus } from '@ulaw/shared';
-import { useFormDetail, useReceiveForm } from '../../api/forms';
+import { useFormDetail, useReceiveForm } from '../../api/form';
 import { PAGE_PATH, personProfilePath, type ReturnState } from '../../app/paths';
 import { Button } from '../../components/Button';
 import { LoadError, loadErrorMessage } from '../../components/LoadError';

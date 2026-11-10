@@ -1,7 +1,8 @@
 /* Lưu nội dung đã sửa của một lá đơn: câu trả lời và mọi tệp vừa chọn đi cùng một lần. */
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import type { FormAnswers, FormDetail } from '@ulaw/shared';
-import { HANDLED_FORMS_KEY, MY_FORMS_KEY, formDetailKey, updateForm } from '../../api/forms';
+import { formDetailKey, updateForm } from '../../api/form';
+import { HANDLED_FORMS_KEY, MY_FORMS_KEY } from '../../api/forms';
 import { ApiError } from '../../api/client';
 import { collectLocalFiles } from './localFiles';
 

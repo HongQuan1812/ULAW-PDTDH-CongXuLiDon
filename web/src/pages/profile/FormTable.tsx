@@ -2,7 +2,7 @@
    (như createAppTable() trong artifact/js/profile.js): cùng các cột thông tin đơn, tìm kiếm / Sắp xếp / Lọc,
    phân trang; bấm một dòng để mở trang chi tiết đơn.
    Chưa có phần xem nhanh (nút › đầu dòng): cần khung nội dung đơn, làm ở bước Nộp đơn. */
-import type { KeyboardEvent } from 'react';
+import type { KeyboardEvent, ReactElement } from 'react';
 import { useNavigate } from 'react-router';
 import { FORM_STATUSES, FORM_STATUS_LABEL, type FormSummary } from '@ulaw/shared';
 import { formPath, PAGE_LABEL, type ReturnState } from '../../app/paths';
@@ -68,6 +68,8 @@ interface FormTableProps<Row extends FormSummary> {
   groupStartKey?: string;
   /** Tên trang này trong nút quay lại của trang đơn ("‹ Quay lại …"); bỏ trống = Thông tin cá nhân */
   pageLabel?: string;
+  /** Tự vẽ ô của một số cột (vd nút Tiếp nhận); trả về thẻ <td> có key, hoặc undefined để dùng cách vẽ mặc định */
+  renderCell?: (field: TableField<Row>, form: Row, query: string) => ReactElement | undefined;
 }
 
 /**
@@ -86,6 +88,7 @@ export function FormTable<Row extends FormSummary>({
   emptyText,
   groupStartKey,
   pageLabel = PAGE_LABEL.profile,
+  renderCell: renderCustomCell,
 }: FormTableProps<Row>) {
   const navigate = useNavigate();
   const { table, query, setQuery, sorting, setSorting, filterRules, setFilterRules, matchedCount, hasCriteria } =
@@ -117,6 +120,8 @@ export function FormTable<Row extends FormSummary>({
    * @returns      thẻ <td>
    */
   const renderCell = (field: TableField<Row>, form: Row) => {
+    const customCell = renderCustomCell?.(field, form, query);
+    if (customCell) return customCell;
     if (field.key === 'code') {
       return (
         <td key={field.key} className={tableStyles.codeCell}>

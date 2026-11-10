@@ -3,6 +3,8 @@ import { QUESTION_TYPES, type FileRef } from '@ulaw/shared';
 import {
   addForm,
   decideForm,
+  getAllForms,
+  getApplicantCccds,
   getFormDetail,
   getFormsHandledBy,
   getFormsOf,
@@ -347,5 +349,33 @@ describe('tìm người dùng theo id', () => {
 
   test('trả về null khi không có người dùng', () => {
     expect(findPerson('khong-co')).toBeNull();
+  });
+});
+
+describe('mọi đơn (Quản lí đơn)', () => {
+  test('có đơn của mọi người nộp, kèm họ tên, email và lúc tiếp nhận', () => {
+    const forms = getAllForms();
+    expect(forms.length).toBeGreaterThan(getFormsOf('sv-1').length);
+    expect(forms.some((form) => form.applicant.id === 'sv-1')).toBe(true);
+    expect(forms.some((form) => form.applicant.id !== 'sv-1')).toBe(true);
+    expect(forms[0]?.applicant.email).toContain('@');
+    expect(forms.find((form) => form.status === 'nop')?.receivedAt).toBeNull();
+  });
+
+  test('người nộp chưa có SĐT, CCCD thì để null; có hồ sơ thì CCCD đã che', () => {
+    const forms = getAllForms();
+    const withoutProfile = forms.find((form) => form.applicant.id === 'sv-2');
+    if (withoutProfile) expect(withoutProfile.applicant).toMatchObject({ phone: null, maskedCccd: null });
+    saveProfile('sv-1', { name: 'Nguyễn Minh Anh', phone: '0987654321', cccd: '079200001234' });
+    const ownForm = getAllForms().find((form) => form.applicant.id === 'sv-1');
+    expect(ownForm?.applicant.maskedCccd).not.toBe('079200001234');
+    expect(ownForm?.applicant.maskedCccd).toBeTruthy();
+  });
+
+  test('CCCD đầy đủ theo id người nộp; người chưa có CCCD không có mặt', () => {
+    saveProfile('sv-1', { name: 'Nguyễn Minh Anh', phone: '0987654321', cccd: '079200001234' });
+    const cccds = getApplicantCccds();
+    expect(cccds['sv-1']).toBe('079200001234');
+    expect(cccds['sv-2']).toBeUndefined();
   });
 });

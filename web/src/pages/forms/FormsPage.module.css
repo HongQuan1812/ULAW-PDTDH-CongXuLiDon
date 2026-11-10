@@ -1,0 +1,4 @@
+/* Trang Quản lí đơn: dùng lại khung thẻ của trang Thông tin cá nhân (ProfilePage.module.css); chỉ thêm phần riêng. */
+.cccdCell{font-variant-numeric:tabular-nums;letter-spacing:.02em}
+.receiveButton.receiveButton{padding:3px 12px;min-height:0;height:auto;font-size:13px}
+.title{font-size:17px;font-weight:600;min-width:0}
