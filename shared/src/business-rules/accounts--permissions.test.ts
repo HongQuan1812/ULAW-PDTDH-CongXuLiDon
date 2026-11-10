@@ -1,5 +1,29 @@
 import { describe, expect, it } from 'vitest';
-import { canEditForm, canReceiveForm } from './accounts--permissions';
+import { canEditForm, canReceiveForm, canTransferForm } from './accounts--permissions';
+
+describe('canTransferForm', () => {
+  const handler = { email: 'thuha.pham.pdt@hcmulaw.edu.vn' };
+
+  it('cán bộ có quyền transfer chuyển giao được đơn đã tiếp nhận chưa có kết quả, kể cả đơn người khác phụ trách', () => {
+    (['xet', 'bs', 'bsg'] as const).forEach((status) => {
+      expect(canTransferForm('nguoiXuLiDon', { status, handler })).toBe(true);
+      expect(canTransferForm('admin', { status, handler })).toBe(true);
+    });
+  });
+
+  it('không chuyển giao được đơn chưa tiếp nhận hoặc đã có kết quả', () => {
+    (['nop', 'duyet', 'tc'] as const).forEach((status) => expect(canTransferForm('admin', { status, handler })).toBe(false));
+  });
+
+  it('không chuyển giao được đơn chưa có người xử lí', () => {
+    expect(canTransferForm('admin', { status: 'xet', handler: null })).toBe(false);
+  });
+
+  it('người nộp đơn hoặc chưa đăng nhập thì không chuyển giao được', () => {
+    expect(canTransferForm('nguoiNopDon', { status: 'xet', handler })).toBe(false);
+    expect(canTransferForm(null, { status: 'xet', handler })).toBe(false);
+  });
+});
 
 describe('canEditForm', () => {
   const student = { id: 'sv-1', role: 'nguoiNopDon' } as const;

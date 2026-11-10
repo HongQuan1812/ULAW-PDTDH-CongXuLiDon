@@ -4,10 +4,10 @@
    Nội dung đơn sửa được khi canEditForm (đơn của mình hoặc Admin, đơn Đã nộp / Cần bổ sung / Đã bổ sung), còn lại chỉ xem.
    Cán bộ có quyền receive thấy nút "Tiếp nhận" ở đầu trang khi đơn Đã nộp / Đã bổ sung.
    Đơn Đang xét mà mình được ra quyết định (canDecideOn) thì có hàng nút Yêu cầu bổ sung / Từ chối / Duyệt ở đáy trang.
-   Chuyển giao, lịch sử: thêm ở các phần sau của bước 5. */
+   Lịch sử: thêm ở phần sau của bước 5. */
 import { useState, type FormEvent } from 'react';
 import { Link, useParams } from 'react-router';
-import { FORM_MESSAGES, canDecideOn, canEditForm, canReceiveForm, type FormDetail, type FormStatus } from '@ulaw/shared';
+import { FORM_MESSAGES, canDecideOn, canEditForm, canReceiveForm, canTransferForm, type FormDetail, type FormStatus } from '@ulaw/shared';
 import { useFormDetail, useReceiveForm } from '../../api/forms';
 import { PAGE_PATH, type ReturnState } from '../../app/paths';
 import { Button } from '../../components/Button';
@@ -24,6 +24,7 @@ import { EMPTY_TEXT, formatDateTime } from '../../lib/format';
 import { DecideBar } from './DecideBar';
 import { FormInfoPanel, FormInfoPanelToggle, FormInfoSection, useFormInfoPanel } from './FormInfoPanel';
 import styles from './FormPage.module.css';
+import { TransferDialog } from './TransferDialog';
 import { SubmitBar, checkBeforeSending, useCommitment } from './SubmitBar';
 import { useLeavePage } from './useLeavePage';
 
@@ -89,6 +90,7 @@ function FormDetailView({ form, onLeave }: { form: FormDetail; onLeave: () => vo
   const { user, role } = useAuth();
   const editable = canEditForm({ id: user.id, role }, { status: form.status, applicantId: form.applicant.id });
   const [savedCount, setSavedCount] = useState(0);
+  const [transferOpen, setTransferOpen] = useState(false);
 
   return (
     <div className={styles.form}>
@@ -137,6 +139,7 @@ function FormDetailView({ form, onLeave }: { form: FormDetail; onLeave: () => vo
           {form.handler && (
             <FormInfoSection
               title="Người xử lí"
+              action={canTransferForm(role, form) && <button type="button" onClick={() => setTransferOpen(true)}>Chuyển giao</button>}
               rows={[
                 ['Họ và tên', form.handler.name],
                 ['Phụ trách từ', form.handlerSince ? formatDateTime(form.handlerSince) : EMPTY_TEXT],
@@ -145,6 +148,7 @@ function FormDetailView({ form, onLeave }: { form: FormDetail; onLeave: () => vo
           )}
         </FormInfoPanel>
       </div>
+      <TransferDialog form={form} open={transferOpen} onClose={() => setTransferOpen(false)} />
     </div>
   );
 }

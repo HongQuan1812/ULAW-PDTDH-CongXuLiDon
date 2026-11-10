@@ -3,7 +3,7 @@
    Quy ước tên: form = lá đơn sinh viên nộp · form type = loại đơn (mẫu do cán bộ soạn). */
 import type { Page, Permission, RoleId } from '../aux-schema/accounts--roles';
 import type { FormStatus } from '../aux-schema/forms--statuses';
-import { isDecidable, isEditable, isReceivable } from './forms--statuses';
+import { isDecidable, isEditable, isReceivable, isTransferable } from './forms--statuses';
 
 export interface Role {
   name: string;
@@ -114,4 +114,18 @@ export function canEditForm(
  */
 export function canReceiveForm(role: RoleId | null | undefined, status: FormStatus): boolean {
   return can(role, 'receive') && isReceivable(status);
+}
+
+/**
+ * Kiểm tra vai trò có được Chuyển giao một lá đơn cho người xử lí khác hay không.
+ * @param role  vai trò người dùng; null / undefined = chưa đăng nhập
+ * @param form  lá đơn (cần status, handler)
+ * @returns     true khi có quyền transfer, đơn đã có người xử lí và đang ở trạng thái chuyển giao được (Đang xét / Cần bổ sung / Đã bổ sung);
+ *              không cần là người xử lí của đơn
+ */
+export function canTransferForm(
+  role: RoleId | null | undefined,
+  form: { status: FormStatus; handler?: { email: string } | null },
+): boolean {
+  return can(role, 'transfer') && !!form.handler && isTransferable(form.status);
 }

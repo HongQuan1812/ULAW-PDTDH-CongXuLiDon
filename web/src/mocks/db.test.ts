@@ -12,6 +12,8 @@ import {
   getFilesOfForm,
   getSavedFileIds,
   getStudents,
+  getTransferTargets,
+  transferForm,
   isCccdTaken,
   resetMockDb,
   saveMainStudent,
@@ -289,5 +291,39 @@ describe('ra quyết định về đơn', () => {
 
   test('trả về null khi không có đơn', () => {
     expect(decideForm('XMM-0000-00000', 'duyet', '')).toBeNull();
+  });
+});
+
+describe('chuyển giao đơn', () => {
+  /** Mã một đơn Đang xét của sinh viên mẫu và người đang xử lí nó. */
+  const underReview = () => {
+    const code = getFormsOf('sv-1').find((form) => form.status === 'xet')!.code;
+    return { code, handler: getFormDetail(code, { id: 'cb-3', role: 'admin' })!.handler! };
+  };
+
+  test('danh sách cán bộ nhận không có người đang xử lí', () => {
+    const { code, handler } = underReview();
+    const targets = getTransferTargets(code)!;
+    expect(targets.length).toBeGreaterThan(0);
+    expect(targets.map((staff) => staff.id)).not.toContain(handler.id);
+  });
+
+  test('chuyển giao: đổi người xử lí, ghi mốc phụ trách mới, giữ người tiếp nhận và trạng thái', () => {
+    const { code, handler } = underReview();
+    const before = getFormDetail(code, { id: 'cb-3', role: 'admin' })!;
+    const newHandler = getTransferTargets(code)![0]!;
+    const transferred = transferForm(code, newHandler.id)!;
+    expect(transferred.handler).toEqual(newHandler);
+    expect(transferred.handler?.id).not.toBe(handler.id);
+    expect(transferred.handlerSince).not.toBe(before.handlerSince);
+    expect(transferred.receiver).toEqual(before.receiver);
+    expect(transferred.status).toBe(before.status);
+  });
+
+  test('trả về null khi không có đơn hoặc không có cán bộ nhận', () => {
+    const { code } = underReview();
+    expect(transferForm('XMM-0000-00000', 'cb-2')).toBeNull();
+    expect(transferForm(code, 'khong-co')).toBeNull();
+    expect(getTransferTargets('XMM-0000-00000')).toBeNull();
   });
 });

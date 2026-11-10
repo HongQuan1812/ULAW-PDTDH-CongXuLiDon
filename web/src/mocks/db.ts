@@ -763,6 +763,32 @@ export function decideForm(code: string, decision: FormDecision, note: string): 
   return toDetail(form);
 }
 
+/**
+ * Cán bộ có thể nhận một lá đơn khi Chuyển giao: mọi cán bộ trừ người đang xử lí đơn.
+ * @param code  mã đơn
+ * @returns     danh sách cán bộ; không có đơn thì null
+ */
+export function getTransferTargets(code: string): StaffRef[] | null {
+  const form = FORMS.find((candidate) => candidate.code === code);
+  if (!form) return null;
+  return STAFF.filter((staff) => staff.id !== form.handlerId);
+}
+
+/**
+ * Chuyển giao một lá đơn: cán bộ nhận thành người xử lí, mốc "Phụ trách từ" tính lại từ lúc này.
+ * Người tiếp nhận, trạng thái, lí do không đổi. Quyền và trạng thái đã được kiểm tra trước (canTransferForm).
+ * @param code       mã đơn
+ * @param toStaffId  id cán bộ nhận
+ * @returns          lá đơn sau khi chuyển giao; không có đơn hoặc không có cán bộ đó thì null
+ */
+export function transferForm(code: string, toStaffId: string): FormDetail | null {
+  const form = FORMS.find((candidate) => candidate.code === code);
+  const toStaff = staffOf(toStaffId);
+  if (!form || !toStaff) return null;
+  Object.assign(form, { handlerId: toStaff.id, handlerSince: vietnamNow() });
+  return toDetail(form);
+}
+
 /* ---------- Tệp minh chứng ---------- */
 
 /** Tệp đính kèm trong API giả: thông tin trả cho giao diện, nội dung, mã đơn chứa tệp. */

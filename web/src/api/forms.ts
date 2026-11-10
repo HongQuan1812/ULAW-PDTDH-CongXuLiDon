@@ -6,12 +6,16 @@ import {
   formDecisionPath,
   formDetailPath,
   formReceivePath,
+  formTransferPath,
+  formTransferTargetsPath,
   type DecideFormRequest,
   type FormDetail,
   type FormSummary,
   type HandledFormsResponse,
   type MyFormsResponse,
   type SubmitFormRequest,
+  type TransferFormRequest,
+  type TransferTargetsResponse,
   type UpdateFormRequest,
 } from '@ulaw/shared';
 import { ApiError, apiFetch } from './client';
@@ -101,6 +105,46 @@ export function useDecideForm(code: string) {
       apiFetch<FormDetail>(formDecisionPath(code), { method: 'POST', body: JSON.stringify(decideRequest) }),
     onSuccess: (decidedForm) => {
       queryClient.setQueryData(formDetailKey(code), decidedForm);
+      void queryClient.invalidateQueries({ queryKey: MY_FORMS_KEY });
+      void queryClient.invalidateQueries({ queryKey: HANDLED_FORMS_KEY });
+    },
+    onError: (error) => {
+      if (error instanceof ApiError && (error.status === 409 || error.status === 404)) {
+        void queryClient.invalidateQueries({ queryKey: formDetailKey(code) });
+      }
+    },
+  });
+}
+
+/**
+ * Cán bộ có thể nhận một lá đơn khi Chuyển giao (trừ người đang xử lí). Chỉ tải khi hộp thoại Chuyển giao mở.
+ * @param code     mã đơn
+ * @param enabled  true: tải (hộp thoại đang mở); false: chưa tải
+ * @returns        kết quả useQuery; data = mảng cán bộ (StaffRef[])
+ */
+export function useTransferTargets(code: string, enabled: boolean) {
+  return useQuery({
+    queryKey: ['forms', 'transfer-targets', code] as const,
+    queryFn: () => apiFetch<TransferTargetsResponse>(formTransferTargetsPath(code)),
+    select: (response) => response.staff,
+    enabled,
+    gcTime: 0, // mỗi lần mở hộp thoại tải lại: người xử lí hiện tại có thể đã đổi
+  });
+}
+
+/**
+ * Chuyển giao một lá đơn cho cán bộ khác. Thành công thì trang chi tiết dùng ngay lá đơn máy chủ trả về, các bảng đơn tải lại.
+ * Đơn không còn chuyển giao được (vd đã có kết quả) hoặc không còn thì tải lại đơn để trang hiện đúng trạng thái.
+ * @param code  mã đơn
+ * @returns     kết quả useMutation; gọi mutate({ toStaffId }). data = lá đơn sau khi chuyển giao
+ */
+export function useTransferForm(code: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (transferRequest: TransferFormRequest) =>
+      apiFetch<FormDetail>(formTransferPath(code), { method: 'POST', body: JSON.stringify(transferRequest) }),
+    onSuccess: (transferredForm) => {
+      queryClient.setQueryData(formDetailKey(code), transferredForm);
       void queryClient.invalidateQueries({ queryKey: MY_FORMS_KEY });
       void queryClient.invalidateQueries({ queryKey: HANDLED_FORMS_KEY });
     },

@@ -7,10 +7,12 @@ import {
   FORM_MESSAGES,
   SUBMIT_FORM_FIELDS,
   SubmitFormRequestSchema,
+  TransferFormRequestSchema,
   UpdateFormRequestSchema,
   can,
   canDecideOn,
   canEditForm,
+  canTransferForm,
   isDecidable,
   isEditable,
   isReceivable,
@@ -20,6 +22,7 @@ import {
   type FormSummary,
   type HandledFormsResponse,
   type MyFormsResponse,
+  type TransferTargetsResponse,
 } from '@ulaw/shared';
 import {
   addForm,
@@ -29,8 +32,10 @@ import {
   getFormsHandledBy,
   getFormsOf,
   getSavedFileIds,
+  getTransferTargets,
   readSession,
   receiveForm,
+  transferForm,
   updateForm,
 } from '../db';
 import { MOCK_DELAY_MS, api, apiError } from '../http';
@@ -201,5 +206,43 @@ export const formHandlers = [
 
     const { decision, note } = decideRequest.data;
     return HttpResponse.json<FormDetail>(decideForm(code, decision, note)!);
+  }),
+
+  // Cán bộ có thể nhận đơn khi Chuyển giao (trừ người đang xử lí)
+  http.get(api(ENDPOINTS.forms.transferTargets), async ({ params }) => {
+    await delay(MOCK_DELAY_MS);
+    const session = readSession();
+    if (!session) return apiError(401, FORM_MESSAGES[401]);
+
+    // Không xem được đơn thì 404; không được chuyển giao thì 403 (không có quyền transfer) hoặc 409 (đơn không còn chuyển giao được)
+    const code = String(params.code);
+    const form = getFormDetail(code, { id: session.user.id, role: session.role });
+    if (!form) return apiError(404, FORM_MESSAGES.notFound);
+    if (!can(session.role, 'transfer')) return apiError(403, FORM_MESSAGES.transferForbidden);
+    if (!canTransferForm(session.role, form)) return apiError(409, FORM_MESSAGES.notTransferable);
+
+    return HttpResponse.json<TransferTargetsResponse>({ staff: getTransferTargets(code)! });
+  }),
+
+  // Chuyển giao: đổi người xử lí của đơn (không đổi trạng thái)
+  http.post(api(ENDPOINTS.forms.transfer), async ({ params, request }) => {
+    await delay(MOCK_DELAY_MS);
+    const session = readSession();
+    if (!session) return apiError(401, FORM_MESSAGES[401]);
+
+    // Không xem được đơn thì 404; body sai thì 422
+    const code = String(params.code);
+    const form = getFormDetail(code, { id: session.user.id, role: session.role });
+    if (!form) return apiError(404, FORM_MESSAGES.notFound);
+    const transferRequest = TransferFormRequestSchema.safeParse(await request.json().catch(() => null));
+    if (!transferRequest.success) return apiError(422, FORM_MESSAGES.invalidBody);
+
+    // Không có quyền transfer thì 403; đơn không còn chuyển giao được thì 409; cán bộ nhận không có trong danh sách thì 422
+    if (!can(session.role, 'transfer')) return apiError(403, FORM_MESSAGES.transferForbidden);
+    if (!canTransferForm(session.role, form)) return apiError(409, FORM_MESSAGES.notTransferable);
+    const { toStaffId } = transferRequest.data;
+    if (!getTransferTargets(code)!.some((staff) => staff.id === toStaffId)) return apiError(422, FORM_MESSAGES.invalidTransferTarget);
+
+    return HttpResponse.json<FormDetail>(transferForm(code, toStaffId)!);
   }),
 ];

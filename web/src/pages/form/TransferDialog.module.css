@@ -1,0 +1,17 @@
+/* Hộp thoại Chuyển giao (như #tModal, .combo của bản mẫu). */
+.subtitle{color:var(--muted);font-size:14px}
+.comboField{display:grid;gap:6px}
+.comboField label{font-size:14px;font-weight:500;color:var(--accent)}
+.combo{position:relative}
+.combo input{width:100%;padding-right:40px}
+.caret{position:absolute;right:12px;top:50%;transform:translateY(-50%);color:var(--muted);pointer-events:none}
+.list{position:absolute;left:0;right:0;top:calc(100% + 4px);z-index:5;max-height:240px;overflow-y:auto;list-style:none;margin:0;padding:6px;
+  background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow-lg)}
+.list li{display:flex;justify-content:space-between;gap:12px;align-items:baseline;padding:9px 12px;border-radius:8px;cursor:pointer}
+.list li.active,.list li:hover{background:var(--hover)}
+.list li[aria-selected="true"]{font-weight:600}
+.staffName{min-width:0}
+.staffEmail{color:var(--muted);font-size:13px;text-align:right;overflow-wrap:anywhere}
+.none{color:var(--muted);cursor:default}
+.list li.none:hover{background:none}
+.buttons{display:flex;justify-content:flex-end;gap:8px}

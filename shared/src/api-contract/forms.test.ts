@@ -1,5 +1,23 @@
 import { describe, expect, test } from 'vitest';
-import { DecideFormRequestSchema, FORM_DECISIONS, formDecisionPath } from './forms';
+import { DecideFormRequestSchema, FORM_DECISIONS, TransferFormRequestSchema, formDecisionPath, formTransferPath, formTransferTargetsPath } from './forms';
+
+describe('TransferFormRequestSchema', () => {
+  test('chấp nhận id cán bộ nhận đơn', () => {
+    expect(TransferFormRequestSchema.safeParse({ toStaffId: 'cb-2' }).success).toBe(true);
+  });
+
+  test('từ chối khi thiếu hoặc rỗng id cán bộ nhận', () => {
+    expect(TransferFormRequestSchema.safeParse({}).success).toBe(false);
+    expect(TransferFormRequestSchema.safeParse({ toStaffId: '' }).success).toBe(false);
+  });
+});
+
+describe('đường dẫn chuyển giao', () => {
+  test('ghép mã đơn vào đường dẫn Chuyển giao và danh sách cán bộ nhận', () => {
+    expect(formTransferPath('XMM-2026-00001')).toBe('/forms/XMM-2026-00001/transfer');
+    expect(formTransferTargetsPath('XMM-2026-00001')).toBe('/forms/XMM-2026-00001/transfer-targets');
+  });
+});
 
 describe('DecideFormRequestSchema', () => {
   test('chấp nhận ba quyết định: yêu cầu bổ sung, duyệt, từ chối', () => {
