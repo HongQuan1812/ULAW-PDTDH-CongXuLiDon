@@ -1,4 +1,4 @@
-/* API giả: lá đơn (nộp đơn mới, danh sách đơn của mình, đơn phụ trách). */
+/* API giả: lá đơn (nộp đơn mới, danh sách đơn của mình, đơn phụ trách, chi tiết một đơn). */
 import { delay, http, HttpResponse } from 'msw';
 import {
   ANSWER_MESSAGES,
@@ -9,11 +9,12 @@ import {
   can,
   validateAnswers,
   validateSentFiles,
+  type FormDetail,
   type FormSummary,
   type HandledFormsResponse,
   type MyFormsResponse,
 } from '@ulaw/shared';
-import { addForm, getFormType, getFormsHandledBy, getFormsOf, readSession } from '../db';
+import { addForm, getFormDetail, getFormType, getFormsHandledBy, getFormsOf, readSession } from '../db';
 import { MOCK_DELAY_MS, api, apiError } from '../http';
 
 /**
@@ -81,5 +82,17 @@ export const formHandlers = [
     if (!session) return apiError(401, FORM_MESSAGES[401]);
     if (!can(session.role, 'decide')) return apiError(403, FORM_MESSAGES[403]);
     return HttpResponse.json<HandledFormsResponse>({ forms: getFormsHandledBy(session.user.id) });
+  }),
+
+  // Một lá đơn đủ nội dung. Đặt sau /forms/mine và /forms/handled để hai đường dẫn đó không bị hiểu là mã đơn
+  http.get(api(ENDPOINTS.forms.detail), async ({ params }) => {
+    await delay(MOCK_DELAY_MS);
+    const session = readSession();
+    if (!session) return apiError(401, FORM_MESSAGES[401]);
+
+    // Không có đơn, hoặc không phải đơn của mình mà không được xem mọi đơn: cùng trả 404
+    const form = getFormDetail(String(params.code), { id: session.user.id, role: session.role });
+    if (!form) return apiError(404, FORM_MESSAGES.notFound);
+    return HttpResponse.json<FormDetail>(form);
   }),
 ];

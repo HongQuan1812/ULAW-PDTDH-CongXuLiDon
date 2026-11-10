@@ -1,4 +1,4 @@
-/* Trang nộp đơn mới (như .page-form, .back, .page-head, .form-grid, .submit-row, .commit của artifact/styles.css). */
+/* Trang đơn: nộp đơn mới và chi tiết đơn (như .page-form, .back, .page-head, .form-grid, .notice, .submit-row, .commit của artifact/styles.css). */
 .page{display:grid;gap:24px;max-width:1320px;margin:0 auto;padding:40px 16px 24px}
 .muted{color:var(--muted)}
 .back{display:inline-flex;align-items:center;gap:4px;border:0;background:none;color:var(--muted);font-weight:500;font-size:13.5px;cursor:pointer;padding:4px 0;margin-bottom:-12px;justify-self:start}
@@ -16,6 +16,16 @@
 .withSide{grid-template-columns:minmax(0,1fr) 320px}
 /* cột nội dung đơn: các phần câu hỏi rồi hàng nút ở dưới */
 .main{display:grid;grid-template-columns:minmax(0,1fr);gap:18px;min-width:0}
+
+/* khung thông báo trên trang chi tiết đơn: màu nền theo trạng thái */
+.notice{border-radius:var(--r-lg);padding:14px 18px;font-size:14px;line-height:1.6;background:var(--s-nop-bg);color:var(--fg)}
+.notice b{font-weight:600}
+.notice p+p{margin-top:2px}
+.notice_xet{background:var(--s-xet-bg)}
+.notice_bs{background:var(--s-bs-bg)}
+.notice_bsg{background:var(--s-bsg-bg)}
+.notice_duyet{background:var(--s-duyet-bg)}
+.notice_tc{background:var(--s-tc-bg)}
 
 /* JUST FOR DEMO: START · ô "Xem thử dạng chỉ xem" */
 .demoToggle{display:inline-flex;align-items:center;gap:10px;justify-self:start;padding:8px 14px;border:1px dashed var(--line-2);border-radius:999px;color:var(--muted);font-size:13px;cursor:pointer}

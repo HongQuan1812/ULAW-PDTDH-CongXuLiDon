@@ -2,6 +2,7 @@
    API giả (MSW), frontend và backend cùng theo file này.
    Quy ước tên: form = lá đơn sinh viên nộp · form type = loại đơn (mẫu do cán bộ soạn). */
 import { z } from 'zod';
+import { FormSectionSchema } from '../aux-schema/form-types--sections';
 import { FormAnswersSchema } from '../aux-schema/forms--answers';
 import { FORM_STATUSES } from '../aux-schema/forms--statuses';
 
@@ -16,7 +17,19 @@ export const FORM_ENDPOINTS = {
   mine: '/forms/mine',
   /** GET: các đơn mình là người tiếp nhận hoặc người xử lí → HandledFormsResponse (mục "Đơn phụ trách"). Cần quyền decide */
   handled: '/forms/handled',
+  /** GET: một lá đơn, đủ nội dung → FormDetail (trang chi tiết đơn, xem nhanh).
+      Xem được: người nộp đơn, hoặc cán bộ có quyền viewAll. Không có đơn, hoặc không được xem, đều trả 404 */
+  detail: '/forms/:code',
 } as const;
+
+/**
+ * Đường dẫn API của một lá đơn.
+ * @param code  mã đơn, vd 'XMM-2026-00001'
+ * @returns     vd '/forms/XMM-2026-00001'
+ */
+export function formDetailPath(code: string): string {
+  return FORM_ENDPOINTS.detail.replace(':code', encodeURIComponent(code));
+}
 
 /* ---------- Dữ liệu gửi / nhận ---------- */
 
@@ -59,6 +72,34 @@ export type HandledFormSummary = z.infer<typeof HandledFormSummarySchema>;
 export const HandledFormsResponseSchema = z.object({ forms: z.array(HandledFormSummarySchema) });
 export type HandledFormsResponse = z.infer<typeof HandledFormsResponseSchema>;
 
+/** Người nộp đơn, hiện trong khung "Thông tin đơn". */
+export const ApplicantRefSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  email: z.string(),
+});
+export type ApplicantRef = z.infer<typeof ApplicantRefSchema>;
+
+/** Trả về từ GET /forms/:code: một lá đơn đủ nội dung, đủ để vẽ trang chi tiết đơn. */
+export const FormDetailSchema = FormSummarySchema.extend({
+  /** Lần lưu gần nhất (nộp, sửa, bổ sung), giờ Việt Nam 'YYYY-MM-DDTHH:mm'; chưa sửa lần nào thì bằng submittedAt */
+  updatedAt: z.string(),
+  /** Lí do Phòng Đào tạo ghi khi Yêu cầu bổ sung / Từ chối; "" = không có */
+  note: z.string(),
+  applicant: ApplicantRefSchema,
+  /** Cán bộ đã bấm "Tiếp nhận" và lúc tiếp nhận; null = chưa tiếp nhận */
+  receiver: StaffRefSchema.nullable(),
+  receivedAt: z.string().nullable(),
+  /** Cán bộ đang xử lí và phụ trách từ lúc nào (đổi khi chuyển giao); null = chưa tiếp nhận */
+  handler: StaffRefSchema.nullable(),
+  handlerSince: z.string().nullable(),
+  /** Các phần, câu hỏi của loại đơn LÚC NỘP (bản chụp), để sửa loại đơn sau này không làm hỏng đơn cũ */
+  sections: z.array(FormSectionSchema),
+  /** Câu trả lời theo id câu hỏi */
+  answers: FormAnswersSchema,
+});
+export type FormDetail = z.infer<typeof FormDetailSchema>;
+
 /**
  * Phần chữ của POST /forms (trường SUBMIT_FORM_FIELDS.request, dạng chuỗi JSON).
  * Câu trả lời của câu hỏi tải tệp là các FileRef có id tạm do trình duyệt đặt (vd 'local-…');
@@ -94,6 +135,8 @@ export const FORM_MESSAGES = {
   formTypeClosed: 'Loại đơn này không có hoặc đã ngừng nhận đơn.',
   /** POST /forms khi body sai định dạng (422). Câu trả lời sai, chưa cam đoan, tệp thiếu / sai / thừa thì báo bằng ANSWER_MESSAGES */
   invalidBody: 'Dữ liệu đơn không hợp lệ.',
+  /** GET /forms/:code khi không có đơn, hoặc không được xem đơn này (404; không nói rõ để không lộ mã đơn của người khác) */
+  notFound: 'Không có đơn này, hoặc bạn không có quyền xem.',
   /** Nộp đơn xong (toast), vd "Đã nộp đơn XMM-2026-01521." */
   submitted: (code: string) => `Đã nộp đơn ${code}.`,
 } as const;

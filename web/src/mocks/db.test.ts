@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, test } from 'vitest';
 import { QUESTION_TYPES } from '@ulaw/shared';
 import {
   addForm,
+  getFormDetail,
   getFormsHandledBy,
   getFormsOf,
   getFormType,
@@ -170,5 +171,37 @@ describe('nộp đơn mới', () => {
     expect(savedFiles).toHaveLength(1);
     expect(savedFiles[0]).toMatchObject({ name: 'bang-diem.pdf', sizeBytes: 4 });
     expect(savedFiles[0]!.id).not.toBe('local-1');
+  });
+});
+
+describe('chi tiết đơn', () => {
+  test('người nộp xem được đơn của mình, đủ nội dung như bản mẫu', () => {
+    const form = getFormDetail('XMM-2026-01520', { id: 'sv-1', role: 'nguoiNopDon' });
+    expect(form).toMatchObject({
+      status: 'nop',
+      note: '',
+      applicant: { id: 'sv-1', name: 'Nguyễn Minh Anh' },
+      receiver: null,
+      handler: null,
+    });
+    expect(form?.sections.map((section) => section.id)).toEqual(['s-mon', 's-files']);
+    expect(form?.answers.mon).toEqual([['Triết học Mác – Lênin', 3, 'Triết học Mác – Lênin', 'ĐH KHXH&NV – ĐHQG TP.HCM']]);
+    expect(form?.answers.files).toMatchObject([{ name: 'Bang_diem_toan_khoa_1.pdf' }]);
+  });
+
+  test('đơn Cần bổ sung có lí do, người tiếp nhận và người xử lí', () => {
+    const supplementForm = getFormsOf('sv-1').find((form) => form.status === 'bs')!;
+    const form = getFormDetail(supplementForm.code, { id: 'sv-1', role: 'nguoiNopDon' })!;
+    expect(form.note).toMatch(/Bảng điểm chưa có dấu xác nhận/);
+    expect(form.receiver).not.toBeNull();
+    expect(form.receivedAt! > form.submittedAt).toBe(true);
+    expect(form.handlerSince! >= form.receivedAt!).toBe(true);
+  });
+
+  test('người nộp đơn không xem được đơn người khác; cán bộ xem được; mã không có thì null', () => {
+    const otherCode = getFormsHandledBy('cb-1').find((form) => !getFormsOf('sv-1').some((own) => own.code === form.code))!.code;
+    expect(getFormDetail(otherCode, { id: 'sv-1', role: 'nguoiNopDon' })).toBeNull();
+    expect(getFormDetail(otherCode, { id: 'cb-1', role: 'nguoiXuLiDon' })?.applicant.id).toMatch(/^sv-([2-9]|1[01])$/);
+    expect(getFormDetail('XMM-2026-99999', { id: 'cb-3', role: 'admin' })).toBeNull();
   });
 });

@@ -1,12 +1,12 @@
 /* Trang nộp đơn mới của một loại đơn (#/nop-don/<mã loại đơn>), mở sau khi chọn trong hộp "Chọn loại đơn".
    Gồm: nội dung đơn theo cấu trúc loại đơn, khung "Thông tin đơn" bên phải, hàng nút dính đáy có ô cam đoan.
-   Gửi đơn: tải tệp lên, gửi câu trả lời; xong thì về trang Thông tin cá nhân, đơn mới nằm trong "Đơn đã nộp". */
+   Gửi đơn: gửi câu trả lời và mọi tệp trong một lần; xong thì về trang Thông tin cá nhân, đơn mới nằm trong "Đơn đã nộp". */
 import { useEffect, useRef, useState, type FormEvent } from 'react';
-import { Link, useLocation, useNavigate, useNavigationType, useParams } from 'react-router';
-import { ANSWER_MESSAGES, FORM_MESSAGES, ROLES, type FormType } from '@ulaw/shared';
+import { Link, useNavigate, useNavigationType, useParams } from 'react-router';
+import { ANSWER_MESSAGES, FORM_MESSAGES, type FormType } from '@ulaw/shared';
 import { useFormType } from '../../api/form-types';
 import { useMyProfile } from '../../api/profile';
-import { homePath, PAGE_LABEL, PAGE_PATH, readPreviousPageLabel, type ReturnState } from '../../app/paths';
+import { PAGE_LABEL, PAGE_PATH, type ReturnState } from '../../app/paths';
 import { Button } from '../../components/Button';
 import { LoadError, loadErrorMessage } from '../../components/LoadError';
 import { RefreshButton } from '../../components/RefreshButton';
@@ -18,7 +18,8 @@ import { useFormAnswers } from '../../features/form-renderer/useFormAnswers';
 import { useSubmitNewForm } from '../../features/form-renderer/useSubmitNewForm';
 import { SHOW_DEMO } from '../../lib/env';
 import { FormInfoPanel, FormInfoPanelToggle, FormInfoSection, useFormInfoPanel } from './FormInfoPanel';
-import styles from './NewFormPage.module.css';
+import styles from './FormPage.module.css';
+import { useLeavePage } from './useLeavePage';
 
 /** Câu báo khi không tải được loại đơn mà máy chủ không gửi kèm câu báo lỗi (vd mất mạng). */
 const LOAD_FAILED_TEXT = 'Không tải được loại đơn.';
@@ -30,37 +31,19 @@ const SUBMIT_FAILED_TEXT = 'Chưa gửi được đơn. Kiểm tra kết nối m
 const COMMITMENT_TEXT = 'Tôi cam đoan các thông tin và minh chứng trên là đúng sự thật.';
 
 /**
- * Các cách rời trang (như goBack, nhãn #formBack của artifact/js/nav.js và đoạn cuối phần gửi đơn của application-form.js).
- * Quay lại: trang trước có gửi kèm tên (vd mở từ Thông tin cá nhân) thì về trang đó như nút Back;
- * mở thẳng đường dẫn (không có trang trước) thì về trang chính của vai trò.
- * Gửi đơn xong: về trang Thông tin cá nhân; trang trước chính là trang đó thì lùi lại như nút Back,
- * không thì thay trang nộp đơn trong lịch sử, để bấm Back không mở lại lá đơn đã gửi.
- * @returns  backLabel: tên trang sẽ về, vd 'Thông tin cá nhân' · goBack: hàm quay lại · leaveAfterSubmit: hàm rời trang sau khi gửi
- */
-function useLeavePage() {
-  const navigate = useNavigate();
-  const location = useLocation();
-  const { role } = useAuth();
-  const previousPageLabel = location.key === 'default' ? undefined : readPreviousPageLabel(location.state);
-  const leaveAfterSubmit = () =>
-    previousPageLabel === PAGE_LABEL.profile ? navigate(-1) : navigate(PAGE_PATH.profile, { replace: true });
-
-  if (previousPageLabel) return { backLabel: previousPageLabel, goBack: () => navigate(-1), leaveAfterSubmit };
-  return {
-    backLabel: PAGE_LABEL[ROLES[role].home],
-    goBack: () => navigate(homePath(role), { replace: true }),
-    leaveAfterSubmit,
-  };
-}
-
-/**
  * Tải cấu trúc loại đơn rồi vẽ trang nộp đơn.
  * @returns  giao diện trang: đang tải / câu báo lỗi kèm nút ↻ / lá đơn
  */
 export function NewFormPage() {
   const { formTypeId = '' } = useParams();
   const formTypeQuery = useFormType(formTypeId);
-  const { backLabel, goBack, leaveAfterSubmit } = useLeavePage();
+  const navigate = useNavigate();
+  const { backLabel, goBack, previousPageLabel } = useLeavePage();
+
+  // Gửi đơn xong: về trang Thông tin cá nhân; trang trước chính là trang đó thì lùi lại như nút Back,
+  // không thì thay trang nộp đơn trong lịch sử, để bấm Back không mở lại lá đơn đã gửi
+  const leaveAfterSubmit = () =>
+    previousPageLabel === PAGE_LABEL.profile ? navigate(-1) : navigate(PAGE_PATH.profile, { replace: true });
 
   return (
     <div className={styles.page}>

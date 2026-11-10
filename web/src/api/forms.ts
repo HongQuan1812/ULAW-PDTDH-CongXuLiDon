@@ -3,6 +3,8 @@ import { useQuery } from '@tanstack/react-query';
 import {
   ENDPOINTS,
   SUBMIT_FORM_FIELDS,
+  formDetailPath,
+  type FormDetail,
   type FormSummary,
   type HandledFormsResponse,
   type MyFormsResponse,
@@ -37,6 +39,25 @@ export function useHandledForms() {
     queryKey: HANDLED_FORMS_KEY,
     queryFn: () => apiFetch<HandledFormsResponse>(ENDPOINTS.forms.handled),
     select: (response) => response.forms,
+  });
+}
+
+/**
+ * Khóa lưu tạm nội dung một lá đơn.
+ * @param code  mã đơn
+ * @returns     vd ['forms', 'detail', 'XMM-2026-00001']
+ */
+export const formDetailKey = (code: string) => ['forms', 'detail', code] as const;
+
+/**
+ * Một lá đơn đủ nội dung (trang chi tiết đơn).
+ * @param code  mã đơn, vd 'XMM-2026-00001'
+ * @returns     kết quả useQuery; data = lá đơn (FormDetail); không có hoặc không được xem thì lỗi 404
+ */
+export function useFormDetail(code: string) {
+  return useQuery({
+    queryKey: formDetailKey(code),
+    queryFn: () => apiFetch<FormDetail>(formDetailPath(code)),
   });
 }
 

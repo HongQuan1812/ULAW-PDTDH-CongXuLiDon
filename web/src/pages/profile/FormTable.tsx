@@ -5,7 +5,7 @@
 import type { KeyboardEvent } from 'react';
 import { useNavigate } from 'react-router';
 import { FORM_STATUSES, FORM_STATUS_LABEL, type FormSummary } from '@ulaw/shared';
-import { formPath } from '../../app/paths';
+import { formPath, PAGE_LABEL, type ReturnState } from '../../app/paths';
 import { StatusPill } from '../../components/StatusPill';
 import { LoadError } from '../../components/LoadError';
 import { HeaderCell } from '../../components/table/HeaderCell';
@@ -98,8 +98,9 @@ export function FormTable<Row extends FormSummary>({
   const columnCount = fields.length + 1;
   const groupClass = (key: string) => (key === groupStartKey ? tableStyles.groupStart : '');
 
-  // Bấm dòng hoặc nhấn Enter khi dòng đang được chọn: mở trang chi tiết đơn
-  const openForm = (code: string) => navigate(formPath(code));
+  // Bấm dòng hoặc nhấn Enter khi dòng đang được chọn: mở trang chi tiết đơn (trang đó có nút "‹ Quay lại Thông tin cá nhân")
+  const openForm = (code: string) =>
+    navigate(formPath(code), { state: { previousPageLabel: PAGE_LABEL.profile } satisfies ReturnState });
   const openOnEnter = (event: KeyboardEvent<HTMLTableRowElement>, code: string) => {
     if (event.target !== event.currentTarget || event.key !== 'Enter') return;
     event.preventDefault();

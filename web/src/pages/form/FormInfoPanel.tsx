@@ -1,5 +1,5 @@
 /* Khung "Thông tin đơn" ở trang đơn (như #fSide và cuối artifact/js/application-form.js).
-   Dùng chung cho trang nộp đơn mới và trang chi tiết đơn (bước sau thêm trạng thái, người tiếp nhận, người xử lí).
+   Dùng chung cho trang nộp đơn mới (người nộp đơn) và trang chi tiết đơn (thêm trạng thái, người tiếp nhận, người xử lí).
      - màn hình rộng: nằm bên phải nội dung đơn; bấm › để ẩn, nút "Thông tin đơn" ở đầu trang để hiện lại
        (nhớ lựa chọn trong trình duyệt này)
      - màn hình hẹp (≤ 1100px): ẩn sẵn, bấm "Thông tin đơn" để trượt ra từ bên phải; bấm ra ngoài, × hoặc Esc để đóng */
@@ -130,7 +130,7 @@ export function FormInfoPanel({ panel, children }: { panel: FormInfoPanelState; 
 
 /**
  * Một mục trong khung, vd "Người nộp đơn": tiêu đề nhỏ, nút / liên kết bên phải (nếu có), các dòng nhãn – giá trị.
- * @param title   tiêu đề mục
+ * @param title   tiêu đề mục; không có thì không có hàng tiêu đề (vd mục trạng thái, ngày nộp ở đầu khung)
  * @param action  nút hoặc liên kết bên phải tiêu đề, vd "Xem hồ sơ ›"
  * @param rows    các dòng [nhãn, giá trị]
  * @returns       khối mục
@@ -140,16 +140,18 @@ export function FormInfoSection({
   action,
   rows,
 }: {
-  title: string;
+  title?: string;
   action?: ReactNode;
   rows: readonly (readonly [label: string, content: ReactNode])[];
 }) {
   return (
     <div className={styles.section}>
-      <div className={styles.sectionHead}>
-        <h3>{title}</h3>
-        {action}
-      </div>
+      {title && (
+        <div className={styles.sectionHead}>
+          <h3>{title}</h3>
+          {action}
+        </div>
+      )}
       <dl className={styles.meta}>
         {rows.map(([label, content]) => (
           <div key={label}>
