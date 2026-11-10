@@ -3,10 +3,12 @@ import type {
   FormStatus,
   FormSummary,
   FormTypeStatus,
+  HandledFormSummary,
   OpenFormType,
   RoleId,
   Session,
   SessionUser,
+  StaffRef,
   StudentInfo,
   UpdateProfileRequest,
 } from '@ulaw/shared';
@@ -193,12 +195,33 @@ export function getOpenFormTypes(): OpenFormType[] {
 /** Thêm số 0 phía trước cho đủ 2 chữ số, vd 7 → "07". */
 const twoDigits = (number: number) => String(number).padStart(2, '0');
 
+/** Ngày dạng 'YYYY-MM-DD' theo giờ máy. */
+const dateText = (day: Date) => `${day.getFullYear()}-${twoDigits(day.getMonth() + 1)}-${twoDigits(day.getDate())}`;
+
+/** Lá đơn trong API giả: dòng tóm tắt, kèm id người nộp, người tiếp nhận, người xử lí (null = chưa tiếp nhận). */
+interface MockForm extends FormSummary {
+  ownerId: string;
+  receiverId: string | null;
+  handlerId: string | null;
+}
+
+/** Lá đơn chưa gán cán bộ. */
+type UnassignedForm = Omit<MockForm, 'receiverId' | 'handlerId'>;
+
+/* Cán bộ Phòng Đào tạo mẫu, như SAMPLE_STAFF trong artifact/js/sample-data.js.
+   cb-1 (Người xử lí đơn) và cb-3 (Admin) là tài khoản đăng nhập thử. */
+const STAFF: StaffRef[] = [
+  { id: 'cb-1', name: 'Phạm Thu Hà', email: 'thuha.pham.pdt@hcmulaw.edu.vn' },
+  { id: 'cb-2', name: 'Trần Quốc Việt', email: 'quocviet.tran.pdt@hcmulaw.edu.vn' },
+  { id: 'cb-3', name: 'Lê Ngọc Diệp', email: 'ngocdiep.le.pdt@hcmulaw.edu.vn' },
+];
+
 /**
- * Sinh 18 đơn Xét miễn môn mẫu cho sinh viên, như hàm seed() trong artifact/js/sample-data.js
+ * Sinh 18 đơn Xét miễn môn mẫu cho sinh viên đăng nhập thử, như hàm seed() trong artifact/js/sample-data.js
  * (cùng trạng thái, mã đơn, ngày nộp), để bảng có nhiều trang, đủ các trạng thái.
- * @returns  các đơn, đơn mới nộp đứng đầu
+ * @returns  các đơn của sv-1, đơn mới nộp đứng đầu
  */
-function seedStudentForms(): FormSummary[] {
+function seedStudentForms(): UnassignedForm[] {
   const statuses: FormStatus[] = [
     'nop', 'xet', 'xet', 'bs', 'duyet', 'xet', 'duyet', 'tc', 'duyet',
     'bsg', 'duyet', 'duyet', 'tc', 'duyet', 'duyet', 'tc', 'duyet', 'duyet',
@@ -207,8 +230,9 @@ function seedStudentForms(): FormSummary[] {
 
   return statuses.map((status, i) => {
     // Ngày nộp lùi dần, giờ nộp trong buổi sáng
-    const date = `${day.getFullYear()}-${twoDigits(day.getMonth() + 1)}-${twoDigits(day.getDate())}`;
-    const form: FormSummary = {
+    const date = dateText(day);
+    const form: UnassignedForm = {
+      ownerId: 'sv-1',
       code: `XMM-${day.getFullYear()}-${String(1520 - i * 83).padStart(5, '0')}`,
       formTypeId: 'xmm',
       formTypeName: 'Xét miễn môn',
@@ -220,11 +244,67 @@ function seedStudentForms(): FormSummary[] {
   });
 }
 
-/* Đơn của từng tài khoản, khóa theo id người dùng. Cán bộ chưa nộp đơn nào (để thấy bảng trống).
-   Chỉ đọc ở bước này; nộp, sửa đơn làm ở bước Nộp đơn. */
-const FORMS_BY_OWNER: Record<string, FormSummary[]> = {
-  'sv-1': seedStudentForms(),
-};
+/**
+ * Sinh đơn của 10 sinh viên khác (sv-2 … sv-11), như hàm seedOthers() trong artifact/js/sample-data.js:
+ * sinh viên thứ i có 1 + i % 3 đơn, tổng 19 đơn. Dùng cho mục "Đơn phụ trách" của cán bộ.
+ * @returns  các đơn
+ */
+function seedOtherStudentForms(): UnassignedForm[] {
+  const statuses: FormStatus[] = ['nop', 'xet', 'bs', 'duyet', 'tc', 'bsg', 'xet', 'duyet'];
+  const forms: UnassignedForm[] = [];
+  let formIndex = 0;
+
+  for (let student = 0; student < 10; student++) {
+    for (let j = 0; j < 1 + (student % 3); j++, formIndex++) {
+      const day = new Date(2026, 9, 31 - ((formIndex * 11) % 200));
+      forms.push({
+        ownerId: `sv-${student + 2}`,
+        code: `XMM-${day.getFullYear()}-${String(1500 - formIndex * 37).padStart(5, '0')}`,
+        formTypeId: 'xmm',
+        formTypeName: 'Xét miễn môn',
+        submittedAt: `${dateText(day)}T${twoDigits(8 + (formIndex % 9))}:${twoDigits((formIndex * 13) % 60)}`,
+        status: statuses[formIndex % statuses.length]!,
+      });
+    }
+  }
+  return forms;
+}
+
+/**
+ * Gán người tiếp nhận, người xử lí cho các đơn, như đoạn cuối artifact/js/sample-data.js:
+ * đơn Đã nộp chưa ai tiếp nhận; đơn khác do lần lượt 3 cán bộ tiếp nhận, cứ 5 đơn có 1 đơn đã chuyển giao cho người kế tiếp.
+ * @param forms  các đơn chưa gán
+ * @returns      các đơn đã gán cán bộ
+ */
+function assignStaff(forms: UnassignedForm[]): MockForm[] {
+  return forms.map((form, i) => {
+    if (form.status === 'nop') return { ...form, receiverId: null, handlerId: null };
+    const receiver = STAFF[i % STAFF.length]!;
+    const handler = i % 5 === 2 ? STAFF[(i + 1) % STAFF.length]! : receiver;
+    return { ...form, receiverId: receiver.id, handlerId: handler.id };
+  });
+}
+
+/* Mọi lá đơn. Chỉ đọc ở bước này; nộp, sửa, xử lí đơn làm ở các bước sau. */
+const FORMS: MockForm[] = assignStaff([...seedStudentForms(), ...seedOtherStudentForms()]);
+
+/**
+ * Bỏ các id nội bộ, chỉ giữ phần trả về cho giao diện.
+ * @param form  lá đơn trong API giả
+ * @returns     dòng tóm tắt theo FormSummarySchema
+ */
+function toSummary({ ownerId: _ownerId, receiverId: _receiverId, handlerId: _handlerId, ...summary }: MockForm): FormSummary {
+  return summary;
+}
+
+/**
+ * Tìm cán bộ theo id.
+ * @param staffId  id tài khoản cán bộ; null = chưa có
+ * @returns        cán bộ; không có thì null
+ */
+function staffOf(staffId: string | null): StaffRef | null {
+  return STAFF.find((staff) => staff.id === staffId) ?? null;
+}
 
 /**
  * Lấy các đơn một tài khoản đã nộp.
@@ -232,7 +312,20 @@ const FORMS_BY_OWNER: Record<string, FormSummary[]> = {
  * @returns       các đơn; chưa nộp đơn nào thì []
  */
 export function getFormsOf(userId: string): FormSummary[] {
-  return FORMS_BY_OWNER[userId] ?? [];
+  return FORMS.filter((form) => form.ownerId === userId).map(toSummary);
+}
+
+/**
+ * Lấy các đơn một cán bộ đã tiếp nhận hoặc đang xử lí.
+ * @param staffId  id tài khoản cán bộ
+ * @returns        các đơn kèm người tiếp nhận, người xử lí; không có thì []
+ */
+export function getFormsHandledBy(staffId: string): HandledFormSummary[] {
+  return FORMS.filter((form) => form.receiverId === staffId || form.handlerId === staffId).map((form) => ({
+    ...toSummary(form),
+    receiver: staffOf(form.receiverId),
+    handler: staffOf(form.handlerId),
+  }));
 }
 
 /** Đưa hồ sơ về ban đầu (dùng trong test). */

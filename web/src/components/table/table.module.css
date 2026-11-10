@@ -51,6 +51,10 @@
 .rowLink:hover>td{background:var(--hover)}
 .rowLink:focus-visible{outline:2px solid var(--focus);outline-offset:-2px}
 .codeCell{font-weight:600;color:var(--fg)}
+.nameCell{font-weight:500}
+.dash{color:var(--faint)}
+/* đường kẻ dọc mở đầu nhóm cột bên phải (vd Người tiếp nhận / Người xử lí) */
+.table .groupStart{border-left:1px solid var(--line)}
 .numberCell{color:var(--muted)}
 .goCell{text-align:right;width:1%}
 .goLabel{display:inline-flex;align-items:center;color:var(--faint);font-weight:500;font-size:13px}

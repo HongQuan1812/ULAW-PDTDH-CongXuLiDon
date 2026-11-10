@@ -1,5 +1,5 @@
-/* Trang Thông tin cá nhân (bước 3): phần thông tin cá nhân, thông tin sinh viên, và mục "Đơn đã nộp".
-   Mục "Đơn phụ trách" của cán bộ làm sau, ở bước Chi tiết, xử lí đơn. */
+/* Trang Thông tin cá nhân (bước 3): phần thông tin cá nhân, thông tin sinh viên, mục "Đơn đã nộp",
+   và mục "Đơn phụ trách" (chỉ vai trò được xử lí đơn). */
 import { useCallback, useState } from 'react';
 import { MAIN_STUDENT_MESSAGES, STUDENT_INFO_LABELS, type Profile, type StudentInfo } from '@ulaw/shared';
 import { useMyFullCccd, useMyProfile, useSetMainStudent } from '../../api/profile';
@@ -8,7 +8,9 @@ import { Button } from '../../components/Button';
 import { Sheet } from '../../components/Sheet';
 import { useToast } from '../../components/Toast';
 import { EMPTY_TEXT, formatPhone } from '../../lib/format';
+import { useCan } from '../../features/auth/useAuth';
 import { EditProfileDialog } from './EditProfileDialog';
+import { HandledForms } from './HandledForms';
 import { SubmittedForms } from './SubmittedForms';
 import styles from './ProfilePage.module.css';
 
@@ -16,11 +18,13 @@ import styles from './ProfilePage.module.css';
 const LOAD_FAILED_TEXT = 'Không tải được thông tin cá nhân. Hãy thử tải lại trang.';
 
 /**
- * Tải hồ sơ của mình rồi vẽ trang. Bảng "Đơn đã nộp" tải riêng, không chờ hồ sơ.
- * @returns  giao diện trang: thẻ thông tin (đang tải / lỗi / thông tin) và mục Đơn đã nộp
+ * Tải hồ sơ của mình rồi vẽ trang. Các bảng đơn tải riêng, không chờ hồ sơ.
+ * @returns  giao diện trang: thẻ thông tin (đang tải / lỗi / thông tin), mục Đơn đã nộp,
+ *           và mục Đơn phụ trách nếu vai trò có quyền decide
  */
 export function ProfilePage() {
   const profileQuery = useMyProfile();
+  const canHandleForms = useCan('decide');
 
   return (
     <div className={styles.page}>
@@ -39,6 +43,7 @@ export function ProfilePage() {
         <IdentityCard profile={profileQuery.data} />
       )}
       <SubmittedForms />
+      {canHandleForms && <HandledForms />}
     </div>
   );
 }

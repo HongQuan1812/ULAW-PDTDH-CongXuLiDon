@@ -1,0 +1,244 @@
+/* Bảng đơn trên trang Thông tin cá nhân, dùng chung cho mục "Đơn đã nộp" và "Đơn phụ trách"
+   (như createAppTable() trong artifact/js/profile.js): cùng các cột thông tin đơn, tìm kiếm / Sắp xếp / Lọc,
+   phân trang; bấm một dòng để mở trang chi tiết đơn.
+   Chưa có phần xem nhanh (nút › đầu dòng): cần khung nội dung đơn, làm ở bước Nộp đơn. */
+import type { KeyboardEvent } from 'react';
+import { useNavigate } from 'react-router';
+import { FORM_STATUSES, FORM_STATUS_LABEL, type FormSummary } from '@ulaw/shared';
+import { formPath } from '../../app/paths';
+import { StatusPill } from '../../components/StatusPill';
+import { HeaderCell } from '../../components/table/HeaderCell';
+import { Highlight } from '../../components/table/Highlight';
+import { Pager } from '../../components/table/Pager';
+import { TableToolbar } from '../../components/table/TableToolbar';
+import { displayText, type SortRules, type TableField } from '../../components/table/tableTools';
+import { useTableTools } from '../../components/table/useTableTools';
+import { EMPTY_TEXT, formatDate } from '../../lib/format';
+import tableStyles from '../../components/table/table.module.css';
+
+/** Các cột thông tin đơn của mọi bảng đơn (như P_FIELDS của bản mẫu): Mã đơn, Loại đơn, Ngày nộp, Trạng thái. */
+export const BASE_FORM_FIELDS: TableField<FormSummary>[] = [
+  { key: 'code', label: 'Mã đơn', type: 'text', getValue: (form) => form.code },
+  {
+    key: 'formType',
+    label: 'Loại đơn',
+    type: 'select',
+    getValue: (form) => form.formTypeId,
+    getLabel: (form) => form.formTypeName,
+  },
+  { key: 'submittedAt', label: 'Ngày nộp', type: 'date', getValue: (form) => form.submittedAt },
+  {
+    key: 'status',
+    label: 'Trạng thái',
+    type: 'select',
+    getValue: (form) => form.status,
+    getLabel: (form) => FORM_STATUS_LABEL[form.status],
+    options: FORM_STATUSES.map((status) => ({ value: status, label: FORM_STATUS_LABEL[status] })),
+  },
+];
+
+/** Thứ tự khi chưa chọn sắp xếp: đơn mới nộp lên trên, cùng lúc thì mã đơn lớn lên trên. */
+const DEFAULT_SORTING: SortRules = [
+  { id: 'submittedAt', desc: true },
+  { id: 'code', desc: true },
+];
+
+/** Số đơn mỗi trang, như PER của bản mẫu. */
+const PAGE_SIZE = 8;
+
+interface FormTableProps<Row extends FormSummary> {
+  /** Tên riêng của bảng, để nhớ cách xem khi đi qua trang khác, vd 'profile.submittedForms' */
+  tableId: string;
+  /** Các cột: BASE_FORM_FIELDS, có thể thêm cột phía sau (vd Người tiếp nhận). Khai báo ngoài component */
+  fields: readonly TableField<Row>[];
+  /** Các đơn; phải giữ nguyên tham chiếu giữa các lần vẽ (lấy thẳng từ useQuery) */
+  rows: readonly Row[];
+  /** Đang tải lần đầu */
+  isPending: boolean;
+  /** Câu báo lỗi khi không tải được; null = không lỗi */
+  errorMessage: string | null;
+  /** Gợi ý trong ô tìm kiếm */
+  searchPlaceholder: string;
+  /** Tên ô tìm kiếm cho trình đọc màn hình */
+  searchLabel: string;
+  /** Câu hiện khi chưa có đơn nào (không tính lúc đang tìm, lọc) */
+  emptyText: string;
+  /** Cột mở đầu nhóm cột bên phải, có đường kẻ dọc ngăn cách (như trang Quản lí đơn), vd 'receiver' */
+  groupStartKey?: string;
+}
+
+/**
+ * Thanh công cụ, bảng và phân trang của một bảng đơn (phần dưới tiêu đề của mục).
+ * @param props  xem FormTableProps
+ * @returns      thanh công cụ, bảng, thanh phân trang
+ */
+export function FormTable<Row extends FormSummary>({
+  tableId,
+  fields,
+  rows,
+  isPending,
+  errorMessage,
+  searchPlaceholder,
+  searchLabel,
+  emptyText,
+  groupStartKey,
+}: FormTableProps<Row>) {
+  const navigate = useNavigate();
+  const { table, query, setQuery, sorting, setSorting, filterRules, setFilterRules, matchedCount, hasCriteria } =
+    useTableTools({
+      tableId,
+      rows,
+      fields,
+      defaultSorting: DEFAULT_SORTING,
+      pageSize: PAGE_SIZE,
+      getRowId: (form) => form.code,
+    });
+  const pageRows = table.getRowModel().rows;
+  const columnCount = fields.length + 1;
+  const groupClass = (key: string) => (key === groupStartKey ? tableStyles.groupStart : '');
+
+  // Bấm dòng hoặc nhấn Enter khi dòng đang được chọn: mở trang chi tiết đơn
+  const openForm = (code: string) => navigate(formPath(code));
+  const openOnEnter = (event: KeyboardEvent<HTMLTableRowElement>, code: string) => {
+    if (event.target !== event.currentTarget || event.key !== 'Enter') return;
+    event.preventDefault();
+    openForm(code);
+  };
+
+  /**
+   * Một ô của dòng: 4 cột thông tin đơn có cách hiện riêng; cột thêm hiện chữ, ô trống ghi "—".
+   * @param field  cột
+   * @param form   đơn của dòng
+   * @returns      thẻ <td>
+   */
+  const renderCell = (field: TableField<Row>, form: Row) => {
+    if (field.key === 'code') {
+      return (
+        <td key={field.key} className={tableStyles.codeCell}>
+          <Highlight text={form.code} query={query} />
+        </td>
+      );
+    }
+    if (field.key === 'submittedAt') {
+      return (
+        <td key={field.key} className={tableStyles.numberCell}>
+          <Highlight text={formatDate(form.submittedAt)} query={query} />
+        </td>
+      );
+    }
+    if (field.key === 'status') {
+      return (
+        <td key={field.key}>
+          <StatusPill status={form.status} query={query} />
+        </td>
+      );
+    }
+    const text = displayText(field, form);
+    return (
+      <td key={field.key} className={`${field.key === 'formType' ? '' : tableStyles.nameCell} ${groupClass(field.key)}`}>
+        {text ? <Highlight text={text} query={query} /> : <span className={tableStyles.dash}>{EMPTY_TEXT}</span>}
+      </td>
+    );
+  };
+
+  return (
+    <>
+      <TableToolbar
+        fields={fields}
+        rows={rows}
+        query={query}
+        onQueryChange={setQuery}
+        searchPlaceholder={searchPlaceholder}
+        searchLabel={searchLabel}
+        sorting={sorting}
+        onSortingChange={setSorting}
+        defaultSortNote="Bảng đang xếp đơn mới nộp lên trên."
+        filterRules={filterRules}
+        onFilterRulesChange={setFilterRules}
+        defaultFilterKey="status"
+      />
+
+      <div className={tableStyles.tableWrap}>
+        <table className={tableStyles.table}>
+          <thead>
+            <tr>
+              {fields.map((field) => (
+                <HeaderCell
+                  key={field.key}
+                  field={field}
+                  sorting={sorting}
+                  filterRules={filterRules}
+                  className={groupClass(field.key)}
+                />
+              ))}
+              <th>
+                <span className="sr-only">Mở đơn</span>
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {isPending ? (
+              <MessageRow columnCount={columnCount} text="Đang tải danh sách đơn…" />
+            ) : errorMessage !== null ? (
+              <MessageRow
+                columnCount={columnCount}
+                text={errorMessage || 'Không tải được danh sách đơn. Hãy thử tải lại trang.'}
+                isError
+              />
+            ) : pageRows.length === 0 ? (
+              <MessageRow
+                columnCount={columnCount}
+                text={hasCriteria ? 'Không có đơn nào khớp điều kiện tìm kiếm và bộ lọc.' : emptyText}
+              />
+            ) : (
+              pageRows.map(({ original: form }) => (
+                <tr
+                  key={form.code}
+                  className={tableStyles.rowLink}
+                  tabIndex={0}
+                  onClick={() => openForm(form.code)}
+                  onKeyDown={(event) => openOnEnter(event, form.code)}
+                >
+                  {fields.map((field) => renderCell(field, form))}
+                  <td className={tableStyles.goCell}>
+                    <span className={tableStyles.goLabel}>Chi tiết ›</span>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      <Pager
+        pageIndex={table.getState().pagination.pageIndex}
+        pageCount={table.getPageCount()}
+        pageSize={PAGE_SIZE}
+        total={matchedCount}
+        unit="đơn"
+        onPageChange={table.setPageIndex}
+      />
+    </>
+  );
+}
+
+/**
+ * Một dòng chữ chiếm cả bề ngang bảng: đang tải, lỗi, hoặc không có đơn.
+ * @param columnCount  số cột của bảng
+ * @param text         câu cần hiện
+ * @param isError      true thì chữ màu lỗi và được đọc ngay cho trình đọc màn hình
+ * @returns            thẻ <tr>
+ */
+function MessageRow({ columnCount, text, isError = false }: { columnCount: number; text: string; isError?: boolean }) {
+  return (
+    <tr>
+      <td
+        colSpan={columnCount}
+        className={`${tableStyles.messageCell} ${isError ? tableStyles.errorCell : ''}`}
+        role={isError ? 'alert' : undefined}
+      >
+        {text}
+      </td>
+    </tr>
+  );
+}

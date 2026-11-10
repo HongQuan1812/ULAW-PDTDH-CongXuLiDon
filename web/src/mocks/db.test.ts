@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, test } from 'vitest';
 import {
+  getFormsHandledBy,
   getFormsOf,
   getOpenFormTypes,
   getProfile,
@@ -102,5 +103,21 @@ describe('loại đơn', () => {
     expect(getOpenFormTypes()).toEqual([
       { id: 'xmm', name: 'Xét miễn môn', prefix: 'XMM', description: 'Miễn môn đã học tương đương ở cơ sở đào tạo khác' },
     ]);
+  });
+});
+
+describe('đơn phụ trách', () => {
+  test('mỗi cán bộ thấy đơn mình tiếp nhận hoặc đang xử lí, có cả đơn đã chuyển giao; đơn Đã nộp chưa ai phụ trách', () => {
+    const handledByStaff = ['cb-1', 'cb-2', 'cb-3'].map((staffId) => getFormsHandledBy(staffId));
+    handledByStaff.forEach((forms, i) => {
+      expect(forms.length).toBeGreaterThan(0);
+      forms.forEach((form) => {
+        expect([form.receiver?.id, form.handler?.id]).toContain(`cb-${i + 1}`);
+        expect(form.status).not.toBe('nop');
+      });
+    });
+    const transferred = handledByStaff.flat().filter((form) => form.receiver?.id !== form.handler?.id);
+    expect(transferred.length).toBeGreaterThan(0);
+    expect(getFormsHandledBy('sv-1')).toEqual([]);
   });
 });
