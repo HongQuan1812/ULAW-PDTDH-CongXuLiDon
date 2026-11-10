@@ -124,12 +124,10 @@ Cổng xử lí đơn/
 │
 ├── shared/                       # ===== DÙNG CHUNG FE + BE =====
 │   └── src/
-│       ├── status.ts             # FORM_STATUSES, FORM_TYPE_STATUSES, EDITABLE, RECEIVABLE, TRANSFERABLE, DECIDABLE
-│       ├── roles.ts              # ROLES, danh sách quyền, can()
-│       ├── question-types.ts     # các kiểu câu hỏi của trình soạn form
-│       ├── schemas.ts            # Zod: hồ sơ, loại đơn, câu trả lời đơn, tài khoản
-│       ├── api-contract/         # HỢP ĐỒNG API, mỗi nhóm một file (auth.ts, forms.ts…): endpoint + schema request/response + câu thông báo (MSW, FE, BE cùng theo)
-│       └── validators.ts         # CCCD, SĐT, email trường
+│       ├── api-contract/         # SCHEMA CHÍNH, mỗi nhóm một file (auth.ts, forms.ts…): endpoint + schema request/response + câu thông báo (MSW, FE, BE cùng theo)
+│       ├── aux-schema/           # SCHEMA PHỤ dựng nên schema chính: vai trò, trạng thái, câu hỏi, các phần, câu trả lời
+│       ├── business-rules/       # LUẬT NGHIỆP VỤ: ROLES + can(), trạng thái nào sửa / tiếp nhận / chuyển giao / ra quyết định được
+│       └── validators/           # KIỂM TRA DỮ LIỆU: CCCD, SĐT, email trường, câu trả lời của lá đơn
 │
 ├── docker-compose.yml            # postgres
 ├── .env.example

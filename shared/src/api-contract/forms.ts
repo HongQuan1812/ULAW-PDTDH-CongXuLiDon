@@ -2,7 +2,7 @@
    API giả (MSW), frontend và backend cùng theo file này.
    Quy ước tên: form = lá đơn sinh viên nộp · form type = loại đơn (mẫu do cán bộ soạn). */
 import { z } from 'zod';
-import { FORM_STATUSES } from '../status';
+import { FORM_STATUSES } from '../aux-schema/forms--statuses';
 
 /* ---------- Đường dẫn (phần sau /api) ---------- */
 

@@ -1,36 +1,9 @@
-/* Vai trò và quyền. Chuyển từ ROLES, can, canSee, canDecideOn trong artifact/js/config.js.
+/* Vai trò nào được làm gì (chuyển từ ROLES, can, canSee, canDecideOn trong artifact/js/config.js).
    Muốn thay đổi vai trò nào làm được gì, chỉ cần sửa ROLES ở đây (frontend và backend cùng dùng).
    Quy ước tên: form = lá đơn sinh viên nộp · form type = loại đơn (mẫu do cán bộ soạn). */
-import { isDecidable, type FormStatus } from './status';
-
-export const PERMISSIONS = [
-  'submit', //             nộp đơn mới
-  'editOwn', //            sửa đơn của mình khi còn sửa được
-  'viewAll', //            xem tất cả đơn ở trang Quản lí đơn
-  'receive', //            bấm "Tiếp nhận" đơn
-  'viewApplicant', //      xem trang thông tin của người nộp đơn
-  'editApplicant', //      sửa thông tin của người nộp đơn
-  'submitForApplicant', // nộp đơn mới thay cho người nộp đơn
-  'decide', //             Yêu cầu bổ sung / Duyệt / Từ chối đơn Đang xét mà mình là người xử lí
-  'decideAny', //          làm việc đó trên đơn người khác phụ trách
-  'transfer', //           chuyển giao đơn cho người xử lí khác
-  'editAnyForm', //        sửa nội dung đơn của người khác (cùng điều kiện EDITABLE)
-  'manageAccounts', //     trang Quản lí tài khoản
-  'manageFormTypes', //    trang Quản lí loại đơn
-] as const;
-export type Permission = (typeof PERMISSIONS)[number];
-
-/* Các trang có trong menu. Tên trùng với thư mục trang trong web/src/pages/. */
-export const PAGES = [
-  'profile', //    Trang thông tin (hồ sơ cá nhân, đơn của mình)
-  'forms', //      Quản lí đơn (tất cả đơn)
-  'formTypes', // Quản lí loại đơn
-  'accounts', //   Quản lí tài khoản
-] as const;
-export type Page = (typeof PAGES)[number];
-
-export const ROLE_IDS = ['nguoiNopDon', 'nguoiXuLiDon', 'admin'] as const;
-export type RoleId = (typeof ROLE_IDS)[number];
+import type { Page, Permission, RoleId } from '../aux-schema/accounts--roles';
+import type { FormStatus } from '../aux-schema/forms--statuses';
+import { isDecidable } from './forms--statuses';
 
 export interface Role {
   name: string;

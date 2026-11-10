@@ -1,21 +1,6 @@
-/* Trạng thái của lá đơn và loại đơn.
-   Chuyển từ STATUS, FORM_STATUS, EDITABLE, RECEIVABLE, TRANSFERABLE, DECIDABLE trong artifact/js/config.js.
-   Quy ước tên: form = lá đơn sinh viên nộp · form type = loại đơn (mẫu do cán bộ soạn). */
-
-/* ---------- Lá đơn ---------- */
-
-export const FORM_STATUSES = ['nop', 'xet', 'bs', 'bsg', 'duyet', 'tc'] as const;
-export type FormStatus = (typeof FORM_STATUSES)[number];
-
-/* Tên hiển thị. Màu của từng trạng thái nằm ở web/src/styles/tokens.css (--s-<mã>-bg / --s-<mã>-fg). */
-export const FORM_STATUS_LABEL: Record<FormStatus, string> = {
-  nop: 'Đã nộp',
-  xet: 'Đang xét',
-  bs: 'Cần bổ sung',
-  bsg: 'Đã bổ sung', // sinh viên đã sửa đơn "Cần bổ sung"; xử lí giống "Đã nộp"
-  duyet: 'Đã duyệt',
-  tc: 'Từ chối',
-};
+/* Luật theo trạng thái lá đơn: trạng thái nào thì sửa được, tiếp nhận được, chuyển giao được, ra quyết định được
+   (chuyển từ EDITABLE, RECEIVABLE, TRANSFERABLE, DECIDABLE trong artifact/js/config.js). */
+import type { FormStatus } from '../aux-schema/forms--statuses';
 
 /** Người nộp sửa được đơn. */
 export const EDITABLE: readonly FormStatus[] = ['nop', 'bs', 'bsg'];
@@ -61,14 +46,3 @@ export function isTransferable(status: FormStatus): boolean {
 export function isDecidable(status: FormStatus): boolean {
   return DECIDABLE.includes(status);
 }
-
-/* ---------- Loại đơn ---------- */
-
-export const FORM_TYPE_STATUSES = ['draft', 'open', 'closed'] as const;
-export type FormTypeStatus = (typeof FORM_TYPE_STATUSES)[number];
-
-export const FORM_TYPE_STATUS_LABEL: Record<FormTypeStatus, string> = {
-  draft: 'Nháp', // người nộp đơn không thấy
-  open: 'Đang mở', // nhận đơn
-  closed: 'Đã đóng', // không nhận đơn mới
-};

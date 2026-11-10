@@ -1,7 +1,7 @@
 /* HỢP ĐỒNG nhóm API đăng nhập: đường dẫn, dữ liệu gửi / nhận, câu thông báo.
    API giả (MSW), frontend và backend cùng theo file này. */
 import { z } from 'zod';
-import { ROLE_IDS } from '../roles';
+import { ROLE_IDS } from '../aux-schema/accounts--roles';
 import { SCHOOL_EMAIL_DOMAINS } from '../validators';
 
 /* ---------- Đường dẫn (phần sau /api, vd '/auth/me' → GET /api/auth/me) ---------- */
