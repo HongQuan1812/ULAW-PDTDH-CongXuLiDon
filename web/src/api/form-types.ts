@@ -1,6 +1,6 @@
 /* Hook gọi API loại đơn. */
 import { useQuery } from '@tanstack/react-query';
-import { ENDPOINTS, type OpenFormTypesResponse } from '@ulaw/shared';
+import { ENDPOINTS, formTypeDetailPath, type FormType, type OpenFormTypesResponse } from '@ulaw/shared';
 import { apiFetch } from './client';
 
 /** Khóa lưu tạm danh sách loại đơn đang mở trong TanStack Query. */
@@ -17,5 +17,17 @@ export function useOpenFormTypes(enabled: boolean) {
     queryFn: () => apiFetch<OpenFormTypesResponse>(ENDPOINTS.formTypes.open),
     select: (response) => response.formTypes,
     enabled,
+  });
+}
+
+/**
+ * Một loại đơn, đủ cấu trúc các phần, câu hỏi (để vẽ trang nộp đơn).
+ * @param formTypeId  mã loại đơn, vd 'xmm'
+ * @returns           kết quả useQuery; data = loại đơn (FormType)
+ */
+export function useFormType(formTypeId: string) {
+  return useQuery({
+    queryKey: ['formTypes', 'detail', formTypeId],
+    queryFn: () => apiFetch<FormType>(formTypeDetailPath(formTypeId)),
   });
 }

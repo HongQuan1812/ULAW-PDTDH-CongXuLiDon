@@ -9,10 +9,21 @@ import type { AnswerableQuestion, Question } from './form-types--question-types'
 export const TableCellSchema = z.union([z.string(), z.number(), z.null()]);
 export type TableCell = z.infer<typeof TableCellSchema>;
 
+/** Một tệp đã tải lên, là câu trả lời của câu hỏi tải tệp. */
+export const FileRefSchema = z.object({
+  /** Định danh tệp ở máy chủ */
+  id: z.string().min(1),
+  /** Tên tệp lúc tải lên, vd 'bang-diem.pdf' */
+  name: z.string().min(1),
+  /** Dung lượng (byte) */
+  sizeBytes: z.number().int().nonnegative(),
+});
+export type FileRef = z.infer<typeof FileRefSchema>;
+
 /**
  * Câu trả lời của một câu hỏi, theo loại câu hỏi:
  * trả lời ngắn / đoạn văn / ngày ('YYYY-MM-DD') / chọn một / danh sách → chuỗi ("" = chưa trả lời)
- * số → số (null = chưa trả lời) · chọn nhiều → các lựa chọn · tải tệp → id các tệp đã tải lên
+ * số → số (null = chưa trả lời) · chọn nhiều → các lựa chọn · tải tệp → các tệp đã tải lên (FileRef)
  * bảng nhiều dòng → các dòng, mỗi dòng một ô theo thứ tự cột
  */
 export const AnswerValueSchema = z.union([
@@ -20,6 +31,7 @@ export const AnswerValueSchema = z.union([
   z.number(),
   z.null(),
   z.array(z.string()),
+  z.array(FileRefSchema),
   z.array(z.array(TableCellSchema)),
 ]);
 export type AnswerValue = z.infer<typeof AnswerValueSchema>;

@@ -1,8 +1,8 @@
 /* Kiểm tra câu trả lời của lá đơn theo cấu trúc loại đơn (như check() của từng loại câu hỏi trong artifact/js/sections.js).
    Trang nộp đơn, API giả và backend cùng dùng validateAnswers(), nên câu báo lỗi giống nhau ở mọi nơi. */
-import type { AnswerableQuestion } from '../aux-schema/form-types--question-types';
+import type { AnswerableQuestion, QuestionOf } from '../aux-schema/form-types--question-types';
 import type { FormSection } from '../aux-schema/form-types--sections';
-import { isAnswerable, type AnswerValue, type FormAnswers, type TableCell } from '../aux-schema/forms--answers';
+import { isAnswerable, type AnswerValue, type FileRef, type FormAnswers, type TableCell } from '../aux-schema/forms--answers';
 
 /** Câu báo lỗi khi kiểm tra câu trả lời (hiện ngay dưới câu hỏi, hoặc dưới nút Gửi đơn). */
 export const ANSWER_MESSAGES = {
@@ -13,6 +13,10 @@ export const ANSWER_MESSAGES = {
   notNumber: 'Nhập một số.',
   invalidDate: 'Ngày không hợp lệ.',
   fileRequired: 'Tải lên ít nhất một tệp.',
+  /** Tệp sai định dạng, vd "a.exe: định dạng không hỗ trợ, hãy dùng PDF · JPG · PNG." */
+  fileType: (fileName: string, acceptedText: string) => `${fileName}: định dạng không hỗ trợ, hãy dùng ${acceptedText}.`,
+  /** Tệp quá lớn, vd "a.pdf: 12.4 MB, vượt quá 10 MB." */
+  fileTooLarge: (fileName: string, sizeText: string, maxMB: number) => `${fileName}: ${sizeText}, vượt quá ${maxMB} MB.`,
   /** Bảng bắt buộc mà chưa có dòng nào, vd "Thêm ít nhất một môn." */
   tableRowRequired: (rowName: string) => `Thêm ít nhất một ${rowName}.`,
   /** Bảng có ô còn trống */
@@ -32,10 +36,65 @@ export function isEmptyCell(cell: TableCell | undefined): boolean {
   return cell === null || cell === undefined || (typeof cell === 'string' && cell.trim() === '');
 }
 
+/* ---------- Tệp tải lên ---------- */
+
+/**
+ * Các đuôi tệp câu hỏi nhận (nhận jpg thì nhận cả jpeg).
+ * @param question  câu hỏi tải tệp
+ * @returns         đuôi tệp chữ thường, vd ['pdf', 'jpg', 'png', 'jpeg']
+ */
+export function acceptedExtensions(question: QuestionOf<'file'>): string[] {
+  const extensions = question.accept.map((extension) => extension.toLowerCase());
+  if (extensions.includes('jpg') && !extensions.includes('jpeg')) extensions.push('jpeg');
+  return extensions;
+}
+
+/**
+ * Các định dạng nhận, để ghi cho người nộp đơn đọc.
+ * @param question  câu hỏi tải tệp
+ * @returns         vd 'PDF · JPG · PNG'
+ */
+export function acceptedExtensionsText(question: QuestionOf<'file'>): string {
+  return question.accept.map((extension) => extension.toUpperCase()).join(' · ');
+}
+
+/**
+ * Dung lượng tệp để ghi cho người đọc.
+ * @param sizeBytes  dung lượng (byte)
+ * @returns          vd '820 KB', '12.4 MB'
+ */
+export function formatFileSize(sizeBytes: number): string {
+  const megabyte = 1024 * 1024;
+  return sizeBytes < megabyte ? `${Math.max(1, Math.round(sizeBytes / 1024))} KB` : `${(sizeBytes / megabyte).toFixed(1)} MB`;
+}
+
+/**
+ * Kiểm tra một tệp trước khi tải lên: đúng định dạng và không quá dung lượng.
+ * @param question   câu hỏi tải tệp
+ * @param fileName   tên tệp, vd 'bang-diem.pdf'
+ * @param sizeBytes  dung lượng (byte)
+ * @returns          "" nếu nhận được, ngược lại là câu báo lỗi có tên tệp
+ */
+export function validateFile(question: QuestionOf<'file'>, fileName: string, sizeBytes: number): string {
+  const extension = fileName.includes('.') ? fileName.split('.').pop()!.toLowerCase() : '';
+  if (!acceptedExtensions(question).includes(extension)) {
+    return ANSWER_MESSAGES.fileType(fileName, acceptedExtensionsText(question));
+  }
+  if (sizeBytes > question.maxMB * 1024 * 1024) {
+    return ANSWER_MESSAGES.fileTooLarge(fileName, formatFileSize(sizeBytes), question.maxMB);
+  }
+  return '';
+}
+
+/* ---------- Câu trả lời ---------- */
+
 /** Chuỗi hay không. */
 const isText = (value: unknown): value is string => typeof value === 'string';
 /** Mảng chuỗi hay không. */
 const isTextList = (value: unknown): value is string[] => Array.isArray(value) && value.every(isText);
+/** Danh sách tệp đã tải lên hay không. */
+const isFileList = (value: unknown): value is FileRef[] =>
+  Array.isArray(value) && value.every((file) => typeof file === 'object' && file !== null && 'id' in file);
 
 /**
  * Kiểm tra câu trả lời của một câu hỏi.
@@ -71,8 +130,8 @@ export function validateAnswer(question: AnswerableQuestion, value: AnswerValue 
       return choices.every((choice) => question.options.includes(choice)) ? '' : ANSWER_MESSAGES.invalidChoice;
     }
     case 'file': {
-      const fileIds = isTextList(value) ? value : [];
-      return question.required && !fileIds.length ? ANSWER_MESSAGES.fileRequired : '';
+      const files = isFileList(value) ? value : [];
+      return question.required && !files.length ? ANSWER_MESSAGES.fileRequired : '';
     }
     case 'table': {
       const rows = Array.isArray(value) ? (value as unknown[]) : [];

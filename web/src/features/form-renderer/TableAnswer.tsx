@@ -1,0 +1,213 @@
+/* Ô trả lời bảng nhiều dòng (như QUESTION_UI.table của artifact/js/sections.js). */
+import { useEffect, useRef, type CSSProperties } from 'react';
+import { isEmptyCell, type TableCell, type TableColumn } from '@ulaw/shared';
+import { Button } from '../../components/Button';
+import type { AnswerProps } from './answerProps';
+import { emptyTableRow, tableTotalText } from './formAnswers';
+import styles from './FormRenderer.module.css';
+
+/* Độ rộng cột co giãn theo độ dài tên cột (và mô tả nhỏ): tối thiểu 7, tối đa 24 ký tự, cộng 2 ký tự đệm.
+   Tên cột dài hơn thì tự xuống dòng; bảng rộng hơn khung thì cuộn ngang. */
+const COLUMN_MIN_CHARS = 7;
+const COLUMN_MAX_CHARS = 24;
+
+/**
+ * Độ rộng một cột, tính bằng số ký tự.
+ * @param column  cột của bảng
+ * @returns       vd 20 (dùng với đơn vị ch)
+ */
+function columnWidthChars(column: TableColumn): number {
+  const wanted = Math.max(COLUMN_MIN_CHARS, column.label.length, Math.ceil((column.sub ?? '').length * 0.85));
+  return Math.min(COLUMN_MAX_CHARS, wanted) + 2;
+}
+
+/**
+ * Đọc câu trả lời thành các dòng, mỗi dòng đủ ô theo số cột (dữ liệu cũ thiếu ô thì thêm ô trống).
+ * @param answerValue  câu trả lời đã lưu
+ * @param columns      các cột của bảng
+ * @returns            các dòng của bảng; câu trả lời không phải bảng thì []
+ */
+function readRows(answerValue: unknown, columns: readonly TableColumn[]): TableCell[][] {
+  if (!Array.isArray(answerValue)) return [];
+  const blankRow = emptyTableRow(columns);
+  return answerValue
+    .filter((row): row is TableCell[] => Array.isArray(row))
+    .map((row) => blankRow.map((blankCell, columnIndex) => (row[columnIndex] === undefined ? blankCell : row[columnIndex]!)));
+}
+
+/**
+ * Ô của bảng có cần tô đỏ không: còn trống, hoặc cột số mà không phải số không âm.
+ * @param column  cột chứa ô
+ * @param cell    giá trị ô
+ * @returns       true nếu ô sai
+ */
+function isInvalidCell(column: TableColumn, cell: TableCell): boolean {
+  if (isEmptyCell(cell)) return true;
+  return column.type === 'number' && !(typeof cell === 'number' && Number.isFinite(cell) && cell >= 0);
+}
+
+/**
+ * Bảng nhiều dòng: mỗi dòng một bộ ô theo cột; cột số có thể tính tổng ở chân bảng.
+ * Sửa được: mỗi ô là một ô nhập, có nút thêm dòng và xóa dòng. Chỉ xem: bảng chữ.
+ * Câu trả lời lưu: mảng các dòng, mỗi dòng một mảng ô theo thứ tự cột (cột số: số hoặc null).
+ * @returns  bảng và dòng tổng bên dưới
+ */
+export function TableAnswer({
+  question,
+  answerValue,
+  onAnswerChange,
+  readOnly,
+  invalid,
+  labelId,
+  describedBy,
+}: AnswerProps<'table'>) {
+  const { columns, rowName } = question;
+  const rows = readRows(answerValue, columns);
+  const bodyRef = useRef<HTMLTableSectionElement>(null);
+  const focusRowIndexRef = useRef<number | null>(null);
+
+  // Vừa thêm dòng: đưa con trỏ vào ô đầu của dòng mới
+  useEffect(() => {
+    const rowIndex = focusRowIndexRef.current;
+    if (rowIndex === null) return;
+    focusRowIndexRef.current = null;
+    bodyRef.current?.rows[rowIndex]?.querySelector('input')?.focus();
+  }, [rows.length]);
+
+  /**
+   * Đổi giá trị một ô.
+   * @param rowIndex     thứ tự dòng
+   * @param columnIndex  thứ tự cột
+   * @param cell         giá trị mới
+   */
+  const updateCell = (rowIndex: number, columnIndex: number, cell: TableCell) => {
+    onAnswerChange(
+      rows.map((row, index) => (index === rowIndex ? row.map((oldCell, k) => (k === columnIndex ? cell : oldCell)) : row)),
+    );
+  };
+
+  /** Thêm một dòng trống ở cuối bảng. */
+  const addRow = () => {
+    focusRowIndexRef.current = rows.length;
+    onAnswerChange([...rows, emptyTableRow(columns)]);
+  };
+
+  /**
+   * Xóa một dòng.
+   * @param rowIndex  thứ tự dòng cần xóa
+   */
+  const removeRow = (rowIndex: number) => onAnswerChange(rows.filter((_, index) => index !== rowIndex));
+
+  // Chỉ xem mà chưa có dòng nào
+  if (readOnly && !rows.length) return <p className={styles.emptyValue}>Chưa có {rowName} nào.</p>;
+
+  // Độ rộng các cột: STT 52px, các cột theo tên, cột nút xóa 48px (chỉ khi sửa được)
+  const columnsWidthChars = columns.reduce((total, column) => total + columnWidthChars(column), 0);
+  const tableStyle: CSSProperties = { minWidth: `calc(${readOnly ? 52 : 100}px + ${columnsWidthChars}ch)` };
+
+  return (
+    <>
+      <div className={styles.tableWrap}>
+        <table
+          className={`${styles.answerTable} ${readOnly ? styles.answerTableReadOnly : ''}`}
+          style={tableStyle}
+          aria-labelledby={labelId}
+          aria-describedby={describedBy}
+        >
+          <colgroup>
+            <col style={{ width: 52 }} />
+            {columns.map((column, columnIndex) => (
+              <col key={columnIndex} style={{ width: `${columnWidthChars(column)}ch` }} />
+            ))}
+            {!readOnly && <col style={{ width: 48 }} />}
+          </colgroup>
+          <thead>
+            <tr>
+              <th scope="col">STT</th>
+              {columns.map((column, columnIndex) => (
+                <th key={columnIndex} scope="col">
+                  {column.label}
+                  {column.sub && <small>{column.sub}</small>}
+                </th>
+              ))}
+              {!readOnly && (
+                <th scope="col">
+                  <span className="sr-only">Xóa</span>
+                </th>
+              )}
+            </tr>
+          </thead>
+          <tbody ref={bodyRef}>
+            {/* Chưa có dòng nào: một dòng ghi chú thay cho bảng trống */}
+            {rows.length === 0 && (
+              <tr>
+                <td colSpan={columns.length + 2} className={styles.emptyRow}>
+                  Chưa có {rowName} nào. Bấm “+ Thêm {rowName}” để thêm.
+                </td>
+              </tr>
+            )}
+            {rows.map((row, rowIndex) => (
+              <tr key={rowIndex}>
+                <td className={styles.rowNumber}>{rowIndex + 1}</td>
+                {columns.map((column, columnIndex) => {
+                  const cell = row[columnIndex] ?? null;
+                  const numeric = column.type === 'number';
+
+                  // Chỉ xem: ô chữ
+                  if (readOnly) {
+                    const text = isEmptyCell(cell) ? '—' : typeof cell === 'number' ? cell.toLocaleString('vi-VN') : cell;
+                    return (
+                      <td key={columnIndex}>
+                        {text}
+                      </td>
+                    );
+                  }
+
+                  // Sửa được: ô nhập; đang báo lỗi thì tô đỏ ô sai
+                  const cellInvalid = invalid && isInvalidCell(column, cell);
+                  return (
+                    <td key={columnIndex}>
+                      <input
+                        type={numeric ? 'number' : 'text'}
+                        inputMode={numeric ? 'decimal' : undefined}
+                        min={numeric ? 0 : undefined}
+                        value={cell ?? ''}
+                        placeholder={column.placeholder}
+                        aria-label={`${column.label}, ${rowName} ${rowIndex + 1}`}
+                        aria-invalid={cellInvalid || undefined}
+                        className={cellInvalid ? styles.invalid : undefined}
+                        onChange={(event) => {
+                          const raw = event.target.value;
+                          updateCell(rowIndex, columnIndex, numeric ? (raw === '' ? null : Number(raw)) : raw);
+                        }}
+                      />
+                    </td>
+                  );
+                })}
+                {!readOnly && (
+                  <td className={styles.rowAction}>
+                    <button
+                      type="button"
+                      className={styles.iconButton}
+                      aria-label={`Xóa ${rowName} ${rowIndex + 1}`}
+                      title={`Xóa ${rowName}`}
+                      onClick={() => removeRow(rowIndex)}
+                    >
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
+                        <path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3" />
+                      </svg>
+                    </button>
+                  </td>
+                )}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <div className={styles.tableFoot}>
+        {!readOnly && <Button onClick={addRow}>+ Thêm {rowName}</Button>}
+        <p className={styles.tableTotal}>{tableTotalText(question, rows)}</p>
+      </div>
+    </>
+  );
+}

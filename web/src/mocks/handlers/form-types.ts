@@ -1,7 +1,7 @@
-/* API giả: loại đơn (bước này mới có danh sách loại đơn đang mở). */
+/* API giả: loại đơn. */
 import { delay, http, HttpResponse } from 'msw';
-import { ENDPOINTS, FORM_TYPE_MESSAGES, type OpenFormTypesResponse } from '@ulaw/shared';
-import { getOpenFormTypes, readSession } from '../db';
+import { ENDPOINTS, FORM_TYPE_MESSAGES, can, type FormType, type OpenFormTypesResponse } from '@ulaw/shared';
+import { getFormType, getOpenFormTypes, readSession } from '../db';
 import { MOCK_DELAY_MS, api, apiError } from '../http';
 
 export const formTypeHandlers = [
@@ -10,5 +10,15 @@ export const formTypeHandlers = [
     await delay(MOCK_DELAY_MS);
     if (!readSession()) return apiError(401, FORM_TYPE_MESSAGES[401]);
     return HttpResponse.json<OpenFormTypesResponse>({ formTypes: getOpenFormTypes() });
+  }),
+
+  // Một loại đơn, đủ cấu trúc: người không quản lí loại đơn chỉ lấy được loại đơn Đang mở
+  http.get(api(ENDPOINTS.formTypes.detail), async ({ params }) => {
+    await delay(MOCK_DELAY_MS);
+    const session = readSession();
+    if (!session) return apiError(401, FORM_TYPE_MESSAGES[401]);
+    const formType = getFormType(String(params.formTypeId), can(session.role, 'manageFormTypes'));
+    if (!formType) return apiError(404, FORM_TYPE_MESSAGES[404]);
+    return HttpResponse.json<FormType>(formType);
   }),
 ];

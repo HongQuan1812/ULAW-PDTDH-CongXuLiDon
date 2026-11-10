@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { QuestionSchema, type AnswerableQuestion } from '../aux-schema/form-types--question-types';
 import { FormSectionSchema } from '../aux-schema/form-types--sections';
 import { emptyAnswer } from '../aux-schema/forms--answers';
-import { ANSWER_MESSAGES, validateAnswer, validateAnswers } from './forms--answers';
+import { ANSWER_MESSAGES, formatFileSize, validateAnswer, validateAnswers, validateFile } from './forms--answers';
 
 /* Cấu trúc Xét miễn môn như TYPES.xmm trong artifact/js/config.js. */
 const XMM_SECTIONS = [
@@ -110,8 +110,32 @@ describe('validateAnswers', () => {
   it('đủ câu trả lời thì không có lỗi', () => {
     const result = validateAnswers(XMM_SECTIONS, {
       mon: [['Triết học', 3, 'Triết học', 'ĐH KHXH&NV']],
-      files: ['file-1'],
+      files: [{ id: 'file-1', name: 'bang-diem.pdf', sizeBytes: 120_000 }],
     });
     expect(result).toEqual({ questionErrors: {}, sectionErrors: [] });
+  });
+});
+
+describe('validateFile', () => {
+  const fileQuestion = questionOf({ id: 'f', type: 'file', label: 'Tệp', accept: ['pdf', 'jpg'], maxMB: 2 }) as Extract<
+    AnswerableQuestion,
+    { type: 'file' }
+  >;
+
+  it('nhận đúng định dạng (jpg thì nhận cả jpeg), không phân biệt hoa thường', () => {
+    expect(validateFile(fileQuestion, 'bang-diem.PDF', 1000)).toBe('');
+    expect(validateFile(fileQuestion, 'anh.jpeg', 1000)).toBe('');
+  });
+
+  it('báo sai định dạng và quá dung lượng, kèm tên tệp', () => {
+    expect(validateFile(fileQuestion, 'ghi-chu.docx', 1000)).toBe(ANSWER_MESSAGES.fileType('ghi-chu.docx', 'PDF · JPG'));
+    expect(validateFile(fileQuestion, 'khong-duoi', 1000)).toBe(ANSWER_MESSAGES.fileType('khong-duoi', 'PDF · JPG'));
+    expect(validateFile(fileQuestion, 'lon.pdf', 3 * 1024 * 1024)).toBe('lon.pdf: 3.0 MB, vượt quá 2 MB.');
+  });
+
+  it('ghi dung lượng theo KB / MB', () => {
+    expect(formatFileSize(500)).toBe('1 KB');
+    expect(formatFileSize(820 * 1024)).toBe('820 KB');
+    expect(formatFileSize(1.5 * 1024 * 1024)).toBe('1.5 MB');
   });
 });

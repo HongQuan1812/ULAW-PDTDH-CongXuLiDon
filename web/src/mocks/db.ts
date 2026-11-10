@@ -2,7 +2,7 @@
 import type {
   FormStatus,
   FormSummary,
-  FormTypeStatus,
+  FormType,
   HandledFormSummary,
   OpenFormType,
   RoleId,
@@ -12,6 +12,7 @@ import type {
   StudentInfo,
   UpdateProfileRequest,
 } from '@ulaw/shared';
+import { FormTypeSchema } from '@ulaw/shared';
 
 /* Tài khoản mẫu để đăng nhập thử: mỗi vai trò một người (lấy từ artifact/js/auth.js và sample-data.js). */
 export const DEMO_USERS: Record<RoleId, SessionUser> = {
@@ -165,29 +166,150 @@ export function getStudents(userId: string): StudentInfo[] {
 
 /* ---------- Loại đơn ---------- */
 
-/** Loại đơn trong API giả: thông tin để chọn khi nộp đơn, và trạng thái Nháp / Đang mở / Đã đóng. */
-interface MockFormType extends OpenFormType {
-  status: FormTypeStatus;
-}
-
-/* Loại đơn ban đầu, như TYPES trong artifact/js/config.js (bản mẫu mới có Xét miễn môn).
-   Cấu trúc các phần, câu hỏi thêm ở bước Nộp đơn. */
-const FORM_TYPES: MockFormType[] = [
+/* Loại đơn ban đầu.
+   - Xét miễn môn: như TYPES.xmm trong artifact/js/config.js.
+   - Đơn thử nghiệm: đủ 10 loại câu hỏi, để xem giao diện từng loại khi chưa có trình soạn loại đơn (bước 7).
+   Cấu trúc khai báo dạng thô rồi cho qua FormTypeSchema, để điền sẵn giá trị mặc định (required, main…) như máy chủ. */
+const FORM_TYPES: FormType[] = [
   {
     id: 'xmm',
     name: 'Xét miễn môn',
     prefix: 'XMM',
     description: 'Miễn môn đã học tương đương ở cơ sở đào tạo khác',
     status: 'open',
+    sections: [
+      {
+        id: 's-mon',
+        title: 'Đăng ký miễn môn',
+        main: true,
+        hint: 'Mỗi dòng là một môn của trường bạn muốn xét miễn, kèm môn đã học tương đương ở cơ sở khác.',
+        questions: [
+          {
+            id: 'mon',
+            tag: 'mon',
+            type: 'table',
+            label: 'Các môn xin miễn',
+            required: true,
+            rowName: 'môn',
+            columns: [
+              { label: 'Môn học của trường', sub: 'Môn muốn xét miễn', type: 'text', placeholder: 'VD: Luật Hiến pháp' },
+              { label: 'Số tín chỉ', type: 'number', placeholder: 'TC', sum: true, sumLabel: 'tín chỉ' },
+              { label: 'Môn học tương đương', sub: 'Môn dùng để xét miễn', type: 'text', placeholder: 'Tên môn đã học' },
+              { label: 'Cơ sở đào tạo', sub: 'Nơi dạy môn tương đương', type: 'text', placeholder: 'Tên trường / cơ sở' },
+            ],
+          },
+        ],
+      },
+      {
+        id: 's-files',
+        title: 'Bảng điểm minh chứng',
+        hint: 'Tải lên bảng điểm có xác nhận của cơ sở đào tạo cũ.',
+        questions: [
+          {
+            id: 'files',
+            tag: 'tep_bang_diem',
+            type: 'file',
+            label: 'Tệp bảng điểm',
+            required: true,
+            accept: ['pdf', 'jpg', 'png'],
+            maxMB: 10,
+          },
+        ],
+      },
+    ],
   },
-];
+  {
+    id: 'thu',
+    name: 'Đơn thử nghiệm (đủ loại câu hỏi)',
+    prefix: 'THU',
+    description: 'Có đủ 10 loại câu hỏi, để xem giao diện của từng loại',
+    status: 'open',
+    sections: [
+      {
+        id: 's-chu',
+        title: 'Chữ, số và ngày',
+        main: true,
+        hint: 'Câu có dấu * là bắt buộc. Bấm Gửi đơn khi còn trống để xem câu báo lỗi.',
+        questions: [
+          {
+            id: 'info-dau',
+            type: 'info',
+            label: 'Lưu ý',
+            help: 'Đây là khối thông báo: không cần trả lời.\nNội dung có thể xuống dòng.',
+          },
+          { id: 'tieu-de', type: 'text', label: 'Tiêu đề đơn', required: true, help: 'Trả lời ngắn, một dòng.' },
+          { id: 'li-do', type: 'para', label: 'Lí do', help: 'Đoạn văn, viết được nhiều dòng.' },
+          { id: 'so-tin-chi', type: 'number', label: 'Số tín chỉ đã tích lũy', required: true },
+          { id: 'ngay-nghi', type: 'date', label: 'Ngày bắt đầu nghỉ học' },
+        ],
+      },
+      {
+        id: 's-chon',
+        title: 'Lựa chọn',
+        questions: [
+          { id: 'hoc-ky', type: 'radio', label: 'Học kỳ đăng ký', required: true, options: ['Học kỳ 1', 'Học kỳ 2', 'Học kỳ hè'] },
+          {
+            id: 'giay-to',
+            type: 'check',
+            label: 'Giấy tờ đã có',
+            required: true,
+            help: 'Chọn một hoặc nhiều mục.',
+            options: ['Bảng điểm', 'Giấy xác nhận sinh viên', 'Đơn có chữ ký phụ huynh'],
+          },
+          {
+            id: 'co-so',
+            type: 'select',
+            label: 'Cơ sở học',
+            options: ['Cơ sở Nguyễn Tất Thành', 'Cơ sở Bình Thạnh', 'Cơ sở Thủ Đức'],
+          },
+        ],
+      },
+      {
+        id: 's-bang',
+        title: 'Bảng và tệp',
+        questions: [
+          {
+            id: 'mon-hoc',
+            type: 'table',
+            label: 'Các môn đã đăng ký',
+            help: 'Không bắt buộc: để trống bảng cũng được.',
+            rowName: 'môn',
+            columns: [
+              { label: 'Tên môn', type: 'text', placeholder: 'VD: Luật Dân sự' },
+              { label: 'Số tín chỉ', type: 'number', placeholder: 'TC', sum: true, sumLabel: 'tín chỉ' },
+              { label: 'Ghi chú', sub: 'Lớp, giảng viên…', type: 'text' },
+            ],
+          },
+          { id: 'tep-dinh-kem', type: 'file', label: 'Tệp đính kèm', accept: ['pdf', 'docx', 'xlsx'], maxMB: 5 },
+        ],
+      },
+    ],
+  },
+].map((rawFormType) => FormTypeSchema.parse(rawFormType));
 
 /**
  * Các loại đơn đang nhận đơn (trạng thái Đang mở).
- * @returns  loại đơn, chưa sắp xếp; không có thì []
+ * @returns  loại đơn, chưa có cấu trúc các phần; không có thì []
  */
 export function getOpenFormTypes(): OpenFormType[] {
-  return FORM_TYPES.filter((formType) => formType.status === 'open').map(({ status: _status, ...formType }) => formType);
+  return FORM_TYPES.filter((formType) => formType.status === 'open').map(({ id, name, prefix, description }) => ({
+    id,
+    name,
+    prefix,
+    description,
+  }));
+}
+
+/**
+ * Một loại đơn, đủ cấu trúc các phần, câu hỏi.
+ * @param formTypeId         mã loại đơn, vd 'xmm'
+ * @param canSeeUnpublished  true: lấy được cả loại đơn Nháp / Đã đóng (người quản lí loại đơn)
+ * @returns                  loại đơn; không có, hoặc không được xem, thì null
+ */
+export function getFormType(formTypeId: string, canSeeUnpublished: boolean): FormType | null {
+  const formType = FORM_TYPES.find((candidate) => candidate.id === formTypeId);
+  if (!formType || (formType.status !== 'open' && !canSeeUnpublished)) return null;
+  return formType;
 }
 
 /* ---------- Lá đơn ---------- */

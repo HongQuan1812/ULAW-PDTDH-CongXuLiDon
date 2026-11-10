@@ -1,7 +1,9 @@
 import { beforeEach, describe, expect, test } from 'vitest';
+import { QUESTION_TYPES } from '@ulaw/shared';
 import {
   getFormsHandledBy,
   getFormsOf,
+  getFormType,
   getOpenFormTypes,
   getProfile,
   getStudents,
@@ -102,7 +104,25 @@ describe('loại đơn', () => {
   test('chỉ trả loại đơn Đang mở, không kèm trạng thái', () => {
     expect(getOpenFormTypes()).toEqual([
       { id: 'xmm', name: 'Xét miễn môn', prefix: 'XMM', description: 'Miễn môn đã học tương đương ở cơ sở đào tạo khác' },
+      {
+        id: 'thu',
+        name: 'Đơn thử nghiệm (đủ loại câu hỏi)',
+        prefix: 'THU',
+        description: 'Có đủ 10 loại câu hỏi, để xem giao diện của từng loại',
+      },
     ]);
+  });
+
+  test('loại đơn đủ cấu trúc: Xét miễn môn như bản mẫu, đơn thử nghiệm có đủ 10 loại câu hỏi', () => {
+    const xmm = getFormType('xmm', false);
+    expect(xmm?.sections.map((section) => section.id)).toEqual(['s-mon', 's-files']);
+    expect(xmm?.sections[0]?.main).toBe(true);
+
+    const testFormType = getFormType('thu', false);
+    const questionTypes = new Set(testFormType?.sections.flatMap((section) => section.questions.map((question) => question.type)));
+    expect(questionTypes).toEqual(new Set(QUESTION_TYPES));
+
+    expect(getFormType('khong-co', true)).toBeNull();
   });
 });
 
