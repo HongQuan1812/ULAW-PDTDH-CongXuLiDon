@@ -7,19 +7,25 @@ import styles from './Modal.module.css';
  * Mở ra thì đưa con trỏ bàn phím vào ô nhập đầu tiên (không có thì nút đầu tiên); đóng thì trả về chỗ cũ.
  * @param open      đang mở hay không
  * @param onClose   gọi khi người dùng muốn đóng
- * @param title     tiêu đề hộp thoại
- * @param children  nội dung hộp thoại
+ * @param title            tiêu đề hộp thoại
+ * @param showCloseButton  true thì có nút × cạnh tiêu đề (cho hộp thoại không có nút Hủy / Đóng ở dưới)
+ * @param className        class thêm cho khung hộp thoại, vd để rộng hơn
+ * @param children         nội dung hộp thoại
  * @returns         hộp thoại, hoặc không gì cả khi đang đóng
  */
 export function Modal({
   open,
   onClose,
   title,
+  showCloseButton = false,
+  className = '',
   children,
 }: {
   open: boolean;
   onClose: () => void;
   title: string;
+  showCloseButton?: boolean;
+  className?: string;
   children: ReactNode;
 }) {
   const titleId = useId();
@@ -58,8 +64,25 @@ export function Modal({
         if (event.target === event.currentTarget && pressedOnBackdropRef.current) onClose();
       }}
     >
-      <div ref={dialogRef} className={styles.modal} role="dialog" aria-modal="true" aria-labelledby={titleId}>
-        <h2 id={titleId}>{title}</h2>
+      <div
+        ref={dialogRef}
+        className={`${styles.modal} ${className}`}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+      >
+        {showCloseButton ? (
+          <div className={styles.head}>
+            <h2 id={titleId}>{title}</h2>
+            <button type="button" className={styles.closeButton} aria-label="Đóng" onClick={onClose}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+                <path d="M6 6l12 12M18 6 6 18" />
+              </svg>
+            </button>
+          </div>
+        ) : (
+          <h2 id={titleId}>{title}</h2>
+        )}
         {children}
       </div>
     </div>

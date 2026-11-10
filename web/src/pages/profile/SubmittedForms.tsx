@@ -1,13 +1,16 @@
 /* Mục "Đơn đã nộp" trên trang Thông tin cá nhân (như submittedTable trong artifact/js/profile.js):
    bảng các đơn của mình, có tìm kiếm, Sắp xếp, Lọc, phân trang; bấm một dòng để mở trang chi tiết đơn.
+   Nút "Nộp đơn mới" mở hộp "Chọn loại đơn".
    Chưa có phần xem nhanh (nút › đầu dòng): cần khung nội dung đơn, làm ở bước Nộp đơn. */
-import type { KeyboardEvent } from 'react';
+import { useCallback, useState, type KeyboardEvent } from 'react';
 import { useNavigate } from 'react-router';
-import { FORM_STATUSES, FORM_STATUS_LABEL, type FormSummary } from '@ulaw/shared';
+import { FORM_STATUSES, FORM_STATUS_LABEL, FORM_TYPE_MESSAGES, type FormSummary } from '@ulaw/shared';
+import { useOpenFormTypes } from '../../api/form-types';
 import { useMyForms } from '../../api/forms';
-import { NEW_FORM_PATH, formPath } from '../../app/paths';
+import { formPath } from '../../app/paths';
 import { Button } from '../../components/Button';
 import { StatusPill } from '../../components/StatusPill';
+import { useToast } from '../../components/Toast';
 import { HeaderCell } from '../../components/table/HeaderCell';
 import { Highlight } from '../../components/table/Highlight';
 import { Pager } from '../../components/table/Pager';
@@ -17,6 +20,7 @@ import { useTableTools } from '../../components/table/useTableTools';
 import { useCan } from '../../features/auth/useAuth';
 import { formatDate } from '../../lib/format';
 import tableStyles from '../../components/table/table.module.css';
+import { FormTypePicker } from './FormTypePicker';
 import styles from './ProfilePage.module.css';
 
 /** Các cột của bảng (như P_FIELDS của bản mẫu). Tìm kiếm, Sắp xếp, Lọc đều theo các cột này. */
@@ -59,7 +63,12 @@ const NO_FORMS: FormSummary[] = [];
 export function SubmittedForms() {
   const navigate = useNavigate();
   const canSubmit = useCan('submit');
+  const toast = useToast();
   const formsQuery = useMyForms();
+  // Tải sẵn các loại đơn đang mở (chỉ khi có quyền nộp đơn), để bấm "Nộp đơn mới" là có ngay
+  const openFormTypesQuery = useOpenFormTypes(canSubmit);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const closePicker = useCallback(() => setPickerOpen(false), []);
   const forms = formsQuery.data ?? NO_FORMS;
   const { table, query, setQuery, sorting, setSorting, filterRules, setFilterRules, matchedCount, hasCriteria } =
     useTableTools({
@@ -81,6 +90,16 @@ export function SubmittedForms() {
     openForm(code);
   };
 
+  // Nộp đơn mới: không có loại đơn nào đang mở thì chỉ báo; còn lại mở hộp chọn loại đơn
+  // (chưa tải xong hoặc lỗi thì hộp hiện đang tải / câu báo lỗi)
+  const openPicker = () => {
+    if (openFormTypesQuery.isSuccess && openFormTypesQuery.data.length === 0) {
+      toast(FORM_TYPE_MESSAGES.noneOpen);
+      return;
+    }
+    setPickerOpen(true);
+  };
+
   // Câu hiện thay cho bảng khi chưa có dòng nào để hiện
   const emptyText = hasCriteria
     ? 'Không có đơn nào khớp điều kiện tìm kiếm và bộ lọc.'
@@ -93,7 +112,7 @@ export function SubmittedForms() {
       <div className={styles.sectionHead}>
         <h2 id="submitted-forms-title">Đơn đã nộp</h2>
         {canSubmit && (
-          <Button variant="primary" onClick={() => navigate(NEW_FORM_PATH)}>
+          <Button variant="primary" aria-haspopup="dialog" onClick={openPicker}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true">
               <path d="M12 5v14M5 12h14" />
             </svg>
@@ -179,6 +198,15 @@ export function SubmittedForms() {
         unit="đơn"
         onPageChange={table.setPageIndex}
       />
+
+      {canSubmit && (
+        <FormTypePicker
+          open={pickerOpen}
+          onClose={closePicker}
+          formTypes={openFormTypesQuery.data}
+          loadError={openFormTypesQuery.isError ? openFormTypesQuery.error.message : null}
+        />
+      )}
     </section>
   );
 }

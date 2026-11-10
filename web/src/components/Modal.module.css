@@ -4,6 +4,10 @@
   padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));overflow-y:auto;animation:fade .15s}
 .modal{width:min(540px,100%);background:var(--surface);border-radius:22px;box-shadow:var(--shadow-lg);padding:28px;display:grid;gap:16px;animation:pop .18s ease-out}
 .modal h2{font-size:20px;font-weight:600}
+/* tiêu đề kèm nút × */
+.head{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.closeButton{display:inline-grid;place-items:center;width:36px;height:36px;border-radius:50%;border:0;background:transparent;color:var(--muted);cursor:pointer;flex:none}
+.closeButton:hover{background:var(--hover);color:var(--fg)}
 @keyframes fade{from{opacity:0}}
 @keyframes pop{from{opacity:0;transform:translateY(8px) scale(.985)}}
 @media (max-width:620px){.modal{padding:22px;border-radius:18px}}

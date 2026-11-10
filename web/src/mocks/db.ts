@@ -2,6 +2,8 @@
 import type {
   FormStatus,
   FormSummary,
+  FormTypeStatus,
+  OpenFormType,
   RoleId,
   Session,
   SessionUser,
@@ -157,6 +159,33 @@ const STUDENT_DIRECTORY: Record<string, StudentInfo[]> = {
  */
 export function getStudents(userId: string): StudentInfo[] {
   return STUDENT_DIRECTORY[userId] ?? [];
+}
+
+/* ---------- Loại đơn ---------- */
+
+/** Loại đơn trong API giả: thông tin để chọn khi nộp đơn, và trạng thái Nháp / Đang mở / Đã đóng. */
+interface MockFormType extends OpenFormType {
+  status: FormTypeStatus;
+}
+
+/* Loại đơn ban đầu, như TYPES trong artifact/js/config.js (bản mẫu mới có Xét miễn môn).
+   Cấu trúc các phần, câu hỏi thêm ở bước Nộp đơn. */
+const FORM_TYPES: MockFormType[] = [
+  {
+    id: 'xmm',
+    name: 'Xét miễn môn',
+    prefix: 'XMM',
+    description: 'Miễn môn đã học tương đương ở cơ sở đào tạo khác',
+    status: 'open',
+  },
+];
+
+/**
+ * Các loại đơn đang nhận đơn (trạng thái Đang mở).
+ * @returns  loại đơn, chưa sắp xếp; không có thì []
+ */
+export function getOpenFormTypes(): OpenFormType[] {
+  return FORM_TYPES.filter((formType) => formType.status === 'open').map(({ status: _status, ...formType }) => formType);
 }
 
 /* ---------- Lá đơn ---------- */

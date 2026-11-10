@@ -11,8 +11,17 @@ export const PAGE_PATH: Record<Page, string> = {
   accounts: '/quan-li-tai-khoan',
 };
 
-/** Trang nộp đơn mới. */
-export const NEW_FORM_PATH = '/nop-don';
+/** Trang nộp đơn mới, khai báo trong router: /nop-don/<mã loại đơn>. */
+export const NEW_FORM_ROUTE = '/nop-don/:formTypeId';
+
+/**
+ * Đường dẫn trang nộp đơn mới của một loại đơn (mở sau khi chọn trong hộp "Chọn loại đơn").
+ * @param formTypeId  mã loại đơn, vd 'xmm'
+ * @returns           vd '/nop-don/xmm'
+ */
+export function newFormPath(formTypeId: string): string {
+  return `/nop-don/${encodeURIComponent(formTypeId)}`;
+}
 
 /**
  * Đường dẫn trang chi tiết của một lá đơn.

@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, test } from 'vitest';
 import {
   getFormsOf,
+  getOpenFormTypes,
   getProfile,
   getStudents,
   isCccdTaken,
@@ -93,5 +94,13 @@ describe('đơn đã nộp', () => {
     expect(new Set(forms.map((form) => form.status))).toEqual(new Set(['nop', 'xet', 'bs', 'bsg', 'duyet', 'tc']));
     expect(forms[0]).toMatchObject({ code: 'XMM-2026-01520', submittedAt: '2026-10-30T07:00', status: 'nop' });
     expect(getFormsOf('cb-1')).toEqual([]);
+  });
+});
+
+describe('loại đơn', () => {
+  test('chỉ trả loại đơn Đang mở, không kèm trạng thái', () => {
+    expect(getOpenFormTypes()).toEqual([
+      { id: 'xmm', name: 'Xét miễn môn', prefix: 'XMM', description: 'Miễn môn đã học tương đương ở cơ sở đào tạo khác' },
+    ]);
   });
 });
