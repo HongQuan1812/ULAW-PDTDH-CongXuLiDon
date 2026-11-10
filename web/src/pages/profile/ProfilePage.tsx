@@ -68,7 +68,10 @@ function IdentityCard({ profile }: { profile: Profile }) {
     <section className={`${styles.card} ${styles.idCard}`}>
       <div className={styles.idHead}>
         <Avatar name={profile.name} size="xl" />
-        <p className={styles.idName}>{profile.name}</p>
+        <div className={styles.titleGroup}>
+          <p className={styles.idName}>{profile.name}</p>
+          <RefreshButton query={profileQuery} label="thông tin cá nhân" size="small" />
+        </div>
         {mainStudent && (
           <Button aria-haspopup="dialog" onClick={() => setStudentSheetOpen(true)}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -84,9 +87,6 @@ function IdentityCard({ profile }: { profile: Profile }) {
           </svg>
           Sửa thông tin
         </Button>
-        <span className={styles.refresh}>
-          <RefreshButton query={profileQuery} label="thông tin cá nhân" />
-        </span>
       </div>
 
       <dl className={styles.info}>

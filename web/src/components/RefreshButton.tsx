@@ -1,4 +1,4 @@
-/* Nút ↻ ở đầu mỗi khung: tải lại riêng dữ liệu của khung đó, không phải tải lại cả trang. */
+/* Nút ↻ ngay bên phải tiêu đề mỗi khung: tải lại riêng dữ liệu của khung đó, không phải tải lại cả trang. */
 import type { UseQueryResult } from '@tanstack/react-query';
 import { useToast } from './Toast';
 import styles from './RefreshButton.module.css';
@@ -9,9 +9,18 @@ import styles from './RefreshButton.module.css';
  * khung chưa có dữ liệu thì câu báo lỗi đã nằm sẵn trong khung (LoadError), không hiện toast.
  * @param query  kết quả useQuery của khung
  * @param label  tên khung, cho trình đọc màn hình và chữ khi rê chuột, vd "Đơn đã nộp"
+ * @param size   'small': nút nhỏ đặt ngay bên phải tiêu đề khung · 'normal' (mặc định): cạnh câu báo lỗi
  * @returns      nút tròn có biểu tượng ↻
  */
-export function RefreshButton({ query, label }: { query: UseQueryResult<unknown>; label: string }) {
+export function RefreshButton({
+  query,
+  label,
+  size = 'normal',
+}: {
+  query: UseQueryResult<unknown>;
+  label: string;
+  size?: 'normal' | 'small';
+}) {
   const toast = useToast();
   const refreshing = query.isFetching;
 
@@ -24,7 +33,7 @@ export function RefreshButton({ query, label }: { query: UseQueryResult<unknown>
   return (
     <button
       type="button"
-      className={styles.refresh}
+      className={`${styles.refresh} ${size === 'small' ? styles.small : ''}`}
       aria-label={`Tải lại ${label}`}
       title={refreshing ? 'Đang tải lại…' : `Tải lại ${label}`}
       disabled={refreshing}
@@ -32,8 +41,8 @@ export function RefreshButton({ query, label }: { query: UseQueryResult<unknown>
     >
       <svg
         className={refreshing ? styles.spinning : undefined}
-        width="18"
-        height="18"
+        width={size === 'small' ? 15 : 18}
+        height={size === 'small' ? 15 : 18}
         viewBox="0 0 24 24"
         fill="none"
         stroke="currentColor"

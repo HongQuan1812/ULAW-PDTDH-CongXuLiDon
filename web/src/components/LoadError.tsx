@@ -1,4 +1,4 @@
-/* Câu báo lỗi khi tải dữ liệu. Muốn tải lại thì bấm nút ↻ (RefreshButton) ở đầu khung. */
+/* Câu báo lỗi khi tải dữ liệu. Muốn tải lại thì bấm nút ↻ (RefreshButton) cạnh tiêu đề khung. */
 import type { UseQueryResult } from '@tanstack/react-query';
 import styles from './LoadError.module.css';
 

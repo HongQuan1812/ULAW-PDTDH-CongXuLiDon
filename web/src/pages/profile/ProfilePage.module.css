@@ -6,11 +6,11 @@
 /* ---------- thẻ thông tin cá nhân ---------- */
 .idCard{display:grid;gap:24px}
 .idHead{display:flex;align-items:center;gap:18px;flex-wrap:wrap}
-/* nút ↻ tải lại thẻ */
-.refresh{display:inline-flex}
+/* tiêu đề + nút ↻ tải lại ngay bên phải, chiếm phần còn lại của hàng (các nút khác dồn sang phải) */
+.titleGroup{display:flex;align-items:center;gap:10px;flex:1;min-width:0}
 /* thẻ khi chưa tải được hồ sơ: câu báo lỗi + nút ↻ */
 .errorCard{display:flex;align-items:center;justify-content:space-between;gap:12px}
-.idName{flex:1;min-width:0;font-size:clamp(22px,2.4vw,26px);font-weight:600;line-height:1.2;letter-spacing:-.03em}
+.idName{min-width:0;font-size:clamp(22px,2.4vw,26px);font-weight:600;line-height:1.2;letter-spacing:-.03em}
 
 /* các ô thông tin. Theo quy ước nền xám = không sửa được:
    ô sửa được (SĐT, CCCD, qua nút Sửa thông tin) chỉ có viền; ô không sửa được (.readOnly: Email, thông tin sinh viên) nền xám */
@@ -26,7 +26,7 @@
 /* ---------- mục Đơn đã nộp (như .card.tcard của bản mẫu): khung không đệm, bảng sát mép ---------- */
 .tableCard{padding:0}
 .sectionHead{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:24px 24px 0}
-.sectionHead h2{font-size:17px;font-weight:600;flex:1;min-width:0}
+.sectionHead h2{font-size:17px;font-weight:600;min-width:0}
 
 /* ---------- khung "Thông tin sinh viên" ---------- */
 .sheetIntro{padding:14px 20px 2px;color:var(--muted);font-size:13px}
@@ -57,7 +57,5 @@
   .tableCard{padding:0}
   .sectionHead{padding:20px 16px 0}
   .idHead>button{width:100%}
-  .refresh{position:absolute;top:20px;right:20px}
-  .idCard{position:relative}
 }
 @media (prefers-reduced-motion:reduce){.studentOption{transition:none}}

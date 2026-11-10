@@ -41,8 +41,10 @@ export function HandledForms() {
   return (
     <section className={`${styles.card} ${styles.tableCard}`} aria-labelledby="handled-forms-title">
       <div className={styles.sectionHead}>
-        <h2 id="handled-forms-title">Đơn phụ trách</h2>
-        <RefreshButton query={formsQuery} label="Đơn phụ trách" />
+        <div className={styles.titleGroup}>
+          <h2 id="handled-forms-title">Đơn phụ trách</h2>
+          <RefreshButton query={formsQuery} label="Đơn phụ trách" size="small" />
+        </div>
       </div>
 
       <FormTable

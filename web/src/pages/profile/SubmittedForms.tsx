@@ -43,7 +43,10 @@ export function SubmittedForms() {
   return (
     <section className={`${styles.card} ${styles.tableCard}`} aria-labelledby="submitted-forms-title">
       <div className={styles.sectionHead}>
-        <h2 id="submitted-forms-title">Đơn đã nộp</h2>
+        <div className={styles.titleGroup}>
+          <h2 id="submitted-forms-title">Đơn đã nộp</h2>
+          <RefreshButton query={formsQuery} label="Đơn đã nộp" size="small" />
+        </div>
         {canSubmit && (
           <Button variant="primary" aria-haspopup="dialog" onClick={openPicker}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true">
@@ -52,7 +55,6 @@ export function SubmittedForms() {
             Nộp đơn mới
           </Button>
         )}
-        <RefreshButton query={formsQuery} label="Đơn đã nộp" />
       </div>
 
       <FormTable
