@@ -1,8 +1,8 @@
 /* Bảng đơn trên trang Thông tin cá nhân, dùng chung cho mục "Đơn đã nộp" và "Đơn phụ trách"
    (như createAppTable() trong artifact/js/profile.js): cùng các cột thông tin đơn, tìm kiếm / Sắp xếp / Lọc,
    phân trang; bấm một dòng để mở trang chi tiết đơn.
-   Chưa có phần xem nhanh (nút › đầu dòng): cần khung nội dung đơn, làm ở bước Nộp đơn. */
-import type { KeyboardEvent, ReactElement } from 'react';
+   Nút › đầu dòng (và nút mở / đóng tất cả ở tiêu đề) sổ xuống phần xem nhanh ngay trong bảng (QuickView). */
+import { Fragment, useState, type KeyboardEvent, type ReactElement } from 'react';
 import { useNavigate } from 'react-router';
 import { FORM_STATUSES, FORM_STATUS_LABEL, type FormSummary } from '@ulaw/shared';
 import { formPath, PAGE_LABEL, type ReturnState } from '../../app/paths';
@@ -16,6 +16,8 @@ import { displayText, type SortRules, type TableField } from '../../components/t
 import { useTableTools } from '../../components/table/useTableTools';
 import { EMPTY_TEXT, formatDate } from '../../lib/format';
 import tableStyles from '../../components/table/table.module.css';
+import { QuickView } from './QuickView';
+import quickStyles from './QuickView.module.css';
 
 /** Các cột thông tin đơn của mọi bảng đơn (như P_FIELDS của bản mẫu): Mã đơn, Loại đơn, Ngày nộp, Trạng thái. */
 export const BASE_FORM_FIELDS: TableField<FormSummary>[] = [
@@ -101,7 +103,25 @@ export function FormTable<Row extends FormSummary>({
       getRowId: (form) => form.code,
     });
   const pageRows = table.getRowModel().rows;
-  const columnCount = fields.length + 1;
+  const columnCount = fields.length + 2;
+
+  // Các đơn đang mở xem nhanh (theo mã đơn)
+  const [openCodes, setOpenCodes] = useState<ReadonlySet<string>>(new Set());
+  const allOpen = pageRows.length > 0 && pageRows.every(({ original: form }) => openCodes.has(form.code));
+  /** Mở / đóng xem nhanh của một đơn. */
+  const toggleOpen = (code: string) =>
+    setOpenCodes((previous) => {
+      const next = new Set(previous);
+      if (!next.delete(code)) next.add(code);
+      return next;
+    });
+  /** Mở tất cả đơn của trang đang xem; đang mở hết thì đóng hết. */
+  const toggleAll = () =>
+    setOpenCodes((previous) => {
+      const next = new Set(previous);
+      pageRows.forEach(({ original: form }) => (allOpen ? next.delete(form.code) : next.add(form.code)));
+      return next;
+    });
   const groupClass = (key: string) => (key === groupStartKey ? tableStyles.groupStart : '');
 
   // Bấm dòng hoặc nhấn Enter khi dòng đang được chọn: mở trang chi tiết đơn (trang đó có nút "‹ Quay lại <pageLabel>")
@@ -172,6 +192,19 @@ export function FormTable<Row extends FormSummary>({
         <table className={tableStyles.table}>
           <thead>
             <tr>
+              <th className={quickStyles.expandCell}>
+                <button
+                  type="button"
+                  className={`${quickStyles.expand} ${allOpen ? quickStyles.open : ''}`}
+                  aria-expanded={allOpen}
+                  aria-label={allOpen ? 'Đóng xem nhanh tất cả đơn' : 'Mở xem nhanh tất cả đơn'}
+                  title="Mở / đóng tất cả"
+                  disabled={pageRows.length === 0}
+                  onClick={toggleAll}
+                >
+                  ›
+                </button>
+              </th>
               {fields.map((field) => (
                 <HeaderCell
                   key={field.key}
@@ -201,20 +234,46 @@ export function FormTable<Row extends FormSummary>({
                 text={hasCriteria ? 'Không có đơn nào khớp điều kiện tìm kiếm và bộ lọc.' : emptyText}
               />
             ) : (
-              pageRows.map(({ original: form }) => (
-                <tr
-                  key={form.code}
-                  className={tableStyles.rowLink}
-                  tabIndex={0}
-                  onClick={() => openForm(form.code)}
-                  onKeyDown={(event) => openOnEnter(event, form.code)}
-                >
-                  {fields.map((field) => renderCell(field, form))}
-                  <td className={tableStyles.goCell}>
-                    <span className={tableStyles.goLabel}>Chi tiết ›</span>
-                  </td>
-                </tr>
-              ))
+              pageRows.map(({ original: form }) => {
+                const isOpen = openCodes.has(form.code);
+                return (
+                  <Fragment key={form.code}>
+                    <tr
+                      className={tableStyles.rowLink}
+                      tabIndex={0}
+                      onClick={() => openForm(form.code)}
+                      onKeyDown={(event) => openOnEnter(event, form.code)}
+                    >
+                      <td className={quickStyles.expandCell}>
+                        <button
+                          type="button"
+                          className={`${quickStyles.expand} ${isOpen ? quickStyles.open : ''}`}
+                          aria-expanded={isOpen}
+                          aria-label={`Xem nhanh đơn ${form.code}`}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            toggleOpen(form.code);
+                          }}
+                        >
+                          ›
+                        </button>
+                      </td>
+                      {fields.map((field) => renderCell(field, form))}
+                      <td className={tableStyles.goCell}>
+                        <span className={tableStyles.goLabel}>Chi tiết ›</span>
+                      </td>
+                    </tr>
+                    {isOpen && (
+                      <tr>
+                        <td className={quickStyles.detailCell} />
+                        <td colSpan={fields.length + 1} className={quickStyles.detailCell}>
+                          <QuickView code={form.code} />
+                        </td>
+                      </tr>
+                    )}
+                  </Fragment>
+                );
+              })
             )}
           </tbody>
         </table>
