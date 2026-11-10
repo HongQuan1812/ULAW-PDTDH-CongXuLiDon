@@ -1,5 +1,13 @@
 /* Dữ liệu giả của API giả, giữ trong bộ nhớ trình duyệt. */
-import type { RoleId, Session, SessionUser, StudentInfo, UpdateProfileRequest } from '@ulaw/shared';
+import type {
+  FormStatus,
+  FormSummary,
+  RoleId,
+  Session,
+  SessionUser,
+  StudentInfo,
+  UpdateProfileRequest,
+} from '@ulaw/shared';
 
 /* Tài khoản mẫu để đăng nhập thử: mỗi vai trò một người (lấy từ artifact/js/auth.js và sample-data.js). */
 export const DEMO_USERS: Record<RoleId, SessionUser> = {
@@ -149,6 +157,53 @@ const STUDENT_DIRECTORY: Record<string, StudentInfo[]> = {
  */
 export function getStudents(userId: string): StudentInfo[] {
   return STUDENT_DIRECTORY[userId] ?? [];
+}
+
+/* ---------- Lá đơn ---------- */
+
+/** Thêm số 0 phía trước cho đủ 2 chữ số, vd 7 → "07". */
+const twoDigits = (number: number) => String(number).padStart(2, '0');
+
+/**
+ * Sinh 18 đơn Xét miễn môn mẫu cho sinh viên, như hàm seed() trong artifact/js/sample-data.js
+ * (cùng trạng thái, mã đơn, ngày nộp), để bảng có nhiều trang, đủ các trạng thái.
+ * @returns  các đơn, đơn mới nộp đứng đầu
+ */
+function seedStudentForms(): FormSummary[] {
+  const statuses: FormStatus[] = [
+    'nop', 'xet', 'xet', 'bs', 'duyet', 'xet', 'duyet', 'tc', 'duyet',
+    'bsg', 'duyet', 'duyet', 'tc', 'duyet', 'duyet', 'tc', 'duyet', 'duyet',
+  ];
+  let day = new Date(2026, 9, 30);
+
+  return statuses.map((status, i) => {
+    // Ngày nộp lùi dần, giờ nộp trong buổi sáng
+    const date = `${day.getFullYear()}-${twoDigits(day.getMonth() + 1)}-${twoDigits(day.getDate())}`;
+    const form: FormSummary = {
+      code: `XMM-${day.getFullYear()}-${String(1520 - i * 83).padStart(5, '0')}`,
+      formTypeId: 'xmm',
+      formTypeName: 'Xét miễn môn',
+      submittedAt: `${date}T${twoDigits(7 + (i % 4))}:${twoDigits((i * 17) % 60)}`,
+      status,
+    };
+    day = new Date(day.getTime() - (9 + ((i * 13) % 17)) * 86_400_000);
+    return form;
+  });
+}
+
+/* Đơn của từng tài khoản, khóa theo id người dùng. Cán bộ chưa nộp đơn nào (để thấy bảng trống).
+   Chỉ đọc ở bước này; nộp, sửa đơn làm ở bước Nộp đơn. */
+const FORMS_BY_OWNER: Record<string, FormSummary[]> = {
+  'sv-1': seedStudentForms(),
+};
+
+/**
+ * Lấy các đơn một tài khoản đã nộp.
+ * @param userId  id tài khoản
+ * @returns       các đơn; chưa nộp đơn nào thì []
+ */
+export function getFormsOf(userId: string): FormSummary[] {
+  return FORMS_BY_OWNER[userId] ?? [];
 }
 
 /** Đưa hồ sơ về ban đầu (dùng trong test). */

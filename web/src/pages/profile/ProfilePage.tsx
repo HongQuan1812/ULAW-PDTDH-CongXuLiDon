@@ -1,5 +1,5 @@
-/* Trang Thông tin cá nhân (bước 3): phần thông tin cá nhân và thông tin sinh viên.
-   Bảng "Đơn đã nộp" làm sau, ở bước Nộp đơn. */
+/* Trang Thông tin cá nhân (bước 3): phần thông tin cá nhân, thông tin sinh viên, và mục "Đơn đã nộp".
+   Mục "Đơn phụ trách" của cán bộ làm sau, ở bước Chi tiết, xử lí đơn. */
 import { useCallback, useState } from 'react';
 import { MAIN_STUDENT_MESSAGES, STUDENT_INFO_LABELS, type Profile, type StudentInfo } from '@ulaw/shared';
 import { useMyFullCccd, useMyProfile, useSetMainStudent } from '../../api/profile';
@@ -9,14 +9,15 @@ import { Sheet } from '../../components/Sheet';
 import { useToast } from '../../components/Toast';
 import { EMPTY_TEXT, formatPhone } from '../../lib/format';
 import { EditProfileDialog } from './EditProfileDialog';
+import { SubmittedForms } from './SubmittedForms';
 import styles from './ProfilePage.module.css';
 
 /** Câu báo khi không tải được hồ sơ mà máy chủ không gửi kèm câu báo lỗi (vd mất mạng). */
 const LOAD_FAILED_TEXT = 'Không tải được thông tin cá nhân. Hãy thử tải lại trang.';
 
 /**
- * Tải hồ sơ của mình rồi vẽ trang.
- * @returns  giao diện trang (đang tải / lỗi / thông tin)
+ * Tải hồ sơ của mình rồi vẽ trang. Bảng "Đơn đã nộp" tải riêng, không chờ hồ sơ.
+ * @returns  giao diện trang: thẻ thông tin (đang tải / lỗi / thông tin) và mục Đơn đã nộp
  */
 export function ProfilePage() {
   const profileQuery = useMyProfile();
@@ -37,6 +38,7 @@ export function ProfilePage() {
       ) : (
         <IdentityCard profile={profileQuery.data} />
       )}
+      <SubmittedForms />
     </div>
   );
 }

@@ -1,5 +1,14 @@
 import { beforeEach, describe, expect, test } from 'vitest';
-import { getProfile, getStudents, isCccdTaken, resetMockDb, saveMainStudent, saveProfile, toSession } from './db';
+import {
+  getFormsOf,
+  getProfile,
+  getStudents,
+  isCccdTaken,
+  resetMockDb,
+  saveMainStudent,
+  saveProfile,
+  toSession,
+} from './db';
 
 beforeEach(() => {
   resetMockDb();
@@ -73,5 +82,16 @@ describe('toSession', () => {
     const session = toSession('nguoiNopDon');
     expect(session.profileCompleted).toBe(true);
     expect(session.user.name).toBe('Nguyễn Minh Anh Thư');
+  });
+});
+
+describe('đơn đã nộp', () => {
+  test('sinh viên mẫu có 18 đơn đủ các trạng thái, mã đơn không trùng; cán bộ chưa có đơn', () => {
+    const forms = getFormsOf('sv-1');
+    expect(forms).toHaveLength(18);
+    expect(new Set(forms.map((form) => form.code)).size).toBe(18);
+    expect(new Set(forms.map((form) => form.status))).toEqual(new Set(['nop', 'xet', 'bs', 'bsg', 'duyet', 'tc']));
+    expect(forms[0]).toMatchObject({ code: 'XMM-2026-01520', submittedAt: '2026-10-30T07:00', status: 'nop' });
+    expect(getFormsOf('cb-1')).toEqual([]);
   });
 });

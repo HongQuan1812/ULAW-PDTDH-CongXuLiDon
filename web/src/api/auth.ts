@@ -1,6 +1,7 @@
 /* Hook gọi API đăng nhập: phiên hiện tại, đăng nhập thử, đăng xuất. */
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ENDPOINTS, type DevLoginRequest, type Session } from '@ulaw/shared';
+import { clearTableStates } from '../components/table/tableStateStore';
 import { ApiError, apiFetch } from './client';
 
 /** Khóa lưu tạm phiên đăng nhập trong TanStack Query. */
@@ -37,8 +38,12 @@ export function useDevLogin() {
   return useMutation({
     mutationFn: (body: DevLoginRequest) =>
       apiFetch<Session>(ENDPOINTS.auth.devLogin, { method: 'POST', body: JSON.stringify(body) }),
-    // Lưu phiên mới để cả ứng dụng thấy ngay, không cần gọi lại /auth/me
-    onSuccess: (session) => queryClient.setQueryData(SESSION_KEY, session),
+    // Lưu phiên mới để cả ứng dụng thấy ngay, không cần gọi lại /auth/me;
+    // các bảng bắt đầu lại từ đầu (không tìm, không sắp xếp, không lọc)
+    onSuccess: (session) => {
+      clearTableStates();
+      queryClient.setQueryData(SESSION_KEY, session);
+    },
   });
 }
 /* JUST FOR DEMO: END */
@@ -52,11 +57,12 @@ export function useLogout() {
   return useMutation({
     mutationFn: () => apiFetch<void>(ENDPOINTS.auth.logout, { method: 'POST' }),
     // Đánh dấu chưa đăng nhập (trang đang theo dõi phiên thấy ngay và chuyển về Đăng nhập),
-    // rồi xóa mọi dữ liệu khác của người vừa đăng xuất. Không dùng clear(): nó gỡ luôn phiên
+    // rồi xóa mọi dữ liệu khác của người vừa đăng xuất (kể cả cách xem các bảng). Không dùng clear(): nó gỡ luôn phiên
     // đang được theo dõi, nên trang không nhận được giá trị null và đứng yên.
     onSuccess: () => {
       queryClient.setQueryData(SESSION_KEY, null);
       queryClient.removeQueries({ predicate: (query) => query.queryKey[0] !== SESSION_KEY[0] });
+      clearTableStates();
     },
   });
 }

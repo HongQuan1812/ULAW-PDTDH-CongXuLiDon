@@ -1,0 +1,76 @@
+/* Bộ công cụ bảng: thanh công cụ, bảng nổi Sắp xếp / Lọc, bảng, thanh phân trang
+   (như .tools, .search, .btn.tb, .pop, .tbl-wrap, table, .pager của bản mẫu). */
+
+/* ---------- thanh công cụ ---------- */
+.toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:18px 24px}
+.search{position:relative;flex:1 1 300px;min-width:0;display:flex;align-items:center}
+.search svg{position:absolute;left:14px;width:17px;height:17px;color:var(--faint);pointer-events:none}
+.search input{padding-left:42px;border-radius:999px;background:var(--surface-2);border-color:transparent}
+.search input:focus{background:var(--surface);border-color:var(--accent)}
+.toolButtons{display:flex;gap:8px;flex-wrap:wrap}
+.popWrap{position:relative}
+.toolButton{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:40px;padding:0 16px;border-radius:999px;border:1px solid var(--line);background:var(--surface);color:var(--muted);font-weight:500;font-size:14px;cursor:pointer;white-space:nowrap;transition:background .15s,border-color .15s,color .15s}
+.toolButton:hover{color:var(--fg);background:var(--hover)}
+.toolButtonOn,.toolButtonOn:hover{color:var(--accent);border-color:color-mix(in srgb,var(--accent) 40%,var(--line));background:var(--accent-soft)}
+.count{display:inline-grid;place-items:center;min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:var(--accent);color:var(--on-accent);font-size:11px;font-weight:600}
+
+/* ---------- bảng nổi ---------- */
+.popover{position:absolute;top:calc(100% + 8px);right:0;z-index:25;width:min(560px,calc(100vw - 32px));background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);box-shadow:var(--shadow-lg);padding:16px;display:grid;gap:12px}
+.popTitle{font-size:12.5px;font-weight:500;color:var(--muted)}
+.popRow{display:flex;gap:8px;align-items:center;flex-wrap:wrap;border-radius:8px}
+.popRow>select,.popRow>input{flex:1 1 140px;width:auto;min-width:0;min-height:36px;padding:6px 12px;font-size:13.5px}
+.popRow>.operatorSelect{flex:0 1 130px}
+.rangeTo{color:var(--muted);font-size:13px}
+.grip{cursor:grab;color:var(--faint);letter-spacing:-2px;user-select:none}
+.priority{display:grid;place-items:center;width:22px;height:22px;border-radius:50%;background:var(--surface-2);font-size:11.5px;font-weight:600;color:var(--muted)}
+.moveButtons{display:flex}
+.iconButton{display:inline-grid;place-items:center;width:30px;height:30px;border-radius:50%;border:0;background:transparent;color:var(--muted);cursor:pointer;flex:none}
+.iconButton:hover{background:var(--hover);color:var(--fg)}
+.iconButton:disabled{opacity:.35;cursor:not-allowed;background:transparent}
+.dragging{opacity:.4}
+.dropAbove{box-shadow:0 -2px 0 var(--accent)}
+.dropBelow{box-shadow:0 2px 0 var(--accent)}
+.popFoot{display:flex;justify-content:space-between;gap:10px;padding-top:10px;border-top:1px solid var(--line)}
+.linkButton{border:0;background:none;color:var(--accent);font-weight:500;font-size:13px;cursor:pointer;padding:4px 2px}
+.linkButton:hover{text-decoration:underline;text-underline-offset:3px}
+.linkMuted{color:var(--muted)}
+.emptyNote{color:var(--muted);font-size:13px}
+
+/* ---------- bảng ---------- */
+.tableWrap{overflow-x:auto;min-width:0;border-top:1px solid var(--line)}
+.table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+.table th{text-align:left;font-size:12px;font-weight:500;color:var(--faint);text-transform:uppercase;letter-spacing:.05em;padding:12px 18px;white-space:nowrap;border-bottom:1px solid var(--line)}
+.table th.headerActive{color:var(--accent)}
+.headerLabel{display:inline-flex;align-items:center;gap:5px}
+.indicator{display:inline-flex;align-items:center;gap:1px;color:var(--accent)}
+.indicator small{font-size:10px;font-weight:600}
+.table td{padding:15px 18px;border-bottom:1px solid var(--line);vertical-align:middle;white-space:nowrap}
+.table tbody tr:last-child>td{border-bottom:0}
+/* dòng bấm được (mở trang chi tiết) */
+.rowLink{cursor:pointer;transition:background .1s}
+.rowLink:hover>td{background:var(--hover)}
+.rowLink:focus-visible{outline:2px solid var(--focus);outline-offset:-2px}
+.codeCell{font-weight:600;color:var(--fg)}
+.numberCell{color:var(--muted)}
+.goCell{text-align:right;width:1%}
+.goLabel{display:inline-flex;align-items:center;color:var(--faint);font-weight:500;font-size:13px}
+.rowLink:hover .goLabel{color:var(--accent)}
+.table td.messageCell{text-align:center;color:var(--muted);padding:56px 20px;white-space:normal}
+.table td.errorCell{color:var(--danger);font-weight:500}
+
+/* ---------- phân trang ---------- */
+.pager{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:14px 24px;border-top:1px solid var(--line);font-size:13px;color:var(--muted)}
+.pages{display:flex;gap:4px;flex-wrap:wrap}
+.pageButton{min-width:32px;height:32px;padding:0 8px;border-radius:999px;border:0;background:transparent;color:var(--muted);font-weight:500;font-size:13px;cursor:pointer}
+.pageButton:hover:not(:disabled){background:var(--hover);color:var(--fg)}
+.pageButton[aria-current="page"]{background:var(--accent);color:var(--on-accent);font-weight:600}
+.pageButton:disabled{opacity:.35;cursor:not-allowed}
+
+/* màn hình hẹp: nút công cụ chia đều chiều ngang; bảng nổi nằm sát đáy màn hình */
+@media (max-width:620px){
+  .toolbar,.pager{padding-left:16px;padding-right:16px}
+  .toolButtons{width:100%}
+  .toolButtons>*{flex:1}
+  .toolButton{width:100%;padding:0 10px}
+  .popover{position:fixed;left:16px;right:16px;top:auto;bottom:calc(16px + env(safe-area-inset-bottom,0px));width:auto;max-height:70vh;overflow-y:auto}
+}

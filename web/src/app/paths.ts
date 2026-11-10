@@ -11,6 +11,18 @@ export const PAGE_PATH: Record<Page, string> = {
   accounts: '/quan-li-tai-khoan',
 };
 
+/** Trang nộp đơn mới. */
+export const NEW_FORM_PATH = '/nop-don';
+
+/**
+ * Đường dẫn trang chi tiết của một lá đơn.
+ * @param code  mã đơn, vd 'XMM-2026-00001'
+ * @returns     vd '/don/XMM-2026-00001'
+ */
+export function formPath(code: string): string {
+  return `/don/${encodeURIComponent(code)}`;
+}
+
 export const PAGE_LABEL: Record<Page, string> = {
   profile: 'Thông tin cá nhân',
   forms: 'Quản lí đơn',
