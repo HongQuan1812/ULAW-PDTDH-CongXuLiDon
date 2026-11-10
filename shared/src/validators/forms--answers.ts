@@ -13,9 +13,9 @@ export const ANSWER_MESSAGES = {
   notNumber: 'Nhập một số.',
   invalidDate: 'Ngày không hợp lệ.',
   fileRequired: 'Tải lên ít nhất một tệp.',
-  /** Nộp đơn: câu trả lời có tệp mà máy chủ không nhận được nội dung, vd "bang-diem.pdf: không nhận được tệp. Gỡ tệp này rồi chọn lại." */
+  /** Nộp / sửa đơn: câu trả lời có tệp mà máy chủ không nhận được nội dung, vd "bang-diem.pdf: không nhận được tệp. Gỡ tệp này rồi chọn lại." */
   fileMissing: (fileName: string) => `${fileName}: không nhận được tệp. Gỡ tệp này rồi chọn lại.`,
-  /** Nộp đơn: có tệp gửi kèm không thuộc câu hỏi nào */
+  /** Nộp / sửa đơn: có tệp gửi kèm không thuộc câu hỏi nào */
   unexpectedFiles: 'Có tệp gửi kèm không thuộc câu hỏi nào.',
   /** Tệp sai định dạng, vd "a.exe: định dạng không hỗ trợ, hãy dùng PDF · JPG · PNG." */
   fileType: (fileName: string, acceptedText: string) => `${fileName}: định dạng không hỗ trợ, hãy dùng ${acceptedText}.`,
@@ -97,33 +97,42 @@ export function validateFile(question: QuestionOf<'file'>, fileName: string, siz
   return '';
 }
 
-/** Thông tin một tệp gửi kèm khi nộp đơn, đủ để kiểm tra. */
+/** Thông tin một tệp gửi kèm khi nộp hoặc sửa đơn, đủ để kiểm tra. */
 export interface SentFileInfo {
   name: string;
   sizeBytes: number;
 }
 
 /**
- * Kiểm tra các tệp gửi kèm khi nộp đơn (máy chủ dùng): mỗi tệp trong câu trả lời phải có nội dung gửi kèm,
- * đúng định dạng và dung lượng của câu hỏi; không có tệp gửi kèm nào thừa.
- * @param sections      các phần của loại đơn
- * @param answers       câu trả lời theo id câu hỏi; tệp mang id tạm
- * @param sentFiles     tệp gửi kèm theo id tạm (tên, dung lượng lấy từ tệp thật)
- * @returns             "" nếu mọi tệp đều được, ngược lại là câu báo lỗi đầu tiên
+ * Kiểm tra các tệp khi nộp hoặc sửa đơn (máy chủ dùng): mỗi tệp trong câu trả lời phải là tệp đã lưu của chính đơn đó (khi sửa),
+ * hoặc có nội dung gửi kèm, đúng định dạng và dung lượng của câu hỏi; không tệp nào lặp lại, không có tệp gửi kèm nào thừa.
+ * @param sections       các phần của loại đơn
+ * @param answers        câu trả lời theo id câu hỏi; tệp mới mang id tạm, tệp giữ lại mang id ở máy chủ
+ * @param sentFiles      tệp gửi kèm theo id tạm (tên, dung lượng lấy từ tệp thật)
+ * @param savedFileIds   id các tệp đơn đang có ở máy chủ (sửa đơn); nộp đơn mới thì không có
+ * @returns              "" nếu mọi tệp đều được, ngược lại là câu báo lỗi đầu tiên
  */
 export function validateSentFiles(
   sections: readonly FormSection[],
   answers: FormAnswers,
   sentFiles: ReadonlyMap<string, SentFileInfo>,
+  savedFileIds: ReadonlySet<string> = new Set(),
 ): string {
   const referencedIds = new Set<string>();
   for (const question of sections.flatMap((section) => section.questions)) {
     const answer = answers[question.id];
     if (question.type !== 'file' || !isFileList(answer)) continue;
     for (const file of answer) {
-      // Tệp trong câu trả lời phải có nội dung gửi kèm, đúng định dạng, không quá dung lượng
+      // Tệp đã lưu của đơn: giữ nguyên, đã kiểm tra lúc tải lên
+      if (referencedIds.has(file.id)) return ANSWER_MESSAGES.fileMissing(file.name);
+      if (savedFileIds.has(file.id) && !sentFiles.has(file.id)) {
+        referencedIds.add(file.id);
+        continue;
+      }
+
+      // Tệp mới phải có nội dung gửi kèm, đúng định dạng, không quá dung lượng
       const sentFile = sentFiles.get(file.id);
-      if (!sentFile || referencedIds.has(file.id)) return ANSWER_MESSAGES.fileMissing(file.name);
+      if (!sentFile) return ANSWER_MESSAGES.fileMissing(file.name);
       const message = validateFile(question, sentFile.name, sentFile.sizeBytes);
       if (message) return message;
       referencedIds.add(file.id);

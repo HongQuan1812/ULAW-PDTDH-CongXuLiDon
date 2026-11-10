@@ -9,6 +9,7 @@ import {
   type HandledFormsResponse,
   type MyFormsResponse,
   type SubmitFormRequest,
+  type UpdateFormRequest,
 } from '@ulaw/shared';
 import { apiFetch } from './client';
 
@@ -68,8 +69,29 @@ export function useFormDetail(code: string) {
  * @returns              dòng tóm tắt của đơn mới, có mã đơn; lỗi thì ném ApiError kèm câu báo
  */
 export function submitForm(request: SubmitFormRequest, filesByTempId: ReadonlyMap<string, File>): Promise<FormSummary> {
+  return apiFetch<FormSummary>(ENDPOINTS.forms.submit, { method: 'POST', body: multipartBody(request, filesByTempId) });
+}
+
+/**
+ * Lưu nội dung đã sửa của một lá đơn: câu trả lời và tệp mới trong một lần; máy chủ sai một chỗ thì không lưu gì.
+ * @param code           mã đơn
+ * @param request        câu trả lời (tệp giữ lại mang id ở máy chủ, tệp mới mang id tạm), ô cam đoan
+ * @param filesByTempId  nội dung các tệp mới theo id tạm
+ * @returns              lá đơn sau khi lưu; lỗi thì ném ApiError kèm câu báo
+ */
+export function updateForm(code: string, request: UpdateFormRequest, filesByTempId: ReadonlyMap<string, File>): Promise<FormDetail> {
+  return apiFetch<FormDetail>(formDetailPath(code), { method: 'PUT', body: multipartBody(request, filesByTempId) });
+}
+
+/**
+ * Body multipart của POST /forms và PUT /forms/:code: phần chữ (JSON) và mỗi tệp một trường tên bằng id tạm.
+ * @param request        phần chữ
+ * @param filesByTempId  nội dung tệp theo id tạm
+ * @returns              FormData để gửi
+ */
+function multipartBody(request: SubmitFormRequest | UpdateFormRequest, filesByTempId: ReadonlyMap<string, File>): FormData {
   const body = new FormData();
   body.append(SUBMIT_FORM_FIELDS.request, JSON.stringify(request));
   filesByTempId.forEach((file, tempId) => body.append(tempId, file, file.name));
-  return apiFetch<FormSummary>(ENDPOINTS.forms.submit, { method: 'POST', body });
+  return body;
 }

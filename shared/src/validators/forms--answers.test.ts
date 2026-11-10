@@ -166,4 +166,19 @@ describe('validateSentFiles', () => {
     ]);
     expect(validateSentFiles(XMM_SECTIONS, answers, extraFile)).toBe(ANSWER_MESSAGES.unexpectedFiles);
   });
+
+  it('sửa đơn: tệp đã lưu của đơn giữ lại không cần gửi kèm; tệp lạ hoặc lặp lại thì báo lỗi', () => {
+    const editedAnswers = {
+      mon: answers.mon,
+      files: [
+        { id: 'file-1', name: 'cu.pdf', sizeBytes: 9 },
+        { id: 'local-1', name: 'moi.pdf', sizeBytes: 4 },
+      ],
+    };
+    const newFile = new Map([['local-1', { name: 'moi.pdf', sizeBytes: 4 }]]);
+    expect(validateSentFiles(XMM_SECTIONS, editedAnswers, newFile, new Set(['file-1']))).toBe('');
+    expect(validateSentFiles(XMM_SECTIONS, editedAnswers, newFile, new Set(['file-khac']))).toBe(ANSWER_MESSAGES.fileMissing('cu.pdf'));
+    const repeated = { ...editedAnswers, files: [editedAnswers.files[0]!, editedAnswers.files[0]!] };
+    expect(validateSentFiles(XMM_SECTIONS, repeated, new Map(), new Set(['file-1']))).toBe(ANSWER_MESSAGES.fileMissing('cu.pdf'));
+  });
 });

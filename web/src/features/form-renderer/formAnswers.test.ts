@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { FormSectionSchema, type QuestionOf } from '@ulaw/shared';
-import { initialAnswers, sumColumn, tableTotalText } from './formAnswers';
+import { answersChanged, initialAnswers, sumColumn, tableTotalText } from './formAnswers';
 
 /* Một phần có đủ các kiểu câu trả lời trống. */
 const SECTION = FormSectionSchema.parse({
@@ -51,5 +51,18 @@ describe('dòng tổng của bảng', () => {
     expect(sumColumn(rows, 1)).toBe(5);
     expect(tableTotalText(TABLE, rows)).toBe('3 môn · tổng 5 tín chỉ');
     expect(tableTotalText(TABLE, [])).toBe('0 môn · tổng 0 tín chỉ');
+  });
+});
+
+describe('answersChanged', () => {
+  const saved = { ten: 'An', so: 3, 'thong-bao-cu': 'giữ' };
+
+  it('câu trả lời như đã lưu: không đổi; câu hỏi không còn trong loại đơn không tính', () => {
+    expect(answersChanged([SECTION], saved, { ...saved })).toBe(false);
+    expect(answersChanged([SECTION], saved, { ten: 'An', so: 3 })).toBe(false);
+  });
+
+  it('sửa một câu: có đổi', () => {
+    expect(answersChanged([SECTION], saved, { ...saved, so: 4 })).toBe(true);
   });
 });

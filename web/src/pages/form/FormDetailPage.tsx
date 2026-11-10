@@ -1,23 +1,34 @@
 /* Trang chi tiết một lá đơn (#/don/<mã đơn>), như openDetail() trong artifact/js/application-form.js.
-   Gồm: tiêu đề, khung thông báo theo trạng thái, nội dung đơn (dạng chỉ xem), khung "Thông tin đơn" bên phải
+   Gồm: tiêu đề, khung thông báo theo trạng thái, nội dung đơn, khung "Thông tin đơn" bên phải
    (trạng thái, ngày nộp, người nộp đơn, người tiếp nhận, người xử lí).
-   Sửa đơn, Tiếp nhận, Yêu cầu bổ sung / Duyệt / Từ chối, Chuyển giao: thêm ở các phần sau của bước 5. */
+   Nội dung đơn sửa được khi canEditForm (đơn của mình hoặc Admin, đơn Đã nộp / Cần bổ sung / Đã bổ sung), còn lại chỉ xem.
+   Tiếp nhận, Yêu cầu bổ sung / Duyệt / Từ chối, Chuyển giao: thêm ở các phần sau của bước 5. */
+import { useState, type FormEvent } from 'react';
 import { Link, useParams } from 'react-router';
-import type { FormDetail, FormStatus } from '@ulaw/shared';
+import { FORM_MESSAGES, canEditForm, type FormDetail, type FormStatus } from '@ulaw/shared';
 import { useFormDetail } from '../../api/forms';
 import { PAGE_PATH, type ReturnState } from '../../app/paths';
+import { Button } from '../../components/Button';
 import { LoadError, loadErrorMessage } from '../../components/LoadError';
 import { RefreshButton } from '../../components/RefreshButton';
 import { StatusPill } from '../../components/StatusPill';
+import { useToast } from '../../components/Toast';
 import { useAuth } from '../../features/auth/useAuth';
 import { FormSections } from '../../features/form-renderer/FormSections';
+import { answersChanged } from '../../features/form-renderer/formAnswers';
+import { useFormAnswers } from '../../features/form-renderer/useFormAnswers';
+import { useSaveFormChanges } from '../../features/form-renderer/useSaveFormChanges';
 import { EMPTY_TEXT, formatDateTime } from '../../lib/format';
 import { FormInfoPanel, FormInfoPanelToggle, FormInfoSection, useFormInfoPanel } from './FormInfoPanel';
 import styles from './FormPage.module.css';
+import { SubmitBar, checkBeforeSending, useCommitment } from './SubmitBar';
 import { useLeavePage } from './useLeavePage';
 
 /** Câu báo khi không tải được đơn mà máy chủ không gửi kèm câu báo lỗi (vd mất mạng). */
 const LOAD_FAILED_TEXT = 'Không tải được đơn.';
+
+/** Câu báo khi lưu thay đổi lỗi mà không có câu báo nào (vd mất mạng). */
+const SAVE_FAILED_TEXT = 'Chưa lưu được thay đổi. Kiểm tra kết nối mạng rồi bấm Lưu thay đổi lại.';
 
 /* Câu thông báo theo trạng thái (như STATUS_MSG của bản mẫu, xem "Câu thông báo trên trang chi tiết đơn" trong artifact/README.md).
    Giống nhau với mọi vai trò, không đổi theo người xem. */
@@ -50,7 +61,7 @@ export function FormDetailPage() {
       {formQuery.isPending ? (
         <p className={styles.muted}>Đang tải đơn…</p>
       ) : formQuery.data ? (
-        <FormDetailView form={formQuery.data} />
+        <FormDetailView form={formQuery.data} onLeave={goBack} />
       ) : (
         <section className={styles.errorCard}>
           <LoadError message={loadErrorMessage(formQuery) ?? LOAD_FAILED_TEXT} />
@@ -63,11 +74,15 @@ export function FormDetailPage() {
 
 /**
  * Nội dung trang chi tiết của một lá đơn đã tải.
- * @param form  lá đơn đủ nội dung
- * @returns     tiêu đề, khung thông báo, nội dung đơn và khung Thông tin đơn
+ * @param form     lá đơn đủ nội dung
+ * @param onLeave  rời trang (nút Hủy thay đổi)
+ * @returns        tiêu đề, khung thông báo, nội dung đơn (sửa được hoặc chỉ xem) và khung Thông tin đơn
  */
-function FormDetailView({ form }: { form: FormDetail }) {
+function FormDetailView({ form, onLeave }: { form: FormDetail; onLeave: () => void }) {
   const infoPanel = useFormInfoPanel();
+  const { user, role } = useAuth();
+  const editable = canEditForm({ id: user.id, role }, { status: form.status, applicantId: form.applicant.id });
+  const [savedCount, setSavedCount] = useState(0);
 
   return (
     <div className={styles.form}>
@@ -81,11 +96,17 @@ function FormDetailView({ form }: { form: FormDetail }) {
       <StatusNotice form={form} />
 
       <div className={`${styles.grid} ${!infoPanel.isNarrow && infoPanel.isOpen ? styles.withSide : ''}`}>
-        <div className={styles.main}>
-          <FormSections sections={form.sections} answers={form.answers} readOnly />
-        </div>
+        {editable ? (
+          // Mỗi lần lưu xong thì vẽ lại từ lá đơn mới (câu trả lời, tệp có id ở máy chủ, bỏ đánh dấu cam đoan)
+          <FormEditor key={savedCount} form={form} onCancel={onLeave} onSaved={() => setSavedCount((count) => count + 1)} />
+        ) : (
+          <div className={styles.main}>
+            <FormSections sections={form.sections} answers={form.answers} readOnly />
+          </div>
+        )}
         <FormInfoPanel panel={infoPanel}>
           <FormInfoSection
+            shaded
             rows={[
               ['Trạng thái', <StatusPill status={form.status} />],
               ['Loại đơn', form.formTypeName],
@@ -115,6 +136,68 @@ function FormDetailView({ form }: { form: FormDetail }) {
         </FormInfoPanel>
       </div>
     </div>
+  );
+}
+
+/**
+ * Nội dung đơn sửa được (như openDetail với editable của bản mẫu): các phần câu hỏi, hàng nút có ô cam đoan,
+ * "Hủy thay đổi" (rời trang) và "Lưu thay đổi".
+ * Bấm Lưu thay đổi: chưa sửa gì thì báo không có thay đổi; còn lỗi thì báo như lúc nộp đơn;
+ * hợp lệ thì gửi câu trả lời và tệp mới lên máy chủ trong một lần.
+ * Lưu xong: đơn Cần bổ sung chuyển sang Đã bổ sung; toast ghi giờ lưu.
+ * @param form      lá đơn đang sửa
+ * @param onCancel  bấm Hủy thay đổi
+ * @param onSaved   lưu xong (lá đơn mới đã có trong cache): trang vẽ lại khung sửa từ lá đơn mới
+ * @returns         thẻ <form> chiếm cột nội dung đơn
+ */
+function FormEditor({ form, onCancel, onSaved }: { form: FormDetail; onCancel: () => void; onSaved: () => void }) {
+  const toast = useToast();
+  const saveChanges = useSaveFormChanges(form);
+  const { answers, setAnswer, questionErrors, validate } = useFormAnswers(form.sections, form.answers);
+  const commitment = useCommitment();
+
+  /**
+   * Bấm Lưu thay đổi (đang lưu thì bỏ qua lần bấm thêm).
+   * @param event  sự kiện gửi form (chặn để trang không tải lại)
+   */
+  const save = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (saveChanges.isPending) return;
+
+    // Chưa sửa gì: không gửi
+    if (!answersChanged(form.sections, form.answers, answers)) {
+      toast(FORM_MESSAGES.noChanges, 'info');
+      return;
+    }
+    if (!checkBeforeSending(validate, commitment, toast)) return;
+
+    // Gửi lên máy chủ; xong thì báo giờ lưu (đơn Cần bổ sung báo đã chuyển sang Đã bổ sung)
+    saveChanges.mutate(
+      { answers, committed: commitment.committed },
+      {
+        onSuccess: (savedForm) => {
+          const timeText = formatDateTime(savedForm.updatedAt);
+          const supplemented = form.status === 'bs' && savedForm.status === 'bsg';
+          toast(supplemented ? FORM_MESSAGES.supplemented(timeText) : FORM_MESSAGES.saved(timeText), 'success');
+          onSaved();
+        },
+        onError: (error) => toast(error.message || SAVE_FAILED_TEXT, 'error'),
+      },
+    );
+  };
+
+  return (
+    <form className={styles.main} onSubmit={save} noValidate>
+      <FormSections sections={form.sections} answers={answers} onAnswerChange={setAnswer} questionErrors={questionErrors} />
+      <SubmitBar commitment={commitment}>
+        <Button variant="ghost" onClick={onCancel} disabled={saveChanges.isPending}>
+          Hủy thay đổi
+        </Button>
+        <Button variant="primary" type="submit" disabled={saveChanges.isPending}>
+          {saveChanges.isPending ? 'Đang lưu…' : 'Lưu thay đổi'}
+        </Button>
+      </SubmitBar>
+    </form>
   );
 }
 

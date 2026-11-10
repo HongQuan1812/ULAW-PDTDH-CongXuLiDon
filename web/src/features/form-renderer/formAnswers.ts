@@ -1,4 +1,4 @@
-/* Câu trả lời ban đầu của lá đơn mới, và vài phép tính nhỏ trên câu trả lời dùng khi vẽ đơn. */
+/* Câu trả lời ban đầu của lá đơn mới, và vài phép tính nhỏ trên câu trả lời dùng khi vẽ đơn, khi sửa đơn. */
 import {
   emptyAnswer,
   isAnswerable,
@@ -60,4 +60,17 @@ export function tableTotalText(question: QuestionOf<'table'>, rows: readonly Tab
     parts.push(`tổng ${sumColumn(rows, columnIndex)} ${column.sumLabel || column.label.toLowerCase()}`);
   });
   return parts.join(' · ');
+}
+
+/**
+ * Câu trả lời trên trang có khác câu trả lời đã lưu không (như describeChange của bản mẫu), chỉ xét câu hỏi cần trả lời.
+ * @param sections      các phần của loại đơn
+ * @param savedAnswers  câu trả lời đã lưu
+ * @param answers       câu trả lời trên trang
+ * @returns             true nếu có ít nhất một câu trả lời khác
+ */
+export function answersChanged(sections: readonly FormSection[], savedAnswers: FormAnswers, answers: FormAnswers): boolean {
+  return sections
+    .flatMap((section) => section.questions.filter(isAnswerable))
+    .some((question) => JSON.stringify(savedAnswers[question.id] ?? null) !== JSON.stringify(answers[question.id] ?? null));
 }

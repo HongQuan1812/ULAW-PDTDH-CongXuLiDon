@@ -3,7 +3,7 @@
    Quy ước tên: form = lá đơn sinh viên nộp · form type = loại đơn (mẫu do cán bộ soạn). */
 import type { Page, Permission, RoleId } from '../aux-schema/accounts--roles';
 import type { FormStatus } from '../aux-schema/forms--statuses';
-import { isDecidable } from './forms--statuses';
+import { isDecidable, isEditable } from './forms--statuses';
 
 export interface Role {
   name: string;
@@ -89,4 +89,19 @@ export function canDecideOn(
 
   // Là người xử lí của đơn, hoặc được quyết định thay người khác
   return isHandlerOf(user, form) || can(user.role, 'decideAny');
+}
+
+/**
+ * Kiểm tra người dùng có được sửa nội dung một lá đơn hay không.
+ * @param user  người dùng đang đăng nhập (cần id, role)
+ * @param form  lá đơn (cần status, applicantId: id người nộp)
+ * @returns     true khi đơn còn sửa được (Đã nộp / Cần bổ sung / Đã bổ sung), và: là đơn của mình (quyền editOwn)
+ *              hoặc được sửa đơn người khác (quyền editAnyForm)
+ */
+export function canEditForm(
+  user: { id: string; role: RoleId } | null | undefined,
+  form: { status: FormStatus; applicantId: string },
+): boolean {
+  if (!user || !isEditable(form.status)) return false;
+  return (form.applicantId === user.id && can(user.role, 'editOwn')) || can(user.role, 'editAnyForm');
 }

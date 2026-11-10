@@ -4,6 +4,7 @@ import type {
   FileRef,
   FormAnswers,
   FormDetail,
+  FormSection,
   FormStatus,
   FormSummary,
   FormType,
@@ -581,11 +582,17 @@ export function getFormsHandledBy(staffId: string): HandledFormSummary[] {
  * @returns           lá đơn theo FormDetailSchema; không có, hoặc không được xem, thì null
  */
 export function getFormDetail(code: string, viewer: { id: string; role: RoleId }): FormDetail | null {
-  // Tìm đơn, kiểm tra quyền xem
   const form = FORMS.find((candidate) => candidate.code === code);
   if (!form || (form.ownerId !== viewer.id && !can(viewer.role, 'viewAll'))) return null;
+  return toDetail(form);
+}
 
-  // Ghép thông tin người nộp, cán bộ và nội dung
+/**
+ * Ghép thông tin người nộp, cán bộ và nội dung của một lá đơn (bản sao, sửa không ảnh hưởng dữ liệu giả).
+ * @param form  lá đơn trong API giả
+ * @returns     lá đơn theo FormDetailSchema
+ */
+function toDetail(form: MockForm): FormDetail {
   return {
     ...toSummary(form),
     updatedAt: form.updatedAt,
@@ -620,19 +627,7 @@ function vietnamNow(): string {
 export function addForm(ownerId: string, formType: FormType, answers: FormAnswers, filesByTempId: ReadonlyMap<string, File>): FormSummary {
   const submittedAt = vietnamNow();
   const code = nextFormCode(formType.prefix, Number(submittedAt.slice(0, 4)), FORMS.map((form) => form.code));
-
-  // Chỉ giữ câu trả lời của câu hỏi có trong loại đơn; tệp được lưu với id mới, tên và dung lượng theo tệp thật
-  const keptAnswers: FormAnswers = {};
-  formType.sections.forEach((section) =>
-    section.questions.filter(isAnswerable).forEach((question) => {
-      const answer = answers[question.id];
-      if (answer === undefined) return;
-      keptAnswers[question.id] =
-        question.type === 'file' && Array.isArray(answer)
-          ? (answer as FileRef[]).map((file) => saveFile(filesByTempId.get(file.id)!, code))
-          : answer;
-    }),
-  );
+  const keptAnswers = storeAnswers(code, formType.sections, answers, filesByTempId, {});
 
   // Lưu đơn, đơn mới đứng đầu
   FORMS.unshift({
@@ -652,6 +647,89 @@ export function addForm(ownerId: string, formType: FormType, answers: FormAnswer
     formTypeSnapshot: structuredClone(formType),
   });
   return toSummary(FORMS[0]!);
+}
+
+/**
+ * Câu trả lời đem lưu: chỉ lấy câu trả lời của câu hỏi có trong loại đơn, đè lên câu trả lời cũ
+ * (câu trả lời cũ của câu hỏi không còn trong loại đơn vẫn giữ). Tệp đã lưu giữ nguyên;
+ * tệp mới được lưu với id mới, tên và dung lượng theo tệp thật.
+ * @param code           mã đơn chứa tệp
+ * @param sections       các phần của loại đơn lúc nộp
+ * @param answers        câu trả lời đã kiểm tra; tệp mới mang id tạm
+ * @param filesByTempId  nội dung tệp mới theo id tạm
+ * @param oldAnswers     câu trả lời đang lưu ({} khi nộp đơn mới)
+ * @returns              câu trả lời mới
+ */
+function storeAnswers(
+  code: string,
+  sections: readonly FormSection[],
+  answers: FormAnswers,
+  filesByTempId: ReadonlyMap<string, File>,
+  oldAnswers: FormAnswers,
+): FormAnswers {
+  const savedFiles = new Map(fileRefsIn(sections, oldAnswers).map((file) => [file.id, file]));
+  const storedAnswers: FormAnswers = { ...oldAnswers };
+  sections.forEach((section) =>
+    section.questions.filter(isAnswerable).forEach((question) => {
+      const answer = answers[question.id];
+      if (answer === undefined) return;
+      storedAnswers[question.id] =
+        question.type === 'file' && Array.isArray(answer)
+          ? (answer as FileRef[]).map((file) => savedFiles.get(file.id) ?? saveFile(filesByTempId.get(file.id)!, code))
+          : answer;
+    }),
+  );
+  return storedAnswers;
+}
+
+/**
+ * Mọi tệp trong câu trả lời của các câu hỏi tải tệp.
+ * @param sections  các phần của loại đơn
+ * @param answers   câu trả lời
+ * @returns         các FileRef
+ */
+function fileRefsIn(sections: readonly FormSection[], answers: FormAnswers): FileRef[] {
+  return sections
+    .flatMap((section) => section.questions)
+    .filter((question) => question.type === 'file')
+    .flatMap((question) => (Array.isArray(answers[question.id]) ? (answers[question.id] as FileRef[]) : []));
+}
+
+/**
+ * Id các tệp một lá đơn đang lưu, để biết tệp nào trong câu trả lời gửi lên là tệp giữ lại.
+ * @param code  mã đơn
+ * @returns     các id; không có đơn thì tập rỗng
+ */
+export function getSavedFileIds(code: string): Set<string> {
+  const form = FORMS.find((candidate) => candidate.code === code);
+  return new Set(form ? fileRefsIn(form.formTypeSnapshot.sections, form.answers).map((file) => file.id) : []);
+}
+
+/**
+ * Lưu nội dung đã sửa của một lá đơn cùng các tệp mới, trong một bước. Đơn Cần bổ sung chuyển sang Đã bổ sung.
+ * Tệp bị gỡ khỏi đơn thì xóa hẳn, sau khi đơn đã lưu.
+ * Quyền sửa, câu trả lời và tệp đã được kiểm tra trước (canEditForm, validateAnswers, validateSentFiles).
+ * @param code           mã đơn
+ * @param answers        câu trả lời mới theo id câu hỏi; tệp mới mang id tạm
+ * @param filesByTempId  nội dung tệp mới theo id tạm
+ * @returns              lá đơn sau khi lưu; không có đơn thì null
+ */
+export function updateForm(code: string, answers: FormAnswers, filesByTempId: ReadonlyMap<string, File>): FormDetail | null {
+  const form = FORMS.find((candidate) => candidate.code === code);
+  if (!form) return null;
+
+  // Lưu câu trả lời, tệp mới; đơn Cần bổ sung thành Đã bổ sung
+  const oldFileIds = getSavedFileIds(code);
+  form.answers = storeAnswers(code, form.formTypeSnapshot.sections, answers, filesByTempId, form.answers);
+  form.updatedAt = vietnamNow();
+  if (form.status === 'bs') form.status = 'bsg';
+
+  // Đơn đã lưu xong: xóa hẳn các tệp bị gỡ
+  const keptFileIds = getSavedFileIds(code);
+  oldFileIds.forEach((fileId) => {
+    if (!keptFileIds.has(fileId)) FILES.delete(fileId);
+  });
+  return toDetail(form);
 }
 
 /* ---------- Tệp minh chứng ---------- */

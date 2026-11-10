@@ -131,21 +131,24 @@ export function FormInfoPanel({ panel, children }: { panel: FormInfoPanelState; 
 /**
  * Một mục trong khung, vd "Người nộp đơn": tiêu đề nhỏ, nút / liên kết bên phải (nếu có), các dòng nhãn – giá trị.
  * @param title   tiêu đề mục; không có thì không có hàng tiêu đề (vd mục trạng thái, ngày nộp ở đầu khung)
+ * @param shaded  true: nền khác màu để nổi bật (như #fMeta của bản mẫu, mục trạng thái ở đầu khung)
  * @param action  nút hoặc liên kết bên phải tiêu đề, vd "Xem hồ sơ ›"
  * @param rows    các dòng [nhãn, giá trị]
  * @returns       khối mục
  */
 export function FormInfoSection({
   title,
+  shaded = false,
   action,
   rows,
 }: {
   title?: string;
+  shaded?: boolean;
   action?: ReactNode;
   rows: readonly (readonly [label: string, content: ReactNode])[];
 }) {
   return (
-    <div className={styles.section}>
+    <div className={`${styles.section} ${shaded ? styles.shaded : ''}`}>
       {title && (
         <div className={styles.sectionHead}>
           <h3>{title}</h3>

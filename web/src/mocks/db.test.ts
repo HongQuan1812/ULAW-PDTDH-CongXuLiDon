@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, test } from 'vitest';
-import { QUESTION_TYPES } from '@ulaw/shared';
+import { QUESTION_TYPES, type FileRef } from '@ulaw/shared';
 import {
   addForm,
   getFormDetail,
@@ -9,12 +9,14 @@ import {
   getOpenFormTypes,
   getProfile,
   getFilesOfForm,
+  getSavedFileIds,
   getStudents,
   isCccdTaken,
   resetMockDb,
   saveMainStudent,
   saveProfile,
   toSession,
+  updateForm,
 } from './db';
 
 beforeEach(() => {
@@ -203,5 +205,36 @@ describe('chi tiết đơn', () => {
     expect(getFormDetail(otherCode, { id: 'sv-1', role: 'nguoiNopDon' })).toBeNull();
     expect(getFormDetail(otherCode, { id: 'cb-1', role: 'nguoiXuLiDon' })?.applicant.id).toMatch(/^sv-([2-9]|1[01])$/);
     expect(getFormDetail('XMM-2026-99999', { id: 'cb-3', role: 'admin' })).toBeNull();
+  });
+});
+
+describe('sửa đơn', () => {
+  test('đơn Cần bổ sung lưu xong thành Đã bổ sung; tệp cũ giữ id, tệp mới có id ở máy chủ; giờ cập nhật đổi', () => {
+    const supplementCode = getFormsOf('sv-1').find((form) => form.status === 'bs')!.code;
+    const before = getFormDetail(supplementCode, { id: 'sv-1', role: 'nguoiNopDon' })!;
+    const oldFile = (before.answers.files as FileRef[])[0]!;
+    const newFile = { id: 'local-9', name: 'ban-co-xac-nhan.pdf', sizeBytes: 4 };
+
+    const saved = updateForm(supplementCode, { mon: [['Logic học', 2, 'Logic', 'ĐH Mở']], files: [oldFile, newFile] }, new Map([['local-9', new File(['%PDF'], 'ban-co-xac-nhan.pdf')]]))!;
+    expect(saved.status).toBe('bsg');
+    expect(saved.updatedAt).not.toBe(before.updatedAt);
+    expect(saved.answers.mon).toEqual([['Logic học', 2, 'Logic', 'ĐH Mở']]);
+    const files = saved.answers.files as FileRef[];
+    expect(files[0]).toEqual(oldFile);
+    expect(files[1]).toMatchObject({ name: 'ban-co-xac-nhan.pdf' });
+    expect(files[1]!.id).not.toBe('local-9');
+    expect(getSavedFileIds(supplementCode)).toEqual(new Set(files.map((file) => file.id)));
+  });
+
+  test('gỡ tệp rồi lưu: tệp bị xóa hẳn, không còn trong kho tệp', () => {
+    const xmm = getFormType('xmm', false)!;
+    const files = [new File(['%PDF'], 'a.pdf'), new File(['%PDF'], 'b.pdf')];
+    const answers = { mon: [['Logic học', 2, 'Logic', 'ĐH Mở']], files: files.map((file, i) => ({ id: `local-${i}`, name: file.name, sizeBytes: 4 })) };
+    const { code } = addForm('sv-1', xmm, answers, new Map(files.map((file, i) => [`local-${i}`, file])));
+    const [keptFile, removedFile] = getFilesOfForm(code);
+
+    updateForm(code, { ...answers, files: [keptFile!] }, new Map());
+    expect(getFilesOfForm(code)).toEqual([keptFile]);
+    expect(getSavedFileIds(code).has(removedFile!.id)).toBe(false);
   });
 });

@@ -20,6 +20,11 @@ export const FORM_ENDPOINTS = {
   /** GET: một lá đơn, đủ nội dung → FormDetail (trang chi tiết đơn, xem nhanh).
       Xem được: người nộp đơn, hoặc cán bộ có quyền viewAll. Không có đơn, hoặc không được xem, đều trả 404 */
   detail: '/forms/:code',
+  /** PUT (multipart/form-data, cùng cách gửi như POST /forms, phần chữ theo UpdateFormRequestSchema) → FormDetail: sửa nội dung đơn.
+      Được sửa khi canEditForm. Tệp giữ lại mang id ở máy chủ, tệp mới mang id tạm và gửi kèm nội dung.
+      Tệp đã lưu mà không còn trong câu trả lời là tệp bị gỡ: máy chủ XÓA HẲN (cả nội dung trên ổ đĩa), sau khi đơn lưu xong.
+      Sai một chỗ thì không lưu gì. Đơn Cần bổ sung sau khi lưu chuyển sang Đã bổ sung */
+  update: '/forms/:code',
 } as const;
 
 /**
@@ -116,7 +121,11 @@ export const SubmitFormRequestSchema = z.object({
 });
 export type SubmitFormRequest = z.infer<typeof SubmitFormRequestSchema>;
 
-/** Các trường trong body multipart của POST /forms. Ngoài trường request, mỗi tệp là một trường tên bằng id tạm của tệp. */
+/** Phần chữ của PUT /forms/:code (trường SUBMIT_FORM_FIELDS.request): câu trả lời mới, ô cam đoan. */
+export const UpdateFormRequestSchema = SubmitFormRequestSchema.omit({ formTypeId: true });
+export type UpdateFormRequest = z.infer<typeof UpdateFormRequestSchema>;
+
+/** Các trường trong body multipart của POST /forms và PUT /forms/:code. Ngoài trường request, mỗi tệp là một trường tên bằng id tạm của tệp. */
 export const SUBMIT_FORM_FIELDS = {
   /** Chuỗi JSON theo SubmitFormRequestSchema */
   request: 'request',
@@ -137,6 +146,16 @@ export const FORM_MESSAGES = {
   invalidBody: 'Dữ liệu đơn không hợp lệ.',
   /** GET /forms/:code khi không có đơn, hoặc không được xem đơn này (404; không nói rõ để không lộ mã đơn của người khác) */
   notFound: 'Không có đơn này, hoặc bạn không có quyền xem.',
+  /** PUT /forms/:code khi không phải đơn của mình mà không có quyền sửa đơn người khác (403) */
+  editForbidden: 'Bạn không có quyền sửa đơn này.',
+  /** PUT /forms/:code khi đơn đã được tiếp nhận hoặc đã có kết quả (409) */
+  notEditable: 'Đơn đã được tiếp nhận hoặc đã có kết quả, không sửa được nữa.',
+  /** Bấm Lưu thay đổi mà câu trả lời vẫn như đã lưu (toast) */
+  noChanges: 'Không có thay đổi nào để lưu.',
+  /** Lưu thay đổi xong (toast), vd "Đã lưu thay đổi lúc 09:30 · 10/11/2026." */
+  saved: (timeText: string) => `Đã lưu thay đổi lúc ${timeText}.`,
+  /** Lưu đơn Cần bổ sung xong (toast) */
+  supplemented: (timeText: string) => `Đã bổ sung đơn lúc ${timeText}, đơn chuyển sang “Đã bổ sung”.`,
   /** Nộp đơn xong (toast), vd "Đã nộp đơn XMM-2026-01521." */
   submitted: (code: string) => `Đã nộp đơn ${code}.`,
 } as const;

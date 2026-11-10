@@ -1,9 +1,9 @@
 /* Trang nộp đơn mới của một loại đơn (#/nop-don/<mã loại đơn>), mở sau khi chọn trong hộp "Chọn loại đơn".
    Gồm: nội dung đơn theo cấu trúc loại đơn, khung "Thông tin đơn" bên phải, hàng nút dính đáy có ô cam đoan.
    Gửi đơn: gửi câu trả lời và mọi tệp trong một lần; xong thì về trang Thông tin cá nhân, đơn mới nằm trong "Đơn đã nộp". */
-import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { Link, useNavigate, useNavigationType, useParams } from 'react-router';
-import { ANSWER_MESSAGES, FORM_MESSAGES, type FormType } from '@ulaw/shared';
+import { FORM_MESSAGES, type FormType } from '@ulaw/shared';
 import { useFormType } from '../../api/form-types';
 import { useMyProfile } from '../../api/profile';
 import { PAGE_LABEL, PAGE_PATH, type ReturnState } from '../../app/paths';
@@ -12,13 +12,14 @@ import { LoadError, loadErrorMessage } from '../../components/LoadError';
 import { RefreshButton } from '../../components/RefreshButton';
 import { useToast } from '../../components/Toast';
 import { useAuth } from '../../features/auth/useAuth';
-import { FormSections, focusFirstError } from '../../features/form-renderer/FormSections';
+import { FormSections } from '../../features/form-renderer/FormSections';
 import { discardNewFormDraft, keepNewFormDraft, readNewFormDraft } from '../../features/form-renderer/newFormDrafts';
 import { useFormAnswers } from '../../features/form-renderer/useFormAnswers';
 import { useSubmitNewForm } from '../../features/form-renderer/useSubmitNewForm';
 import { SHOW_DEMO } from '../../lib/env';
 import { FormInfoPanel, FormInfoPanelToggle, FormInfoSection, useFormInfoPanel } from './FormInfoPanel';
 import styles from './FormPage.module.css';
+import { SubmitBar, checkBeforeSending, useCommitment } from './SubmitBar';
 import { useLeavePage } from './useLeavePage';
 
 /** Câu báo khi không tải được loại đơn mà máy chủ không gửi kèm câu báo lỗi (vd mất mạng). */
@@ -26,9 +27,6 @@ const LOAD_FAILED_TEXT = 'Không tải được loại đơn.';
 
 /** Câu báo khi gửi đơn lỗi mà không có câu báo nào (vd mất mạng). */
 const SUBMIT_FAILED_TEXT = 'Chưa gửi được đơn. Kiểm tra kết nối mạng rồi bấm Gửi đơn lại.';
-
-/** Câu cam đoan ở cuối lá đơn (như #cam của bản mẫu). */
-const COMMITMENT_TEXT = 'Tôi cam đoan các thông tin và minh chứng trên là đúng sự thật.';
 
 /**
  * Tải cấu trúc loại đơn rồi vẽ trang nộp đơn.
@@ -81,40 +79,20 @@ function NewForm({ formType, onCancel, onSubmitted }: { formType: FormType; onCa
   const navigationType = useNavigationType();
   const [savedDraft] = useState(() => (navigationType === 'POP' ? readNewFormDraft(formType.id) : undefined));
   const { answers, setAnswer, questionErrors, validate } = useFormAnswers(formType.sections, savedDraft?.answers);
-  const [committed, setCommitted] = useState(savedDraft?.committed ?? false);
-  const [showCommitmentError, setShowCommitmentError] = useState(false);
-  const commitmentRef = useRef<HTMLInputElement>(null);
+  const commitment = useCommitment(savedDraft?.committed ?? false);
+  const { committed } = commitment;
   const [previewReadOnly, setPreviewReadOnly] = useState(false);
 
   // Giữ nháp mỗi khi đổi câu trả lời hoặc ô cam đoan, để rời trang rồi quay lại vẫn còn
   useEffect(() => keepNewFormDraft(formType.id, { answers, committed }), [formType.id, answers, committed]);
 
   /**
-   * Bấm Gửi đơn. Còn lỗi thì: lỗi hiện dưới từng câu, ô cam đoan tô đỏ nếu chưa đánh dấu,
-   * toast đỏ ghi các phần cần xem lại (và nhắc cam đoan), con trỏ tới chỗ lỗi đầu tiên.
-   * Hợp lệ thì gửi lên máy chủ (đang gửi thì bỏ qua lần bấm thêm).
+   * Bấm Gửi đơn. Còn lỗi thì báo (xem checkBeforeSending); hợp lệ thì gửi lên máy chủ (đang gửi thì bỏ qua lần bấm thêm).
    * @param event  sự kiện gửi form (chặn để trang không tải lại)
    */
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (submitNewForm.isPending) return;
-
-    // Kiểm tra câu trả lời và ô cam đoan
-    const validation = validate();
-    const { invalidSectionTitles } = validation;
-    setShowCommitmentError(!committed);
-
-    // Có lỗi: gộp các câu báo vào một toast, đưa con trỏ tới câu lỗi đầu tiên (không có thì tới ô cam đoan)
-    if (invalidSectionTitles.length || !committed) {
-      const errorMessages = [
-        invalidSectionTitles.length ? ANSWER_MESSAGES.sectionsToCheck(invalidSectionTitles) : '',
-        committed ? '' : ANSWER_MESSAGES.commitmentRequired,
-      ];
-      toast(errorMessages.filter(Boolean).join(' '), 'error');
-      if (invalidSectionTitles.length) focusFirstError(validation.questionErrors);
-      else commitmentRef.current?.focus();
-      return;
-    }
+    if (submitNewForm.isPending || !checkBeforeSending(validate, commitment, toast)) return;
 
     // Hợp lệ: gửi lên máy chủ; xong thì bỏ nháp, rời trang, báo mã đơn
     submitNewForm.mutate(
@@ -128,15 +106,6 @@ function NewForm({ formType, onCancel, onSubmitted }: { formType: FormType; onCa
         onError: (error) => toast(error.message || SUBMIT_FAILED_TEXT, 'error'),
       },
     );
-  };
-
-  /**
-   * Đánh dấu / bỏ đánh dấu ô cam đoan; đã đánh dấu thì bỏ tô đỏ.
-   * @param checked  ô đang được đánh dấu hay không
-   */
-  const changeCommitment = (checked: boolean) => {
-    setCommitted(checked);
-    if (checked) setShowCommitmentError(false);
   };
 
   return (
@@ -170,26 +139,14 @@ function NewForm({ formType, onCancel, onSubmitted }: { formType: FormType; onCa
           />
 
           {!previewReadOnly && (
-            <div className={styles.submitRow}>
-              <label className={`${styles.commitment} ${showCommitmentError ? styles.commitmentInvalid : ''}`}>
-                <input
-                  ref={commitmentRef}
-                  type="checkbox"
-                  checked={committed}
-                  aria-invalid={showCommitmentError || undefined}
-                  onChange={(event) => changeCommitment(event.target.checked)}
-                />
-                <span>{COMMITMENT_TEXT}</span>
-              </label>
-              <div className={styles.buttons}>
-                <Button variant="ghost" onClick={onCancel} disabled={submitNewForm.isPending}>
-                  Hủy
-                </Button>
-                <Button variant="primary" type="submit" disabled={submitNewForm.isPending}>
-                  {submitNewForm.isPending ? 'Đang gửi…' : 'Gửi đơn'}
-                </Button>
-              </div>
-            </div>
+            <SubmitBar commitment={commitment}>
+              <Button variant="ghost" onClick={onCancel} disabled={submitNewForm.isPending}>
+                Hủy
+              </Button>
+              <Button variant="primary" type="submit" disabled={submitNewForm.isPending}>
+                {submitNewForm.isPending ? 'Đang gửi…' : 'Gửi đơn'}
+              </Button>
+            </SubmitBar>
           )}
         </div>
         <FormInfoPanel panel={infoPanel}>
