@@ -46,7 +46,19 @@
 .answerTable th small{display:block;font-weight:400;color:var(--faint);font-size:11.5px}
 .answerTable td{padding:6px 0 6px var(--column-inset);border-bottom:1px solid var(--line);vertical-align:middle}
 .answerTable tbody tr:last-child>td{border-bottom:0}
-.answerTable td input{min-height:36px;padding:6px 10px}
+.answerTable td :is(input,textarea){min-height:36px;padding:6px 10px;line-height:1.45}
+/* ô chữ: tự cao lên theo nội dung (GrowingTextarea), không thanh cuộn, không kéo giãn bằng tay */
+.answerTable td textarea{display:block;resize:none;overflow:hidden;overflow-wrap:anywhere}
+/* sửa được: ô dài xuống hàng thì mọi ô nhập cùng dòng cao bằng nhau (height:1px cho ô bảng để height:100% của ô nhập có tác dụng);
+   số STT và nút xóa thẳng hàng với dòng chữ đầu */
+.answerTable:not(.answerTableReadOnly) td{vertical-align:top;height:1px}
+.answerTable:not(.answerTableReadOnly) td textarea{height:100%}
+/* ô số: khung bọc mang viền và cao bằng cả dòng, ô nhập bên trong không viền */
+.numberBox{height:100%;min-height:36px;border:1px solid var(--line-2);border-radius:var(--r);background:var(--surface);transition:border-color .15s,box-shadow .15s}
+.numberBox:focus-within{border-color:var(--accent);box-shadow:0 0 0 4px color-mix(in srgb,var(--accent) 14%,transparent)}
+.answerTable td .numberBox input{min-height:34px;border:0;background:transparent;box-shadow:none}
+.answerTable:not(.answerTableReadOnly) td.rowNumber{padding-top:14px}
+.answerTable:not(.answerTableReadOnly) td.rowAction{padding-top:8px}
 /* mọi cột đều căn trái (tiêu đề, mô tả nhỏ, giá trị), kể cả cột STT và cột số */
 .answerTable td.rowNumber{color:var(--muted);font-weight:500}
 .answerTable td.emptyRow{padding:14px var(--column-inset);color:var(--faint);font-size:13.5px}

@@ -4,6 +4,7 @@ import { isEmptyCell, type TableCell, type TableColumn } from '@ulaw/shared';
 import { Button } from '../../components/Button';
 import type { AnswerProps } from './answerProps';
 import { emptyTableRow, tableTotalText } from './formAnswers';
+import { GrowingTextarea } from './GrowingTextarea';
 import styles from './FormRenderer.module.css';
 
 /* Độ rộng cột co giãn theo độ dài tên cột (và mô tả nhỏ): tối thiểu 7, tối đa 24 ký tự, cộng 2 ký tự đệm.
@@ -48,7 +49,7 @@ function isInvalidCell(column: TableColumn, cell: TableCell): boolean {
 
 /**
  * Bảng nhiều dòng: mỗi dòng một bộ ô theo cột; cột số có thể tính tổng ở chân bảng.
- * Sửa được: mỗi ô là một ô nhập, có nút thêm dòng và xóa dòng. Chỉ xem: bảng chữ.
+ * Sửa được: mỗi ô là một ô nhập (ô chữ dài thì tự xuống hàng), có nút thêm dòng và xóa dòng. Chỉ xem: bảng chữ.
  * Câu trả lời lưu: mảng các dòng, mỗi dòng một mảng ô theo thứ tự cột (cột số: số hoặc null).
  * @returns  bảng và dòng tổng bên dưới
  */
@@ -71,7 +72,7 @@ export function TableAnswer({
     const rowIndex = focusRowIndexRef.current;
     if (rowIndex === null) return;
     focusRowIndexRef.current = null;
-    bodyRef.current?.rows[rowIndex]?.querySelector('input')?.focus();
+    bodyRef.current?.rows[rowIndex]?.querySelector<HTMLElement>('input, textarea')?.focus();
   }, [rows.length]);
 
   /**
@@ -163,24 +164,40 @@ export function TableAnswer({
                     );
                   }
 
-                  // Sửa được: ô nhập; đang báo lỗi thì tô đỏ ô sai
+                  // Sửa được: cột số là ô nhập số, cột chữ là ô tự xuống hàng khi chữ dài; đang báo lỗi thì tô đỏ ô sai
                   const cellInvalid = invalid && isInvalidCell(column, cell);
+                  const cellProps = {
+                    placeholder: column.placeholder,
+                    'aria-label': `${column.label}, ${rowName} ${rowIndex + 1}`,
+                    'aria-invalid': cellInvalid || undefined,
+                    className: cellInvalid ? styles.invalid : undefined,
+                  };
                   return (
                     <td key={columnIndex}>
-                      <input
-                        type={numeric ? 'number' : 'text'}
-                        inputMode={numeric ? 'decimal' : undefined}
-                        min={numeric ? 0 : undefined}
-                        value={cell ?? ''}
-                        placeholder={column.placeholder}
-                        aria-label={`${column.label}, ${rowName} ${rowIndex + 1}`}
-                        aria-invalid={cellInvalid || undefined}
-                        className={cellInvalid ? styles.invalid : undefined}
-                        onChange={(event) => {
-                          const raw = event.target.value;
-                          updateCell(rowIndex, columnIndex, numeric ? (raw === '' ? null : Number(raw)) : raw);
-                        }}
-                      />
+                      {numeric ? (
+                        // Khung bọc cao bằng cả dòng, ô nhập số nằm ở đầu khung để số thẳng hàng với dòng chữ đầu của ô bên cạnh
+                        // Bấm vào phần trống bên dưới của khung cũng đưa con trỏ vào ô nhập
+                        <div
+                          className={`${styles.numberBox} ${cellInvalid ? styles.invalid : ''}`}
+                          onClick={(event) => event.currentTarget.querySelector('input')?.focus()}
+                        >
+                          <input
+                            type="number"
+                            inputMode="decimal"
+                            min={0}
+                            value={cell ?? ''}
+                            onChange={(event) => updateCell(rowIndex, columnIndex, event.target.value === '' ? null : Number(event.target.value))}
+                            {...cellProps}
+                            className={undefined}
+                          />
+                        </div>
+                      ) : (
+                        <GrowingTextarea
+                          value={typeof cell === 'string' ? cell : ''}
+                          onValueChange={(text) => updateCell(rowIndex, columnIndex, text)}
+                          {...cellProps}
+                        />
+                      )}
                     </td>
                   );
                 })}
