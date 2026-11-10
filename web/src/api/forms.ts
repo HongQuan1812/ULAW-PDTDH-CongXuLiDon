@@ -1,6 +1,6 @@
 /* Hook gọi API nhiều lá đơn: bảng đơn của mình, đơn phụ trách, Quản lí đơn. */
 import { useQuery } from '@tanstack/react-query';
-import { ENDPOINTS, type FormCccdsResponse, type HandledFormsResponse, type ManagedFormsResponse, type MyFormsResponse } from '@ulaw/shared';
+import { ENDPOINTS, type FormCccdsResponse, type FormStats, type HandledFormsResponse, type ManagedFormsResponse, type MyFormsResponse } from '@ulaw/shared';
 import { apiFetch } from './client';
 
 /** Khóa lưu tạm danh sách đơn của mình trong TanStack Query. */
@@ -46,6 +46,17 @@ export function useAllForms() {
     queryFn: () => apiFetch<ManagedFormsResponse>(ENDPOINTS.forms.list),
     select: (response) => response.forms,
   });
+}
+
+/** Khóa lưu tạm số liệu thống kê; tải lại cùng lúc với danh sách mọi đơn (tiếp nhận, duyệt… làm số đổi). */
+export const FORM_STATS_KEY = ['forms', 'stats'] as const;
+
+/**
+ * Số đơn theo trạng thái và theo loại đơn (chỉ vai trò có quyền viewAll).
+ * @returns  kết quả useQuery; data = FormStats
+ */
+export function useFormStats() {
+  return useQuery({ queryKey: FORM_STATS_KEY, queryFn: () => apiFetch<FormStats>(ENDPOINTS.forms.stats) });
 }
 
 /**

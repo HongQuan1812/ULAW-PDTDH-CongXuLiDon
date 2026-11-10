@@ -2,6 +2,7 @@
    Một lá đơn (nộp, chi tiết, sửa, xử lí) nằm ở form.ts.
    API giả (MSW), frontend và backend cùng theo file này. */
 import { z } from 'zod';
+import { FORM_STATUSES, FORM_TYPE_STATUSES } from '../aux-schema';
 import { FormSummarySchema, StaffRefSchema } from './form';
 
 /* ---------- Đường dẫn (phần sau /api) ---------- */
@@ -12,6 +13,8 @@ export const FORMS_ENDPOINTS = {
   list: '/forms',
   /** GET: CCCD đầy đủ của mọi người nộp đơn → FormCccdsResponse (nút "Hiện CCCD" ở trang Quản lí đơn). Cần quyền viewApplicant */
   cccds: '/forms/cccds',
+  /** GET: số đơn theo trạng thái và theo loại đơn → FormStats (hai khung thống kê đầu trang Quản lí đơn). Cần quyền viewAll */
+  stats: '/forms/stats',
   /** GET: các đơn mình đã nộp → MyFormsResponse (bảng "Đơn đã nộp" trên trang Thông tin cá nhân) */
   mine: '/forms/mine',
   /** GET: các đơn mình là người tiếp nhận hoặc người xử lí → HandledFormsResponse (mục "Đơn phụ trách"). Cần quyền decide */
@@ -65,6 +68,25 @@ export type ManagedFormsResponse = z.infer<typeof ManagedFormsResponseSchema>;
 export const FormCccdsResponseSchema = z.object({ cccds: z.record(z.string(), z.string()) });
 export type FormCccdsResponse = z.infer<typeof FormCccdsResponseSchema>;
 
+/** Số đơn của một loại đơn (kể cả loại chưa có đơn nào, đếm 0). */
+export const FormTypeCountSchema = z.object({
+  formTypeId: z.string(),
+  formTypeName: z.string(),
+  /** Nháp / Đang mở / Đã đóng, để biểu đồ ghi chú loại không còn nhận đơn */
+  formTypeStatus: z.enum(FORM_TYPE_STATUSES),
+  count: z.number().int().min(0),
+});
+export type FormTypeCount = z.infer<typeof FormTypeCountSchema>;
+
+/** Trả về từ GET /forms/stats: đếm trên TẤT CẢ đơn, không theo ô tìm kiếm hay bộ lọc của bảng. */
+export const FormStatsSchema = z.object({
+  total: z.number().int().min(0),
+  /** Đủ mọi trạng thái, trạng thái chưa có đơn thì 0 */
+  byStatus: z.object(Object.fromEntries(FORM_STATUSES.map((status) => [status, z.number().int().min(0)])) as Record<(typeof FORM_STATUSES)[number], z.ZodNumber>),
+  byType: z.array(FormTypeCountSchema),
+});
+export type FormStats = z.infer<typeof FormStatsSchema>;
+
 /* ---------- Câu thông báo ---------- */
 
 export const FORMS_MESSAGES = {
@@ -74,6 +96,8 @@ export const FORMS_MESSAGES = {
   handledForbidden: 'Bạn không có quyền xem đơn phụ trách.',
   /** GET /forms khi vai trò không được xem mọi đơn (không có quyền viewAll) */
   listForbidden: 'Bạn không có quyền xem tất cả đơn.',
+  /** GET /forms/stats khi vai trò không được xem mọi đơn (không có quyền viewAll) */
+  statsForbidden: 'Bạn không có quyền xem thống kê đơn.',
   /** GET /forms/cccds khi vai trò không được xem hồ sơ người nộp đơn (không có quyền viewApplicant) */
   cccdsForbidden: 'Bạn không có quyền xem CCCD người nộp đơn.',
 } as const;

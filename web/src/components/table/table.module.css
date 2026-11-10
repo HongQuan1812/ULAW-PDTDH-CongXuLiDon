@@ -40,7 +40,7 @@
 .emptyNote{color:var(--muted);font-size:13px}
 
 /* ---------- bảng ---------- */
-.tableWrap{overflow-x:auto;min-width:0;border-top:1px solid var(--line)}
+.tableWrap{position:relative;overflow-x:auto;min-width:0;border-top:1px solid var(--line)}
 .table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
 .table th{text-align:left;font-size:12px;font-weight:500;color:var(--faint);text-transform:uppercase;letter-spacing:.05em;padding:12px 18px;white-space:nowrap;border-bottom:1px solid var(--line)}
 .table th.headerActive{color:var(--accent)}

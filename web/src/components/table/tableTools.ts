@@ -134,6 +134,30 @@ export function createFilterRule(fieldKey: string): FilterRule {
 }
 
 /**
+ * Giá trị đang lọc "=" của một cột (để tô viền ô thống kê đang chọn).
+ * @param rules     các điều kiện lọc hiện có
+ * @param fieldKey  cột
+ * @returns         giá trị đang lọc; không lọc cột đó thì null
+ */
+export function equalsFilterValue(rules: readonly FilterRule[], fieldKey: string): string | null {
+  const rule = rules.find((candidate) => candidate.fieldKey === fieldKey && candidate.operator === 'equals' && candidate.value !== '');
+  return rule ? rule.value : null;
+}
+
+/**
+ * Bấm một ô thống kê: lọc cột đó "=" giá trị đã bấm (thay điều kiện cùng cột); bấm lại đúng giá trị đó thì bỏ lọc.
+ * @param rules     các điều kiện lọc hiện có
+ * @param fieldKey  cột
+ * @param value     giá trị vừa bấm
+ * @returns         danh sách điều kiện mới (điều kiện cột khác giữ nguyên)
+ */
+export function toggleEqualsFilter(rules: readonly FilterRule[], fieldKey: string, value: string): FilterRule[] {
+  const wasOn = equalsFilterValue(rules, fieldKey) === value;
+  const others = rules.filter((rule) => rule.fieldKey !== fieldKey);
+  return wasOn ? others : [...others, { ...createFilterRule(fieldKey), value }];
+}
+
+/**
  * Điều kiện lọc đã có giá trị chưa. Điều kiện chưa có giá trị thì không lọc gì và không được đếm.
  * @param rule  điều kiện lọc
  * @returns     true nếu đang có tác dụng

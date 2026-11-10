@@ -4,9 +4,11 @@ import { buildColumns } from './useTableTools';
 import {
   createFilterRule,
   displayText,
+  equalsFilterValue,
   filterRows,
   isFilterActive,
   selectOptions,
+  toggleEqualsFilter,
   type FilterRule,
   type TableField,
 } from './tableTools';
@@ -146,5 +148,25 @@ describe('sắp xếp bằng TanStack Table', () => {
       { id: 'code', desc: true },
     ]);
     expect(newestFirst).toEqual(['XMM-2026-00002', 'XMM-2026-00010', 'XMM-2026-00001']);
+  });
+});
+
+describe('toggleEqualsFilter / equalsFilterValue (bấm ô thống kê để lọc)', () => {
+  it('chưa lọc cột đó thì thêm điều kiện "=" giá trị đã bấm', () => {
+    const rules = toggleEqualsFilter([], 'status', 'nop');
+    expect(equalsFilterValue(rules, 'status')).toBe('nop');
+  });
+
+  it('bấm giá trị khác thì thay điều kiện cùng cột, giữ điều kiện cột khác', () => {
+    const other = createFilterRule('formType');
+    const rules = toggleEqualsFilter([{ ...createFilterRule('status'), value: 'nop' }, { ...other, value: 'xmm' }], 'status', 'xet');
+    expect(equalsFilterValue(rules, 'status')).toBe('xet');
+    expect(equalsFilterValue(rules, 'formType')).toBe('xmm');
+    expect(rules).toHaveLength(2);
+  });
+
+  it('bấm lại đúng giá trị đang lọc thì bỏ lọc cột đó', () => {
+    const rules = toggleEqualsFilter(toggleEqualsFilter([], 'status', 'nop'), 'status', 'nop');
+    expect(equalsFilterValue(rules, 'status')).toBeNull();
   });
 });

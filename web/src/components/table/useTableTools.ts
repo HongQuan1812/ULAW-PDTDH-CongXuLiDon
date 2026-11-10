@@ -1,7 +1,7 @@
 /* Nối bộ công cụ bảng với TanStack Table: giữ chữ tìm kiếm, các dòng sắp xếp, các điều kiện lọc, trang đang xem;
    lọc trước bằng filterRows(), rồi để TanStack Table sắp xếp nhiều cột và chia trang.
    Cách xem được nhớ lại (tableStateStore.ts), nên đi qua trang khác rồi quay lại vẫn như cũ. */
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   getCoreRowModel,
   getPaginationRowModel,
@@ -40,6 +40,10 @@ interface TableToolsOptions<Row> {
   pageSize: number;
   /** Khóa riêng của mỗi dòng, vd mã đơn */
   getRowId: (row: Row) => string;
+  /** Tùy chọn: điều kiện lọc do nơi khác giữ (vd ô thống kê bấm để lọc). Bỏ trống thì hook tự giữ */
+  filterRules?: FilterRule[];
+  /** Đi kèm filterRules: gọi khi người dùng đổi điều kiện lọc */
+  onFilterRulesChange?: (nextFilterRules: FilterRule[]) => void;
 }
 
 /**
@@ -57,18 +61,31 @@ export function useTableTools<Row>({
   defaultSorting,
   pageSize,
   getRowId,
+  filterRules: controlledFilterRules,
+  onFilterRulesChange,
 }: TableToolsOptions<Row>) {
   // Bắt đầu từ cách xem đã nhớ (nếu có)
   const [saved] = useState(() => readTableState(tableId));
   const [query, setQueryState] = useState(saved?.query ?? '');
   const [sorting, setSortingState] = useState<SortRules>(saved?.sorting ?? []);
-  const [filterRules, setFilterRulesState] = useState<FilterRule[]>(saved?.filterRules ?? []);
+  const [ownFilterRules, setOwnFilterRules] = useState<FilterRule[]>(saved?.filterRules ?? []);
+  const filterRules = controlledFilterRules ?? ownFilterRules;
   const [pageIndex, setPageIndex] = useState(saved?.pageIndex ?? 0);
 
   // Nhớ lại mỗi khi cách xem thay đổi
   useEffect(() => {
     saveTableState(tableId, { query, sorting, filterRules, pageIndex });
   }, [tableId, query, sorting, filterRules, pageIndex]);
+
+  // Điều kiện lọc do nơi khác đổi (vd bấm ô thống kê) thì cũng về trang 1; lần vẽ đầu giữ trang đã nhớ
+  const isFirstRender = useRef(true);
+  useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+    if (controlledFilterRules) setPageIndex(0);
+  }, [controlledFilterRules]);
 
   // Đổi tìm kiếm, sắp xếp, lọc thì về trang 1
   const setQuery = (nextQuery: string) => {
@@ -80,7 +97,8 @@ export function useTableTools<Row>({
     setPageIndex(0);
   };
   const setFilterRules = (nextFilterRules: FilterRule[]) => {
-    setFilterRulesState(nextFilterRules);
+    setOwnFilterRules(nextFilterRules);
+    onFilterRulesChange?.(nextFilterRules);
     setPageIndex(0);
   };
 

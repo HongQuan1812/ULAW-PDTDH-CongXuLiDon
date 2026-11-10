@@ -12,7 +12,7 @@ import { HeaderCell } from '../../components/table/HeaderCell';
 import { Highlight } from '../../components/table/Highlight';
 import { Pager } from '../../components/table/Pager';
 import { TableToolbar } from '../../components/table/TableToolbar';
-import { displayText, type SortRules, type TableField } from '../../components/table/tableTools';
+import { displayText, type FilterRule, type SortRules, type TableField } from '../../components/table/tableTools';
 import { useTableTools } from '../../components/table/useTableTools';
 import { EMPTY_TEXT, formatDate } from '../../lib/format';
 import tableStyles from '../../components/table/table.module.css';
@@ -72,6 +72,9 @@ interface FormTableProps<Row extends FormSummary> {
   pageLabel?: string;
   /** Tự vẽ ô của một số cột (vd nút Tiếp nhận); trả về thẻ <td> có key, hoặc undefined để dùng cách vẽ mặc định */
   renderCell?: (field: TableField<Row>, form: Row, query: string) => ReactElement | undefined;
+  /** Tùy chọn: điều kiện lọc do trang giữ (vd ô thống kê bấm để lọc); đi kèm onFilterRulesChange */
+  filterRules?: FilterRule[];
+  onFilterRulesChange?: (nextFilterRules: FilterRule[]) => void;
 }
 
 /**
@@ -91,6 +94,8 @@ export function FormTable<Row extends FormSummary>({
   groupStartKey,
   pageLabel = PAGE_LABEL.profile,
   renderCell: renderCustomCell,
+  filterRules: controlledFilterRules,
+  onFilterRulesChange,
 }: FormTableProps<Row>) {
   const navigate = useNavigate();
   const { table, query, setQuery, sorting, setSorting, filterRules, setFilterRules, matchedCount, hasCriteria } =
@@ -101,6 +106,8 @@ export function FormTable<Row extends FormSummary>({
       defaultSorting: DEFAULT_SORTING,
       pageSize: PAGE_SIZE,
       getRowId: (form) => form.code,
+      filterRules: controlledFilterRules,
+      onFilterRulesChange,
     });
   const pageRows = table.getRowModel().rows;
   const columnCount = fields.length + 2;

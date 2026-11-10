@@ -6,6 +6,7 @@ import type {
   FormDecision,
   FormDetail,
   FormSection,
+  FormStats,
   FormStatus,
   FormSummary,
   FormType,
@@ -20,7 +21,7 @@ import type {
   TableCell,
   UpdateProfileRequest,
 } from '@ulaw/shared';
-import { FormTypeSchema, can, isAnswerable, maskCccd, nextFormCode } from '@ulaw/shared';
+import { FORM_STATUSES, FormTypeSchema, can, isAnswerable, maskCccd, nextFormCode } from '@ulaw/shared';
 import { buildSamplePdf } from './samplePdf';
 
 /* Tài khoản mẫu để đăng nhập thử: mỗi vai trò một người (lấy từ artifact/js/auth.js và sample-data.js). */
@@ -294,6 +295,32 @@ const FORM_TYPES: FormType[] = [
       },
     ],
   },
+  ...[
+    ['nhs', 'Xin nghỉ học tạm thời', 'closed'],
+    ['blk', 'Xin bảo lưu kết quả học tập', 'closed'],
+    ['pkd', 'Phúc khảo điểm thi', 'closed'],
+    ['cnh', 'Xin chuyển ngành', 'closed'],
+    ['cbd', 'Xin cấp bảng điểm', 'closed'],
+    ['xnsv', 'Xin giấy xác nhận sinh viên', 'closed'],
+    ['hth', 'Xin hoãn thi', 'draft'],
+    ['hv', 'Xin học vượt', 'draft'],
+    ['hl', 'Đăng ký học lại', 'draft'],
+    ['cltsv', 'Xin cấp lại thẻ sinh viên', 'draft'],
+  ].map(([id, name, status]) => ({
+    id,
+    name,
+    prefix: id!.toUpperCase(),
+    description: `${name} (loại đơn mẫu để thử giao diện)`,
+    status,
+    sections: [
+      {
+        id: 's-chung',
+        title: 'Thông tin đơn',
+        main: true,
+        questions: [{ id: 'li-do', type: 'para', label: 'Lí do', required: true }],
+      },
+    ],
+  })),
 ].map((rawFormType) => FormTypeSchema.parse(rawFormType));
 
 /**
@@ -626,6 +653,26 @@ export function getAllForms(): ManagedFormSummary[] {
       applicant: { ...applicant, phone: person?.phone ?? null, maskedCccd: maskCccd(person?.cccd ?? null) },
     };
   });
+}
+
+/**
+ * Đếm đơn theo trạng thái và theo loại đơn (hai khung thống kê của Quản lí đơn), trên tất cả đơn.
+ * @returns  tổng số đơn, số đơn mỗi trạng thái (đủ 6 trạng thái) và số đơn mỗi loại đơn (nhiều nhất trước, bằng nhau thì theo tên)
+ */
+export function getFormStats(): FormStats {
+  const byStatus = Object.fromEntries(FORM_STATUSES.map((status) => [status, 0])) as FormStats['byStatus'];
+  const countByType = new Map<string, number>();
+  for (const form of FORMS) {
+    byStatus[form.status] += 1;
+    countByType.set(form.formTypeId, (countByType.get(form.formTypeId) ?? 0) + 1);
+  }
+  const byType = FORM_TYPES.map(({ id, name, status }) => ({
+    formTypeId: id,
+    formTypeName: name,
+    formTypeStatus: status,
+    count: countByType.get(id) ?? 0,
+  })).sort((a, b) => b.count - a.count || a.formTypeName.localeCompare(b.formTypeName, 'vi'));
+  return { total: FORMS.length, byStatus, byType };
 }
 
 /**

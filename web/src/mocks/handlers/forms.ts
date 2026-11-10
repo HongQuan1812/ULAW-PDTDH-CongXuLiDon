@@ -5,11 +5,12 @@ import {
   FORMS_MESSAGES,
   can,
   type FormCccdsResponse,
+  type FormStats,
   type HandledFormsResponse,
   type ManagedFormsResponse,
   type MyFormsResponse,
 } from '@ulaw/shared';
-import { getAllForms, getApplicantCccds, getFormsHandledBy, getFormsOf, readSession } from '../db';
+import { getAllForms, getApplicantCccds, getFormStats, getFormsHandledBy, getFormsOf, readSession } from '../db';
 import { MOCK_DELAY_MS, api, apiError } from '../http';
 
 export const formsHandlers = [
@@ -37,6 +38,15 @@ export const formsHandlers = [
     if (!session) return apiError(401, FORMS_MESSAGES[401]);
     if (!can(session.role, 'viewAll')) return apiError(403, FORMS_MESSAGES.listForbidden);
     return HttpResponse.json<ManagedFormsResponse>({ forms: getAllForms() });
+  }),
+
+  // Số đơn theo trạng thái, theo loại đơn (khung thống kê): cần quyền viewAll
+  http.get(api(ENDPOINTS.forms.stats), async () => {
+    await delay(MOCK_DELAY_MS);
+    const session = readSession();
+    if (!session) return apiError(401, FORMS_MESSAGES[401]);
+    if (!can(session.role, 'viewAll')) return apiError(403, FORMS_MESSAGES.statsForbidden);
+    return HttpResponse.json<FormStats>(getFormStats());
   }),
 
   // CCCD đầy đủ của mọi người nộp (nút "Hiện CCCD"): cần quyền viewApplicant

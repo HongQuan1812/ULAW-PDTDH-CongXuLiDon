@@ -4,18 +4,20 @@
 import { useEffect, useMemo, useState, type ReactElement } from 'react';
 import { FORM_MESSAGES, canReceiveForm, type ManagedFormSummary } from '@ulaw/shared';
 import { useReceiveForm } from '../../api/form';
-import { useAllForms, useApplicantCccds } from '../../api/forms';
+import { useAllForms, useApplicantCccds, useFormStats } from '../../api/forms';
 import { Button } from '../../components/Button';
 import { loadErrorMessage } from '../../components/LoadError';
 import { RefreshButton } from '../../components/RefreshButton';
 import { Highlight } from '../../components/table/Highlight';
-import type { TableField } from '../../components/table/tableTools';
+import { readTableState } from '../../components/table/tableStateStore';
+import { equalsFilterValue, toggleEqualsFilter, type FilterRule, type TableField } from '../../components/table/tableTools';
 import { useToast } from '../../components/Toast';
 import { useAuth } from '../../features/auth/useAuth';
 import { EMPTY_TEXT, formatDateTime, formatPhone } from '../../lib/format';
 import tableStyles from '../../components/table/table.module.css';
 import profileStyles from '../profile/ProfilePage.module.css';
 import { BASE_FORM_FIELDS, FormTable } from '../profile/FormTable';
+import { FormStatsPanel } from './FormStatsPanel';
 import styles from './FormsPage.module.css';
 
 /** Các cột: thông tin đơn, lúc tiếp nhận, rồi thông tin người nộp (Họ và tên mở đầu nhóm bên phải). */
@@ -31,6 +33,9 @@ const MANAGED_FORM_FIELDS: TableField<ManagedFormSummary>[] = [
 /** Mảng rỗng dùng chung khi chưa tải xong, để bảng không bị tính lại mỗi lần vẽ. */
 const NO_FORMS: ManagedFormSummary[] = [];
 
+/** Tên bảng, để nhớ cách xem khi đi qua trang khác. */
+const TABLE_ID = 'forms.all';
+
 const RECEIVE_FAILED_TEXT = 'Chưa tiếp nhận được đơn. Kiểm tra kết nối mạng rồi bấm Tiếp nhận lại.';
 const CCCD_FAILED_TEXT = 'Chưa tải được số CCCD. Kiểm tra kết nối mạng rồi bấm Hiện CCCD lại.';
 
@@ -44,6 +49,10 @@ export function FormsPage() {
   const formsQuery = useAllForms();
   const [showCccd, setShowCccd] = useState(false);
   const cccdsQuery = useApplicantCccds(showCccd);
+  const statsQuery = useFormStats();
+
+  // Điều kiện lọc của bảng do trang giữ, để ô thống kê bấm được là lọc bảng (bắt đầu từ cách xem đã nhớ)
+  const [filterRules, setFilterRules] = useState<FilterRule[]>(() => readTableState(TABLE_ID)?.filterRules ?? []);
 
   // Đang hiện CCCD thì thay số che bằng số đầy đủ (người chưa có CCCD giữ nguyên null)
   const revealed = showCccd && cccdsQuery.data ? cccdsQuery.data : null;
@@ -98,6 +107,13 @@ export function FormsPage() {
 
   return (
     <div className={profileStyles.page}>
+      <FormStatsPanel
+        statsQuery={statsQuery}
+        activeStatus={equalsFilterValue(filterRules, 'status')}
+        activeFormTypeId={equalsFilterValue(filterRules, 'formType')}
+        onToggleStatus={(status) => setFilterRules((rules) => toggleEqualsFilter(rules, 'status', status))}
+        onToggleFormType={(formTypeId) => setFilterRules((rules) => toggleEqualsFilter(rules, 'formType', formTypeId))}
+      />
       <section className={`${profileStyles.card} ${profileStyles.tableCard}`} aria-labelledby="all-forms-title">
         <div className={profileStyles.sectionHead}>
           <div className={profileStyles.titleGroup}>
@@ -112,7 +128,7 @@ export function FormsPage() {
         </div>
 
         <FormTable
-          tableId="forms.all"
+          tableId={TABLE_ID}
           fields={MANAGED_FORM_FIELDS}
           rows={rows}
           isPending={formsQuery.isPending}
@@ -123,6 +139,8 @@ export function FormsPage() {
           groupStartKey="name"
           pageLabel="Quản lí đơn"
           renderCell={renderCell}
+          filterRules={filterRules}
+          onFilterRulesChange={setFilterRules}
         />
       </section>
     </div>

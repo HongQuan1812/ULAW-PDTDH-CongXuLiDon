@@ -7,6 +7,7 @@ import {
   getApplicantCccds,
   getFileContent,
   getFormDetail,
+  getFormStats,
   getFormsHandledBy,
   getFormsOf,
   getFormType,
@@ -414,5 +415,28 @@ describe('nội dung tệp đính kèm', () => {
   test('không có tệp thì null', () => {
     expect(getFileContent('khong-co', staff)).toBeNull();
     expect(getFileContent('seed-XMM-0000-00000', staff)).toBeNull();
+  });
+});
+
+describe('thống kê đơn (Quản lí đơn)', () => {
+  test('tổng số đơn bằng số đơn của mọi người; số theo trạng thái cộng lại bằng tổng', () => {
+    const stats = getFormStats();
+    expect(stats.total).toBe(getAllForms().length);
+    expect(Object.values(stats.byStatus).reduce((sum, count) => sum + count, 0)).toBe(stats.total);
+    expect(Object.keys(stats.byStatus)).toHaveLength(6);
+  });
+
+  test('số theo loại đơn cộng lại bằng tổng, kể cả loại chưa có đơn (đếm 0) và ghi trạng thái loại đơn', () => {
+    const stats = getFormStats();
+    expect(stats.byType.reduce((sum, type) => sum + type.count, 0)).toBe(stats.total);
+    const xmm = stats.byType.find((type) => type.formTypeId === 'xmm');
+    expect(xmm?.count).toBeGreaterThan(0);
+    expect(xmm?.formTypeStatus).toBe('open');
+    expect(stats.byType.some((type) => type.count === 0)).toBe(true);
+  });
+
+  test('nhiều đơn nhất đứng trước', () => {
+    const counts = getFormStats().byType.map((type) => type.count);
+    expect(counts).toEqual([...counts].sort((a, b) => b - a));
   });
 });

@@ -17,7 +17,7 @@ import {
   type UpdateFormRequest,
 } from '@ulaw/shared';
 import { ApiError, apiFetch } from './client';
-import { ALL_FORMS_KEY, HANDLED_FORMS_KEY, MY_FORMS_KEY } from './forms';
+import { ALL_FORMS_KEY, FORM_STATS_KEY, HANDLED_FORMS_KEY, MY_FORMS_KEY } from './forms';
 
 /**
  * Khóa lưu tạm nội dung một lá đơn.
@@ -53,6 +53,7 @@ export function useReceiveForm(code: string) {
       void queryClient.invalidateQueries({ queryKey: MY_FORMS_KEY });
       void queryClient.invalidateQueries({ queryKey: HANDLED_FORMS_KEY });
       void queryClient.invalidateQueries({ queryKey: ALL_FORMS_KEY });
+      void queryClient.invalidateQueries({ queryKey: FORM_STATS_KEY });
     },
     onError: (error) => {
       if (error instanceof ApiError && (error.status === 409 || error.status === 404)) {
@@ -78,6 +79,7 @@ export function useDecideForm(code: string) {
       void queryClient.invalidateQueries({ queryKey: MY_FORMS_KEY });
       void queryClient.invalidateQueries({ queryKey: HANDLED_FORMS_KEY });
       void queryClient.invalidateQueries({ queryKey: ALL_FORMS_KEY });
+      void queryClient.invalidateQueries({ queryKey: FORM_STATS_KEY });
     },
     onError: (error) => {
       if (error instanceof ApiError && (error.status === 409 || error.status === 404)) {
@@ -119,6 +121,7 @@ export function useTransferForm(code: string) {
       void queryClient.invalidateQueries({ queryKey: MY_FORMS_KEY });
       void queryClient.invalidateQueries({ queryKey: HANDLED_FORMS_KEY });
       void queryClient.invalidateQueries({ queryKey: ALL_FORMS_KEY });
+      void queryClient.invalidateQueries({ queryKey: FORM_STATS_KEY });
     },
     onError: (error) => {
       if (error instanceof ApiError && (error.status === 409 || error.status === 404)) {

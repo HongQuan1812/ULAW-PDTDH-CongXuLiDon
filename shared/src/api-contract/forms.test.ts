@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { FORMS_ENDPOINTS, FormCccdsResponseSchema, ManagedFormsResponseSchema } from './forms';
+import { FORMS_ENDPOINTS, FormCccdsResponseSchema, FormStatsSchema, ManagedFormsResponseSchema } from './forms';
 
 describe('danh sách mọi đơn (Quản lí đơn)', () => {
   const managedForm = {
@@ -29,5 +29,27 @@ describe('danh sách mọi đơn (Quản lí đơn)', () => {
   test('CCCD đầy đủ trả theo id người nộp', () => {
     expect(FormCccdsResponseSchema.safeParse({ cccds: { 'cb-1': '079300000001' } }).success).toBe(true);
     expect(FormCccdsResponseSchema.safeParse({ cccds: [] }).success).toBe(false);
+  });
+});
+
+describe('thống kê (Quản lí đơn)', () => {
+  const stats = {
+    total: 3,
+    byStatus: { nop: 1, xet: 2, bs: 0, bsg: 0, duyet: 0, tc: 0 },
+    byType: [{ formTypeId: 'xmm', formTypeName: 'Xét miễn môn', formTypeStatus: 'open', count: 3 }],
+  };
+
+  test('đường dẫn: GET /forms/stats', () => {
+    expect(FORMS_ENDPOINTS.stats).toBe('/forms/stats');
+  });
+
+  test('chấp nhận số liệu đủ 6 trạng thái và loại đơn đang mở / đã đóng', () => {
+    expect(FormStatsSchema.safeParse(stats).success).toBe(true);
+  });
+
+  test('từ chối khi thiếu một trạng thái hoặc trạng thái loại đơn lạ', () => {
+    const { tc: _tc, ...missingStatus } = stats.byStatus;
+    expect(FormStatsSchema.safeParse({ ...stats, byStatus: missingStatus }).success).toBe(false);
+    expect(FormStatsSchema.safeParse({ ...stats, byType: [{ ...stats.byType[0], formTypeStatus: 'x' }] }).success).toBe(false);
   });
 });
