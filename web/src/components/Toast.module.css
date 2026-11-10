@@ -1,3 +1,3 @@
-/* Thông báo ngắn (như .toast của bản mẫu). */
-.toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:90;max-width:min(520px,calc(100vw - 32px));background:var(--inverse-bg);color:var(--inverse-fg);padding:12px 20px;border-radius:999px;font-weight:500;font-size:14px;box-shadow:var(--shadow-lg);animation:toast .2s ease-out}
-@keyframes toast{from{opacity:0;transform:translate(-50%,8px)}}
+/* Thông báo ngắn (như .toast của bản mẫu), hiện ở giữa phía trên màn hình. */
+.toast{position:fixed;left:50%;top:calc(24px + env(safe-area-inset-top,0px));transform:translateX(-50%);z-index:90;max-width:min(520px,calc(100vw - 32px));background:var(--inverse-bg);color:var(--inverse-fg);padding:12px 20px;border-radius:999px;font-weight:500;font-size:14px;box-shadow:var(--shadow-lg);animation:toast .2s ease-out}
+@keyframes toast{from{opacity:0;transform:translate(-50%,-8px)}}
