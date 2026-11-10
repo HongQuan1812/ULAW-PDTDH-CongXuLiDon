@@ -12,7 +12,6 @@
 .googleButton:hover{background:var(--hover);border-color:var(--faint)}
 .googleButton:disabled{opacity:.6;cursor:progress}
 .hint{color:var(--muted);font-size:13px;text-align:center;margin-top:-4px}
-.message{color:var(--danger);font-size:13.5px;font-weight:500}
 
 /* danh sách lợi ích */
 .points{list-style:none;margin:6px 0 0;padding:16px 0 0;border-top:1px solid var(--line);display:grid;gap:8px}

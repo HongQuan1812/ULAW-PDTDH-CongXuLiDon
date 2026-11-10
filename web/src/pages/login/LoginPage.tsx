@@ -4,6 +4,7 @@ import { Navigate, useLocation } from 'react-router';
 import { ROLES, ROLE_IDS, SCHOOL_EMAIL_DOMAINS, type RoleId } from '@ulaw/shared';
 import { useDevLogin, useSession } from '../../api/auth';
 import { homePath } from '../../app/paths';
+import { useToast } from '../../components/Toast';
 import { SHOW_DEMO } from '../../lib/env';
 import styles from './LoginPage.module.css';
 
@@ -26,7 +27,15 @@ export function LoginPage() {
   const session = useSession();
   const login = useDevLogin();
   const location = useLocation();
+  const toast = useToast();
   const [role, setRole] = useState<RoleId>('nguoiNopDon');
+
+  /**
+   * Đăng nhập thử; không đăng nhập được (vd email ngoài trường, máy chủ lỗi) thì báo bằng toast đỏ.
+   * @param email  email muốn thử; bỏ trống = email trường của vai trò đang chọn
+   */
+  const logIn = (email?: string) =>
+    login.mutate(email ? { role, email } : { role }, { onError: (error) => toast(error.message, 'error') });
 
   // Đang kiểm tra phiên: chưa vẽ gì, tránh nháy trang đăng nhập
   if (session.isPending) return null;
@@ -50,18 +59,13 @@ export function LoginPage() {
           type="button"
           className={styles.googleButton}
           disabled={login.isPending}
-          onClick={() => login.mutate({ role })}
+          onClick={() => logIn()}
         >
           <GoogleIcon />
           {login.isPending ? 'Đang đăng nhập…' : 'Đăng nhập bằng email trường'}
         </button>
         {/* JUST FOR DEMO: END */}
         <p className={styles.hint}>Dùng tài khoản Google do trường cấp (@{SCHOOL_EMAIL_DOMAINS[0]}).</p>
-        {login.isError && (
-          <p className={styles.message} role="alert">
-            {login.error.message}
-          </p>
-        )}
 
         <ul className={styles.points}>
           {POINTS.map((point) => (
@@ -93,7 +97,7 @@ export function LoginPage() {
               type="button"
               className={styles.personalEmailButton}
               disabled={login.isPending}
-              onClick={() => login.mutate({ role, email: PERSONAL_DEMO_EMAIL })}
+              onClick={() => logIn(PERSONAL_DEMO_EMAIL)}
             >
               Thử đăng nhập bằng email cá nhân ({PERSONAL_DEMO_EMAIL})
             </button>

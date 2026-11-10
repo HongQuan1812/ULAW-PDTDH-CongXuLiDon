@@ -25,6 +25,11 @@ export const ANSWER_MESSAGES = {
   tableNumberInvalid: (columnLabel: string) => `Cột “${columnLabel}” chỉ nhận số không âm.`,
   /** Câu báo chung dưới nút Gửi đơn cho phần có lỗi */
   section: (sectionTitle: string) => `Kiểm tra lại phần “${sectionTitle}”.`,
+  /** Một câu gộp các phần có lỗi (toast khi bấm Gửi đơn), vd "Kiểm tra lại các phần “A”, “B”." */
+  sectionsToCheck: (sectionTitles: readonly string[]) =>
+    sectionTitles.length === 1
+      ? `Kiểm tra lại phần “${sectionTitles[0]}”.`
+      : `Kiểm tra lại các phần ${sectionTitles.map((title) => `“${title}”`).join(', ')}.`,
 } as const;
 
 /**

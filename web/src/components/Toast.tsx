@@ -1,6 +1,8 @@
 /* Thông báo ngắn hiện ở giữa phía trên màn hình rồi tự tắt (như toast() của artifact/js/utils.js).
-   3 kiểu: thành công (nền xanh lá), lỗi (nền đỏ, hiện lâu hơn), thông tin (nền tối, mặc định).
-   Lỗi gắn với form (ô nhập sai, không lưu được) thì hiện ngay trên form, không dùng toast. */
+   3 kiểu, mỗi kiểu một màu và một biểu tượng: thành công (xanh ngọc, ✓), lỗi (đỏ hồng, ×, hiện lâu hơn),
+   thông tin (xanh lơ, i, mặc định).
+   Rê chuột vào (hoặc đưa con trỏ bàn phím vào nút ×) thì giữ thông báo; rời ra thì đếm lại từ đầu. Nút × góc phải trên để tắt ngay.
+   Lỗi của từng ô nhập / câu hỏi hiện ngay dưới ô đó; toast chỉ báo chung. */
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import styles from './Toast.module.css';
 
@@ -8,7 +10,7 @@ import styles from './Toast.module.css';
 export type ToastTone = 'success' | 'error' | 'info';
 
 /** Thời gian thông báo hiện trước khi tự tắt (mili giây); lỗi hiện lâu hơn để kịp đọc. */
-const TOAST_DURATION_MS: Record<ToastTone, number> = { success: 2600, info: 2600, error: 5000 };
+const TOAST_DURATION_MS: Record<ToastTone, number> = { success: 2000, info: 2000, error: 3500 };
 
 type ShowToast = (message: string, tone?: ToastTone) => void;
 
@@ -31,12 +33,32 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   const timerRef = useRef<number | undefined>(undefined);
   const nextIdRef = useRef(1);
 
-  // Hiện thông báo mới (thay thông báo cũ nếu đang hiện) và hẹn giờ tắt theo kiểu
-  const show = useCallback<ShowToast>((message, tone = 'info') => {
+  /**
+   * Hẹn giờ tắt thông báo (hủy hẹn giờ cũ nếu có).
+   * @param tone  kiểu thông báo, quyết định thời gian hiện
+   */
+  const startTimer = useCallback((tone: ToastTone) => {
     window.clearTimeout(timerRef.current);
-    setShown({ id: nextIdRef.current++, message, tone });
     timerRef.current = window.setTimeout(() => setShown(null), TOAST_DURATION_MS[tone]);
   }, []);
+
+  /** Giữ thông báo: hủy hẹn giờ tắt. */
+  const holdToast = () => window.clearTimeout(timerRef.current);
+
+  /** Tắt thông báo ngay. */
+  const dismissToast = () => {
+    window.clearTimeout(timerRef.current);
+    setShown(null);
+  };
+
+  // Hiện thông báo mới (thay thông báo cũ nếu đang hiện) và hẹn giờ tắt theo kiểu
+  const show = useCallback<ShowToast>(
+    (message, tone = 'info') => {
+      setShown({ id: nextIdRef.current++, message, tone });
+      startTimer(tone);
+    },
+    [startTimer],
+  );
 
   // Rời khỏi ứng dụng thì hủy hẹn giờ
   useEffect(() => () => window.clearTimeout(timerRef.current), []);
@@ -50,25 +72,41 @@ export function ToastProvider({ children }: { children: ReactNode }) {
           className={`${styles.toast} ${styles[shown.tone]}`}
           // Lỗi: trình đọc màn hình đọc ngay; thành công / thông tin: đọc khi rảnh
           role={shown.tone === 'error' ? 'alert' : 'status'}
+          onMouseEnter={holdToast}
+          onMouseLeave={() => startTimer(shown.tone)}
+          onFocus={holdToast}
+          onBlur={() => startTimer(shown.tone)}
         >
-          {shown.tone !== 'info' && <ToneIcon tone={shown.tone} />}
-          {shown.message}
+          <ToneIcon tone={shown.tone} />
+          <span className={styles.message}>{shown.message}</span>
+          <button type="button" className={styles.close} aria-label="Tắt thông báo" title="Tắt" onClick={dismissToast}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden="true">
+              <path d="M6 6l12 12M18 6 6 18" />
+            </svg>
+          </button>
         </div>
       )}
     </ToastContext>
   );
 }
 
+/** Nét vẽ màu trắng bên trong hình tròn của biểu tượng, theo kiểu thông báo. */
+const TONE_GLYPH: Record<ToastTone, string> = {
+  success: 'm8 12.3 2.7 2.7L16 9.6', // dấu ✓
+  error: 'M9 9l6 6M15 9l-6 6', // dấu ×
+  info: 'M12 11v5.5M12 7.6v.01', // chữ i
+};
+
 /**
- * Biểu tượng đầu thông báo, để phân biệt cả khi không nhìn rõ màu.
- * @param tone  'success' dấu ✓ · 'error' dấu !
+ * Biểu tượng đầu thông báo: hình tròn đặc cùng màu chữ, dấu trắng bên trong; để phân biệt cả khi không nhìn rõ màu.
+ * @param tone  'success' dấu ✓ · 'error' dấu × · 'info' chữ i
  * @returns     biểu tượng svg
  */
-function ToneIcon({ tone }: { tone: Exclude<ToastTone, 'info'> }) {
+function ToneIcon({ tone }: { tone: ToastTone }) {
   return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <circle cx="12" cy="12" r="9.5" strokeWidth="2" />
-      {tone === 'success' ? <path d="m8 12.5 2.7 2.7L16 9.8" /> : <path d="M12 7.5v5.5M12 16.5v.01" />}
+    <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
+      <circle cx="12" cy="12" r="11" fill="currentColor" />
+      <path d={TONE_GLYPH[tone]} fill="none" stroke="#FFFFFF" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
@@ -76,7 +114,7 @@ function ToneIcon({ tone }: { tone: Exclude<ToastTone, 'info'> }) {
 /**
  * Lấy hàm hiện thông báo.
  * @returns  hàm nhận câu thông báo và kiểu, vd toast('Đã lưu thông tin cá nhân', 'success');
- *           không truyền kiểu thì là thông tin (nền tối)
+ *           không truyền kiểu thì là thông tin (xanh lơ)
  */
 export function useToast(): ShowToast {
   const show = useContext(ToastContext);

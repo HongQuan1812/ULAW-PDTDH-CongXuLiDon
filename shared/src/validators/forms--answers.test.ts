@@ -105,6 +105,10 @@ describe('validateAnswers', () => {
     const result = validateAnswers(XMM_SECTIONS, { mon: [['Triết học', 3, 'Triết học', 'ĐH KHXH&NV']], files: [] });
     expect(result.questionErrors).toEqual({ files: ANSWER_MESSAGES.fileRequired });
     expect(result.sectionErrors).toEqual(['Kiểm tra lại phần “Bảng điểm minh chứng”.']);
+    expect(ANSWER_MESSAGES.sectionsToCheck(['Bảng điểm minh chứng'])).toBe('Kiểm tra lại phần “Bảng điểm minh chứng”.');
+    expect(ANSWER_MESSAGES.sectionsToCheck(['Đăng ký miễn môn', 'Bảng điểm minh chứng'])).toBe(
+      'Kiểm tra lại các phần “Đăng ký miễn môn”, “Bảng điểm minh chứng”.',
+    );
   });
 
   it('đủ câu trả lời thì không có lỗi', () => {

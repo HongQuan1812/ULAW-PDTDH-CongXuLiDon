@@ -57,7 +57,7 @@ export function NewFormPage() {
 
 /**
  * Lá đơn mới: tiêu đề, các phần câu hỏi, hàng nút Gửi đơn.
- * Bấm Gửi đơn: kiểm tra mọi câu, lỗi thì báo dưới từng câu và dưới nút, đưa con trỏ tới câu lỗi đầu tiên.
+ * Bấm Gửi đơn: kiểm tra mọi câu, lỗi thì báo dưới từng câu và bằng toast, đưa con trỏ tới câu lỗi đầu tiên.
  * @param formType  loại đơn đủ cấu trúc
  * @param onCancel  bấm Hủy: rời trang
  * @returns         thẻ <form>
@@ -67,19 +67,18 @@ function NewForm({ formType, onCancel }: { formType: FormType; onCancel: () => v
   const { answers, setAnswer, questionErrors, validate } = useFormAnswers(formType.sections);
   const [previewReadOnly, setPreviewReadOnly] = useState(false);
 
-  // Câu báo chung dưới nút Gửi đơn: các phần còn câu lỗi (tự cập nhật khi sửa xong câu lỗi)
-  const sectionErrors = formType.sections
-    .filter((section) => section.questions.some((question) => question.id in questionErrors))
-    .map((section) => ANSWER_MESSAGES.section(section.title));
-
   /**
-   * Bấm Gửi đơn.
+   * Bấm Gửi đơn. Còn lỗi thì: lỗi hiện dưới từng câu, toast đỏ ghi các phần cần xem lại, con trỏ tới câu lỗi đầu tiên.
    * @param event  sự kiện gửi form (chặn để trang không tải lại)
    */
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const validation = validate();
     if (validation.sectionErrors.length) {
+      const invalidSectionTitles = formType.sections
+        .filter((section) => section.questions.some((question) => question.id in validation.questionErrors))
+        .map((section) => section.title);
+      toast(ANSWER_MESSAGES.sectionsToCheck(invalidSectionTitles), 'error');
       focusFirstError(validation.questionErrors);
       return;
     }
@@ -112,13 +111,6 @@ function NewForm({ formType, onCancel }: { formType: FormType; onCancel: () => v
 
       {!previewReadOnly && (
         <div className={styles.submitRow}>
-          {sectionErrors.length > 0 && (
-            <p className={styles.submitErrors} role="alert">
-              {sectionErrors.map((message) => (
-                <span key={message}>{message}</span>
-              ))}
-            </p>
-          )}
           <Button variant="ghost" onClick={onCancel}>
             Hủy
           </Button>
