@@ -1,6 +1,7 @@
 /* Trang Thông tin cá nhân (bước 3): phần thông tin cá nhân, thông tin sinh viên, mục "Đơn đã nộp",
    và mục "Đơn phụ trách" (chỉ vai trò được xử lí đơn). */
 import { useCallback, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router';
 import { MAIN_STUDENT_MESSAGES, STUDENT_INFO_LABELS, type Profile, type StudentInfo } from '@ulaw/shared';
 import { useMyFullCccd, useMyProfile, useSetMainStudent } from '../../api/profile';
 import { Avatar } from '../../components/Avatar';
@@ -11,6 +12,7 @@ import { LoadError, loadErrorMessage } from '../../components/LoadError';
 import { RefreshButton } from '../../components/RefreshButton';
 import { EMPTY_TEXT, formatPhone } from '../../lib/format';
 import { useCan } from '../../features/auth/useAuth';
+import { readPreviousPageLabel } from '../../app/paths';
 import { EditProfileDialog } from './EditProfileDialog';
 import { HandledForms } from './HandledForms';
 import { SubmittedForms } from './SubmittedForms';
@@ -23,14 +25,22 @@ const LOAD_FAILED_TEXT = 'Không tải được thông tin cá nhân.';
  * Tải hồ sơ của mình rồi vẽ trang. Các bảng đơn tải riêng, không chờ hồ sơ.
  * Đã có hồ sơ thì luôn hiện hồ sơ, kể cả khi lần tải lại sau đó bị lỗi (lỗi đó báo bằng toast).
  * @returns  giao diện trang: thẻ thông tin (đang tải / lỗi / thông tin), mục Đơn đã nộp,
- *           và mục Đơn phụ trách nếu vai trò có quyền decide
+ *           và mục Đơn phụ trách nếu vai trò có quyền decide;
+ *           mở từ trang đơn ("Xem hồ sơ ›") thì có thêm nút "‹ Quay lại đơn đang soạn" ở đầu trang
  */
 export function ProfilePage() {
   const profileQuery = useMyProfile();
   const canHandleForms = useCan('decide');
+  const navigate = useNavigate();
+  const previousPageLabel = readPreviousPageLabel(useLocation().state);
 
   return (
     <div className={styles.page}>
+      {previousPageLabel && (
+        <button type="button" className={styles.back} onClick={() => navigate(-1)}>
+          ‹ Quay lại {previousPageLabel}
+        </button>
+      )}
       <h1 className="sr-only">Thông tin cá nhân</h1>
       {profileQuery.isPending ? (
         <section className={styles.card}>

@@ -30,6 +30,8 @@ export const ANSWER_MESSAGES = {
     sectionTitles.length === 1
       ? `Kiểm tra lại phần “${sectionTitles[0]}”.`
       : `Kiểm tra lại các phần ${sectionTitles.map((title) => `“${title}”`).join(', ')}.`,
+  /** Chưa đánh dấu ô cam đoan ở cuối lá đơn */
+  commitmentRequired: 'Đánh dấu ô cam đoan trước khi gửi.',
 } as const;
 
 /**

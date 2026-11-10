@@ -10,7 +10,8 @@
 .sectionHint{margin-top:-10px}
 
 /* ---------- câu hỏi ---------- */
-.question{display:grid;gap:8px;min-width:0}
+/* cột minmax(0,1fr): nội dung dài (vd tên tệp rất dài) không đẩy câu hỏi rộng ra ngoài khung phần */
+.question{display:grid;grid-template-columns:minmax(0,1fr);gap:8px;min-width:0}
 .questionLabel{font-weight:500;font-size:14.5px}
 .required{color:var(--danger)}
 .error{color:var(--danger);font-size:13.5px;font-weight:500;margin-top:-2px}
@@ -66,7 +67,8 @@
 .dropZone strong{color:var(--fg);font-weight:500}
 .dropZone span{font-size:12.5px}
 .dropZone:hover,.dropZoneOver{border-color:var(--accent);background:var(--accent-soft)}
-.fileList{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+/* cột minmax(0,1fr): tên tệp dài thì cắt bằng dấu …, không kéo dòng tệp rộng ra */
+.fileList{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:minmax(0,1fr);gap:8px}
 .fileList li{display:flex;align-items:center;gap:10px;min-height:46px;padding:6px 8px 6px 14px;border:1px solid var(--line);border-radius:var(--r)}
 .fileType{display:inline-grid;place-items:center;min-width:38px;height:22px;padding:0 7px;border-radius:6px;background:var(--surface-2);color:var(--muted);font-size:10.5px;font-weight:600;letter-spacing:.05em}
 .fileName{flex:1;min-width:0;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}

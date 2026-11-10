@@ -32,6 +32,22 @@ export function formPath(code: string): string {
   return `/don/${encodeURIComponent(code)}`;
 }
 
+/** state gửi kèm khi chuyển trang, để trang mới có nút "‹ Quay lại <trang trước>" (như routeLabel của artifact/js/nav.js). */
+export interface ReturnState {
+  /** tên trang trước, vd 'Thông tin cá nhân', 'đơn đang soạn' */
+  previousPageLabel: string;
+}
+
+/**
+ * Đọc tên trang trước từ state của trang (nếu trang trước có gửi kèm).
+ * @param locationState  location.state của React Router
+ * @returns              tên trang trước, hoặc undefined nếu không có
+ */
+export function readPreviousPageLabel(locationState: unknown): string | undefined {
+  const previousPageLabel = (locationState as Partial<ReturnState> | null)?.previousPageLabel;
+  return typeof previousPageLabel === 'string' ? previousPageLabel : undefined;
+}
+
 export const PAGE_LABEL: Record<Page, string> = {
   profile: 'Thông tin cá nhân',
   forms: 'Quản lí đơn',

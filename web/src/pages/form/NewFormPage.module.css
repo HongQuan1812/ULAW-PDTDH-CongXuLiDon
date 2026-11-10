@@ -1,16 +1,37 @@
-/* Trang nộp đơn mới (như .page-form, .back, .form-title, .submit-row của artifact/styles.css). */
-.page{display:grid;gap:24px;max-width:1040px;margin:0 auto;padding:40px 16px 24px}
+/* Trang nộp đơn mới (như .page-form, .back, .page-head, .form-grid, .submit-row, .commit của artifact/styles.css). */
+.page{display:grid;gap:24px;max-width:1320px;margin:0 auto;padding:40px 16px 24px}
 .muted{color:var(--muted)}
 .back{display:inline-flex;align-items:center;gap:4px;border:0;background:none;color:var(--muted);font-weight:500;font-size:13.5px;cursor:pointer;padding:4px 0;margin-bottom:-12px;justify-self:start}
 .back:hover{color:var(--accent)}
 .form{display:grid;gap:18px;min-width:0}
-.head{display:grid;gap:6px;margin-bottom:6px}
-.title{font-size:clamp(24px,2.6vw,30px);line-height:1.2;font-weight:600;letter-spacing:-.03em}
 .errorCard{display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);padding:28px}
+
+/* đầu trang: tiêu đề bên trái, nút "Thông tin đơn" bên phải */
+.head{display:flex;align-items:flex-end;justify-content:space-between;gap:16px 24px;flex-wrap:wrap;margin-bottom:6px}
+.headText{display:grid;gap:6px;min-width:0;max-width:68ch}
+.title{font-size:clamp(24px,2.6vw,30px);line-height:1.2;font-weight:600;letter-spacing:-.03em}
+
+/* nội dung đơn; khung Thông tin đơn đang nằm bên phải thì chia 2 cột */
+.grid{display:grid;grid-template-columns:minmax(0,1fr);gap:24px;align-items:start}
+.withSide{grid-template-columns:minmax(0,1fr) 320px}
+/* cột nội dung đơn: các phần câu hỏi rồi hàng nút ở dưới */
+.main{display:grid;grid-template-columns:minmax(0,1fr);gap:18px;min-width:0}
 
 /* JUST FOR DEMO: START · ô "Xem thử dạng chỉ xem" */
 .demoToggle{display:inline-flex;align-items:center;gap:10px;justify-self:start;padding:8px 14px;border:1px dashed var(--line-2);border-radius:999px;color:var(--muted);font-size:13px;cursor:pointer}
 /* JUST FOR DEMO: END */
 
-/* hàng nút dính ở đáy màn hình khi cuộn */
-.submitRow{position:sticky;bottom:0;z-index:20;display:flex;align-items:center;gap:10px 12px;flex-wrap:wrap;justify-content:flex-end;background:color-mix(in srgb,var(--surface) 94%,transparent);backdrop-filter:blur(10px);border:1px solid var(--line);border-radius:999px;padding:10px;margin-bottom:calc(env(safe-area-inset-bottom,0px) + 12px);box-shadow:var(--shadow)}
+/* hàng dính ở đáy màn hình khi cuộn: ô cam đoan bên trái, nút bên phải */
+.submitRow{position:sticky;bottom:0;z-index:20;display:flex;align-items:center;gap:10px 18px;flex-wrap:wrap;justify-content:flex-end;background:color-mix(in srgb,var(--surface) 94%,transparent);backdrop-filter:blur(10px);border:1px solid var(--line);border-radius:999px;padding:10px 10px 10px 24px;margin-bottom:calc(env(safe-area-inset-bottom,0px) + 12px);box-shadow:var(--shadow)}
+.commitment{display:flex;align-items:flex-start;gap:10px;flex:1 1 300px;font-size:13.5px;cursor:pointer}
+.commitment input{margin-top:3px;flex:none}
+/* bấm Gửi đơn khi chưa đánh dấu: chữ và ô đỏ */
+.commitmentInvalid{color:var(--danger)}
+.commitmentInvalid input{outline:2px solid var(--danger);outline-offset:2px}
+.buttons{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;margin-left:auto}
+
+@media (max-width:620px){
+  .submitRow{padding:12px;border-radius:18px}
+  .buttons{width:100%}
+  .buttons>*{flex:1}
+}

@@ -16,7 +16,7 @@ import { initialAnswers } from './formAnswers';
  * Câu trả lời và lỗi của lá đơn đang soạn.
  * Lỗi chỉ hiện sau khi bấm Gửi đơn (validate); sau đó sửa câu nào thì lỗi của câu đó cập nhật ngay, hết lỗi thì ẩn.
  * @param sections       các phần của loại đơn
- * @param savedAnswers   câu trả lời đã lưu (sửa đơn); bỏ trống = đơn mới
+ * @param savedAnswers   câu trả lời có sẵn (sửa đơn, hoặc nháp đơn mới đang soạn); bỏ trống = đơn trống
  * @returns              answers, setAnswer(id, giá trị), questionErrors (lỗi theo id câu hỏi), validate()
  */
 export function useFormAnswers(sections: readonly FormSection[], savedAnswers?: FormAnswers) {

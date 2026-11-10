@@ -3,7 +3,7 @@
 import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import { useNavigate } from 'react-router';
 import type { OpenFormType } from '@ulaw/shared';
-import { newFormPath } from '../../app/paths';
+import { newFormPath, PAGE_LABEL, type ReturnState } from '../../app/paths';
 import { LoadError } from '../../components/LoadError';
 import { Modal } from '../../components/Modal';
 import { Highlight } from '../../components/table/Highlight';
@@ -78,7 +78,8 @@ function FormTypeList({ formTypes }: { formTypes: OpenFormType[] }) {
   }, [shownIndex]);
 
   // Mở trang nộp đơn của loại đã chọn (hộp thoại tự đóng khi rời trang)
-  const start = (formType: OpenFormType) => navigate(newFormPath(formType.id));
+  const start = (formType: OpenFormType) =>
+    navigate(newFormPath(formType.id), { state: { previousPageLabel: PAGE_LABEL.profile } satisfies ReturnState });
 
   // ↑ ↓ đi vòng trong danh sách; Enter mở loại đang chọn
   const handleKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
