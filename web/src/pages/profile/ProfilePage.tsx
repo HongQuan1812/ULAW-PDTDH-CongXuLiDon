@@ -117,7 +117,8 @@ function IdentityCard({ profile }: { profile: Profile }) {
         </div>
       </dl>
 
-      {mainStudent && <StudentRow student={mainStudent} />}
+      {/* điện thoại: ẩn cho gọn, xem trong khung "Thông tin sinh viên" (nút ở đầu thẻ) */}
+      {mainStudent && <StudentRow student={mainStudent} hideOnNarrowScreen />}
 
       {mainStudent && (
         <Sheet open={studentSheetOpen} onClose={() => setStudentSheetOpen(false)} title="Thông tin sinh viên">
@@ -185,12 +186,13 @@ function studentValue(student: StudentInfo, key: keyof StudentInfo): string {
 /**
  * Hàng 6 mục của MSSV chính (MSSV, Lớp, Hình thức đào tạo, Ngành, Khóa học hiện tại, Khóa học gốc).
  * Lấy từ database trường, không sửa được nên nền xám. Mục database trường không có thì ghi "—".
- * @param student  MSSV chính
- * @returns        hàng thông tin sinh viên
+ * @param student             MSSV chính
+ * @param hideOnNarrowScreen  true: ẩn trên điện thoại (chỉ dùng khi trang có khung "Thông tin sinh viên" để xem thay)
+ * @returns                   hàng thông tin sinh viên
  */
-export function StudentRow({ student }: { student: StudentInfo }) {
+export function StudentRow({ student, hideOnNarrowScreen = false }: { student: StudentInfo; hideOnNarrowScreen?: boolean }) {
   return (
-    <dl className={`${styles.info} ${styles.studentRow}`}>
+    <dl className={`${styles.info} ${styles.studentRow} ${hideOnNarrowScreen ? styles.hideOnNarrowScreen : ''}`}>
       {STUDENT_INFO_LABELS.map(({ key, label }) => (
         <div key={key} className={styles.readOnly}>
           <dt>{label}</dt>

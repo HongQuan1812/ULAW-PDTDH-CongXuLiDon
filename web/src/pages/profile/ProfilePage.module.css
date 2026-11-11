@@ -53,8 +53,10 @@
   .studentRow{grid-template-columns:none;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:10px}
   .studentRow>div{padding:12px 14px}
 }
-/* màn hình hẹp: thẻ sát hơn, nút trên đầu thẻ giãn hết chiều ngang */
+/* màn hình hẹp: thẻ sát hơn, nút trên đầu thẻ giãn hết chiều ngang;
+   trang của mình thì ẩn 6 mục sinh viên cho gọn (xem trong khung "Thông tin sinh viên") */
 @media (max-width:620px){
+  .hideOnNarrowScreen{display:none}
   .page{gap:18px;padding-top:24px}
   .card{padding:20px}
   .tableCard{padding:0}
