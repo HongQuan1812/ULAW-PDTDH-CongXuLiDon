@@ -4,6 +4,8 @@
 .card:first-child{grid-template-rows:auto auto minmax(0,1fr)}
 .head{display:flex;align-items:center;justify-content:space-between;gap:12px}
 .head h2{font-size:15px;font-weight:600;margin:0}
+/* tiêu đề và nút ↻ đứng sát nhau */
+.titleGroup{display:flex;align-items:center;gap:10px;min-width:0}
 .total{font-size:13px;color:var(--muted)}
 .total b{font-size:18px;color:var(--fg);font-weight:600}
 .placeholder{min-height:120px;border-radius:var(--r);background:var(--surface-2)}

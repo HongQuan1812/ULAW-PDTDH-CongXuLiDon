@@ -44,15 +44,17 @@ export function FormStatsPanel({ statsQuery, activeStatus, activeFormTypeId, onT
   return (
     <div className={styles.stats}>
       <section className={styles.card} aria-labelledby="stats-status-title">
+        {/* Tiêu đề, nút ↻ (tải lại số liệu thống kê) · tổng số đơn */}
         <div className={styles.head}>
-          <h2 id="stats-status-title">Theo trạng thái</h2>
+          <div className={styles.titleGroup}>
+            <h2 id="stats-status-title">Theo trạng thái</h2>
+            <RefreshButton query={statsQuery} label="thống kê theo trạng thái" size="small" />
+          </div>
           {stats ? (
             <span className={styles.total}>
               <b>{stats.total}</b> đơn
             </span>
-          ) : (
-            <RefreshButton query={statsQuery} label="Thống kê" size="small" />
-          )}
+          ) : null}
         </div>
         {errorMessage ? <LoadError message={errorMessage} /> : null}
         {stats ? <StatusPart stats={stats} activeStatus={activeStatus} onToggleStatus={onToggleStatus} /> : null}
@@ -60,8 +62,12 @@ export function FormStatsPanel({ statsQuery, activeStatus, activeFormTypeId, onT
       </section>
 
       <section className={styles.card} aria-labelledby="stats-type-title">
+        {/* Tiêu đề, nút ↻ · số loại đơn. Hai khung dùng chung một lần tải, nên bấm ↻ ở khung nào cũng tải lại cả hai */}
         <div className={styles.head}>
-          <h2 id="stats-type-title">Theo loại đơn</h2>
+          <div className={styles.titleGroup}>
+            <h2 id="stats-type-title">Theo loại đơn</h2>
+            <RefreshButton query={statsQuery} label="thống kê theo loại đơn" size="small" />
+          </div>
           {stats ? <span className={styles.total}>{stats.byType.length} loại đơn</span> : null}
         </div>
         {stats ? (
