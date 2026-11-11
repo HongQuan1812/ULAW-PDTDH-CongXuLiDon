@@ -7,7 +7,7 @@ import {
   isSchoolEmail,
   type Session,
 } from '@ulaw/shared';
-import { DEMO_USERS, readSession, toSession, writeSession } from '../db';
+import { demoAccountFor, getProfile, readSession, toSession, writeSession } from '../db';
 import { MOCK_DELAY_MS, api, apiError } from '../http';
 
 export const authHandlers = [
@@ -27,13 +27,17 @@ export const authHandlers = [
     const parsed = DevLoginRequestSchema.safeParse(await request.json().catch(() => null));
     if (!parsed.success) return apiError(422, AUTH_MESSAGES[422]);
 
+    // Tài khoản đăng nhập thử của vai trò này (Admin có thể đã đổi vai trò của mọi tài khoản vai trò này thì 404)
+    const userId = demoAccountFor(parsed.data.role);
+    if (!userId) return apiError(404, AUTH_MESSAGES.noDemoAccount);
+
     // Chỉ cho email trường vào (backend thật cũng kiểm tra lại như vậy); có email thử thì kiểm tra email đó
-    const email = parsed.data.email ?? DEMO_USERS[parsed.data.role].email;
+    const email = parsed.data.email ?? getProfile(userId).email;
     if (!isSchoolEmail(email)) return apiError(403, AUTH_MESSAGES[403](email));
 
     // Lưu phiên và trả về
-    writeSession(parsed.data.role);
-    return HttpResponse.json<Session>(toSession(parsed.data.role));
+    writeSession(userId);
+    return HttpResponse.json<Session>(toSession(userId));
   }),
 
   // Đăng xuất

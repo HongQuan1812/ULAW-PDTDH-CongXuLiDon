@@ -1,4 +1,5 @@
 /* HỢP ĐỒNG API: mỗi nhóm API một file, gom lại ở đây. */
+import { ACCOUNT_ENDPOINTS } from './accounts';
 import { AUTH_ENDPOINTS } from './auth';
 import { FILE_ENDPOINTS } from './files';
 import { FORM_TYPE_ENDPOINTS } from './form-types';
@@ -8,6 +9,7 @@ import { HEALTH_ENDPOINTS } from './health';
 import { PROFILE_ENDPOINTS } from './profile';
 
 export * from './common';
+export * from './accounts';
 export * from './auth';
 export * from './files';
 export * from './form-types';
@@ -18,6 +20,7 @@ export * from './profile';
 
 /** Mọi đường dẫn API, theo nhóm. Vd ENDPOINTS.auth.me */
 export const ENDPOINTS = {
+  accounts: ACCOUNT_ENDPOINTS,
   auth: AUTH_ENDPOINTS,
   form: FORM_ENDPOINTS,
   files: FILE_ENDPOINTS,

@@ -1,3 +1,4 @@
+import { accountHandlers } from './accounts';
 import { authHandlers } from './auth';
 import { fileHandlers } from './files';
 import { formTypeHandlers } from './form-types';
@@ -11,6 +12,7 @@ import { randomFailureHandlers } from './random-failure';
 export const handlers = [
   ...randomFailureHandlers,
   ...authHandlers,
+  ...accountHandlers,
   // forms trước form: /forms/mine, /forms/handled, /forms/cccds phải được xét trước /forms/:code
   ...formsHandlers,
   ...formHandlers,

@@ -53,6 +53,8 @@ export const AUTH_MESSAGES = {
     `Hãy đăng nhập bằng email trường (@${SCHOOL_EMAIL_DOMAINS[0]}). Email ${email} không được dùng cho cổng này.`,
   /** POST /auth/dev-login với body sai (vai trò không có trong danh sách) */
   422: 'Vai trò không hợp lệ.',
+  /** POST /auth/dev-login (JUST FOR DEMO) khi Admin đã đổi hết tài khoản của vai trò này sang vai trò khác (404) */
+  noDemoAccount: 'Không còn tài khoản nào có vai trò này để đăng nhập thử.',
   /** Bấm Đăng xuất mà không gửi được yêu cầu (mất mạng) */
   logoutFailed: 'Chưa đăng xuất được. Kiểm tra kết nối mạng rồi thử lại.',
   /** Đổi vai trò thử nghiệm mà không gửi được yêu cầu (mất mạng) */

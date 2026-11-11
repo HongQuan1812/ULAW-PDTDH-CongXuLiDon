@@ -129,3 +129,15 @@ export function canTransferForm(
 ): boolean {
   return can(role, 'transfer') && !!form.handler && isTransferable(form.status);
 }
+
+/**
+ * Kiểm tra người dùng có được đổi vai trò của một tài khoản hay không.
+ * Cần quyền manageAccounts, và không được đổi vai trò của chính mình (tránh tự khóa mình khỏi trang Quản lí tài khoản).
+ * @param user           người dùng đang đăng nhập (cần id, role)
+ * @param targetUserId   id tài khoản muốn đổi vai trò
+ * @returns              true nếu được đổi
+ */
+export function canChangeAccountRole(user: { id: string; role: RoleId } | null | undefined, targetUserId: string): boolean {
+  if (!user) return false;
+  return can(user.role, 'manageAccounts') && user.id !== targetUserId;
+}

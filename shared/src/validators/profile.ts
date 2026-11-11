@@ -1,10 +1,13 @@
-/* Kiểm tra dữ liệu hồ sơ cá nhân: họ tên, CCCD, số điện thoại. */
+/* Kiểm tra dữ liệu hồ sơ cá nhân: họ tên, CCCD, số điện thoại, email (khi tạo tài khoản). */
+import { SCHOOL_EMAIL_DOMAINS } from './auth';
 
 /* ---------- Họ tên, CCCD, số điện thoại (chuyển từ `rx` trong artifact/js/auth.js) ---------- */
 
-/** Câu báo lỗi khi họ tên, CCCD, số điện thoại không hợp lệ (hiện dưới ô nhập). */
+/** Câu báo lỗi khi họ tên, CCCD, số điện thoại, email không hợp lệ (hiện dưới ô nhập). */
 export const VALIDATION_MESSAGES = {
   fullName: 'Nhập đầy đủ họ và tên.',
+  email: `Nhập đúng địa chỉ email, ví dụ ten@${SCHOOL_EMAIL_DOMAINS[0]}.`,
+  schoolEmail: `Chỉ dùng email trường (@${SCHOOL_EMAIL_DOMAINS[0]}).`,
   cccd: 'Số CCCD gồm đúng 12 chữ số và bắt đầu bằng 0.',
   phone: 'Số điện thoại gồm 10 chữ số, bắt đầu bằng 03, 05, 07, 08 hoặc 09.',
 } as const;

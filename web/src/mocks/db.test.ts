@@ -32,6 +32,11 @@ import {
   saveProfile,
   toSession,
   receiveForm,
+  createAccount,
+  demoAccountFor,
+  getAccountCccds,
+  getAccounts,
+  updateAccount,
   updateForm,
 } from './db';
 
@@ -56,6 +61,8 @@ describe('saveProfile', () => {
   test('lưu họ tên, CCCD, SĐT và đánh dấu đã bổ sung thông tin', () => {
     const saved = saveProfile('sv-1', { name: 'Nguyễn Minh Anh', cccd: '079206001234', phone: '0901234567' });
     expect(saved).toEqual({
+      email: 'minhanh.nguyen@hcmulaw.edu.vn',
+      role: 'nguoiNopDon',
       name: 'Nguyễn Minh Anh',
       cccd: '079206001234',
       phone: '0901234567',
@@ -102,9 +109,9 @@ describe('isCccdTaken', () => {
 
 describe('toSession', () => {
   test('phản ánh họ tên mới và trạng thái đã bổ sung thông tin', () => {
-    expect(toSession('nguoiNopDon').profileCompleted).toBe(false);
+    expect(toSession('sv-1').profileCompleted).toBe(false);
     saveProfile('sv-1', { name: 'Nguyễn Minh Anh Thư', cccd: '', phone: '' });
-    const session = toSession('nguoiNopDon');
+    const session = toSession('sv-1');
     expect(session.profileCompleted).toBe(true);
     expect(session.user.name).toBe('Nguyễn Minh Anh Thư');
   });
@@ -497,5 +504,51 @@ describe('thống kê đơn (Quản lí đơn)', () => {
   test('nhiều đơn nhất đứng trước', () => {
     const counts = getFormStats().byType.map((type) => type.count);
     expect(counts).toEqual([...counts].sort((a, b) => b - a));
+  });
+});
+
+describe('tài khoản', () => {
+  const admin = { id: 'cb-3' };
+  const newStaff = { name: 'Hồ Thị Lan', email: 'lan.ho.pdt@hcmulaw.edu.vn', role: 'nguoiXuLiDon', cccd: '', phone: '' } as const;
+
+  test('bảng tài khoản có đủ 14 tài khoản mẫu, CCCD che; Hiện CCCD trả số đầy đủ', () => {
+    const list = getAccounts();
+    expect(list).toHaveLength(14);
+    expect(list.find((account) => account.id === 'cb-1')).toMatchObject({ role: 'nguoiXuLiDon', maskedCccd: '079•••••1122' });
+    expect(getAccountCccds()).toEqual({ 'cb-1': '079188001122', 'cb-3': '079190003344' });
+  });
+
+  test('tạo tài khoản: chưa bổ sung thông tin; email hoặc CCCD đã có tài khoản thì 409', () => {
+    const created = createAccount(newStaff);
+    expect(created.ok && created.account).toMatchObject({ name: 'Hồ Thị Lan', role: 'nguoiXuLiDon', phone: null, maskedCccd: null });
+    expect(created.ok && getProfile(created.account.id).completed).toBe(false);
+    expect(createAccount({ ...newStaff, email: 'thuha.pham.pdt@hcmulaw.edu.vn' })).toMatchObject({ ok: false, status: 409 });
+    expect(createAccount({ ...newStaff, email: 'khac@hcmulaw.edu.vn', cccd: '079188001122' })).toMatchObject({ ok: false, status: 409 });
+  });
+
+  test('sửa tài khoản: đổi tên hiện ở đơn đã xử lí; không tự đổi vai trò; CCCD trùng 409; không có tài khoản 404', () => {
+    const updated = updateAccount('cb-2', { name: 'Trần Quốc Việt Anh', cccd: '', phone: '0901234567', role: 'nguoiXuLiDon' }, admin);
+    expect(updated.ok).toBe(true);
+    expect(getFormsHandledBy('cb-2').some((form) => form.handler?.name === 'Trần Quốc Việt Anh' || form.receiver?.name === 'Trần Quốc Việt Anh')).toBe(true);
+    expect(updateAccount('cb-3', { name: 'Lê Ngọc Diệp', cccd: '', phone: '', role: 'nguoiNopDon' }, admin)).toMatchObject({ ok: false, status: 422 });
+    expect(updateAccount('sv-2', { name: 'Trần Thị Bảo Ngọc', cccd: '079188001122', phone: '', role: 'nguoiNopDon' }, admin)).toMatchObject({ ok: false, status: 409 });
+    expect(updateAccount('khong-co', { name: 'Ai Đó', cccd: '', phone: '', role: 'nguoiNopDon' }, admin)).toMatchObject({ ok: false, status: 404 });
+  });
+
+  test('đổi cán bộ sang Người nộp đơn: không còn trong danh sách Chuyển giao, đơn đang phụ trách giữ nguyên', () => {
+    const handledBefore = getFormsHandledBy('cb-2').length;
+    updateAccount('cb-2', { name: 'Trần Quốc Việt', cccd: '', phone: '', role: 'nguoiNopDon' }, admin);
+    const code = getAllForms().find((form) => form.status === 'xet')!.code;
+    expect(getTransferTargets(code)!.map((staff) => staff.id)).not.toContain('cb-2');
+    expect(transferForm(code, 'cb-2')).toBeNull();
+    expect(getFormsHandledBy('cb-2')).toHaveLength(handledBefore);
+  });
+
+  test('phiên lấy vai trò theo tài khoản; đăng nhập thử dùng tài khoản khác khi tài khoản mẫu đã đổi vai trò', () => {
+    updateAccount('cb-1', { name: 'Phạm Thu Hà', cccd: '079188001122', phone: '0912345678', role: 'nguoiNopDon' }, admin);
+    expect(toSession('cb-1').role).toBe('nguoiNopDon');
+    expect(demoAccountFor('nguoiXuLiDon')).toBe('cb-2');
+    updateAccount('cb-2', { name: 'Trần Quốc Việt', cccd: '', phone: '', role: 'nguoiNopDon' }, admin);
+    expect(demoAccountFor('nguoiXuLiDon')).toBeNull();
   });
 });

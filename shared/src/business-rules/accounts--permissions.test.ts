@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { canEditForm, canReceiveForm, canTransferForm } from './accounts--permissions';
+import { canChangeAccountRole, canEditForm, canReceiveForm, canTransferForm } from './accounts--permissions';
 
 describe('canTransferForm', () => {
   const handler = { email: 'thuha.pham.pdt@hcmulaw.edu.vn' };
@@ -61,5 +61,19 @@ describe('canReceiveForm', () => {
   it('người nộp đơn và người chưa đăng nhập không tiếp nhận được', () => {
     expect(canReceiveForm('nguoiNopDon', 'nop')).toBe(false);
     expect(canReceiveForm(null, 'nop')).toBe(false);
+  });
+});
+
+describe('canChangeAccountRole', () => {
+  const admin = { id: 'cb-3', role: 'admin' } as const;
+
+  it('Admin đổi được vai trò tài khoản khác, không đổi được vai trò của chính mình', () => {
+    expect(canChangeAccountRole(admin, 'cb-1')).toBe(true);
+    expect(canChangeAccountRole(admin, 'cb-3')).toBe(false);
+  });
+
+  it('vai trò không có quyền manageAccounts hoặc chưa đăng nhập thì không đổi được', () => {
+    expect(canChangeAccountRole({ id: 'cb-1', role: 'nguoiXuLiDon' }, 'sv-1')).toBe(false);
+    expect(canChangeAccountRole(null, 'sv-1')).toBe(false);
   });
 });

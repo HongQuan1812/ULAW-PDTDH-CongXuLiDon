@@ -1,6 +1,8 @@
 /* Dữ liệu giả của API giả, giữ trong bộ nhớ trình duyệt. */
 import type {
+  Account,
   ApplicantRef,
+  CreateAccountRequest,
   FileRef,
   FormAnswers,
   FormDecision,
@@ -24,23 +26,29 @@ import type {
   StaffRef,
   StudentInfo,
   TableCell,
+  UpdateAccountRequest,
   UpdateProfileRequest,
 } from '@ulaw/shared';
-import { FORM_STATUSES, FORM_TYPE_MESSAGES, FormTypeSchema, can, formatFormCode, isAnswerable, maskCccd, nextFormCode } from '@ulaw/shared';
+import {
+  ACCOUNT_MESSAGES,
+  FORM_STATUSES,
+  FORM_TYPE_MESSAGES,
+  FormTypeSchema,
+  can,
+  formatFormCode,
+  isAnswerable,
+  maskCccd,
+  nextFormCode,
+} from '@ulaw/shared';
 import { buildSamplePdf } from './samplePdf';
 
-/* Tài khoản mẫu để đăng nhập thử: mỗi vai trò một người (lấy từ artifact/js/auth.js và sample-data.js). */
-export const DEMO_USERS: Record<RoleId, SessionUser> = {
-  nguoiNopDon: { id: 'sv-1', email: 'minhanh.nguyen@hcmulaw.edu.vn', name: 'Nguyễn Minh Anh' },
-  nguoiXuLiDon: { id: 'cb-1', email: 'thuha.pham.pdt@hcmulaw.edu.vn', name: 'Phạm Thu Hà' },
-  admin: { id: 'cb-3', email: 'ngocdiep.le.pdt@hcmulaw.edu.vn', name: 'Lê Ngọc Diệp' },
-};
+/* ---------- Tài khoản (hồ sơ, vai trò) ---------- */
 
-/* ---------- Hồ sơ cá nhân ---------- */
-
-/** Hồ sơ lưu trong API giả: họ tên, SĐT, CCCD (null = chưa có), đã bổ sung thông tin lần đầu hay chưa,
-    và MSSV chính người dùng đã chọn (null = chưa chọn, dùng MSSV đầu). */
-export interface MockProfile {
+/** Một tài khoản trong API giả: email (không đổi được), vai trò, họ tên, SĐT, CCCD (null = chưa có),
+    đã bổ sung thông tin lần đầu hay chưa, và MSSV chính người dùng đã chọn (null = chưa chọn, dùng MSSV đầu). */
+export interface MockAccount {
+  email: string;
+  role: RoleId;
   name: string;
   phone: string | null;
   cccd: string | null;
@@ -48,83 +56,126 @@ export interface MockProfile {
   mainStudentId: string | null;
 }
 
-/* Hồ sơ ban đầu, khóa theo id người dùng. Sinh viên chưa bổ sung thông tin (để thấy màn Bổ sung thông tin
-   lần đầu); cán bộ có sẵn hồ sơ và CCCD (để thử báo trùng CCCD). Số liệu tổng hợp, không phải dữ liệu thật. */
-const SEED_PROFILES: Record<string, MockProfile> = {
-  'sv-1': { name: 'Nguyễn Minh Anh', phone: null, cccd: null, completed: false, mainStudentId: null },
-  'cb-1': { name: 'Phạm Thu Hà', phone: '0912345678', cccd: '079188001122', completed: true, mainStudentId: null },
-  'cb-3': { name: 'Lê Ngọc Diệp', phone: '0987654321', cccd: '079190003344', completed: true, mainStudentId: null },
+/** Ghi tắt một tài khoản mẫu: người dùng sẵn có, đã bổ sung thông tin, chưa có SĐT, CCCD. */
+const seedAccount = (name: string, email: string, role: RoleId): MockAccount => ({
+  email,
+  role,
+  name,
+  phone: null,
+  cccd: null,
+  completed: true,
+  mainStudentId: null,
+});
+
+/* Tài khoản ban đầu, khóa theo id (lấy từ artifact/js/auth.js và sample-data.js). Họ tên, email, số liệu tổng hợp, không phải người thật.
+   - sv-1, cb-1, cb-3: tài khoản đăng nhập thử của 3 vai trò (DEMO_USER_IDS). sv-1 chưa bổ sung thông tin (để thấy màn Bổ sung thông tin
+     lần đầu); cb-1, cb-3 có sẵn CCCD (để thử báo trùng CCCD).
+   - cb-2: cán bộ thứ ba (như SAMPLE_STAFF). sv-2 … sv-11: 10 sinh viên khác (như seedOthers()). */
+const SEED_ACCOUNTS: Record<string, MockAccount> = {
+  'sv-1': { ...seedAccount('Nguyễn Minh Anh', 'minhanh.nguyen@hcmulaw.edu.vn', 'nguoiNopDon'), completed: false },
+  'cb-1': { ...seedAccount('Phạm Thu Hà', 'thuha.pham.pdt@hcmulaw.edu.vn', 'nguoiXuLiDon'), phone: '0912345678', cccd: '079188001122' },
+  'cb-2': seedAccount('Trần Quốc Việt', 'quocviet.tran.pdt@hcmulaw.edu.vn', 'nguoiXuLiDon'),
+  'cb-3': { ...seedAccount('Lê Ngọc Diệp', 'ngocdiep.le.pdt@hcmulaw.edu.vn', 'admin'), phone: '0987654321', cccd: '079190003344' },
+  ...Object.fromEntries(
+    [
+      ['Trần Thị Bảo Ngọc', 'baongoc.tran@hcmulaw.edu.vn'],
+      ['Lê Hoàng Phúc', 'phuc.lehoang@hcmulaw.edu.vn'],
+      ['Phạm Gia Hân', 'giahan.pham06@hcmulaw.edu.vn'],
+      ['Võ Minh Khang', 'khangvo.law@hcmulaw.edu.vn'],
+      ['Đặng Thùy Linh', 'thuylinh.dang@hcmulaw.edu.vn'],
+      ['Huỳnh Quốc Bảo', 'quocbao.huynh@hcmulaw.edu.vn'],
+      ['Ngô Phương Thảo', 'thao.ngophuong@hcmulaw.edu.vn'],
+      ['Bùi Đức Anh', 'ducanh.bui.k51@hcmulaw.edu.vn'],
+      ['Trương Ngọc Mai', 'ngocmai.truong@hcmulaw.edu.vn'],
+      ['Đỗ Thành Nam', 'thanhnam.do@hcmulaw.edu.vn'],
+    ].map(([name, email], i) => [`sv-${i + 2}`, seedAccount(name!, email!, 'nguoiNopDon')]),
+  ),
 };
 
-/* Hồ sơ đã sửa, lưu trong sessionStorage để tải lại trang không phải bổ sung thông tin lại
+/* Tài khoản đăng nhập thử của mỗi vai trò (JUST FOR DEMO: ô đổi vai trò). */
+export const DEMO_USER_IDS: Record<RoleId, string> = { nguoiNopDon: 'sv-1', nguoiXuLiDon: 'cb-1', admin: 'cb-3' };
+
+/* Tài khoản đã tạo / sửa, lưu trong sessionStorage để tải lại trang không phải bổ sung thông tin lại
    (giống phiên đăng nhập bên dưới). Đóng tab là mất. */
-const PROFILES_KEY = 'mock-profiles';
+const ACCOUNTS_KEY = 'mock-accounts';
 
 /**
- * Sao chép hồ sơ ban đầu để không sửa vào bản gốc.
- * @returns  bản sao của SEED_PROFILES
+ * Sao chép tài khoản ban đầu để không sửa vào bản gốc.
+ * @returns  bản sao của SEED_ACCOUNTS
  */
-function cloneSeed(): Record<string, MockProfile> {
-  return Object.fromEntries(Object.entries(SEED_PROFILES).map(([id, profile]) => [id, { ...profile }]));
+function cloneSeed(): Record<string, MockAccount> {
+  return Object.fromEntries(Object.entries(SEED_ACCOUNTS).map(([id, account]) => [id, { ...account }]));
 }
 
 /**
- * Đọc hồ sơ đã lưu trong sessionStorage, chồng lên hồ sơ ban đầu.
- * @returns  hồ sơ của mọi tài khoản mẫu; không đọc được thì dùng hồ sơ ban đầu
+ * Đọc tài khoản đã lưu trong sessionStorage, chồng lên tài khoản ban đầu (từng ô một, nên bản lưu thiếu ô vẫn dùng được).
+ * @returns  mọi tài khoản; không đọc được thì dùng tài khoản ban đầu
  */
-function loadProfiles(): Record<string, MockProfile> {
+function loadAccounts(): Record<string, MockAccount> {
   const seed = cloneSeed();
   try {
-    const raw = sessionStorage.getItem(PROFILES_KEY);
-    return raw ? { ...seed, ...(JSON.parse(raw) as Record<string, MockProfile>) } : seed;
+    const raw = sessionStorage.getItem(ACCOUNTS_KEY);
+    if (!raw) return seed;
+    const saved = JSON.parse(raw) as Record<string, Partial<MockAccount>>;
+    for (const [id, account] of Object.entries(saved)) seed[id] = { ...seed[id], ...account } as MockAccount;
+    return seed;
   } catch {
-    // Trình duyệt chặn bộ nhớ hoặc dữ liệu hỏng: dùng hồ sơ ban đầu
     return seed;
   }
 }
 
-let profiles = loadProfiles();
+/* Mọi tài khoản, khóa theo id. Thứ tự: tài khoản ban đầu rồi tài khoản mới tạo. */
+let accounts = loadAccounts();
 
 /**
- * Lưu hồ sơ vào sessionStorage.
- * @param next  hồ sơ của mọi tài khoản mẫu
+ * Lưu mọi tài khoản vào sessionStorage.
+ * @param next  mọi tài khoản
  */
-function persistProfiles(next: Record<string, MockProfile>): void {
+function persistAccounts(next: Record<string, MockAccount>): void {
   try {
-    sessionStorage.setItem(PROFILES_KEY, JSON.stringify(next));
+    sessionStorage.setItem(ACCOUNTS_KEY, JSON.stringify(next));
   } catch {
-    // Trình duyệt chặn bộ nhớ: hồ sơ chỉ không giữ được khi tải lại trang
+    // Trình duyệt chặn bộ nhớ: tài khoản chỉ không giữ được khi tải lại trang
   }
 }
 
 /**
- * Lấy hồ sơ của một tài khoản.
- * @param userId  id tài khoản, vd 'sv-1'
- * @returns       hồ sơ hiện tại
+ * Ghi đè một tài khoản rồi lưu lại.
+ * @param userId   id tài khoản
+ * @param account  tài khoản mới
+ * @returns        tài khoản vừa lưu
  */
-export function getProfile(userId: string): MockProfile {
-  const profile = profiles[userId];
-  if (!profile) throw new Error(`Không có hồ sơ giả cho tài khoản ${userId}`);
-  return profile;
+function putAccount(userId: string, account: MockAccount): MockAccount {
+  accounts = { ...accounts, [userId]: account };
+  persistAccounts(accounts);
+  return account;
+}
+
+/**
+ * Lấy một tài khoản.
+ * @param userId  id tài khoản, vd 'sv-1'
+ * @returns       tài khoản hiện tại
+ */
+export function getProfile(userId: string): MockAccount {
+  const account = accounts[userId];
+  if (!account) throw new Error(`Không có tài khoản giả ${userId}`);
+  return account;
 }
 
 /**
  * Lưu họ tên, CCCD, SĐT của một tài khoản và đánh dấu đã bổ sung thông tin.
  * @param userId  id tài khoản
  * @param input   dữ liệu đã kiểm tra; cccd và phone là chuỗi rỗng nghĩa là không có
- * @returns       hồ sơ sau khi lưu
+ * @returns       tài khoản sau khi lưu
  */
-export function saveProfile(userId: string, input: UpdateProfileRequest): MockProfile {
-  const saved: MockProfile = {
+export function saveProfile(userId: string, input: UpdateProfileRequest): MockAccount {
+  return putAccount(userId, {
     ...getProfile(userId),
     name: input.name,
     cccd: input.cccd || null,
     phone: input.phone || null,
     completed: true,
-  };
-  profiles = { ...profiles, [userId]: saved };
-  persistProfiles(profiles);
-  return saved;
+  });
 }
 
 /**
@@ -133,8 +184,7 @@ export function saveProfile(userId: string, input: UpdateProfileRequest): MockPr
  * @param studentId  MSSV đã kiểm tra là thuộc tài khoản này
  */
 export function saveMainStudent(userId: string, studentId: string): void {
-  profiles = { ...profiles, [userId]: { ...getProfile(userId), mainStudentId: studentId } };
-  persistProfiles(profiles);
+  putAccount(userId, { ...getProfile(userId), mainStudentId: studentId });
 }
 
 /**
@@ -144,7 +194,83 @@ export function saveMainStudent(userId: string, studentId: string): void {
  * @returns             true nếu có tài khoản khác đang dùng số này
  */
 export function isCccdTaken(cccd: string, exceptUserId: string): boolean {
-  return Object.entries(profiles).some(([id, profile]) => id !== exceptUserId && profile.cccd === cccd);
+  return Object.entries(accounts).some(([id, account]) => id !== exceptUserId && account.cccd === cccd);
+}
+
+/**
+ * Email đã có tài khoản chưa (không phân biệt hoa thường).
+ * @param email  email cần kiểm tra
+ * @returns      true nếu đã có tài khoản dùng email này
+ */
+function isEmailTaken(email: string): boolean {
+  return Object.values(accounts).some((account) => account.email.toLowerCase() === email.toLowerCase());
+}
+
+/**
+ * Dựng một dòng của bảng Quản lí tài khoản (CCCD che).
+ * @param userId  id tài khoản
+ * @returns       tài khoản theo AccountSchema
+ */
+function toAccount(userId: string): Account {
+  const { name, email, role, phone, cccd } = getProfile(userId);
+  return { id: userId, name, email, role, phone, maskedCccd: maskCccd(cccd) };
+}
+
+/**
+ * Lấy mọi tài khoản cho bảng Quản lí tài khoản.
+ * @returns  các tài khoản, CCCD đã che
+ */
+export function getAccounts(): Account[] {
+  return Object.keys(accounts).map(toAccount);
+}
+
+/**
+ * Lấy CCCD đầy đủ của mọi tài khoản (cho nút "Hiện CCCD" ở Quản lí tài khoản).
+ * @returns  CCCD theo id tài khoản; tài khoản chưa có CCCD thì không có mặt
+ */
+export function getAccountCccds(): Record<string, string> {
+  return Object.fromEntries(Object.entries(accounts).flatMap(([id, account]) => (account.cccd ? [[id, account.cccd]] : [])));
+}
+
+/** Kết quả tạo / sửa tài khoản: thành công kèm tài khoản, hoặc mã HTTP và câu báo lỗi. */
+export type AccountChange = { ok: true; account: Account } | { ok: false; status: number; message: string };
+
+/**
+ * Tạo tài khoản mới. Người dùng tự bổ sung thông tin khi đăng nhập lần đầu (chưa đánh dấu đã bổ sung).
+ * @param input  dữ liệu đã kiểm tra (email đã đổi về chữ thường); cccd, phone rỗng = không có
+ * @returns      tài khoản vừa tạo; email hoặc CCCD đã có tài khoản thì 409
+ */
+export function createAccount(input: CreateAccountRequest): AccountChange {
+  if (isEmailTaken(input.email)) return { ok: false, status: 409, message: ACCOUNT_MESSAGES.emailTaken };
+  if (input.cccd && isCccdTaken(input.cccd, '')) return { ok: false, status: 409, message: ACCOUNT_MESSAGES.cccdTaken };
+  const userId = `tk-${Date.now()}`;
+  putAccount(userId, {
+    email: input.email,
+    role: input.role,
+    name: input.name,
+    phone: input.phone || null,
+    cccd: input.cccd || null,
+    completed: false,
+    mainStudentId: null,
+  });
+  return { ok: true, account: toAccount(userId) };
+}
+
+/**
+ * Sửa họ tên, CCCD, SĐT, vai trò của một tài khoản. Email giữ nguyên.
+ * Họ tên mới hiện ở mọi đơn người đó nộp, tiếp nhận, xử lí (đơn lưu id tài khoản, không chép họ tên).
+ * @param userId  id tài khoản cần sửa
+ * @param input   dữ liệu đã kiểm tra
+ * @param editor  id người đang sửa: không được đổi vai trò của chính mình
+ * @returns       tài khoản sau khi sửa; không có tài khoản thì 404, tự đổi vai trò 422, CCCD trùng 409
+ */
+export function updateAccount(userId: string, input: UpdateAccountRequest, editor: { id: string }): AccountChange {
+  const account = accounts[userId];
+  if (!account) return { ok: false, status: 404, message: ACCOUNT_MESSAGES[404] };
+  if (userId === editor.id && input.role !== account.role) return { ok: false, status: 422, message: ACCOUNT_MESSAGES.ownRole };
+  if (input.cccd && isCccdTaken(input.cccd, userId)) return { ok: false, status: 409, message: ACCOUNT_MESSAGES.cccdTaken };
+  putAccount(userId, { ...account, name: input.name, cccd: input.cccd || null, phone: input.phone || null, role: input.role });
+  return { ok: true, account: toAccount(userId) };
 }
 
 /* Các MSSV "lấy từ database trường" theo email (lấy từ artifact/js/auth.js), chỉ đọc nên không lưu lại.
@@ -661,27 +787,11 @@ interface MockForm extends FormSummary {
 /** Lá đơn mẫu chưa gán cán bộ. */
 type UnassignedForm = Omit<MockForm, 'receiverId' | 'handlerId' | 'handlerSince'>;
 
-/* Cán bộ Phòng Đào tạo mẫu, như SAMPLE_STAFF trong artifact/js/sample-data.js.
-   cb-1 (Người xử lí đơn) và cb-3 (Admin) là tài khoản đăng nhập thử. */
-const STAFF: StaffRef[] = [
-  { id: 'cb-1', name: 'Phạm Thu Hà', email: 'thuha.pham.pdt@hcmulaw.edu.vn' },
-  { id: 'cb-2', name: 'Trần Quốc Việt', email: 'quocviet.tran.pdt@hcmulaw.edu.vn' },
-  { id: 'cb-3', name: 'Lê Ngọc Diệp', email: 'ngocdiep.le.pdt@hcmulaw.edu.vn' },
-];
+/* 3 cán bộ tiếp nhận / xử lí các đơn mẫu, như SAMPLE_STAFF trong artifact/js/sample-data.js. */
+const SEED_STAFF_IDS = ['cb-1', 'cb-2', 'cb-3'] as const;
 
-/* 10 sinh viên khác (sv-2 … sv-11), như seedOthers() trong artifact/js/sample-data.js. Họ tên và email tổng hợp, không phải người thật. */
-const OTHER_STUDENTS: ApplicantRef[] = [
-  ['Trần Thị Bảo Ngọc', 'baongoc.tran@hcmulaw.edu.vn'],
-  ['Lê Hoàng Phúc', 'phuc.lehoang@hcmulaw.edu.vn'],
-  ['Phạm Gia Hân', 'giahan.pham06@hcmulaw.edu.vn'],
-  ['Võ Minh Khang', 'khangvo.law@hcmulaw.edu.vn'],
-  ['Đặng Thùy Linh', 'thuylinh.dang@hcmulaw.edu.vn'],
-  ['Huỳnh Quốc Bảo', 'quocbao.huynh@hcmulaw.edu.vn'],
-  ['Ngô Phương Thảo', 'thao.ngophuong@hcmulaw.edu.vn'],
-  ['Bùi Đức Anh', 'ducanh.bui.k51@hcmulaw.edu.vn'],
-  ['Trương Ngọc Mai', 'ngocmai.truong@hcmulaw.edu.vn'],
-  ['Đỗ Thành Nam', 'thanhnam.do@hcmulaw.edu.vn'],
-].map(([name, email], i) => ({ id: `sv-${i + 2}`, name: name!, email: email! }));
+/* 10 sinh viên khác có đơn mẫu (tài khoản sv-2 … sv-11). */
+const OTHER_STUDENT_IDS = Array.from({ length: 10 }, (_, i) => `sv-${i + 2}`);
 
 /* Các môn mẫu cho bảng "Các môn xin miễn": [môn của trường, số tín chỉ, môn tương đương, cơ sở đào tạo] (như P trong sample-data.js). */
 const SAMPLE_SUBJECTS: TableCell[][] = [
@@ -775,7 +885,7 @@ function seedOtherStudentForms(): UnassignedForm[] {
   const forms: UnassignedForm[] = [];
   let formIndex = 0;
 
-  for (let student = 0; student < OTHER_STUDENTS.length; student++) {
+  for (let student = 0; student < OTHER_STUDENT_IDS.length; student++) {
     for (let j = 0; j < 1 + (student % 3); j++, formIndex++) {
       // Ngày nộp rải trong khoảng 200 ngày; đơn Đã bổ sung sửa sau 30 giờ, vài đơn khác sửa sau 5 giờ
       const day = new Date(2026, 9, 31 - ((formIndex * 11) % 200));
@@ -785,7 +895,7 @@ function seedOtherStudentForms(): UnassignedForm[] {
       const updatedAt = status === 'bsg' ? addHours(submittedAt, 30) : formIndex % 5 === 2 ? addHours(submittedAt, 5) : submittedAt;
 
       forms.push({
-        ownerId: OTHER_STUDENTS[student]!.id,
+        ownerId: OTHER_STUDENT_IDS[student]!,
         code,
         formTypeId: 'xmm',
         formTypeName: 'Xét miễn môn',
@@ -812,12 +922,12 @@ function seedOtherStudentForms(): UnassignedForm[] {
 function assignStaff(forms: UnassignedForm[]): MockForm[] {
   return forms.map((form, i) => {
     if (!form.receivedAt) return { ...form, receiverId: null, handlerId: null, handlerSince: null };
-    const receiver = STAFF[i % STAFF.length]!;
+    const receiverId = SEED_STAFF_IDS[i % SEED_STAFF_IDS.length]!;
     const transferred = i % 5 === 2;
     return {
       ...form,
-      receiverId: receiver.id,
-      handlerId: transferred ? STAFF[(i + 1) % STAFF.length]!.id : receiver.id,
+      receiverId,
+      handlerId: transferred ? SEED_STAFF_IDS[(i + 1) % SEED_STAFF_IDS.length]! : receiverId,
       handlerSince: transferred ? addHours(form.receivedAt, 26) : form.receivedAt,
     };
   });
@@ -844,31 +954,30 @@ function toSummary({ code, formTypeId, formTypeName, submittedAt, status }: Mock
 }
 
 /**
- * Tìm cán bộ theo id.
- * @param staffId  id tài khoản cán bộ; null = chưa có
- * @returns        cán bộ; không có thì null
+ * Tên, email hiện tại của một tài khoản (người nộp, người tiếp nhận, người xử lí của đơn; người lưu loại đơn).
+ * Đơn chỉ lưu id, nên đổi họ tên tài khoản thì tên mới hiện ở mọi nơi.
+ * @param userId  id tài khoản
+ * @returns       id, họ tên, email; không có tài khoản thì họ tên là id, email rỗng
  */
-function staffOf(staffId: string | null): StaffRef | null {
-  return STAFF.find((staff) => staff.id === staffId) ?? null;
+function personRef(userId: string): ApplicantRef {
+  const account = accounts[userId];
+  return account ? { id: userId, name: account.name, email: account.email } : { id: userId, name: userId, email: '' };
 }
 
 /**
- * Tìm người nộp đơn theo id: sinh viên đăng nhập thử (họ tên theo hồ sơ mới nhất), cán bộ (nộp đơn cho chính mình) hoặc sinh viên khác.
- * @param userId  id tài khoản
- * @returns       id, họ tên, email
+ * Tìm cán bộ theo id.
+ * @param staffId  id tài khoản cán bộ; null = chưa có
+ * @returns        cán bộ; null nếu chưa có
  */
-function applicantOf(userId: string): ApplicantRef {
-  const demoUser = Object.values(DEMO_USERS).find((user) => user.id === userId);
-  if (demoUser) return { id: userId, name: getProfile(userId).name, email: demoUser.email };
-  const staff = staffOf(userId);
-  if (staff) return staff;
-  return OTHER_STUDENTS.find((student) => student.id === userId) ?? { id: userId, name: userId, email: '' };
+function staffOf(staffId: string | null): StaffRef | null {
+  return staffId ? personRef(staffId) : null;
 }
 
-/** Một người dùng trong API giả: họ tên, email, SĐT và CCCD (null = chưa có), các MSSV. */
+/** Một người dùng trong API giả: họ tên, email, vai trò, SĐT và CCCD (null = chưa có), các MSSV. */
 export interface MockPerson {
   name: string;
   email: string;
+  role: RoleId;
   phone: string | null;
   cccd: string | null;
   students: StudentInfo[];
@@ -876,24 +985,15 @@ export interface MockPerson {
 }
 
 /**
- * Tìm một người dùng theo id: sinh viên đăng nhập thử, cán bộ hoặc sinh viên khác.
- * Người có hồ sơ riêng thì lấy SĐT, CCCD từ đó; sinh viên khác chưa có hồ sơ riêng nên chưa có SĐT, CCCD, MSSV.
+ * Tìm một người dùng theo id.
  * @param userId  id người dùng
  * @returns       thông tin người dùng; không có thì null
  */
 export function findPerson(userId: string): MockPerson | null {
-  const person: ApplicantRef | undefined =
-    Object.values(DEMO_USERS).find((user) => user.id === userId) ?? staffOf(userId) ?? OTHER_STUDENTS.find((student) => student.id === userId);
-  if (!person) return null;
-  const profile = profiles[userId];
-  return {
-    name: profile?.name ?? person.name,
-    email: person.email,
-    phone: profile?.phone ?? null,
-    cccd: profile?.cccd ?? null,
-    students: getStudents(userId),
-    mainStudentId: profile?.mainStudentId ?? null,
-  };
+  const account = accounts[userId];
+  if (!account) return null;
+  const { name, email, role, phone, cccd, mainStudentId } = account;
+  return { name, email, role, phone, cccd, students: getStudents(userId), mainStudentId };
 }
 
 /**
@@ -925,7 +1025,7 @@ export function getFormsHandledBy(staffId: string): HandledFormSummary[] {
 export function getAllForms(): ManagedFormSummary[] {
   return FORMS.map((form) => {
     const person = findPerson(form.ownerId);
-    const applicant = applicantOf(form.ownerId);
+    const applicant = personRef(form.ownerId);
     return {
       ...toSummary(form),
       receivedAt: form.receivedAt,
@@ -990,7 +1090,7 @@ function toDetail(form: MockForm): FormDetail {
     ...toSummary(form),
     updatedAt: form.updatedAt,
     note: form.note,
-    applicant: applicantOf(form.ownerId),
+    applicant: personRef(form.ownerId),
     receiver: staffOf(form.receiverId),
     receivedAt: form.receivedAt,
     handler: staffOf(form.handlerId),
@@ -1163,7 +1263,9 @@ export function decideForm(code: string, decision: FormDecision, note: string): 
 export function getTransferTargets(code: string): StaffRef[] | null {
   const form = FORMS.find((candidate) => candidate.code === code);
   if (!form) return null;
-  return STAFF.filter((staff) => staff.id !== form.handlerId);
+  return Object.entries(accounts)
+    .filter(([id, account]) => id !== form.handlerId && can(account.role, 'decide'))
+    .map(([id]) => personRef(id));
 }
 
 /**
@@ -1175,9 +1277,9 @@ export function getTransferTargets(code: string): StaffRef[] | null {
  */
 export function transferForm(code: string, toStaffId: string): FormDetail | null {
   const form = FORMS.find((candidate) => candidate.code === code);
-  const toStaff = staffOf(toStaffId);
-  if (!form || !toStaff) return null;
-  Object.assign(form, { handlerId: toStaff.id, handlerSince: vietnamNow() });
+  const toStaff = accounts[toStaffId];
+  if (!form || !toStaff || !can(toStaff.role, 'decide')) return null;
+  Object.assign(form, { handlerId: toStaffId, handlerSince: vietnamNow() });
   return toDetail(form);
 }
 
@@ -1233,14 +1335,14 @@ export function getFileContent(fileId: string, viewer: { id: string; role: RoleI
   return sampleRef ? buildSamplePdf(sampleRef.name) : null;
 }
 
-/** Đưa hồ sơ, lá đơn, tệp về ban đầu (dùng trong test). */
+/** Đưa tài khoản, lá đơn, tệp về ban đầu (dùng trong test). */
 export function resetMockDb(): void {
-  profiles = cloneSeed();
+  accounts = cloneSeed();
   FORMS = seedForms();
   FORM_TYPES = seedFormTypes();
   FILES.clear();
   try {
-    sessionStorage.removeItem(PROFILES_KEY);
+    sessionStorage.removeItem(ACCOUNTS_KEY);
   } catch {
     // Không có sessionStorage (vd chạy test): bỏ qua
   }
@@ -1249,45 +1351,61 @@ export function resetMockDb(): void {
 /* ---------- Phiên đăng nhập ---------- */
 
 /**
- * Dựng phiên đăng nhập từ vai trò: người dùng (họ tên theo hồ sơ mới nhất) + vai trò + đã bổ sung thông tin chưa.
- * @param role  vai trò đang đăng nhập
- * @returns     phiên đăng nhập
+ * Dựng phiên đăng nhập của một tài khoản: người dùng (họ tên mới nhất) + vai trò hiện tại + đã bổ sung thông tin chưa.
+ * @param userId  id tài khoản đang đăng nhập
+ * @returns       phiên đăng nhập
  */
-export function toSession(role: RoleId): Session {
-  const user = DEMO_USERS[role];
-  const profile = getProfile(user.id);
-  return { user: { ...user, name: profile.name }, role, profileCompleted: profile.completed };
+export function toSession(userId: string): Session {
+  const account = getProfile(userId);
+  return {
+    user: { id: userId, email: account.email, name: account.name } satisfies SessionUser,
+    role: account.role,
+    profileCompleted: account.completed,
+  };
 }
 
-/* Vai trò đang đăng nhập, lưu trong sessionStorage để tải lại trang không bị đăng xuất
+/* JUST FOR DEMO: START · đăng nhập thử theo vai trò */
+/**
+ * Chọn tài khoản để đăng nhập thử một vai trò: tài khoản mẫu của vai trò đó; nếu Admin đã đổi vai trò của tài khoản mẫu
+ * thì lấy tài khoản đầu tiên đang có vai trò này.
+ * @param role  vai trò muốn đăng nhập
+ * @returns     id tài khoản; không còn tài khoản nào có vai trò này thì null
+ */
+export function demoAccountFor(role: RoleId): string | null {
+  if (accounts[DEMO_USER_IDS[role]]?.role === role) return DEMO_USER_IDS[role];
+  return Object.entries(accounts).find(([, account]) => account.role === role)?.[0] ?? null;
+}
+/* JUST FOR DEMO: END */
+
+/* Id tài khoản đang đăng nhập, lưu trong sessionStorage để tải lại trang không bị đăng xuất
    (giống cookie phiên của backend thật). Đóng tab là mất. */
-const SESSION_KEY = 'mock-session-role';
+const SESSION_KEY = 'mock-session-user';
 
 /**
- * Đọc phiên đăng nhập giả hiện tại.
+ * Đọc phiên đăng nhập giả hiện tại. Vai trò lấy theo tài khoản, nên Admin đổi vai trò thì phiên đổi theo.
  * @returns  phiên (người dùng + vai trò); chưa đăng nhập thì null
  */
 export function readSession(): Session | null {
-  // Đọc vai trò đã lưu (trình duyệt chặn bộ nhớ thì coi như chưa đăng nhập)
-  let role: string | null = null;
+  // Đọc id đã lưu (trình duyệt chặn bộ nhớ thì coi như chưa đăng nhập)
+  let userId: string | null = null;
   try {
-    role = sessionStorage.getItem(SESSION_KEY);
+    userId = sessionStorage.getItem(SESSION_KEY);
   } catch {
     return null;
   }
 
-  // Vai trò không hợp lệ thì coi như chưa đăng nhập
-  if (!role || !(role in DEMO_USERS)) return null;
-  return toSession(role as RoleId);
+  // Không còn tài khoản này thì coi như chưa đăng nhập
+  if (!userId || !accounts[userId]) return null;
+  return toSession(userId);
 }
 
 /**
  * Ghi hoặc xóa phiên đăng nhập giả.
- * @param role  vai trò đăng nhập; null = đăng xuất
+ * @param userId  id tài khoản đăng nhập; null = đăng xuất
  */
-export function writeSession(role: RoleId | null): void {
+export function writeSession(userId: string | null): void {
   try {
-    if (role) sessionStorage.setItem(SESSION_KEY, role);
+    if (userId) sessionStorage.setItem(SESSION_KEY, userId);
     else sessionStorage.removeItem(SESSION_KEY);
   } catch {
     // Trình duyệt chặn bộ nhớ: phiên chỉ không giữ được khi tải lại trang

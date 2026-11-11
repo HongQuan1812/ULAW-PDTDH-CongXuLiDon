@@ -117,7 +117,7 @@ export const profileHandlers = [
 
     // Lưu rồi trả phiên mới để giao diện cập nhật họ tên và bỏ màn Bổ sung thông tin
     saveProfile(session.user.id, parsed.data);
-    return HttpResponse.json<Session>(toSession(session.role));
+    return HttpResponse.json<Session>(toSession(session.user.id));
   }),
 
   // Hồ sơ của người khác (chỉ xem, CCCD che). Đặt sau các đường dẫn /profile/me để 'me' không bị hiểu là id
