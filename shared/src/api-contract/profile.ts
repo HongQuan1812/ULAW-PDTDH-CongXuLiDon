@@ -23,6 +23,8 @@ export const PROFILE_ENDPOINTS = {
   personForms: '/profile/:userId/forms',
   /** GET → HandledFormsResponse: các đơn cán bộ đó tiếp nhận hoặc đang xử lí (mục "Đơn phụ trách"). Cần quyền viewAll */
   personHandledForms: '/profile/:userId/handled-forms',
+  /** PUT SetMainStudentRequest → Profile: chọn MSSV chính cho người khác. Cần quyền editApplicant */
+  personMainStudent: '/profile/:userId/main-student',
 } as const;
 
 /**
@@ -59,6 +61,15 @@ export function profileFormsPath(userId: string): string {
  */
 export function profileHandledFormsPath(userId: string): string {
   return PROFILE_ENDPOINTS.personHandledForms.replace(':userId', encodeURIComponent(userId));
+}
+
+/**
+ * Đường dẫn API chọn MSSV chính cho một người dùng khác.
+ * @param userId  id người dùng
+ * @returns       vd '/profile/sv-2/main-student'
+ */
+export function profileMainStudentPath(userId: string): string {
+  return PROFILE_ENDPOINTS.personMainStudent.replace(':userId', encodeURIComponent(userId));
 }
 
 /* ---------- Dữ liệu gửi / nhận ---------- */
@@ -118,7 +129,8 @@ export const ProfileSchema = z.object({
 });
 export type Profile = z.infer<typeof ProfileSchema>;
 
-/** Body của PUT /profile/me/main-student: MSSV muốn dùng làm MSSV chính, phải thuộc email của mình. */
+/** Body của PUT /profile/me/main-student và /profile/:userId/main-student: MSSV muốn dùng làm MSSV chính,
+    phải thuộc email của người được chọn. */
 export const SetMainStudentRequestSchema = z.object({ studentId: z.string().trim().min(1) });
 export type SetMainStudentRequest = z.infer<typeof SetMainStudentRequestSchema>;
 
@@ -147,9 +159,13 @@ export const PROFILE_MESSAGES = {
   422: 'Thông tin chưa hợp lệ.',
 } as const;
 
-/** Câu thông báo của PUT /profile/me/main-student. */
+/** Câu thông báo của PUT /profile/me/main-student và /profile/:userId/main-student. */
 export const MAIN_STUDENT_MESSAGES = {
   200: (studentId: string) => `Đã chọn MSSV ${studentId} làm thông tin chính`,
-  /** MSSV gửi lên không thuộc email của mình */
+  /** /profile/:userId/main-student khi không có quyền editApplicant */
+  403: 'Bạn không có quyền đổi MSSV chính của người khác.',
+  /** /profile/me/main-student: MSSV gửi lên không thuộc email của mình */
   422: 'MSSV này không thuộc tài khoản của bạn.',
+  /** /profile/:userId/main-student: MSSV gửi lên không thuộc email của người đó */
+  personNotOwned: 'MSSV này không thuộc tài khoản này.',
 } as const;

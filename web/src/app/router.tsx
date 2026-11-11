@@ -11,7 +11,15 @@ import { PersonProfilePage } from '../pages/profile/PersonProfilePage';
 import { ProfilePage } from '../pages/profile/ProfilePage';
 import { AppLayout } from './AppLayout';
 import { HomeRedirect, PageGuard } from './guards';
-import { FORM_TYPE_EDITOR_ROUTE, LOGIN_PATH, NEW_FORM_ROUTE, ONBOARDING_PATH, PAGE_PATH, PERSON_PROFILE_ROUTE } from './paths';
+import {
+  FORM_TYPE_EDITOR_ROUTE,
+  LOGIN_PATH,
+  NEW_FORM_FOR_APPLICANT_ROUTE,
+  NEW_FORM_ROUTE,
+  ONBOARDING_PATH,
+  PAGE_PATH,
+  PERSON_PROFILE_ROUTE,
+} from './paths';
 
 /* Đường dẫn dạng #/... như bản mẫu.
    Trang Đăng nhập và Bổ sung thông tin lần đầu nằm ngoài khung; các trang còn lại nằm trong AppLayout (phải đăng nhập). */
@@ -26,6 +34,11 @@ export const router = createHashRouter([
       // Xem hồ sơ người nộp đơn: cán bộ có quyền viewApplicant (máy chủ kiểm tra lại)
       { path: PERSON_PROFILE_ROUTE, element: <PageGuard page="forms" permission="viewApplicant"><PersonProfilePage /></PageGuard> },
       { path: NEW_FORM_ROUTE, element: <PageGuard page="profile" permission="submit"><NewFormPage /></PageGuard> },
+      // Nộp đơn thay cho người khác: Admin có quyền submitForApplicant (máy chủ kiểm tra lại)
+      {
+        path: NEW_FORM_FOR_APPLICANT_ROUTE,
+        element: <PageGuard page="forms" permission="submitForApplicant"><NewFormPage /></PageGuard>,
+      },
       // Ai xem được đơn nào do máy chủ kiểm tra (người nộp, hoặc cán bộ có quyền xem mọi đơn)
       { path: '/don/:code', element: <FormDetailPage /> },
       { path: PAGE_PATH.forms, element: <PageGuard page="forms"><FormsPage /></PageGuard> },

@@ -38,6 +38,8 @@
 .studentOption:hover:not(:disabled){border-color:var(--line-2);background:var(--hover)}
 .studentOption[aria-checked="true"]{border-color:var(--accent);background:var(--accent-soft)}
 .studentOption:disabled{cursor:progress}
+/* chỉ xem (không có quyền đổi MSSV chính): thẻ không bấm được */
+.studentOption.viewOnly{cursor:default}
 .optionTop{display:flex;align-items:center;gap:8px}
 .optionId{flex:1;font-weight:600;font-size:15px;font-variant-numeric:tabular-nums}
 .optionTag{padding:2px 10px;border-radius:999px;font-size:12px;font-weight:600;background:var(--accent);color:var(--on-accent);white-space:nowrap}

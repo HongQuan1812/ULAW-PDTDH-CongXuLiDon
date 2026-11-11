@@ -1,9 +1,10 @@
 /* Hộp "Chọn loại đơn", mở khi bấm "Nộp đơn mới" (như #nModal và renderNewPicker() trong artifact/js/application-form.js):
-   các loại đơn đang nhận đơn, có ô tìm kiếm; chọn một loại thì sang trang nộp đơn của loại đó. */
+   các loại đơn đang nhận đơn, có ô tìm kiếm; chọn một loại thì sang trang nộp đơn của loại đó
+   (của mình, hoặc thay cho người đang xem khi mở từ trang thông tin người khác). */
 import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import { useNavigate } from 'react-router';
 import type { OpenFormType } from '@ulaw/shared';
-import { newFormPath, PAGE_LABEL, type ReturnState } from '../../app/paths';
+import { newFormForApplicantPath, newFormPath, type ReturnState } from '../../app/paths';
 import { LoadError } from '../../components/LoadError';
 import { Modal } from '../../components/Modal';
 import { Highlight } from '../../components/table/Highlight';
@@ -19,6 +20,10 @@ interface FormTypePickerProps {
   formTypes: OpenFormType[] | undefined;
   /** Câu báo khi không tải được danh sách (đóng hộp rồi mở lại để tải lại); null = không lỗi */
   loadError: string | null;
+  /** Nộp thay: id người nộp đơn; bỏ trống = đơn của mình */
+  applicantId?: string;
+  /** Tên trang đang mở hộp, hiện trên nút "‹ Quay lại …" của trang nộp đơn */
+  previousPageLabel: string;
 }
 
 /**
@@ -26,11 +31,11 @@ interface FormTypePickerProps {
  * @param props  xem FormTypePickerProps
  * @returns      hộp thoại
  */
-export function FormTypePicker({ open, onClose, formTypes, loadError }: FormTypePickerProps) {
+export function FormTypePicker({ open, onClose, formTypes, loadError, applicantId, previousPageLabel }: FormTypePickerProps) {
   return (
     <Modal open={open} onClose={onClose} title="Chọn loại đơn" showCloseButton className={styles.modal}>
       {formTypes ? (
-        <FormTypeList formTypes={formTypes} />
+        <FormTypeList formTypes={formTypes} applicantId={applicantId} previousPageLabel={previousPageLabel} />
       ) : loadError ? (
         <LoadError message={`${loadError} Đóng hộp này rồi bấm “Nộp đơn mới” lại để tải lại.`} />
       ) : (
@@ -59,10 +64,16 @@ function matchFormTypes(formTypes: OpenFormType[], query: string): OpenFormType[
 
 /**
  * Ô tìm kiếm và danh sách loại đơn. Dùng phím ↑ ↓ để đổi loại đang chọn, Enter để mở form.
- * @param formTypes  các loại đơn đang mở
- * @returns          ô tìm kiếm, danh sách, dòng đếm số loại đơn
+ * @param formTypes          các loại đơn đang mở
+ * @param applicantId        nộp thay: id người nộp đơn; bỏ trống = đơn của mình
+ * @param previousPageLabel  tên trang đang mở hộp (cho nút Quay lại của trang nộp đơn)
+ * @returns                  ô tìm kiếm, danh sách, dòng đếm số loại đơn
  */
-function FormTypeList({ formTypes }: { formTypes: OpenFormType[] }) {
+function FormTypeList({
+  formTypes,
+  applicantId,
+  previousPageLabel,
+}: { formTypes: OpenFormType[] } & Pick<FormTypePickerProps, 'applicantId' | 'previousPageLabel'>) {
   const navigate = useNavigate();
   const listId = useId();
   const listRef = useRef<HTMLDivElement>(null);
@@ -77,9 +88,11 @@ function FormTypeList({ formTypes }: { formTypes: OpenFormType[] }) {
     listRef.current?.querySelector('[aria-selected="true"]')?.scrollIntoView({ block: 'nearest' });
   }, [shownIndex]);
 
-  // Mở trang nộp đơn của loại đã chọn (hộp thoại tự đóng khi rời trang)
+  // Mở trang nộp đơn của loại đã chọn, của mình hoặc nộp thay (hộp thoại tự đóng khi rời trang)
   const start = (formType: OpenFormType) =>
-    navigate(newFormPath(formType.id), { state: { previousPageLabel: PAGE_LABEL.profile } satisfies ReturnState });
+    navigate(applicantId ? newFormForApplicantPath(applicantId, formType.id) : newFormPath(formType.id), {
+      state: { previousPageLabel } satisfies ReturnState,
+    });
 
   // ↑ ↓ đi vòng trong danh sách; Enter mở loại đang chọn
   const handleKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {

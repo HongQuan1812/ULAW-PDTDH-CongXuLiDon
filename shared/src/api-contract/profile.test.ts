@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest';
 import { VALIDATION_MESSAGES } from '../validators';
-import { UpdateProfileRequestSchema, profileCccdPath, profileFormsPath, profilePath } from './profile';
+import { UpdateProfileRequestSchema, profileCccdPath, profileFormsPath, profileMainStudentPath, profilePath } from './profile';
 
 /** Lấy câu báo lỗi của ô nhập `field` sau khi kiểm tra `input`; không lỗi thì undefined. */
 function errorOf(input: unknown, field: string): string | undefined {
@@ -51,9 +51,10 @@ describe('UpdateProfileRequestSchema', () => {
 });
 
 describe('đường dẫn hồ sơ của người khác', () => {
-  test('ghép id người dùng vào đường dẫn hồ sơ, CCCD đầy đủ, đơn đã nộp', () => {
+  test('ghép id người dùng vào đường dẫn hồ sơ, CCCD đầy đủ, đơn đã nộp, MSSV chính', () => {
     expect(profilePath('sv-2')).toBe('/profile/sv-2');
     expect(profileCccdPath('sv-2')).toBe('/profile/sv-2/cccd');
     expect(profileFormsPath('sv-2')).toBe('/profile/sv-2/forms');
+    expect(profileMainStudentPath('sv-2')).toBe('/profile/sv-2/main-student');
   });
 });

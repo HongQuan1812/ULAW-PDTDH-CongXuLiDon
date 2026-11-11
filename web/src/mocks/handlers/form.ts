@@ -25,6 +25,7 @@ import {
 import {
   addForm,
   decideForm,
+  findPerson,
   getFormDetail,
   getFormType,
   getSavedFileIds,
@@ -88,8 +89,15 @@ export const formHandlers = [
     const multipart = await readMultipart(request);
     const parsed = SubmitFormRequestSchema.safeParse(multipart?.jsonValue);
     if (!multipart || !parsed.success) return apiError(422, FORM_MESSAGES.invalidBody);
-    const { formTypeId, answers, committed } = parsed.data;
+    const { formTypeId, answers, committed, applicantId } = parsed.data;
     const { filesByTempId } = multipart;
+
+    // Nộp thay cho người khác: cần quyền submitForApplicant (403), người đó phải có (404)
+    const ownerId = applicantId ?? session.user.id;
+    if (ownerId !== session.user.id) {
+      if (!can(session.role, 'submitForApplicant')) return apiError(403, FORM_MESSAGES.submitForApplicantForbidden);
+      if (!findPerson(ownerId)) return apiError(404, FORM_MESSAGES.applicantNotFound);
+    }
 
     // Loại đơn không có hoặc không còn nhận đơn thì 404
     const formType = getFormType(formTypeId);
@@ -103,7 +111,7 @@ export const formHandlers = [
     if (fileError) return apiError(422, fileError);
 
     // Đúng hết: lưu đơn và tệp cùng lúc
-    return HttpResponse.json<FormSummary>(addForm(session.user.id, formType, answers, filesByTempId), { status: 201 });
+    return HttpResponse.json<FormSummary>(addForm(ownerId, formType, answers, filesByTempId), { status: 201 });
   }),
 
   // Một lá đơn đủ nội dung. Đăng ký SAU các handler của forms.ts (/forms/mine, /forms/handled, /forms/cccds) để các đường dẫn đó không bị hiểu là mã đơn

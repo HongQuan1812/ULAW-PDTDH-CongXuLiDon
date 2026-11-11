@@ -5,6 +5,7 @@ import {
   profileCccdPath,
   profileFormsPath,
   profileHandledFormsPath,
+  profileMainStudentPath,
   profilePath,
   type HandledFormsResponse,
   type MyFormsResponse,
@@ -50,13 +51,15 @@ export function useMyFullCccd(enabled: boolean) {
 
 /**
  * Hồ sơ của người khác (cán bộ có quyền viewApplicant xem hồ sơ người nộp đơn). CCCD đã che.
- * @param userId  id người dùng cần xem
- * @returns       kết quả useQuery; data = hồ sơ; không có quyền hoặc không có người đó thì lỗi 403 / 404
+ * @param userId   id người dùng cần xem
+ * @param enabled  false thì không tải (vd trang nộp đơn của chính mình, không có người nộp thay); mặc định true
+ * @returns        kết quả useQuery; data = hồ sơ; không có quyền hoặc không có người đó thì lỗi 403 / 404
  */
-export function usePersonProfile(userId: string) {
+export function usePersonProfile(userId: string, enabled = true) {
   return useQuery({
     queryKey: ['profile', 'person', userId] as const,
     queryFn: () => apiFetch<Profile>(profilePath(userId)),
+    enabled,
   });
 }
 
@@ -114,6 +117,20 @@ export function useSetMainStudent() {
     mutationFn: (body: SetMainStudentRequest) =>
       apiFetch<Profile>(ENDPOINTS.profile.myMainStudent, { method: 'PUT', body: JSON.stringify(body) }),
     onSuccess: (profile) => queryClient.setQueryData(MY_PROFILE_KEY, profile),
+  });
+}
+
+/**
+ * Chọn MSSV chính cho người khác (Admin, quyền editApplicant).
+ * @param userId  id người được chọn MSSV chính
+ * @returns       kết quả useMutation; gọi mutateAsync({ studentId }). Thành công thì hồ sơ mới của người đó được lưu ngay.
+ */
+export function useSetPersonMainStudent(userId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (body: SetMainStudentRequest) =>
+      apiFetch<Profile>(profileMainStudentPath(userId), { method: 'PUT', body: JSON.stringify(body) }),
+    onSuccess: (profile) => queryClient.setQueryData(['profile', 'person', userId], profile),
   });
 }
 

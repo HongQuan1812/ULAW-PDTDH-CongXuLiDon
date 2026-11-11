@@ -1,5 +1,14 @@
 import { describe, expect, test } from 'vitest';
-import { DecideFormRequestSchema, FORM_DECISIONS, TransferFormRequestSchema, formDecisionPath, formTransferPath, formTransferTargetsPath } from './form';
+import {
+  DecideFormRequestSchema,
+  FORM_DECISIONS,
+  SubmitFormRequestSchema,
+  TransferFormRequestSchema,
+  UpdateFormRequestSchema,
+  formDecisionPath,
+  formTransferPath,
+  formTransferTargetsPath,
+} from './form';
 
 describe('TransferFormRequestSchema', () => {
   test('chấp nhận id cán bộ nhận đơn', () => {
@@ -44,5 +53,22 @@ describe('DecideFormRequestSchema', () => {
 describe('formDecisionPath', () => {
   test('ghép mã đơn vào đường dẫn Ra quyết định', () => {
     expect(formDecisionPath('XMM-2026-001-00001')).toBe('/forms/XMM-2026-001-00001/decision');
+  });
+});
+
+describe('SubmitFormRequestSchema: nộp thay', () => {
+  const ownForm = { formTypeId: 'xmm', answers: {}, committed: true };
+
+  test('không có applicantId là đơn của chính mình', () => {
+    expect(SubmitFormRequestSchema.parse(ownForm).applicantId).toBeUndefined();
+  });
+
+  test('có applicantId là nộp thay cho người đó; chuỗi rỗng thì sai', () => {
+    expect(SubmitFormRequestSchema.parse({ ...ownForm, applicantId: 'sv-5' }).applicantId).toBe('sv-5');
+    expect(SubmitFormRequestSchema.safeParse({ ...ownForm, applicantId: '' }).success).toBe(false);
+  });
+
+  test('sửa đơn không đổi được người nộp đơn (bỏ applicantId)', () => {
+    expect(UpdateFormRequestSchema.parse({ answers: {}, committed: true, applicantId: 'sv-5' })).not.toHaveProperty('applicantId');
   });
 });

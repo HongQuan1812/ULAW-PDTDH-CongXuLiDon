@@ -64,6 +64,22 @@ export function personProfilePath(userId: string): string {
   return `/ho-so/${encodeURIComponent(userId)}`;
 }
 
+/** Trang nộp đơn mới thay cho người khác (như #nop-don-<id> của bản mẫu), khai báo trong router: /ho-so/<id>/nop-don/<mã loại đơn>. */
+export const NEW_FORM_FOR_APPLICANT_ROUTE = '/ho-so/:userId/nop-don/:formTypeId';
+
+/**
+ * Đường dẫn trang nộp đơn mới thay cho một người nộp đơn.
+ * @param userId      id người nộp đơn (đơn thuộc về người này)
+ * @param formTypeId  mã loại đơn, vd 'xmm'
+ * @returns           vd '/ho-so/sv-5/nop-don/xmm'
+ */
+export function newFormForApplicantPath(userId: string, formTypeId: string): string {
+  return `${personProfilePath(userId)}${newFormPath(formTypeId)}`;
+}
+
+/** Tên trang thông tin người khác, hiện trên nút "‹ Quay lại …" của trang mở từ đó. */
+export const PERSON_PROFILE_LABEL = 'Thông tin người nộp đơn';
+
 /** state gửi kèm khi chuyển trang, để trang mới có nút "‹ Quay lại <trang trước>" (như routeLabel của artifact/js/nav.js). */
 export interface ReturnState {
   /** tên trang trước, vd 'Thông tin cá nhân', 'đơn đang soạn' */

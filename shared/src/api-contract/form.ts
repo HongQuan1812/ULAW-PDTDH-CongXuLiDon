@@ -11,7 +11,7 @@ import { FORM_STATUSES } from '../aux-schema/forms--statuses';
 
 export const FORM_ENDPOINTS = {
   /** POST (multipart/form-data, xem SUBMIT_FORM_FIELDS) → FormSummary (201): nộp đơn mới, gửi câu trả lời và mọi tệp trong MỘT lần.
-      Cần quyền submit. Máy chủ kiểm tra hết (câu trả lời, ô cam đoan, từng tệp); sai một chỗ thì trả lỗi và KHÔNG lưu gì.
+      Cần quyền submit; nộp thay (có applicantId) cần quyền submitForApplicant. Máy chủ kiểm tra hết (câu trả lời, ô cam đoan, từng tệp); sai một chỗ thì trả lỗi và KHÔNG lưu gì.
       Đúng hết thì sinh mã đơn, lưu đơn kèm bản chụp cấu trúc loại đơn lúc nộp và lưu các tệp */
   submit: '/forms',
   /** GET: một lá đơn, đủ nội dung → FormDetail (trang chi tiết đơn, xem nhanh).
@@ -149,11 +149,13 @@ export const SubmitFormRequestSchema = z.object({
   answers: FormAnswersSchema,
   /** Người nộp đã đánh dấu ô cam đoan "các thông tin và minh chứng trên là đúng sự thật" */
   committed: z.boolean(),
+  /** Nộp thay: id người nộp đơn mà đơn thuộc về (cần quyền submitForApplicant). Bỏ trống = đơn của chính mình (quyền submit) */
+  applicantId: z.string().min(1).optional(),
 });
 export type SubmitFormRequest = z.infer<typeof SubmitFormRequestSchema>;
 
 /** Phần chữ của PUT /forms/:code (trường SUBMIT_FORM_FIELDS.request): câu trả lời mới, ô cam đoan. */
-export const UpdateFormRequestSchema = SubmitFormRequestSchema.omit({ formTypeId: true });
+export const UpdateFormRequestSchema = SubmitFormRequestSchema.omit({ formTypeId: true, applicantId: true });
 export type UpdateFormRequest = z.infer<typeof UpdateFormRequestSchema>;
 
 /** Các trường trong body multipart của POST /forms và PUT /forms/:code. Ngoài trường request, mỗi tệp là một trường tên bằng id tạm của tệp. */
@@ -194,6 +196,10 @@ export const FORM_MESSAGES = {
   401: 'Bạn chưa đăng nhập.',
   /** POST /forms khi vai trò không được nộp đơn (không có quyền submit) */
   submitForbidden: 'Bạn không có quyền nộp đơn.',
+  /** POST /forms có applicantId (nộp thay) khi không có quyền submitForApplicant */
+  submitForApplicantForbidden: 'Bạn không có quyền nộp đơn thay cho người khác.',
+  /** POST /forms có applicantId mà không có người dùng này (404) */
+  applicantNotFound: 'Không có người dùng này.',
   /** POST /forms khi loại đơn không có hoặc không còn nhận đơn (404) */
   formTypeClosed: 'Loại đơn này không có hoặc đã ngừng nhận đơn.',
   /** POST /forms khi body sai định dạng (422). Câu trả lời sai, chưa cam đoan, tệp thiếu / sai / thừa thì báo bằng ANSWER_MESSAGES */
@@ -238,4 +244,6 @@ export const FORM_MESSAGES = {
   supplemented: (timeText: string) => `Đã bổ sung đơn lúc ${timeText}, đơn chuyển sang “Đã bổ sung”.`,
   /** Nộp đơn xong (toast), vd "Đã nộp đơn XMM-2026-001-01521." */
   submitted: (code: string) => `Đã nộp đơn ${code}.`,
+  /** Nộp thay xong (toast), vd "Đã nộp đơn XMM-2026-001-01521 thay cho Võ Minh Khang." */
+  submittedFor: (code: string, applicantName: string) => `Đã nộp đơn ${code} thay cho ${applicantName}.`,
 } as const;

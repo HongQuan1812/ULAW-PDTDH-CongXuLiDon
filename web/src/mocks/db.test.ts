@@ -406,8 +406,11 @@ describe('tìm người dùng theo id', () => {
     expect(findPerson('sv-2')?.email).toBe('baongoc.tran@hcmulaw.edu.vn');
   });
 
-  test('người chưa có hồ sơ riêng (sinh viên khác) chưa có SĐT, CCCD, MSSV', () => {
-    expect(findPerson('sv-2')).toMatchObject({ phone: null, cccd: null, students: [] });
+  test('người chưa có hồ sơ riêng (sinh viên khác) chưa có SĐT, CCCD; MSSV lấy từ database trường', () => {
+    expect(findPerson('sv-2')).toMatchObject({ phone: null, cccd: null });
+    expect(findPerson('sv-2')?.students.map((student) => student.studentId)).toEqual(['2253801010012']);
+    expect(findPerson('sv-5')?.students).toHaveLength(2);
+    expect(findPerson('sv-7')?.students).toEqual([]);
   });
 
   test('có hồ sơ riêng thì lấy SĐT, CCCD, MSSV từ đó', () => {

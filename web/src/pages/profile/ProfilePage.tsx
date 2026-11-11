@@ -2,7 +2,15 @@
    và mục "Đơn phụ trách" (chỉ vai trò được xử lí đơn). */
 import { useCallback, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router';
-import { MAIN_STUDENT_MESSAGES, STUDENT_INFO_LABELS, type Account, type Profile, type StudentInfo } from '@ulaw/shared';
+import type { UseMutationResult } from '@tanstack/react-query';
+import {
+  MAIN_STUDENT_MESSAGES,
+  STUDENT_INFO_LABELS,
+  type Account,
+  type Profile,
+  type SetMainStudentRequest,
+  type StudentInfo,
+} from '@ulaw/shared';
 import { useMyFullCccd, useMyProfile, usePersonFullCccd, useSetMainStudent } from '../../api/profile';
 import { Avatar } from '../../components/Avatar';
 import { Button } from '../../components/Button';
@@ -72,6 +80,7 @@ function IdentityCard({ profile }: { profile: Profile }) {
   const [editOpen, setEditOpen] = useState(false);
   const closeEdit = useCallback(() => setEditOpen(false), []);
   const profileQuery = useMyProfile();
+  const setMainStudent = useSetMainStudent();
   const { user } = useAuth();
   const mainStudent = profile.students.find((student) => student.studentId === profile.mainStudentId) ?? null;
 
@@ -83,15 +92,7 @@ function IdentityCard({ profile }: { profile: Profile }) {
           <p className={styles.idName}>{profile.name}</p>
           <RefreshButton query={profileQuery} label="thông tin cá nhân" size="small" />
         </div>
-        {mainStudent && (
-          <Button aria-haspopup="dialog" onClick={() => setStudentSheetOpen(true)}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <rect x="3" y="4" width="18" height="16" rx="2" />
-              <path d="M15 4v16" />
-            </svg>
-            Thông tin sinh viên
-          </Button>
-        )}
+        {mainStudent && <StudentInfoButton onClick={() => setStudentSheetOpen(true)} />}
         <Button aria-haspopup="dialog" onClick={() => setEditOpen(true)}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
             <path d="M4 20h4L19 9l-4-4L4 16z" />
@@ -122,7 +123,7 @@ function IdentityCard({ profile }: { profile: Profile }) {
 
       {mainStudent && (
         <Sheet open={studentSheetOpen} onClose={() => setStudentSheetOpen(false)} title="Thông tin sinh viên">
-          <StudentPicker profile={profile} onPicked={() => setStudentSheetOpen(false)} />
+          <StudentPicker profile={profile} setMainStudent={setMainStudent} onPicked={() => setStudentSheetOpen(false)} />
         </Sheet>
       )}
 
@@ -204,19 +205,46 @@ export function StudentRow({ student, hideOnNarrowScreen = false }: { student: S
 }
 
 /**
+ * Nút "Thông tin sinh viên" ở đầu thẻ thông tin, mở khung chọn / xem các MSSV.
+ * @param onClick  mở khung
+ * @returns        nút
+ */
+export function StudentInfoButton({ onClick }: { onClick: () => void }) {
+  return (
+    <Button aria-haspopup="dialog" onClick={onClick}>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <rect x="3" y="4" width="18" height="16" rx="2" />
+        <path d="M15 4v16" />
+      </svg>
+      Thông tin sinh viên
+    </Button>
+  );
+}
+
+/**
  * Danh sách mọi MSSV trong khung "Thông tin sinh viên". MSSV chính có nhãn "Đang dùng";
  * bấm MSSV khác thì lưu làm MSSV chính, báo thành công rồi đóng khung.
- * @param profile   hồ sơ của mình (các MSSV và MSSV chính)
- * @param onPicked  gọi sau khi đã chọn xong (để đóng khung)
- * @returns         đoạn giới thiệu + danh sách MSSV
+ * Không có lệnh lưu (người xem không được đổi MSSV chính của người khác) thì chỉ xem, các thẻ không bấm được.
+ * @param profile         hồ sơ đang xem (các MSSV và MSSV chính): của mình hoặc của người khác
+ * @param setMainStudent  lệnh lưu MSSV chính (useSetMainStudent / useSetPersonMainStudent); null = chỉ xem
+ * @param onPicked        gọi sau khi đã chọn xong (để đóng khung)
+ * @returns               đoạn giới thiệu + danh sách MSSV
  */
-function StudentPicker({ profile, onPicked }: { profile: Profile; onPicked: () => void }) {
+export function StudentPicker({
+  profile,
+  setMainStudent,
+  onPicked,
+}: {
+  profile: Profile;
+  setMainStudent: UseMutationResult<Profile, Error, SetMainStudentRequest> | null;
+  onPicked: () => void;
+}) {
   const toast = useToast();
-  const setMainStudent = useSetMainStudent();
-  const savingStudentId = setMainStudent.isPending ? setMainStudent.variables?.studentId : undefined;
+  const savingStudentId = setMainStudent?.isPending ? setMainStudent.variables?.studentId : undefined;
 
   // Bấm MSSV đang dùng thì chỉ đóng khung; MSSV khác thì lưu lên máy chủ
   const pick = async (studentId: string) => {
+    if (!setMainStudent) return;
     if (studentId === profile.mainStudentId) {
       onPicked();
       return;
@@ -233,9 +261,11 @@ function StudentPicker({ profile, onPicked }: { profile: Profile; onPicked: () =
   return (
     <>
       <p className={styles.sheetIntro}>
-        Chọn MSSV dùng làm thông tin chính. MSSV này hiện trên trang thông tin và được điền vào file Word khi xuất đơn.
+        {setMainStudent
+          ? 'Chọn MSSV dùng làm thông tin chính. MSSV này hiện trên trang thông tin và được điền vào file Word khi xuất đơn.'
+          : 'MSSV “Đang dùng” là thông tin chính khi xuất file. Chỉ người nộp đơn hoặc Admin mới đổi được.'}
       </p>
-      <div className={styles.studentList} role="radiogroup" aria-label="Chọn MSSV chính">
+      <div className={styles.studentList} role="radiogroup" aria-label={setMainStudent ? 'Chọn MSSV chính' : 'Các MSSV'}>
         {profile.students.map((student) => {
           const isMain = student.studentId === profile.mainStudentId;
           const isSaving = student.studentId === savingStudentId;
@@ -245,8 +275,8 @@ function StudentPicker({ profile, onPicked }: { profile: Profile; onPicked: () =
               type="button"
               role="radio"
               aria-checked={isMain}
-              className={styles.studentOption}
-              disabled={setMainStudent.isPending}
+              className={`${styles.studentOption} ${setMainStudent ? '' : styles.viewOnly}`}
+              disabled={!setMainStudent || setMainStudent.isPending}
               onClick={() => pick(student.studentId)}
             >
               <span className={styles.optionTop}>

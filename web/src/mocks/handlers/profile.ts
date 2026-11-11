@@ -54,6 +54,28 @@ function toProfile(session: Session): Profile {
 }
 
 /**
+ * Dựng hồ sơ của người khác trả về cho giao diện: CCCD đã che, các MSSV, MSSV chính.
+ * @param userId  id người dùng (đã biết là có)
+ * @returns       hồ sơ theo ProfileSchema
+ */
+function toPersonProfile(userId: string): Profile {
+  const person = findPerson(userId)!;
+
+  // MSSV chính: MSSV đã chọn nếu còn trong danh sách, không thì MSSV đầu
+  const mainStudent = person.students.find((student) => student.studentId === person.mainStudentId) ?? person.students[0];
+
+  return {
+    name: person.name,
+    email: person.email,
+    role: person.role,
+    phone: person.phone,
+    maskedCccd: maskCccd(person.cccd),
+    students: person.students,
+    mainStudentId: mainStudent?.studentId ?? null,
+  };
+}
+
+/**
  * Tìm người dùng mà người đang đăng nhập được xem hồ sơ (quyền viewApplicant).
  * @param userId  id người dùng cần xem (từ đường dẫn)
  * @returns       person: người cần xem · errorResponse: câu trả lỗi nếu chưa đăng nhập (401), không có quyền (403) hoặc không có người đó (404)
@@ -129,18 +151,7 @@ export const profileHandlers = [
     await delay(MOCK_DELAY_MS);
     const { person, errorResponse } = personToView(String(params.userId));
     if (!person) return errorResponse;
-
-    // MSSV chính: MSSV đã chọn nếu còn trong danh sách, không thì MSSV đầu
-    const mainStudent = person.students.find((student) => student.studentId === person.mainStudentId) ?? person.students[0];
-    return HttpResponse.json<Profile>({
-      name: person.name,
-      email: person.email,
-      role: person.role,
-      phone: person.phone,
-      maskedCccd: maskCccd(person.cccd),
-      students: person.students,
-      mainStudentId: mainStudent?.studentId ?? null,
-    });
+    return HttpResponse.json<Profile>(toPersonProfile(String(params.userId)));
   }),
 
   // Số CCCD đầy đủ của người khác (người xem bấm "Hiện")
@@ -166,5 +177,26 @@ export const profileHandlers = [
     if (!person) return errorResponse;
     if (!can(readSession()?.role, 'viewAll')) return apiError(403, PROFILE_MESSAGES.handledFormsForbidden);
     return HttpResponse.json<HandledFormsResponse>({ forms: getFormsHandledBy(String(params.userId)) });
+  }),
+
+  // Chọn MSSV chính cho người khác: cần thêm quyền editApplicant, MSSV phải thuộc email của người đó
+  http.put(api(ENDPOINTS.profile.personMainStudent), async ({ params, request }) => {
+    await delay(MOCK_DELAY_MS);
+
+    // Chưa đăng nhập / không xem được / không có người đó thì 401 / 403 / 404; không có quyền sửa thì 403
+    const userId = String(params.userId);
+    const { person, errorResponse } = personToView(userId);
+    if (!person) return errorResponse;
+    if (!can(readSession()?.role, 'editApplicant')) return apiError(403, MAIN_STUDENT_MESSAGES[403]);
+
+    // Body sai, hoặc MSSV không thuộc người đó thì 422
+    const parsed = SetMainStudentRequestSchema.safeParse(await request.json().catch(() => null));
+    const { studentId } = parsed.success ? parsed.data : { studentId: '' };
+    const owned = person.students.some((student) => student.studentId === studentId);
+    if (!owned) return apiError(422, MAIN_STUDENT_MESSAGES.personNotOwned);
+
+    // Lưu rồi trả hồ sơ mới của người đó
+    saveMainStudent(userId, studentId);
+    return HttpResponse.json<Profile>(toPersonProfile(userId));
   }),
 ];

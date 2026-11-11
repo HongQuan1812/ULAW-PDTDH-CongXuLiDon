@@ -1,12 +1,14 @@
-/* Trang nộp đơn mới của một loại đơn (#/nop-don/<mã loại đơn>), mở sau khi chọn trong hộp "Chọn loại đơn".
+/* Trang nộp đơn mới của một loại đơn, mở sau khi chọn trong hộp "Chọn loại đơn":
+   - đơn của mình: #/nop-don/<mã loại đơn>, mở từ trang Thông tin cá nhân;
+   - nộp thay (Admin, như #nop-don-<id> của bản mẫu): #/ho-so/<id người nộp đơn>/nop-don/<mã loại đơn>, mở từ trang thông tin người đó.
    Gồm: nội dung đơn theo cấu trúc loại đơn, khung "Thông tin đơn" bên phải, hàng nút dính đáy có ô cam đoan.
-   Gửi đơn: gửi câu trả lời và mọi tệp trong một lần; xong thì về trang Thông tin cá nhân, đơn mới nằm trong "Đơn đã nộp". */
+   Gửi đơn: gửi câu trả lời và mọi tệp trong một lần; xong thì về trang thông tin của người nộp đơn, đơn mới nằm trong "Đơn đã nộp". */
 import { useEffect, useState, type FormEvent } from 'react';
 import { Link, useNavigate, useNavigationType, useParams } from 'react-router';
 import { FORM_MESSAGES, type FormType } from '@ulaw/shared';
 import { useFormType } from '../../api/form-types';
-import { useMyProfile } from '../../api/profile';
-import { PAGE_LABEL, PAGE_PATH, type ReturnState } from '../../app/paths';
+import { useMyProfile, usePersonProfile } from '../../api/profile';
+import { PAGE_LABEL, PAGE_PATH, PERSON_PROFILE_LABEL, personProfilePath, type ReturnState } from '../../app/paths';
 import { Button } from '../../components/Button';
 import { LoadError, loadErrorMessage } from '../../components/LoadError';
 import { RefreshButton } from '../../components/RefreshButton';
@@ -29,19 +31,22 @@ const LOAD_FAILED_TEXT = 'Không tải được loại đơn.';
 const SUBMIT_FAILED_TEXT = 'Chưa gửi được đơn. Kiểm tra kết nối mạng rồi bấm Gửi đơn lại.';
 
 /**
- * Tải cấu trúc loại đơn rồi vẽ trang nộp đơn.
+ * Tải cấu trúc loại đơn rồi vẽ trang nộp đơn. Đường dẫn có id người dùng thì là nộp thay cho người đó.
  * @returns  giao diện trang: đang tải / câu báo lỗi kèm nút ↻ / lá đơn
  */
 export function NewFormPage() {
-  const { formTypeId = '' } = useParams();
+  const { formTypeId = '', userId: applicantId } = useParams();
   const formTypeQuery = useFormType(formTypeId);
   const navigate = useNavigate();
   const { backLabel, goBack, previousPageLabel } = useLeavePage();
 
-  // Gửi đơn xong: về trang Thông tin cá nhân; trang trước chính là trang đó thì lùi lại như nút Back,
-  // không thì thay trang nộp đơn trong lịch sử, để bấm Back không mở lại lá đơn đã gửi
-  const leaveAfterSubmit = () =>
-    previousPageLabel === PAGE_LABEL.profile ? navigate(-1) : navigate(PAGE_PATH.profile, { replace: true });
+  // Gửi đơn xong: về trang thông tin của người nộp đơn (của mình: Thông tin cá nhân; nộp thay: trang người đó).
+  // Trang trước chính là trang đó thì lùi lại như nút Back, không thì thay trang nộp đơn trong lịch sử,
+  // để bấm Back không mở lại lá đơn đã gửi
+  const [ownerPageLabel, ownerPagePath] = applicantId
+    ? [PERSON_PROFILE_LABEL, personProfilePath(applicantId)]
+    : [PAGE_LABEL.profile, PAGE_PATH.profile];
+  const leaveAfterSubmit = () => (previousPageLabel === ownerPageLabel ? navigate(-1) : navigate(ownerPagePath, { replace: true }));
 
   return (
     <div className={styles.page}>
@@ -51,7 +56,13 @@ export function NewFormPage() {
       {formTypeQuery.isPending ? (
         <p className={styles.muted}>Đang tải loại đơn…</p>
       ) : formTypeQuery.data ? (
-        <NewForm key={formTypeQuery.data.id} formType={formTypeQuery.data} onCancel={goBack} onSubmitted={leaveAfterSubmit} />
+        <NewForm
+          key={`${formTypeQuery.data.id}@${applicantId ?? ''}`}
+          formType={formTypeQuery.data}
+          applicantId={applicantId}
+          onCancel={goBack}
+          onSubmitted={leaveAfterSubmit}
+        />
       ) : (
         <section className={styles.errorCard}>
           <LoadError message={loadErrorMessage(formTypeQuery) ?? LOAD_FAILED_TEXT} />
@@ -67,24 +78,38 @@ export function NewFormPage() {
  * Bấm Gửi đơn: kiểm tra mọi câu và ô cam đoan; lỗi thì báo dưới từng câu và bằng toast, đưa con trỏ tới chỗ lỗi đầu tiên.
  * Hợp lệ thì gửi lên máy chủ; xong thì bỏ nháp, báo mã đơn mới và rời trang.
  * Quay lại trang này bằng nút Quay lại / Back (vd từ "Xem hồ sơ ›") thì giữ câu đã điền; mở bằng "Nộp đơn mới" thì đơn trống.
+ * Nháp giữ riêng theo loại đơn và người nộp đơn (nộp thay cho hai người khác nhau không lẫn nháp).
  * @param formType     loại đơn đủ cấu trúc
+ * @param applicantId  nộp thay: id người nộp đơn; bỏ trống = đơn của mình
  * @param onCancel     bấm Hủy: rời trang
  * @param onSubmitted  gửi đơn xong: rời trang
  * @returns            thẻ <form>
  */
-function NewForm({ formType, onCancel, onSubmitted }: { formType: FormType; onCancel: () => void; onSubmitted: () => void }) {
+function NewForm({
+  formType,
+  applicantId,
+  onCancel,
+  onSubmitted,
+}: {
+  formType: FormType;
+  applicantId?: string;
+  onCancel: () => void;
+  onSubmitted: () => void;
+}) {
   const toast = useToast();
-  const submitNewForm = useSubmitNewForm(formType);
+  const submitNewForm = useSubmitNewForm(formType, applicantId);
+  const applicantQuery = usePersonProfile(applicantId ?? '', !!applicantId);
   const infoPanel = useFormInfoPanel();
   const navigationType = useNavigationType();
-  const [savedDraft] = useState(() => (navigationType === 'POP' ? readNewFormDraft(formType.id) : undefined));
+  const draftKey = applicantId ? `${formType.id}@${applicantId}` : formType.id;
+  const [savedDraft] = useState(() => (navigationType === 'POP' ? readNewFormDraft(draftKey) : undefined));
   const { answers, setAnswer, questionErrors, validate } = useFormAnswers(formType.sections, savedDraft?.answers);
   const commitment = useCommitment(savedDraft?.committed ?? false);
   const { committed } = commitment;
   const [previewReadOnly, setPreviewReadOnly] = useState(false);
 
   // Giữ nháp mỗi khi đổi câu trả lời hoặc ô cam đoan, để rời trang rồi quay lại vẫn còn
-  useEffect(() => keepNewFormDraft(formType.id, { answers, committed }), [formType.id, answers, committed]);
+  useEffect(() => keepNewFormDraft(draftKey, { answers, committed }), [draftKey, answers, committed]);
 
   /**
    * Bấm Gửi đơn. Còn lỗi thì báo (xem checkBeforeSending); hợp lệ thì gửi lên máy chủ (đang gửi thì bỏ qua lần bấm thêm).
@@ -94,14 +119,15 @@ function NewForm({ formType, onCancel, onSubmitted }: { formType: FormType; onCa
     event.preventDefault();
     if (submitNewForm.isPending || !checkBeforeSending(validate, commitment, toast)) return;
 
-    // Hợp lệ: gửi lên máy chủ; xong thì bỏ nháp, rời trang, báo mã đơn
+    // Hợp lệ: gửi lên máy chủ; xong thì bỏ nháp, rời trang, báo mã đơn (nộp thay thì kèm tên người nộp đơn)
     submitNewForm.mutate(
       { answers, committed },
       {
         onSuccess: (newForm) => {
-          discardNewFormDraft(formType.id);
+          discardNewFormDraft(draftKey);
           onSubmitted();
-          toast(FORM_MESSAGES.submitted(newForm.code), 'success');
+          const applicantName = applicantQuery.data?.name;
+          toast(applicantName ? FORM_MESSAGES.submittedFor(newForm.code, applicantName) : FORM_MESSAGES.submitted(newForm.code), 'success');
         },
         onError: (error) => toast(error.message || SUBMIT_FAILED_TEXT, 'error'),
       },
@@ -150,7 +176,11 @@ function NewForm({ formType, onCancel, onSubmitted }: { formType: FormType; onCa
           )}
         </div>
         <FormInfoPanel panel={infoPanel}>
-          <ApplicantInfo />
+          {applicantId ? (
+            <OtherApplicantInfo applicantId={applicantId} name={applicantQuery.data?.name} email={applicantQuery.data?.email} />
+          ) : (
+            <ApplicantInfo />
+          )}
         </FormInfoPanel>
       </div>
     </form>
@@ -177,6 +207,31 @@ function ApplicantInfo() {
       rows={[
         ['Họ và tên', profileQuery.data?.name ?? user.name],
         ['Email', user.email],
+      ]}
+    />
+  );
+}
+
+/**
+ * Mục "Người nộp đơn" khi nộp thay: họ tên, email của người đó và liên kết sang trang thông tin của họ
+ * (ở đó có nút "‹ Quay lại đơn đang soạn", quay về vẫn còn câu đã điền).
+ * @param applicantId  id người nộp đơn
+ * @param name         họ tên (chưa tải xong thì "Đang tải…")
+ * @param email        email (chưa tải xong thì "Đang tải…")
+ * @returns            khối mục
+ */
+function OtherApplicantInfo({ applicantId, name, email }: { applicantId: string; name?: string; email?: string }) {
+  return (
+    <FormInfoSection
+      title="Người nộp đơn"
+      action={
+        <Link to={personProfilePath(applicantId)} state={{ previousPageLabel: 'đơn đang soạn' } satisfies ReturnState}>
+          Xem hồ sơ ›
+        </Link>
+      }
+      rows={[
+        ['Họ và tên', name ?? 'Đang tải…'],
+        ['Email', email ?? 'Đang tải…'],
       ]}
     />
   );
