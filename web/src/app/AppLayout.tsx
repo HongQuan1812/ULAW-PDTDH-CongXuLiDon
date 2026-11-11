@@ -1,7 +1,7 @@
 /* Khung ứng dụng sau khi đăng nhập: thanh menu + vùng nội dung của từng trang.
    Đủ chỗ: menu nằm ngang trên cùng; thiếu chỗ thì ẩn tên tài khoản và nhãn ô vai trò trước;
-   vẫn không đủ: thanh trên cùng + menu trượt ra từ bên trái. Chỉ xét theo chỗ trống, không theo bề rộng màn hình cố định,
-   nên vai trò nào (nhiều hay ít mục) cũng thu gọn theo cùng một luật. */
+   vẫn không đủ: thanh trên cùng + menu trượt ra từ bên trái; thanh trên cùng thiếu chỗ thì ẩn dải icon, rồi ẩn tên ứng dụng.
+   Chỉ xét theo chỗ trống, không theo bề rộng màn hình cố định, nên vai trò nào (nhiều hay ít mục) cũng thu gọn theo cùng một luật. */
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { Navigate, NavLink, Outlet, useLocation } from 'react-router';
 import { PAGES, canSeePage, type Page } from '@ulaw/shared';
@@ -25,10 +25,11 @@ export function AppLayout() {
   const logout = useLogoutAction();
   const location = useLocation();
 
-  // Không đủ chỗ thì thu gọn dần: ẩn tên tài khoản và nhãn ô vai trò → menu trượt
-  const { navRef, stage } = useMenuStage(session.data?.role);
-  const narrow = stage === 'drawer';
+  // Không đủ chỗ thì thu gọn dần: ẩn tên tài khoản và nhãn ô vai trò → menu trượt → ẩn dải icon → ẩn tên ứng dụng
+  const { navRef, iconNavRef, appNameRef, stage } = useMenuStage(session.data?.role);
+  const narrow = DRAWER_STAGES.includes(stage);
   const menuMode = narrow ? 'drawer' : stage === 'compact' ? 'compact' : 'bar';
+  const topbarMode = stage === 'drawerNoIcons' ? 'noIcons' : stage === 'drawerMinimal' ? 'minimal' : 'full';
   const [open, setOpen] = useState(false);
   const drawerOpen = narrow && open;
   // Menu tài khoản: giữ mở / đóng ở đây để đổi kiểu menu (ngang ↔ trượt) thì menu đang mở vẫn mở
@@ -74,7 +75,7 @@ export function AppLayout() {
   }
 
   return (
-    <div className={styles.shell} data-menu={menuMode}>
+    <div className={styles.shell} data-menu={menuMode} data-topbar={topbarMode}>
       {/* Thanh trên cùng: chỉ hiện khi dùng menu trượt. ☰ · logo · tên · icon các trang · menu tài khoản */}
       <header className={styles.topbar}>
         <button
@@ -89,10 +90,10 @@ export function AppLayout() {
           <MenuIcon />
         </button>
         <img src="/assets/logo.png" alt="" />
-        <span className={styles.appName}>Cổng xử lí đơn</span>
+        <span ref={appNameRef} className={styles.appName}>Cổng xử lí đơn</span>
 
         {/* Các trang dạng icon (rê chuột hiện tên trang), để chuyển trang nhanh mà không cần mở menu trượt */}
-        <nav className={styles.iconNav} aria-label="Chuyển trang nhanh">
+        <nav ref={iconNavRef} className={styles.iconNav} aria-label="Chuyển trang nhanh">
           {visiblePages.map((page) => (
             <NavLink key={page} to={PAGE_PATH[page]} aria-label={PAGE_LABEL[page]} title={PAGE_LABEL[page]}>
               {PAGE_ICON[page]}
@@ -187,20 +188,28 @@ export function AppLayout() {
   );
 }
 
-/** Các mức thu gọn của menu ngang: đủ cả · gọn (ẩn tên tài khoản, nhãn ô vai trò) · menu trượt. */
-type MenuStage = 'full' | 'compact' | 'drawer';
+/* Các mức thu gọn, theo thứ tự: menu ngang đủ cả · menu ngang gọn (ẩn tên tài khoản, nhãn ô vai trò) ·
+   menu trượt (thanh trên cùng đủ cả) · menu trượt, thanh trên cùng ẩn dải icon · menu trượt, thanh trên cùng ẩn cả tên ứng dụng */
+const MENU_STAGES = ['full', 'compact', 'drawer', 'drawerNoIcons', 'drawerMinimal'] as const;
+type MenuStage = (typeof MENU_STAGES)[number];
+/** Các mức dùng menu trượt */
+const DRAWER_STAGES: readonly MenuStage[] = ['drawer', 'drawerNoIcons', 'drawerMinimal'];
 
 /**
- * Chọn mức thu gọn của menu theo chỗ trống, thu gọn theo một chiều: đủ cả → gọn → menu trượt.
- * Ở mỗi mức, nếu các mục trong nav bị bóp (chữ tràn ra ngoài khung nav) thì xuống mức tiếp theo.
+ * Chọn mức thu gọn của menu theo chỗ trống, thu gọn theo một chiều qua MENU_STAGES.
+ * Ở mỗi mức, đo phần sẽ bị ẩn ở mức sau (menu ngang: nav các trang; menu trượt: dải icon, rồi tên ứng dụng trên thanh trên cùng);
+ * phần đó bị bóp (nội dung tràn ra ngoài khung) thì xuống mức tiếp theo.
  * Đây là luật duy nhất, không có mốc bề rộng màn hình cố định: màn hình điện thoại cũng ra menu trượt vì đo thấy hết chỗ.
  * Đổi bề ngang cửa sổ hoặc đổi vai trò (số mục đổi) thì thử lại từ mức "đủ cả" rồi đo;
  * việc thử chạy trước khi vẽ nên không nháy.
  * @param role  vai trò hiện tại; đổi thì đo lại
- * @returns     navRef gắn vào thẻ <nav>; stage = mức thu gọn hiện tại
+ * @returns     navRef gắn vào nav các trang; iconNavRef, appNameRef gắn vào dải icon và tên ứng dụng trên thanh trên cùng;
+ *              stage = mức thu gọn hiện tại
  */
 function useMenuStage(role: string | undefined) {
   const navRef = useRef<HTMLElement>(null);
+  const iconNavRef = useRef<HTMLElement>(null);
+  const appNameRef = useRef<HTMLElement>(null);
   const [stage, setStage] = useState<MenuStage>('full');
   const measuredWidthRef = useRef(window.innerWidth);
 
@@ -209,10 +218,11 @@ function useMenuStage(role: string | undefined) {
 
   // Đo khi mới vẽ, khi đổi bề ngang cửa sổ và khi font tải xong (chữ rộng ra)
   useLayoutEffect(() => {
-    // Đang menu ngang mà chữ trong nav tràn ra ngoài: xuống mức tiếp theo
+    // Phần đang đo bị tràn: xuống mức tiếp theo (mức cuối thì thôi, không còn gì để ẩn)
     const check = () => {
-      const nav = navRef.current;
-      if (stage !== 'drawer' && nav && nav.scrollWidth > nav.clientWidth) setStage(stage === 'full' ? 'compact' : 'drawer');
+      const measuredElement = { full: navRef, compact: navRef, drawer: iconNavRef, drawerNoIcons: appNameRef, drawerMinimal: null }[stage]?.current;
+      const nextStage = MENU_STAGES[MENU_STAGES.indexOf(stage) + 1];
+      if (nextStage && measuredElement && measuredElement.scrollWidth > measuredElement.clientWidth) setStage(nextStage);
     };
 
     // Đổi bề ngang: đang thu gọn thì thử lại mức đủ cả (lần vẽ sau đo lại); đang đủ cả thì đo luôn.
@@ -230,7 +240,7 @@ function useMenuStage(role: string | undefined) {
     return () => window.removeEventListener('resize', retry);
   }, [stage, role]);
 
-  return { navRef, stage };
+  return { navRef, iconNavRef, appNameRef, stage };
 }
 
 /* ---------- biểu tượng (chuyển từ artifact/index.html) ---------- */
