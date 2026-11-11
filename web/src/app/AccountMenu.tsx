@@ -1,6 +1,7 @@
-/* Menu tài khoản trên thanh trên cùng (màn hình hẹp): bấm vào hình tròn có chữ cái đại diện
-   thì thả xuống tên, email, đổi vai trò (JUST FOR DEMO) và nút đăng xuất. */
-import { useEffect, useId, useRef, useState } from 'react';
+/* Menu tài khoản: bấm vào hình tròn có chữ cái đại diện thì thả xuống tên, email, đổi vai trò (JUST FOR DEMO)
+   và nút đăng xuất. Nằm cuối menu ngang, hoặc trên thanh trên cùng khi dùng menu trượt.
+   Mở / đóng do AppLayout giữ, nên đổi kiểu menu (ngang ↔ trượt) thì menu đang mở vẫn mở. */
+import { useEffect, useId, useRef } from 'react';
 import type { SessionUser } from '@ulaw/shared';
 import { Avatar } from '../components/Avatar';
 import { DemoRoleSwitch } from '../features/auth/DemoRoleSwitch';
@@ -12,18 +13,23 @@ import styles from './AccountMenu.module.css';
  * @param user           người đang đăng nhập
  * @param onLogout       gọi khi bấm Đăng xuất (AppLayout giữ việc đăng xuất để biết không nhớ trang cũ)
  * @param logoutPending  đang đăng xuất thì khóa nút
+ * @param open           đang mở bảng thả xuống
+ * @param setOpen        mở / đóng bảng
  * @returns              nút + bảng thả xuống khi đang mở
  */
 export function AccountMenu({
   user,
   onLogout,
   logoutPending,
+  open,
+  setOpen,
 }: {
   user: SessionUser;
   onLogout: () => void;
   logoutPending: boolean;
+  open: boolean;
+  setOpen: (open: boolean) => void;
 }) {
-  const [open, setOpen] = useState(false);
   const panelId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -45,7 +51,7 @@ export function AccountMenu({
       document.removeEventListener('pointerdown', onPointerDown);
       document.removeEventListener('keydown', onKey);
     };
-  }, [open]);
+  }, [open, setOpen]);
 
   return (
     <div ref={rootRef} className={styles.root}>
@@ -56,7 +62,7 @@ export function AccountMenu({
         aria-label={`Tài khoản: ${user.name}`}
         aria-expanded={open}
         aria-controls={panelId}
-        onClick={() => setOpen((value) => !value)}
+        onClick={() => setOpen(!open)}
       >
         <Avatar name={user.name} size="sm" />
       </button>
@@ -75,7 +81,7 @@ export function AccountMenu({
           {/* JUST FOR DEMO: START · đổi vai trò để thử, chỉ hiện khi VITE_APP_ENV = "dev" */}
           {SHOW_DEMO && (
             <div className={styles.demo}>
-              <DemoRoleSwitch onSwitched={() => setOpen(false)} />
+              <DemoRoleSwitch stacked onSwitched={() => setOpen(false)} />
             </div>
           )}
           {/* JUST FOR DEMO: END */}

@@ -13,9 +13,10 @@ import styles from './DemoRoleSwitch.module.css';
 /**
  * Ô chọn để đổi vai trò mà không cần đăng xuất. Đổi xong thì mở trang chính của vai trò mới.
  * @param onSwitched  gọi sau khi đổi xong (vd để đóng menu đang mở)
+ * @param stacked     true: luôn xếp dọc (nhãn trên, ô chọn rộng hết), không đổi theo kiểu menu — dùng trong menu tài khoản
  * @returns           nhãn + ô chọn vai trò
  */
-export function DemoRoleSwitch({ onSwitched }: { onSwitched?: () => void }) {
+export function DemoRoleSwitch({ onSwitched, stacked = false }: { onSwitched?: () => void; stacked?: boolean }) {
   const { role } = useAuth();
   const selectId = useId(); // có thể có 2 ô cùng lúc (menu trượt, menu tài khoản) nên id phải riêng
   const login = useDevLogin();
@@ -41,7 +42,7 @@ export function DemoRoleSwitch({ onSwitched }: { onSwitched?: () => void }) {
   }
 
   return (
-    <div className={styles.roleSwitch}>
+    <div className={stacked ? styles.stacked : styles.roleSwitch}>
       <label htmlFor={selectId}>Vai trò (thử nghiệm)</label>
       <select
         id={selectId}

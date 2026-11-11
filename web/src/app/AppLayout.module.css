@@ -27,34 +27,34 @@
 .account span{display:none}
 .logoutText{display:none}
 .backdrop{position:fixed;inset:0;background:rgba(14,22,19,.35);z-index:35}
-@media (max-width:1180px){.account{display:none}}
+/* menu ngang thiếu chỗ (AppLayout gắn data-menu="compact"): ẩn tên tài khoản */
+[data-menu="compact"] .account{display:none}
 
-/* ---------- màn hình hẹp: thanh trên cùng + menu trượt từ trái ---------- */
-@media (max-width:960px){
-  .topbar{display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:30;min-height:58px;padding:8px 16px 8px 10px;
-    background:color-mix(in srgb,var(--surface) 94%,transparent);backdrop-filter:blur(10px);border-bottom:1px solid var(--line);color:var(--fg)}
-  .topbar img{width:30px;height:30px}
-  .topbar .appName{flex:1;color:var(--fg)}
-  .menuButton{display:grid;place-items:center;width:40px;height:40px;border:0;border-radius:50%;background:transparent;color:var(--fg);cursor:pointer}
-  .menuButton:hover{background:var(--hover)}
+/* ---------- menu trượt: thanh trên cùng + menu trượt từ trái ----------
+   Bật khi màn hình hẹp (≤ 960px) hoặc khi các mục menu ngang không còn đủ chỗ (AppLayout gắn data-menu="drawer") */
+[data-menu="drawer"] .topbar{display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:30;min-height:58px;padding:8px 16px 8px 10px;
+  background:color-mix(in srgb,var(--surface) 94%,transparent);backdrop-filter:blur(10px);border-bottom:1px solid var(--line);color:var(--fg)}
+[data-menu="drawer"] .topbar img{width:30px;height:30px}
+[data-menu="drawer"] .topbar .appName{flex:1;color:var(--fg)}
+[data-menu="drawer"] .menuButton{display:grid;place-items:center;width:40px;height:40px;border:0;border-radius:50%;background:transparent;color:var(--fg);cursor:pointer}
+[data-menu="drawer"] .menuButton:hover{background:var(--hover)}
 
-  .drawer{position:fixed;inset:0 auto 0 0;height:auto;width:min(300px,86vw);flex-direction:column;align-items:stretch;gap:0;padding:0;
-    background:var(--surface);backdrop-filter:none;border-bottom:0;box-shadow:var(--shadow-lg);overflow-y:auto;transform:translateX(-102%);transition:transform .22s ease}
-  .drawer.open{transform:none}
-  .brand{margin:0;padding:20px 16px 16px}
-  .school{display:block}
-  .close{display:inline-grid}
-  .nav{flex-direction:column;align-items:stretch;padding:4px 12px;gap:2px}
-  .nav a{height:44px;border-radius:12px;gap:12px}
-  .nav a svg{display:block;flex:none;opacity:.8}
-  .spacer{min-height:20px}
-  .foot{margin:0;padding:14px 12px 18px 16px;border-left:0;border-top:1px solid var(--side-line);align-items:flex-start;flex-wrap:wrap}
-  .account{display:grid;flex:1;max-width:none}
-  .account span{display:block;font-size:12px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  /* nút đăng xuất bằng chữ nằm dưới email, bỏ biểu tượng bên phải */
-  .logoutIcon{display:none}
-  /* cùng kiểu với nút Đăng xuất trong menu avatar (AccountMenu.module.css → .logout) */
-  .logoutText{display:block;flex:0 0 100%;min-height:40px;border:1px solid var(--line-2);border-radius:999px;background:var(--surface);color:var(--fg);font-weight:500;font-size:14px;cursor:pointer}
-  .logoutText:hover{background:var(--hover)}
-  .logoutText:disabled{opacity:.6;cursor:progress}
-}
+[data-menu="drawer"] .drawer{position:fixed;inset:0 auto 0 0;height:auto;width:min(300px,86vw);flex-direction:column;align-items:stretch;gap:0;padding:0;
+  background:var(--surface);backdrop-filter:none;border-bottom:0;box-shadow:var(--shadow-lg);overflow-y:auto;transform:translateX(-102%);transition:transform .22s ease}
+[data-menu="drawer"] .drawer.open{transform:none}
+[data-menu="drawer"] .brand{margin:0;padding:20px 16px 16px}
+[data-menu="drawer"] .school{display:block}
+[data-menu="drawer"] .close{display:inline-grid}
+[data-menu="drawer"] .nav{flex-direction:column;align-items:stretch;padding:4px 12px;gap:2px}
+[data-menu="drawer"] .nav a{height:44px;border-radius:12px;gap:12px}
+[data-menu="drawer"] .nav a svg{display:block;flex:none;opacity:.8}
+[data-menu="drawer"] .spacer{min-height:20px}
+[data-menu="drawer"] .foot{margin:0;padding:14px 12px 18px 16px;border-left:0;border-top:1px solid var(--side-line);align-items:flex-start;flex-wrap:wrap}
+[data-menu="drawer"] .account{display:grid;flex:1;max-width:none}
+[data-menu="drawer"] .account span{display:block;font-size:12px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* nút đăng xuất bằng chữ nằm dưới email, bỏ biểu tượng bên phải */
+[data-menu="drawer"] .logoutIcon{display:none}
+/* cùng kiểu với nút Đăng xuất trong menu avatar (AccountMenu.module.css → .logout) */
+[data-menu="drawer"] .logoutText{display:block;flex:0 0 100%;min-height:40px;border:1px solid var(--line-2);border-radius:999px;background:var(--surface);color:var(--fg);font-weight:500;font-size:14px;cursor:pointer}
+[data-menu="drawer"] .logoutText:hover{background:var(--hover)}
+[data-menu="drawer"] .logoutText:disabled{opacity:.6;cursor:progress}

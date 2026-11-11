@@ -1,6 +1,7 @@
 /* Khung ứng dụng sau khi đăng nhập: thanh menu + vùng nội dung của từng trang.
-   Màn hình rộng: menu nằm ngang trên cùng. Màn hình hẹp: thanh trên cùng + menu trượt ra từ bên trái. */
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+   Màn hình rộng: menu nằm ngang trên cùng; thiếu chỗ thì ẩn tên tài khoản và nhãn ô vai trò trước.
+   Màn hình hẹp, hoặc vẫn không đủ chỗ: thanh trên cùng + menu trượt ra từ bên trái. */
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { Navigate, NavLink, Outlet, useLocation } from 'react-router';
 import { PAGES, canSeePage, type Page } from '@ulaw/shared';
 import { useSession } from '../api/auth';
@@ -24,12 +25,16 @@ export function AppLayout() {
   const logout = useLogoutAction();
   const location = useLocation();
 
-  // Menu trượt chỉ có ở màn hình hẹp; màn hình rộng menu luôn hiện
-  const narrow = useMediaQuery('(max-width: 960px)');
+  // Menu trượt khi màn hình hẹp; màn hình rộng mà không đủ chỗ thì thu gọn dần (ẩn tên tài khoản → menu trượt)
+  const narrowScreen = useMediaQuery('(max-width: 960px)');
+  const { navRef, stage } = useMenuStage(narrowScreen, session.data?.role);
+  const narrow = narrowScreen || stage === 'drawer';
+  const menuMode = narrow ? 'drawer' : stage === 'compact' ? 'compact' : 'bar';
   const [open, setOpen] = useState(false);
   const drawerOpen = narrow && open;
+  // Menu tài khoản: giữ mở / đóng ở đây để đổi kiểu menu (ngang ↔ trượt) thì menu đang mở vẫn mở
+  const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
-  const navRef = useRef<HTMLElement>(null);
 
   // Mở menu: đưa con trỏ bàn phím vào mục đầu tiên; bấm Esc thì đóng
   useEffect(() => {
@@ -69,7 +74,7 @@ export function AppLayout() {
   }
 
   return (
-    <div className={styles.shell}>
+    <div className={styles.shell} data-menu={menuMode}>
       {/* Thanh trên cùng: chỉ hiện ở màn hình hẹp */}
       <header className={styles.topbar}>
         <button
@@ -85,7 +90,16 @@ export function AppLayout() {
         </button>
         <img src="/assets/logo.png" alt="" />
         <span className={styles.appName}>Cổng xử lí đơn</span>
-        <AccountMenu user={user} onLogout={logout.logOut} logoutPending={logout.isPending} />
+        {/* chỉ một menu tài khoản tại một lúc: ở đây khi dùng menu trượt, ở cuối menu ngang khi không */}
+        {narrow && (
+          <AccountMenu
+            user={user}
+            onLogout={logout.logOut}
+            logoutPending={logout.isPending}
+            open={accountMenuOpen}
+            setOpen={setAccountMenuOpen}
+          />
+        )}
       </header>
       {drawerOpen && <div className={styles.backdrop} onClick={closeDrawer} />}
 
@@ -122,7 +136,13 @@ export function AppLayout() {
           {narrow ? (
             <Avatar name={user.name} />
           ) : (
-            <AccountMenu user={user} onLogout={logout.logOut} logoutPending={logout.isPending} />
+            <AccountMenu
+              user={user}
+              onLogout={logout.logOut}
+              logoutPending={logout.isPending}
+              open={accountMenuOpen}
+              setOpen={setAccountMenuOpen}
+            />
           )}
           <div className={styles.account}>
             <strong>{user.name}</strong>
@@ -155,6 +175,49 @@ export function AppLayout() {
       </div>
     </div>
   );
+}
+
+/** Các mức thu gọn của menu ngang: đủ cả · gọn (ẩn tên tài khoản, nhãn ô vai trò) · menu trượt. */
+type MenuStage = 'full' | 'compact' | 'drawer';
+
+/**
+ * Chọn mức thu gọn của menu theo chỗ trống, thu gọn theo một chiều: đủ cả → gọn → menu trượt.
+ * Ở mỗi mức, nếu các mục trong nav bị bóp (chữ tràn ra ngoài khung nav) thì xuống mức tiếp theo.
+ * Đổi cỡ cửa sổ hoặc đổi vai trò (số mục đổi) thì thử lại từ mức "đủ cả" rồi đo;
+ * việc thử chạy trước khi vẽ nên không nháy.
+ * @param narrowScreen  màn hình đã hẹp (≤ 960px): luôn là menu trượt, không cần đo
+ * @param role          vai trò hiện tại; đổi thì đo lại
+ * @returns             navRef gắn vào thẻ <nav>; stage = mức thu gọn hiện tại
+ */
+function useMenuStage(narrowScreen: boolean, role: string | undefined) {
+  const navRef = useRef<HTMLElement>(null);
+  const [stage, setStage] = useState<MenuStage>('full');
+
+  // Đổi vai trò: thử lại từ mức đủ cả rồi đo
+  useLayoutEffect(() => setStage('full'), [role]);
+
+  // Đo khi mới vẽ, khi đổi cỡ cửa sổ và khi font tải xong (chữ rộng ra)
+  useLayoutEffect(() => {
+    // Màn hình hẹp: luôn là menu trượt; bỏ kết quả đo cũ để rộng ra lại thì đo từ đầu
+    if (narrowScreen) {
+      setStage('full');
+      return;
+    }
+
+    // Đang menu ngang mà chữ trong nav tràn ra ngoài: xuống mức tiếp theo
+    const check = () => {
+      const nav = navRef.current;
+      if (stage !== 'drawer' && nav && nav.scrollWidth > nav.clientWidth) setStage(stage === 'full' ? 'compact' : 'drawer');
+    };
+    // Đổi cỡ cửa sổ: đang thu gọn thì thử lại mức đủ cả (lần vẽ sau đo lại); đang đủ cả thì đo luôn
+    const retry = () => (stage === 'full' ? check() : setStage('full'));
+    check();
+    window.addEventListener('resize', retry);
+    document.fonts?.ready.then(check);
+    return () => window.removeEventListener('resize', retry);
+  }, [narrowScreen, stage, role]);
+
+  return { navRef, stage };
 }
 
 /* ---------- biểu tượng (chuyển từ artifact/index.html) ---------- */

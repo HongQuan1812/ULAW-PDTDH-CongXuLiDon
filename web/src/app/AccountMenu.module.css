@@ -1,4 +1,4 @@
-/* Menu tài khoản trên thanh trên cùng (màn hình hẹp). */
+/* Menu tài khoản (cuối menu ngang, hoặc trên thanh trên cùng khi dùng menu trượt). */
 .root{position:relative;flex:none}
 .trigger{display:grid;place-items:center;width:40px;height:40px;padding:0;border:0;border-radius:50%;background:transparent;cursor:pointer}
 .trigger:hover{background:var(--hover)}
@@ -14,11 +14,8 @@
 .account strong{font-size:14px;font-weight:600;color:var(--fg);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .account div span{font-size:12px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
-/* JUST FOR DEMO: START · ô đổi vai trò: bỏ lề của bản trong menu trượt */
+/* JUST FOR DEMO: START · ô đổi vai trò (kiểu xếp dọc, xem DemoRoleSwitch stacked) */
 .demo{padding-top:12px;border-top:1px solid var(--line)}
-.demo > div{margin:0;flex-direction:column;align-items:stretch;gap:6px}
-.demo > div label{display:block}
-.demo > div select{width:100%;border-radius:var(--r)}
 /* JUST FOR DEMO: END */
 
 /* nút đăng xuất */
