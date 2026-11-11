@@ -19,7 +19,7 @@ const UPDATED_TEXT = 'Đã cập nhật thông tin';
 /**
  * Hộp thoại sửa thông tin. Có CCCD thì tải số đầy đủ trước để điền sẵn vào ô (hồ sơ chỉ có số đã che).
  * @param open     đang mở hay không
- * @param onClose  gọi khi đóng (bấm Hủy, Esc, nền mờ, hoặc lưu xong)
+ * @param onClose  gọi khi đóng (bấm Đóng, Esc, nền mờ, hoặc lưu xong)
  * @param profile  hồ sơ hiện tại của mình
  * @returns        hộp thoại
  */
@@ -59,7 +59,7 @@ export function EditProfileDialog({ open, onClose, profile }: { open: boolean; o
  * Form sửa họ tên, CCCD, SĐT. Họ tên bắt buộc; CCCD và SĐT có nhập thì phải đúng định dạng.
  * @param profile   hồ sơ hiện tại (lấy email, họ tên, SĐT)
  * @param fullCccd  số CCCD đầy đủ hiện tại; "" nếu chưa có
- * @param onClose   gọi khi bấm Hủy hoặc lưu xong
+ * @param onClose   gọi khi bấm Đóng hoặc lưu xong
  * @returns         form
  */
 function EditProfileForm({ profile, fullCccd, onClose }: { profile: Profile; fullCccd: string; onClose: () => void }) {
@@ -68,6 +68,7 @@ function EditProfileForm({ profile, fullCccd, onClose }: { profile: Profile; ful
   const {
     register,
     handleSubmit,
+    reset,
     setError,
     setFocus,
     formState: { errors, isDirty },
@@ -100,6 +101,12 @@ function EditProfileForm({ profile, fullCccd, onClose }: { profile: Profile; ful
       setError('root', { message: error instanceof Error ? error.message : PROFILE_MESSAGES[422] });
     }
   });
+
+  /** Bỏ thay đổi: các ô về như lúc mở hộp (bỏ cả câu báo lỗi), con trỏ về ô Họ và tên. */
+  const discardChanges = () => {
+    reset();
+    setFocus('name');
+  };
 
   return (
     <form className={styles.form} onSubmit={onSubmit} noValidate>
@@ -140,15 +147,19 @@ function EditProfileForm({ profile, fullCccd, onClose }: { profile: Profile; ful
         </p>
       )}
 
-      {/* Hủy (đóng hộp thoại) · Lưu thay đổi: nút Lưu chỉ hiện khi đã sửa */}
+      {/* Góc dưới bên phải: chưa sửa thì nút Đóng; đã sửa thì thay bằng Bỏ thay đổi · Lưu thay đổi */}
       <div className={styles.actions}>
-        <Button variant="ghost" onClick={onClose} disabled={updateProfile.isPending}>
-          Hủy
-        </Button>
-        {isDirty && (
-          <Button variant="primary" type="submit" disabled={updateProfile.isPending}>
-            {updateProfile.isPending ? 'Đang lưu…' : 'Lưu thay đổi'}
-          </Button>
+        {isDirty ? (
+          <>
+            <Button variant="ghost" onClick={discardChanges} disabled={updateProfile.isPending}>
+              Bỏ thay đổi
+            </Button>
+            <Button variant="primary" type="submit" disabled={updateProfile.isPending}>
+              {updateProfile.isPending ? 'Đang lưu…' : 'Lưu thay đổi'}
+            </Button>
+          </>
+        ) : (
+          <Button onClick={onClose}>Đóng</Button>
         )}
       </div>
     </form>
