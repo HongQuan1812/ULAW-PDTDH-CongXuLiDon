@@ -57,11 +57,12 @@ function ChoiceSettings({ question, onChange }: { question: QuestionOf<'radio' |
       {question.options.map((option, i) => (
         <div key={i} className={styles.option}>
           <span className={`${styles.optionMark} ${styles[`optionMark_${question.type}`] ?? ''}`} aria-hidden="true" />
-          <input
+          <GrowingTextarea
+            className={styles.growing}
             value={option}
             aria-label={`Lựa chọn ${i + 1}`}
             aria-invalid={invalidTargets.has(FORM_TYPE_ISSUE_TARGET.option(question.id, i)) || undefined}
-            onChange={(event) => setOptions(replaceAt(question.options, i, event.target.value))}
+            onValueChange={(nextOption) => setOptions(replaceAt(question.options, i, nextOption))}
           />
           <EditorIconButton
             icon="remove"
@@ -96,7 +97,7 @@ function TableSettings({ question, onChange }: { question: QuestionOf<'table'>; 
     <div className={styles.tableSettings}>
       <label className={`${styles.subLabel} ${styles.rowName}`}>
         Tên gọi mỗi dòng
-        <input value={question.rowName} onChange={(event) => onChange({ ...question, rowName: event.target.value })} />
+        <GrowingTextarea className={styles.growing} value={question.rowName} onValueChange={(rowName) => onChange({ ...question, rowName })} />
         <small>Hiện ở nút “+ Thêm …” và dòng tổng, vd “môn”</small>
       </label>
 

@@ -35,6 +35,10 @@
 .untitled{color:var(--faint)}
 .grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}
 .wide{grid-column:1/-1}
+/* hai ô cùng hàng: hai ô cao bằng nhau (cả nhãn, ô nhập, ghi chú); ô chữ tự xuống hàng giãn ra cho bằng ô cao hơn,
+   ô một dòng (vd Mã đơn) và ô chọn giữ cao một dòng; ghi chú luôn nằm ngay dưới ô của nó */
+.grid2>label,.questionRow>label{display:flex;flex-direction:column}
+.grid2 textarea.growing,.questionRow textarea.growing{flex:1 0 auto}
 .hint{color:var(--muted);font-size:13px}
 
 /* nút biểu tượng: ↑ ↓ nhân bản xóa */
@@ -77,7 +81,10 @@
 .questionHead .iconActions{margin-left:auto}
 .questionBody{display:grid;gap:14px;padding:16px;min-width:0}
 .questionBody>*{min-width:0}
-.questionRow{display:grid;grid-template-columns:minmax(0,1fr) 240px;gap:10px;align-items:start}
+/* cột Loại câu hỏi rộng vừa lựa chọn dài nhất (ô chọn không xuống hàng được) nên chữ luôn hiện đủ */
+.questionRow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px}
+/* ô chữ tự xuống hàng (GrowingTextarea): trông như ô một dòng, chữ dài thì cao lên, không kéo giãn bằng tay */
+.growing{display:block;min-height:42px;line-height:1.45;resize:none;overflow:hidden;overflow-wrap:anywhere}
 .questionLabel{font-weight:500}
 .questionFoot{display:flex;align-items:center;gap:12px 24px;flex-wrap:wrap;padding-top:14px;border-top:1px solid var(--line)}
 
@@ -98,7 +105,7 @@
 /* bảng: tên gọi mỗi dòng, các cột */
 .tableSettings{display:grid;gap:8px;overflow-x:auto;min-width:0}
 .rowName{max-width:340px}
-.columnsHead,.column{display:grid;grid-template-columns:minmax(150px,1.4fr) minmax(120px,1fr) 90px 70px 34px;gap:8px;align-items:center;min-width:560px}
+.columnsHead,.column{display:grid;grid-template-columns:minmax(140px,1fr) minmax(140px,1fr) 90px 70px 34px;gap:8px;align-items:center;min-width:560px}
 .column{align-items:stretch}
 .column>textarea{display:block;height:100%;min-height:43px;padding:10px 14px;line-height:1.45;resize:none;overflow:hidden;overflow-wrap:anywhere}
 .column>select{height:43px;align-self:start}

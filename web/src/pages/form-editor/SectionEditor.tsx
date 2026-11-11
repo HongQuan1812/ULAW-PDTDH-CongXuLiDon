@@ -3,6 +3,7 @@
 import { FORM_TYPE_ISSUE_TARGET, type FormSection, type Question } from '@ulaw/shared';
 import { Button } from '../../components/Button';
 import { Field } from '../../components/Field';
+import { GrowingTextarea } from '../../features/form-renderer/GrowingTextarea';
 import { useDraftIssues } from './draftIssues';
 import { EditorIconButton } from './EditorIconButton';
 import { duplicateQuestion, moveItem, newQuestion, removeAt, replaceAt } from './formTypeDraft';
@@ -75,16 +76,17 @@ export function SectionEditor({ section, index, sectionCount, focusQuestionId, a
 
       <div className={styles.grid2}>
         <Field label="Tiêu đề phần">
-          <input
+          <GrowingTextarea
+            className={styles.growing}
             value={section.title}
             placeholder="VD: Lí do bảo lưu"
             aria-invalid={invalidTargets.has(FORM_TYPE_ISSUE_TARGET.sectionTitle(section.id)) || undefined}
             autoFocus={autoFocus}
-            onChange={(event) => onChange({ ...section, title: event.target.value })}
+            onValueChange={(title) => onChange({ ...section, title })}
           />
         </Field>
         <Field label="Mô tả phần" optional>
-          <input value={section.hint ?? ''} onChange={(event) => onChange({ ...section, hint: event.target.value })} />
+          <GrowingTextarea className={styles.growing} value={section.hint ?? ''} onValueChange={(hint) => onChange({ ...section, hint })} />
         </Field>
       </div>
 

@@ -17,10 +17,9 @@ export const CHOICE_QUESTION_TYPES: readonly QuestionType[] = ['radio', 'check',
 
 /** Các nhóm định dạng tệp người soạn chọn được (như ACCEPTS của bản mẫu): [các đuôi tệp, tên hiện]. */
 export const FILE_FORMAT_GROUPS: readonly [readonly string[], string][] = [
-  [['pdf'], 'PDF'],
   [['jpg', 'png'], 'Ảnh JPG, PNG'],
   [['doc', 'docx'], 'Word'],
-  [['xls', 'xlsx'], 'Excel'],
+  [['pdf'], 'PDF'],
 ];
 
 /** Dung lượng tối đa mỗi tệp (MB) khi tạo câu hỏi tải tệp, và giới hạn người soạn đặt được. */

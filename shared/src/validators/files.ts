@@ -14,7 +14,7 @@ const PREVIEW_KIND_BY_EXTENSION: Record<string, PreviewKind> = {
 /**
  * Cách xem trước của một tệp.
  * @param fileName  tên tệp, vd 'bang-diem.pdf'
- * @returns         loại xem trước; đuôi lạ, không có đuôi, Excel hoặc .doc cũ thì 'none'
+ * @returns         loại xem trước; đuôi lạ, không có đuôi, .doc cũ thì 'none'
  */
 export function previewKindOf(fileName: string): PreviewKind {
   const extension = fileName.includes('.') ? fileName.split('.').pop()!.toLowerCase() : '';

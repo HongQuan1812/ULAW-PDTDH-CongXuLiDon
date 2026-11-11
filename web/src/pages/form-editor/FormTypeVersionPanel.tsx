@@ -1,6 +1,7 @@
 /* Khung "Phiên bản" của trình soạn loại đơn, cùng kiểu khung "Thông tin đơn" ở trang đơn (FormInfoPanel):
    màn hình rộng nằm bên phải nội dung soạn; màn hình hẹp trượt ra từ bên phải.
-   Mỗi phiên bản một mục: tên loại đơn, mã đơn, trạng thái phiên bản, mô tả ngắn (dài thì chỉ hiện 2 dòng, bấm "Xem thêm" để hiện hết).
+   Mỗi phiên bản một mục: tên loại đơn, mã đơn, trạng thái phiên bản, mô tả ngắn
+   (tên và mô tả dài thì chỉ hiện 2 dòng, bấm "Xem thêm" để hiện hết).
    Bấm mục để xem / soạn phiên bản đó. */
 import { useLayoutEffect, useRef, useState } from 'react';
 import type { FormTypeStatus } from '@ulaw/shared';
@@ -69,29 +70,31 @@ export function FormTypeVersionPanel({ panel, choices, selectedVersion, onSelect
 }
 
 /**
- * Một mục phiên bản: nút chọn (số phiên bản, tên, mã đơn, trạng thái, mô tả ngắn) và nút "Xem thêm" / "Thu gọn" cho mô tả dài.
- * Nút "Xem thêm" nằm ngoài nút chọn (không lồng nút trong nút), chỉ hiện khi mô tả bị cắt.
+ * Một mục phiên bản: nút chọn (số phiên bản, tên, mã đơn, trạng thái, mô tả ngắn) và nút "Xem thêm" / "Thu gọn" cho tên, mô tả dài.
+ * Nút "Xem thêm" nằm ngoài nút chọn (không lồng nút trong nút), chỉ hiện khi tên hoặc mô tả bị cắt; bấm thì mở cả hai.
  * @param choice      phiên bản
  * @param isSelected  true: phiên bản đang xem
  * @param onSelect    gọi khi bấm chọn
  * @returns           thẻ <li>
  */
 function VersionChoiceItem({ choice, isSelected, onSelect }: { choice: VersionChoice; isSelected: boolean; onSelect: () => void }) {
+  const name = choice.name.trim();
   const description = choice.description?.trim() ?? '';
+  const nameRef = useRef<HTMLElement>(null);
   const descriptionRef = useRef<HTMLElement>(null);
   const [expanded, setExpanded] = useState(false);
   const [overflowing, setOverflowing] = useState(false);
 
-  // Đo xem mô tả có dài hơn 2 dòng không (đo lúc đang thu gọn); đổi mô tả hoặc đổi cỡ khung thì đo lại
+  // Đo xem tên hoặc mô tả có dài hơn 2 dòng không (đo lúc đang thu gọn); đổi chữ hoặc đổi cỡ khung thì đo lại
   useLayoutEffect(() => {
-    const element = descriptionRef.current;
-    if (!element || expanded) return;
-    const measure = () => setOverflowing(element.scrollHeight > element.clientHeight + 1);
+    if (expanded) return;
+    const elements = [nameRef.current, descriptionRef.current].filter((element): element is HTMLElement => element !== null);
+    const measure = () => setOverflowing(elements.some((element) => element.scrollHeight > element.clientHeight + 1));
     measure();
     const observer = new ResizeObserver(measure);
-    observer.observe(element);
+    elements.forEach((element) => observer.observe(element));
     return () => observer.disconnect();
-  }, [description, expanded]);
+  }, [name, description, expanded]);
 
   return (
     <li className={`${styles.item} ${isSelected ? styles.selected : ''}`}>
@@ -106,7 +109,9 @@ function VersionChoiceItem({ choice, isSelected, onSelect }: { choice: VersionCh
         <dl className={styles.meta}>
           <div>
             <dt>Tên loại đơn</dt>
-            <dd>{choice.name.trim() || <span className={styles.empty}>(chưa đặt tên)</span>}</dd>
+            <dd ref={nameRef} className={expanded ? '' : styles.clamped}>
+              {name || <span className={styles.empty}>(chưa đặt tên)</span>}
+            </dd>
           </div>
           <div>
             <dt>Mã đơn</dt>
@@ -128,7 +133,7 @@ function VersionChoiceItem({ choice, isSelected, onSelect }: { choice: VersionCh
         </dl>
       </button>
 
-      {/* Mô tả dài: mở rộng / thu gọn */}
+      {/* Tên, mô tả dài: mở rộng / thu gọn */}
       {(overflowing || expanded) && (
         <button type="button" className={styles.more} aria-expanded={expanded} onClick={() => setExpanded((current) => !current)}>
           {expanded ? 'Thu gọn' : 'Xem thêm'}

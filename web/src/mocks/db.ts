@@ -295,7 +295,7 @@ const FORM_TYPE_SEED: readonly FormType[] = [
               { label: 'Ghi chú', sub: 'Lớp, giảng viên…', type: 'text' },
             ],
           },
-          { id: 'tep-dinh-kem', type: 'file', label: 'Tệp đính kèm', accept: ['pdf', 'docx', 'xlsx'], maxMB: 5 },
+          { id: 'tep-dinh-kem', type: 'file', label: 'Tệp đính kèm', accept: ['pdf', 'docx'], maxMB: 5 },
         ],
       },
     ],

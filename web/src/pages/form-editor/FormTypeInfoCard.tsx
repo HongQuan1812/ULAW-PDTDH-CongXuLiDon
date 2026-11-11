@@ -3,6 +3,7 @@
    Phiên bản Nháp chọn Nháp / Đang mở; phiên bản đã khóa chọn Đang mở / Đã đóng. */
 import { FORM_TYPE_ISSUE_TARGET, FORM_TYPE_STATUS_LABEL, type FormTypeStatus } from '@ulaw/shared';
 import { Field } from '../../components/Field';
+import { GrowingTextarea } from '../../features/form-renderer/GrowingTextarea';
 import { useDraftIssues } from './draftIssues';
 import { cleanPrefix, type FormTypeDraft } from './formTypeDraft';
 import styles from './FormTypeEditor.module.css';
@@ -41,12 +42,13 @@ export function FormTypeInfoCard({ draft, prefixLocked, contentLocked, status, s
       {/* Tên, mã đơn, mô tả */}
       <div className={styles.grid2}>
         <Field label="Tên loại đơn" hint="Dùng ở mọi nơi: tiêu đề trang đơn, danh sách chọn loại đơn, bảng và thống kê">
-          <input
+          <GrowingTextarea
+            className={styles.growing}
             value={draft.name}
             disabled={contentLocked}
             aria-invalid={invalidTargets.has(FORM_TYPE_ISSUE_TARGET.name) || undefined}
             placeholder="VD: Xin bảo lưu kết quả học tập"
-            onChange={(event) => onChange({ name: event.target.value })}
+            onValueChange={(name) => onChange({ name })}
           />
         </Field>
         <Field
@@ -67,7 +69,12 @@ export function FormTypeInfoCard({ draft, prefixLocked, contentLocked, status, s
         </Field>
         <div className={styles.wide}>
           <Field label="Mô tả ngắn" hint="Hiện khi người nộp đơn chọn loại đơn">
-            <input value={draft.description} disabled={contentLocked} onChange={(event) => onChange({ description: event.target.value })} />
+            <GrowingTextarea
+              className={styles.growing}
+              value={draft.description}
+              disabled={contentLocked}
+              onValueChange={(description) => onChange({ description })}
+            />
           </Field>
         </div>
       </div>

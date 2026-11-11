@@ -14,8 +14,6 @@ const MIME_BY_EXTENSION: Record<string, string> = {
   png: 'image/png',
   doc: 'application/msword',
   docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-  xls: 'application/vnd.ms-excel',
-  xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
 };
 
 /**

@@ -3,6 +3,7 @@
    khối cài đặt riêng theo loại câu hỏi, công tắc Bắt buộc trả lời. Khối thông báo chỉ có tiêu đề và nội dung. */
 import { FORM_TYPE_ISSUE_TARGET, QUESTION_TYPES, QUESTION_TYPE_LABEL, type Question, type QuestionType } from '@ulaw/shared';
 import { Field } from '../../components/Field';
+import { GrowingTextarea } from '../../features/form-renderer/GrowingTextarea';
 import { useDraftIssues } from './draftIssues';
 import { EditorIconButton } from './EditorIconButton';
 import { changeQuestionType } from './formTypeDraft';
@@ -52,13 +53,13 @@ export function QuestionEditor({ question, index, questionCount, autoFocus, onCh
         {/* Nội dung câu hỏi (khối thông báo: tiêu đề khối) và loại câu hỏi */}
         <div className={styles.questionRow}>
           <Field label={isInfo ? 'Tiêu đề khối' : 'Nội dung câu hỏi'} optional={isInfo}>
-            <input
-              className={styles.questionLabel}
+            <GrowingTextarea
+              className={`${styles.growing} ${styles.questionLabel}`}
               value={question.label}
               aria-invalid={invalidTargets.has(FORM_TYPE_ISSUE_TARGET.questionLabel(question.id)) || undefined}
               placeholder={isInfo ? 'VD: Lưu ý khi nộp đơn' : 'VD: Lí do xin miễn'}
               autoFocus={autoFocus}
-              onChange={(event) => onChange({ ...question, label: event.target.value })}
+              onValueChange={(label) => onChange({ ...question, label })}
             />
           </Field>
           <Field label="Loại câu hỏi">
@@ -84,10 +85,11 @@ export function QuestionEditor({ question, index, questionCount, autoFocus, onCh
           </Field>
         ) : (
           <Field label="Mô tả, gợi ý cho người nộp đơn" optional>
-            <input
+            <GrowingTextarea
+              className={styles.growing}
               value={question.help ?? ''}
               placeholder="VD: Ghi rõ học kỳ và năm học"
-              onChange={(event) => onChange({ ...question, help: event.target.value })}
+              onValueChange={(help) => onChange({ ...question, help })}
             />
           </Field>
         )}

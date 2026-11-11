@@ -27,11 +27,11 @@
 .meta dd{margin:0;font-weight:500;overflow-wrap:anywhere;font-size:13.5px}
 .empty{color:var(--faint);font-weight:400}
 
-/* mô tả ngắn: thu gọn còn 2 dòng */
+/* tên, mô tả ngắn: thu gọn còn 2 dòng */
 .meta dd.statusValue{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
 .meta dd.description{white-space:pre-line;font-weight:400}
 .clamped{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2;overflow:hidden}
-/* nút "Xem thêm" / "Thu gọn": thẳng cột giá trị (lề trái 17px + cột nhãn 96px + khoảng cách 10px) */
-.more{justify-self:start;margin:-10px 0 0 123px;padding:2px 0 14px;border:0;background:none;color:var(--accent);font:inherit;font-size:13px;font-weight:500;cursor:pointer}
+/* nút "Xem thêm" / "Thu gọn": góc dưới bên phải mục, để thấy là mở cả mục phiên bản (tên và mô tả), không riêng dòng nào */
+.more{justify-self:end;margin:-10px 20px 0 0;padding:2px 0 14px;border:0;background:none;color:var(--accent);font:inherit;font-size:13px;font-weight:500;cursor:pointer}
 .more:hover{text-decoration:underline;text-underline-offset:3px}
 .more:focus-visible{outline:2px solid var(--focus);outline-offset:2px;border-radius:4px}
