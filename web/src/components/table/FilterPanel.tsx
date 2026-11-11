@@ -8,6 +8,8 @@ import {
   type FilterRule,
   type TableField,
 } from './tableTools';
+import { DateInput } from '../DateInput';
+import { isIsoDate } from '../../lib/format';
 import styles from './table.module.css';
 
 interface FilterPanelProps<Row> {
@@ -146,36 +148,34 @@ function FilterValueInputs<Row>({
     );
   }
 
-  // Số và ngày
-  const inputType = field.type === 'number' ? 'number' : 'date';
+  // Ngày: ô dd/mm/yyyy; ngày gõ dở thì chưa lọc
+  if (field.type === 'date' || field.type === 'datetime') {
+    const dateInput = (label: string, ruleValue: string, changeRule: (isoDate: string) => void) => (
+      <DateInput aria-label={label} value={ruleValue} onValueChange={(nextValue) => changeRule(isIsoDate(nextValue) ? nextValue : '')} />
+    );
+    if (rule.operator === 'range') {
+      return (
+        <>
+          {dateInput('Từ ngày', rule.from, (from) => onChange({ from }))}
+          <span className={styles.rangeTo}>đến</span>
+          {dateInput('Đến ngày', rule.to, (to) => onChange({ to }))}
+        </>
+      );
+    }
+    return dateInput('Ngày', rule.value, (value) => onChange({ value }));
+  }
+
+  // Số
   if (rule.operator === 'range') {
     return (
       <>
-        <input
-          type={inputType}
-          aria-label={inputType === 'date' ? 'Từ ngày' : 'Từ'}
-          placeholder="Từ"
-          value={rule.from}
-          onChange={(event) => onChange({ from: event.target.value })}
-        />
+        <input type="number" aria-label="Từ" placeholder="Từ" value={rule.from} onChange={(event) => onChange({ from: event.target.value })} />
         <span className={styles.rangeTo}>đến</span>
-        <input
-          type={inputType}
-          aria-label={inputType === 'date' ? 'Đến ngày' : 'Đến'}
-          placeholder="Đến"
-          value={rule.to}
-          onChange={(event) => onChange({ to: event.target.value })}
-        />
+        <input type="number" aria-label="Đến" placeholder="Đến" value={rule.to} onChange={(event) => onChange({ to: event.target.value })} />
       </>
     );
   }
   return (
-    <input
-      type={inputType}
-      aria-label={inputType === 'date' ? 'Ngày' : 'Giá trị'}
-      placeholder={inputType === 'number' ? 'Nhập số' : undefined}
-      value={rule.value}
-      onChange={(event) => onChange({ value: event.target.value })}
-    />
+    <input type="number" aria-label="Giá trị" placeholder="Nhập số" value={rule.value} onChange={(event) => onChange({ value: event.target.value })} />
   );
 }

@@ -1,4 +1,5 @@
 /* Ô trả lời một giá trị: trả lời ngắn, đoạn văn, số, ngày, danh sách thả xuống. */
+import { DateInput } from '../../components/DateInput';
 import { formatDate } from '../../lib/format';
 import type { AnswerProps } from './answerProps';
 import styles from './FormRenderer.module.css';
@@ -61,7 +62,8 @@ export function SimpleAnswer({
         />
       );
     case 'date':
-      return <input type="date" value={textValue} onChange={(event) => onAnswerChange(event.target.value)} {...inputProps} />;
+      // Ngày gõ dở cũng lưu lại, để khi kiểm tra báo "Ngày không hợp lệ."
+      return <DateInput value={textValue} onValueChange={onAnswerChange} {...inputProps} />;
     case 'select':
       return (
         <select value={textValue} onChange={(event) => onAnswerChange(event.target.value)} {...inputProps}>
