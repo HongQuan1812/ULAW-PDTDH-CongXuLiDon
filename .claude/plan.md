@@ -32,6 +32,8 @@ Mỗi bước làm trên một nhánh riêng. Xong thì tạo Pull Request vào 
 - Dữ liệu giả lấy từ `artifact/js/sample-data.js` và `TYPES` trong `config.js`, giữ trong bộ nhớ. Tải lại trang là về ban đầu.
 - Đăng nhập giả: `POST /api/auth/dev-login` với vai trò chọn sẵn. Chỉ có ở API giả, backend thật không có.
 
+**Nhắc:** trước khi làm backend, đổi các API danh sách từ tải hết một lượt sang phân trang ở máy chủ.
+
 ## Giai đoạn 2: Backend
 
 Làm `api/` (NestJS + Prisma + PostgreSQL) theo đúng hợp đồng trong `shared/src/api-contract/`.
