@@ -2,7 +2,7 @@
    (như createAppTable() trong artifact/js/profile.js): cùng các cột thông tin đơn, tìm kiếm / Sắp xếp / Lọc,
    phân trang; bấm một dòng để mở trang chi tiết đơn.
    Nút › đầu dòng (và nút mở / đóng tất cả ở tiêu đề) sổ xuống phần xem nhanh ngay trong bảng (QuickView). */
-import { Fragment, useState, type KeyboardEvent, type ReactElement } from 'react';
+import { Fragment, useState, type KeyboardEvent, type ReactElement, type ReactNode } from 'react';
 import { useNavigate } from 'react-router';
 import { FORM_STATUSES, FORM_STATUS_LABEL, type FormSummary } from '@ulaw/shared';
 import { formPath, PAGE_LABEL, type ReturnState } from '../../app/paths';
@@ -75,6 +75,8 @@ interface FormTableProps<Row extends FormSummary> {
   /** Tùy chọn: điều kiện lọc do trang giữ (vd ô thống kê bấm để lọc); đi kèm onFilterRulesChange */
   filterRules?: FilterRule[];
   onFilterRulesChange?: (nextFilterRules: FilterRule[]) => void;
+  /** Tùy chọn: các nút thêm trên thanh công cụ, ngay sau nút Lọc (vd Hiện CCCD) */
+  extraButtons?: ReactNode;
 }
 
 /**
@@ -96,6 +98,7 @@ export function FormTable<Row extends FormSummary>({
   renderCell: renderCustomCell,
   filterRules: controlledFilterRules,
   onFilterRulesChange,
+  extraButtons,
 }: FormTableProps<Row>) {
   const navigate = useNavigate();
   const { table, query, setQuery, sorting, setSorting, filterRules, setFilterRules, matchedCount, hasCriteria } =
@@ -199,6 +202,7 @@ export function FormTable<Row extends FormSummary>({
         filterRules={filterRules}
         onFilterRulesChange={setFilterRules}
         defaultFilterKey="status"
+        extraButtons={extraButtons}
       />
 
       <div className={tableStyles.tableWrap}>

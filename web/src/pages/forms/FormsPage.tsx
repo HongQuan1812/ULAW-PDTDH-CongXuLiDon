@@ -1,6 +1,6 @@
 /* Trang Quản lí đơn (như applications-page.js của bản mẫu): bảng mọi đơn của mọi người nộp, gộp thông tin đơn
    và thông tin người nộp; tìm kiếm / Sắp xếp / Lọc / phân trang dùng chung với các bảng đơn khác.
-   Cột "Thời gian tiếp nhận" có nút Tiếp nhận cho đơn đang chờ; nút Hiện CCCD bỏ che số CCCD. */
+   Cột "Thời gian tiếp nhận" có nút Tiếp nhận cho đơn đang chờ; nút Hiện CCCD (thanh công cụ, sau nút Lọc) bỏ che số CCCD. */
 import { useEffect, useMemo, useState, type ReactElement } from 'react';
 import { FORM_MESSAGES, canReceiveForm, type ManagedFormSummary } from '@ulaw/shared';
 import { useReceiveForm } from '../../api/form';
@@ -8,6 +8,7 @@ import { useAllForms, useApplicantCccds, useFormStats } from '../../api/forms';
 import { Button } from '../../components/Button';
 import { loadErrorMessage } from '../../components/LoadError';
 import { RefreshButton } from '../../components/RefreshButton';
+import { CccdToggleButton } from '../../components/table/CccdToggleButton';
 import { Highlight } from '../../components/table/Highlight';
 import { readTableState } from '../../components/table/tableStateStore';
 import { equalsFilterValue, toggleEqualsFilter, type FilterRule, type TableField } from '../../components/table/tableTools';
@@ -41,7 +42,7 @@ const CCCD_FAILED_TEXT = 'Chưa tải được số CCCD. Kiểm tra kết nối
 
 /**
  * Trang Quản lí đơn.
- * @returns  tiêu đề, nút Hiện CCCD và bảng mọi đơn
+ * @returns  tiêu đề và bảng mọi đơn (nút Hiện CCCD trên thanh công cụ, sau nút Lọc)
  */
 export function FormsPage() {
   const { role } = useAuth();
@@ -122,9 +123,6 @@ export function FormsPage() {
             </h1>
             <RefreshButton query={formsQuery} label="Quản lí đơn" size="small" />
           </div>
-          <Button aria-pressed={showCccd} onClick={() => setShowCccd((isShown) => !isShown)} disabled={showCccd && cccdsQuery.isPending}>
-            {showCccd ? (cccdsQuery.isPending ? 'Đang tải…' : 'Ẩn CCCD') : 'Hiện CCCD'}
-          </Button>
         </div>
 
         <FormTable
@@ -141,6 +139,13 @@ export function FormsPage() {
           renderCell={renderCell}
           filterRules={filterRules}
           onFilterRulesChange={setFilterRules}
+          extraButtons={
+            <CccdToggleButton
+              shown={showCccd}
+              loading={showCccd && cccdsQuery.isPending}
+              onToggle={() => setShowCccd((isShown) => !isShown)}
+            />
+          }
         />
       </section>
     </div>

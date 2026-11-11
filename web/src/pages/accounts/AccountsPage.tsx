@@ -1,8 +1,8 @@
 /* Trang Quản lí tài khoản (#/quan-li-tai-khoan, chỉ Admin), như artifact/js/accounts-page.js.
    Bảng mọi tài khoản (người nộp đơn và cán bộ): họ tên (tài khoản của mình có nhãn "Bạn"), email, vai trò, SĐT, CCCD;
    tìm kiếm / Sắp xếp / Lọc / phân trang dùng chung với các bảng khác, mặc định xếp theo họ tên A → Z.
-   Bấm một dòng: mở trang thông tin của tài khoản đó (dòng của mình → Thông tin cá nhân). Nút Sửa cuối dòng, nút "+ Tạo tài khoản",
-   nút Hiện CCCD ở đầu thẻ. */
+   Bấm một dòng: mở trang thông tin của tài khoản đó (dòng của mình → Thông tin cá nhân). Nút Sửa cuối dòng, nút "+ Tạo tài khoản" ở đầu thẻ,
+   nút Hiện CCCD trên thanh công cụ (sau nút Lọc, như bản mẫu). */
 import { useEffect, useMemo, useState, type KeyboardEvent } from 'react';
 import { useNavigate } from 'react-router';
 import { ROLES, ROLE_IDS, type Account, type RoleId } from '@ulaw/shared';
@@ -17,6 +17,7 @@ import { Highlight } from '../../components/table/Highlight';
 import { Pager } from '../../components/table/Pager';
 import { TableToolbar } from '../../components/table/TableToolbar';
 import { displayText, type SortRules, type TableField } from '../../components/table/tableTools';
+import { CccdToggleButton } from '../../components/table/CccdToggleButton';
 import { useTableTools } from '../../components/table/useTableTools';
 import { AccountDialog } from '../../features/accounts/AccountDialog';
 import { useAuth } from '../../features/auth/useAuth';
@@ -62,7 +63,7 @@ const CCCD_FAILED_TEXT = 'Chưa tải được số CCCD. Kiểm tra kết nối
 
 /**
  * Trang Quản lí tài khoản.
- * @returns  thẻ bảng tài khoản: tiêu đề, nút ↻, Hiện CCCD và "+ Tạo tài khoản" ở đầu thẻ; hộp tạo / sửa tài khoản
+ * @returns  thẻ bảng tài khoản: tiêu đề, nút ↻ và "+ Tạo tài khoản" ở đầu thẻ; thanh công cụ (có Hiện CCCD); hộp tạo / sửa tài khoản
  */
 export function AccountsPage() {
   const { user } = useAuth();
@@ -132,14 +133,9 @@ export function AccountsPage() {
             </h1>
             <RefreshButton query={accountsQuery} label="Quản lí tài khoản" size="small" />
           </div>
-          <div className={styles.headActions}>
-            <Button aria-pressed={showCccd} onClick={() => setShowCccd((isShown) => !isShown)} disabled={showCccd && cccdsQuery.isPending}>
-              {showCccd ? (cccdsQuery.isPending ? 'Đang tải…' : 'Ẩn CCCD') : 'Hiện CCCD'}
-            </Button>
-            <Button variant="primary" onClick={() => setDialog({ account: null })}>
-              + Tạo tài khoản
-            </Button>
-          </div>
+          <Button variant="primary" onClick={() => setDialog({ account: null })}>
+            + Tạo tài khoản
+          </Button>
         </div>
 
         <TableToolbar
@@ -155,6 +151,13 @@ export function AccountsPage() {
           filterRules={filterRules}
           onFilterRulesChange={setFilterRules}
           defaultFilterKey="role"
+          extraButtons={
+            <CccdToggleButton
+              shown={showCccd}
+              loading={showCccd && cccdsQuery.isPending}
+              onToggle={() => setShowCccd((isShown) => !isShown)}
+            />
+          }
         />
 
         <div className={tableStyles.tableWrap}>

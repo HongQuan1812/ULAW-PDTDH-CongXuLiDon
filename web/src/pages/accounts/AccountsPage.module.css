@@ -2,7 +2,6 @@
    như trang Quản lí đơn; chỉ thêm phần riêng. */
 .title{font-size:17px;font-weight:600;min-width:0}
 /* đầu thẻ: Hiện CCCD · + Tạo tài khoản */
-.headActions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 /* SĐT, CCCD: chữ số thẳng cột */
 .numberText{font-variant-numeric:tabular-nums;letter-spacing:.02em}
 /* nhãn "Bạn" cạnh họ tên của chính mình (như .you của bản mẫu) */

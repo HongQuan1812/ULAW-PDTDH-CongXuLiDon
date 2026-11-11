@@ -1,6 +1,6 @@
-/* Thanh công cụ phía trên bảng (như .tools của bản mẫu): ô tìm kiếm, nút Sắp xếp, nút Lọc.
-   Mỗi lúc chỉ mở một bảng nổi. */
-import { useCallback, useState } from 'react';
+/* Thanh công cụ phía trên bảng (như .tools của bản mẫu): ô tìm kiếm, nút Sắp xếp, nút Lọc, và các nút thêm của từng trang
+   (vd Hiện CCCD) nằm ngay sau nút Lọc. Mỗi lúc chỉ mở một bảng nổi. */
+import { useCallback, useState, type ReactNode } from 'react';
 import { FilterPanel } from './FilterPanel';
 import { FilterIcon, SearchIcon, SortIcon } from './icons';
 import { SortPanel } from './SortPanel';
@@ -26,6 +26,8 @@ interface TableToolbarProps<Row> {
   onFilterRulesChange: (filterRules: FilterRule[]) => void;
   /** Cột của điều kiện lọc mới thêm, vd 'status' */
   defaultFilterKey: string;
+  /** Tùy chọn: các nút thêm, nằm ngay sau nút Lọc, vd <CccdToggleButton> */
+  extraButtons?: ReactNode;
 }
 
 type OpenTool = 'sort' | 'filter' | null;
@@ -33,11 +35,11 @@ type OpenTool = 'sort' | 'filter' | null;
 /**
  * Thanh công cụ của bảng.
  * @param props  xem TableToolbarProps
- * @returns      ô tìm kiếm và hai nút Sắp xếp / Lọc
+ * @returns      ô tìm kiếm, hai nút Sắp xếp / Lọc và các nút thêm (nếu có)
  */
 export function TableToolbar<Row>(props: TableToolbarProps<Row>) {
   const { fields, rows, query, onQueryChange, searchPlaceholder, searchLabel } = props;
-  const { sorting, onSortingChange, defaultSortNote, filterRules, onFilterRulesChange, defaultFilterKey } = props;
+  const { sorting, onSortingChange, defaultSortNote, filterRules, onFilterRulesChange, defaultFilterKey, extraButtons } = props;
   const [openTool, setOpenTool] = useState<OpenTool>(null);
 
   // Bấm nút: mở bảng của nút (đóng bảng kia), bấm lại thì đóng.
@@ -91,6 +93,7 @@ export function TableToolbar<Row>(props: TableToolbarProps<Row>) {
             defaultFieldKey={defaultFilterKey}
           />
         </ToolPopover>
+        {extraButtons}
       </div>
     </div>
   );
