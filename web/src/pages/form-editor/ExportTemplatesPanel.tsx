@@ -1,7 +1,7 @@
 /* Khung "Mẫu xuất file" trong trình soạn loại đơn (như tplCardHtml() và các nút data-act="tpl…" của artifact/js/print-templates.js).
    Mẫu thuộc loại đơn (dùng chung mọi phiên bản). Chọn file (bấm hoặc kéo thả, như câu hỏi tải tệp của lá đơn), đổi tên, xóa
    chỉ ghi nhận trong trình duyệt và trình soạn hiện "Chưa lưu"; bấm Lưu mới gửi lên máy chủ (exportTemplateChanges.ts).
-   Mã trong mỗi mẫu tự được kiểm tra (không cần bấm nút) và cột Ví dụ của Bảng mã theo bản soạn đang hiện
+   Mã trong mỗi mẫu tự được kiểm tra (không cần bấm nút), theo bản soạn đang hiện
    (kể cả thay đổi chưa lưu, kể cả mẫu chưa lưu). Muốn xem mẫu điền dữ liệu thật thì Xuất file ở trang chi tiết một lá đơn.
    Mỗi lần mở trình soạn, khung và các mục thu gọn bên trong đều đóng. */
 import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from 'react';
@@ -10,7 +10,6 @@ import {
   EXPORT_MESSAGES,
   formatFileSize,
   questionExportTags,
-  sampleExportData,
   type ExportDraftRequest,
   type ExportTemplateCheck,
 } from '@ulaw/shared';
@@ -18,7 +17,6 @@ import {
   checkExportTemplate,
   checkExportTemplateFile,
   fetchExportTemplateFile,
-  useExportExample,
   useExportTemplates,
 } from '../../api/exports';
 import { Button } from '../../components/Button';
@@ -32,8 +30,8 @@ import { ExportTagGuide } from './ExportTagGuide';
 import { removeRow, renameRow, stageTemplate, templateRows, type ExportTemplateChanges, type TemplateRow } from './exportTemplateChanges';
 import styles from './ExportTemplatesPanel.module.css';
 
-/** Chờ người dùng ngừng gõ bao lâu (ms) rồi mới lấy lại dữ liệu ví dụ theo bản soạn mới. */
-const EXAMPLE_REFRESH_DELAY_MS = 800;
+/** Chờ người dùng ngừng gõ bao lâu (ms) rồi mới kiểm tra lại mã các mẫu theo bản soạn mới. */
+const CHECK_REFRESH_DELAY_MS = 800;
 
 /** Hộp chọn file chỉ hiện file Word .docx. */
 const DOCX_ACCEPT = `.docx,${DOCX_CONTENT_TYPE}`;
@@ -104,23 +102,16 @@ export function ExportTemplatesPanel({ formTypeId, draft, changes, onChangesChan
   const bodyId = useId();
   const questionTags = useMemo(() => questionExportTags(draft.sections), [draft.sections]);
 
-  // Dữ liệu ví dụ: loại đơn đã lưu thì lấy từ máy chủ (đơn mới nhất, theo bản soạn), chờ ngừng gõ rồi mới lấy lại;
-  // loại đơn mới thì dùng dữ liệu mẫu
-  const settledDraft = useSettledValue(draft, EXAMPLE_REFRESH_DELAY_MS);
-  const exampleQuery = useExportExample(formTypeId ?? '', settledDraft, open && formTypeId !== null);
-  const today = new Date().toISOString().slice(0, 10);
-  const exampleData = exampleQuery.data?.data ?? sampleExportData(draft, today);
+  // Bản soạn dùng để kiểm tra mã: chờ ngừng gõ rồi mới lấy bản mới
+  const settledDraft = useSettledValue(draft, CHECK_REFRESH_DELAY_MS);
 
   // Danh sách mẫu ở máy chủ (loại đơn đã lưu); lượt kiểm tra mã, tăng lên thì mọi mẫu kiểm tra lại
   const templatesQuery = useExportTemplates(formTypeId ?? '', formTypeId !== null);
   const [checkRound, setCheckRound] = useState(0);
   const toggle = () => setOpen((isOpen) => !isOpen);
 
-  /** Nút ↻: ngoài tải lại danh sách mẫu, còn kiểm tra lại mã mọi mẫu và lấy lại cột Ví dụ của Bảng mã. */
-  const refreshAll = () => {
-    setCheckRound((round) => round + 1);
-    if (open && formTypeId !== null) void exampleQuery.refetch();
-  };
+  /** Nút ↻: ngoài tải lại danh sách mẫu, còn kiểm tra lại mã mọi mẫu. */
+  const refreshAll = () => setCheckRound((round) => round + 1);
 
   return (
     <section className={styles.card} aria-labelledby={`${bodyId}-title`}>
@@ -161,7 +152,7 @@ export function ExportTemplatesPanel({ formTypeId, draft, changes, onChangesChan
             onChangesChange={onChangesChange}
             saving={saving}
           />
-          <ExportTagGuide questionTags={questionTags} exampleData={exampleData} exampleFormCode={exampleQuery.data?.formCode ?? null} />
+          <ExportTagGuide questionTags={questionTags} />
         </div>
       )}
     </section>

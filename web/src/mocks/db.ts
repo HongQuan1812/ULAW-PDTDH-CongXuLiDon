@@ -1598,17 +1598,6 @@ function toExportSource(form: MockForm): ExportSource {
 }
 
 /**
- * Mã đơn mới nộp nhất của một loại đơn (để lấy ví dụ cho Bảng mã).
- * @param formTypeId  mã loại đơn
- * @returns           mã đơn; loại đơn chưa có đơn nào thì null
- */
-export function latestFormCodeOfType(formTypeId: string): string | null {
-  const forms = FORMS.filter((form) => form.formTypeId === formTypeId);
-  forms.sort((first, second) => second.submittedAt.localeCompare(first.submittedAt));
-  return forms[0]?.code ?? null;
-}
-
-/**
  * Ngày hôm nay theo giờ Việt Nam (mã {ngay_xuat}).
  * @returns  vd '2026-11-11'
  */

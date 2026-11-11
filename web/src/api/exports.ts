@@ -1,17 +1,15 @@
 /* Hook gọi API xuất file theo mẫu Word: mẫu của loại đơn (danh sách, lưu các thay đổi, xem mẫu gốc,
    kiểm tra mã kể cả với file chưa lưu, ví dụ cho Bảng mã) và xuất file một lá đơn. */
-import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   DOCX_CONTENT_TYPE,
   EXPORT_MESSAGES,
   EXPORT_TEMPLATE_FIELDS,
   ENDPOINTS,
-  exportExamplePath,
   exportTemplatePath,
   exportTemplatesPath,
   formExportPath,
   type ExportDraftRequest,
-  type ExportExampleResponse,
   type ExportFormRequest,
   type ExportTemplateCheck,
   type ExportTemplatesResponse,
@@ -126,22 +124,6 @@ export function fetchExportTemplateFile(formTypeId: string, templateId: string):
  */
 export function checkExportTemplate(formTypeId: string, templateId: string, draft: ExportDraftRequest): Promise<ExportTemplateCheck> {
   return apiFetch<ExportTemplateCheck>(exportTemplatePath(formTypeId, templateId, 'check'), { method: 'POST', body: JSON.stringify(draft) });
-}
-
-/**
- * Dữ liệu ví dụ cho cột "Ví dụ" của Bảng mã, theo bản soạn hiện tại. Đổi bản soạn thì tải lại, trong lúc tải vẫn hiện ví dụ cũ.
- * @param formTypeId  mã loại đơn
- * @param draft       tên, mã đơn, các phần đang soạn
- * @param enabled     false thì chưa tải (vd Bảng mã đang đóng, loại đơn mới chưa lưu)
- * @returns           kết quả useQuery; data = giá trị theo mã và mã đơn đã dùng
- */
-export function useExportExample(formTypeId: string, draft: ExportDraftRequest, enabled: boolean) {
-  return useQuery({
-    queryKey: ['exportExample', formTypeId, draft] as const,
-    queryFn: () => apiFetch<ExportExampleResponse>(exportExamplePath(formTypeId), { method: 'POST', body: JSON.stringify(draft) }),
-    enabled,
-    placeholderData: keepPreviousData,
-  });
 }
 
 /**

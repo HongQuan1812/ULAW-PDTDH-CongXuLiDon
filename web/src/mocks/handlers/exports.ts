@@ -11,11 +11,8 @@ import {
   SaveExportTemplatesRequestSchema,
   buildExportData,
   can,
-  sampleExportData,
   textToTag,
-  type ExportData,
   type ExportDraftRequest,
-  type ExportExampleResponse,
   type ExportTemplateCheck,
   type ExportTemplatesResponse,
   type Session,
@@ -27,7 +24,6 @@ import {
   formTypeExists,
   getExportSource,
   getExportTemplates,
-  latestFormCodeOfType,
   readSession,
   renameExportTemplate,
   vietnamToday,
@@ -71,20 +67,6 @@ function docxResponse(bytes: ArrayBuffer, fileName: string): Response {
  */
 function exportFileName(prefix: string, templateName: string): string {
   return `${prefix}_${textToTag(templateName).replace(/_/g, '-')}.docx`;
-}
-
-/**
- * Dữ liệu ví dụ của Bảng mã theo bản soạn: lấy đơn mới nhất của loại đơn (câu trả lời theo id câu hỏi, khớp với câu hỏi đang soạn);
- * chưa có đơn thì dữ liệu giả.
- * @param formTypeId  mã loại đơn
- * @param draft       bản soạn hiện tại
- * @returns           dữ liệu điền và mã đơn đã dùng (null = dữ liệu giả)
- */
-function draftExportData(formTypeId: string, draft: ExportDraftRequest): { exportData: ExportData; formCode: string | null } {
-  const formCode = latestFormCodeOfType(formTypeId);
-  const source = formCode ? getExportSource(formCode)?.source : null;
-  if (!source) return { exportData: sampleExportData(draft, vietnamToday()), formCode: null };
-  return { exportData: buildExportData({ ...source, formTypeName: draft.name, sections: draft.sections }, vietnamToday()), formCode };
 }
 
 /**
@@ -211,18 +193,6 @@ export const exportHandlers = [
     const { upload, errorResponse } = await readDraftFile(request);
     if (!upload) return errorResponse;
     return HttpResponse.json<ExportTemplateCheck>(checkDocxTemplate(upload.bytes, upload.draft.sections));
-  }),
-
-  // Dữ liệu ví dụ cho Bảng mã
-  http.post(api(ENDPOINTS.exports.example), async ({ params, request }) => {
-    await delay(MOCK_DELAY_MS);
-    const formTypeId = String(params.formTypeId);
-    const { session, errorResponse } = templateManager(formTypeId);
-    if (!session) return errorResponse;
-    const draft = await readBody(request, ExportDraftRequestSchema);
-    if (!draft) return apiError(422, EXPORT_MESSAGES.invalidRequest);
-    const { exportData, formCode } = draftExportData(formTypeId, draft);
-    return HttpResponse.json<ExportExampleResponse>({ data: exportData, formCode });
   }),
 
   // Xuất file một lá đơn: xem được đơn thì xuất được

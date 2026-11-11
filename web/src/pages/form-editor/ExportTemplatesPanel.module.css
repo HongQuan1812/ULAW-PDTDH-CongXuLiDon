@@ -78,14 +78,11 @@
 .tagTableScroll{overflow-x:auto}
 /* như .tag-tbl của bản mẫu; độ rộng cột cố định để mọi nhóm mã thẳng cột với nhau */
 .tagTable{width:100%;min-width:600px;table-layout:fixed;border-collapse:collapse;font-size:13px}
-.tagColumn{width:32%}
-.meaningColumn{width:40%}
+.tagColumn{width:50%}
 .tagTable th{text-align:left;font-size:12px;font-weight:500;color:var(--faint);padding:12px 18px;border-bottom:1px solid var(--line)}
 .tagTable td{padding:15px 18px;border-bottom:1px solid var(--line);vertical-align:middle;overflow-wrap:anywhere}
 .questionGroup td{background:var(--surface-2);font-weight:600}
 .kind{font-weight:400;color:var(--muted)}
-.example{color:var(--muted);overflow-wrap:anywhere}
-.exampleEmpty{color:var(--faint);font-style:italic}
 .codeChip{border:0;background:var(--accent-soft);color:var(--accent);border-radius:6px;padding:2px 8px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;cursor:pointer;max-width:100%;text-align:left;overflow-wrap:anywhere}
 .codeChip:hover{background:color-mix(in srgb,var(--accent) 18%,var(--surface))}
 .loopBox{display:grid;gap:10px;background:var(--surface)}

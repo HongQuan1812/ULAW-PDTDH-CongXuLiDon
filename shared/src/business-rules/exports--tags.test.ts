@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest';
 import { FormSectionSchema } from '../aux-schema/form-types--sections';
-import { buildExportData, columnTagOwners, knownExportTags, sampleExportData, textToTag, type ExportSource } from './exports--tags';
+import { buildExportData, columnTagOwners, knownExportTags, textToTag, type ExportSource } from './exports--tags';
 
 /** Loại đơn thử: một câu ngày, một câu chọn nhiều, một câu tải tệp, một bảng có cột tính tổng. */
 const sections = [
@@ -108,14 +108,5 @@ describe('buildExportData', () => {
 
   test('không có MSSV thì các mã sinh viên để trống', () => {
     expect(buildExportData({ ...source, mainStudent: null }, '2026-11-11')).toMatchObject({ mssv: '', nganh: '' });
-  });
-});
-
-describe('sampleExportData', () => {
-  test('câu hỏi điền "(nội dung câu hỏi)", bảng có 2 dòng', () => {
-    const exportData = sampleExportData({ name: 'Xét miễn môn', prefix: 'XMM', sections }, '2026-11-11');
-    expect(exportData.hoc_ky).toBe('(Học kỳ)');
-    expect(exportData.so_mon).toBe(2);
-    expect(exportData.mon).toHaveLength(2);
   });
 });

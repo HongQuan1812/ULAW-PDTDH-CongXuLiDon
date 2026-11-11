@@ -1,9 +1,9 @@
 /* Hai mục dưới danh sách mẫu trong khung "Mẫu xuất file" (như tplCardHtml() của artifact/js/print-templates.js):
    - "Cách tạo một mẫu": 3 bước và ví dụ trước / sau;
-   - "Bảng mã": mã câu trả lời của từng câu hỏi và mã chung, mỗi mã một dòng (Gõ vào file Word · Sẽ được điền bằng · Ví dụ).
+   - "Bảng mã": mã câu trả lời của từng câu hỏi và mã chung, mỗi mã một dòng (Gõ vào file Word · Sẽ được điền bằng).
    Bấm vào mã để sao chép; câu hỏi dạng bảng có bảng mẫu một dòng (vòng lặp) và nút sao chép để dán vào Word thành bảng thật. */
 import { Fragment } from 'react';
-import { COMMON_EXPORT_TAG_GROUPS, ROW_NUMBER_TAG, type ExportData, type ExportValue, type QuestionExportTag } from '@ulaw/shared';
+import { COMMON_EXPORT_TAG_GROUPS, ROW_NUMBER_TAG, type QuestionExportTag } from '@ulaw/shared';
 import { Button } from '../../components/Button';
 import { useToast } from '../../components/Toast';
 import styles from './ExportTemplatesPanel.module.css';
@@ -75,32 +75,18 @@ function CodeChip({ tag }: { tag: string }) {
 }
 
 /**
- * Ô ví dụ: giá trị điền của mã; trống thì ghi "(trống)".
- * @param value  giá trị ví dụ
- * @returns      chữ trong ô
- */
-function ExampleValue({ value }: { value: ExportValue | undefined }) {
-  if (value === undefined || value === '' || Array.isArray(value)) return <span className={styles.exampleEmpty}>(trống)</span>;
-  return <>{String(value)}</>;
-}
-
-/**
  * Một dòng của Bảng mã.
  * @param tag      mã
  * @param meaning  sẽ được điền bằng gì
- * @param example  giá trị ví dụ
  * @returns        dòng bảng
  */
-function TagRow({ tag, meaning, example }: { tag: string; meaning: string; example: ExportValue | undefined }) {
+function TagRow({ tag, meaning }: { tag: string; meaning: string }) {
   return (
     <tr>
       <td>
         <CodeChip tag={tag} />
       </td>
       <td>{meaning}</td>
-      <td className={styles.example}>
-        <ExampleValue value={example} />
-      </td>
     </tr>
   );
 }
@@ -114,14 +100,12 @@ function TagTableHead() {
     <>
       <colgroup>
         <col className={styles.tagColumn} />
-        <col className={styles.meaningColumn} />
         <col />
       </colgroup>
       <thead>
         <tr>
           <th>Gõ vào file Word</th>
           <th>Sẽ được điền bằng</th>
-          <th>Ví dụ</th>
         </tr>
       </thead>
     </>
@@ -131,10 +115,9 @@ function TagTableHead() {
 /**
  * Các dòng của một câu hỏi trong Bảng mã: câu thường một dòng; câu dạng bảng có bảng mẫu, mã stt, mã cột, số dòng, tổng cột.
  * @param question     mã của câu hỏi
- * @param exampleData  dữ liệu ví dụ
- * @returns            các dòng bảng
+ * @returns  các dòng bảng
  */
-function QuestionTagRows({ question, exampleData }: { question: QuestionExportTag; exampleData: ExportData }) {
+function QuestionTagRows({ question }: { question: QuestionExportTag }) {
   const toast = useToast();
 
   // Câu thường: một dòng mã câu trả lời
@@ -143,9 +126,9 @@ function QuestionTagRows({ question, exampleData }: { question: QuestionExportTa
     return (
       <>
         <tr className={styles.questionGroup}>
-          <td colSpan={3}>{question.label}</td>
+          <td colSpan={2}>{question.label}</td>
         </tr>
-        <TagRow tag={question.tag} meaning={`Câu trả lời${kind ? ` (${kind})` : ''}`} example={exampleData[question.tag]} />
+        <TagRow tag={question.tag} meaning={`Câu trả lời${kind ? ` (${kind})` : ''}`} />
       </>
     );
   }
@@ -153,17 +136,16 @@ function QuestionTagRows({ question, exampleData }: { question: QuestionExportTa
   // Câu dạng bảng: bảng mẫu một dòng có vòng lặp, rồi mã trong và ngoài vòng lặp
   const columns = question.columns;
   const rowName = question.rowName || 'dòng';
-  const firstRow = (Array.isArray(exampleData[question.tag]) ? (exampleData[question.tag] as Array<Record<string, string | number>>)[0] : undefined) ?? {};
   return (
     <>
       <tr className={styles.questionGroup}>
-        <td colSpan={3}>
+        <td colSpan={2}>
           {question.label} <span className={styles.kind}>— câu hỏi dạng bảng</span>
         </td>
       </tr>
       <tr>
-        {/* ô trải hết 3 cột; nội dung bọc trong div, vì đặt display:grid lên td thì nó không còn là ô bảng */}
-        <td colSpan={3}>
+        {/* ô trải hết 2 cột; nội dung bọc trong div, vì đặt display:grid lên td thì nó không còn là ô bảng */}
+        <td colSpan={2}>
           <div className={styles.loopBox}>
             <p>
               Trong Word, tạo bảng có <b>một dòng mẫu</b> như dưới đây. Khi xuất file, dòng này tự nhân lên theo số {rowName} trong đơn.{' '}
@@ -199,20 +181,15 @@ function QuestionTagRows({ question, exampleData }: { question: QuestionExportTa
           </div>
         </td>
       </tr>
-      <TagRow tag={ROW_NUMBER_TAG} meaning="Số thứ tự (đặt trong vòng lặp)" example={firstRow[ROW_NUMBER_TAG]} />
+      <TagRow tag={ROW_NUMBER_TAG} meaning="Số thứ tự (đặt trong vòng lặp)" />
       {columns.map((column) => (
-        <TagRow key={column.tag} tag={column.tag} meaning={`Cột “${column.label}” (đặt trong vòng lặp)`} example={firstRow[column.tag]} />
+        <TagRow key={column.tag} tag={column.tag} meaning={`Cột “${column.label}” (đặt trong vòng lặp)`} />
       ))}
-      <TagRow tag={`so_${question.tag}`} meaning={`Số ${rowName} trong bảng (đặt ngoài vòng lặp)`} example={exampleData[`so_${question.tag}`]} />
+      <TagRow tag={`so_${question.tag}`} meaning={`Số ${rowName} trong bảng (đặt ngoài vòng lặp)`} />
       {columns
         .filter((column) => column.sum)
         .map((column) => (
-          <TagRow
-            key={`tong_${column.tag}`}
-            tag={`tong_${column.tag}`}
-            meaning={`Tổng cột “${column.label}” (đặt ngoài vòng lặp)`}
-            example={exampleData[`tong_${column.tag}`]}
-          />
+          <TagRow key={`tong_${column.tag}`} tag={`tong_${column.tag}`} meaning={`Tổng cột “${column.label}” (đặt ngoài vòng lặp)`} />
         ))}
     </>
   );
@@ -221,34 +198,22 @@ function QuestionTagRows({ question, exampleData }: { question: QuestionExportTa
 interface ExportTagGuideProps {
   /** Mã của các câu hỏi đang soạn */
   questionTags: QuestionExportTag[];
-  /** Dữ liệu cho cột Ví dụ */
-  exampleData: ExportData;
-  /** Ví dụ lấy từ đơn nào; null = dữ liệu mẫu */
-  exampleFormCode: string | null;
 }
 
-/**
- * Các dòng ví dụ của "Cách tạo một mẫu": mỗi dòng một kiểu định dạng của mã (thường, in đậm, in nghiêng, cỡ chữ lớn).
- * @param exampleData  dữ liệu ví dụ (đơn mới nhất hoặc dữ liệu mẫu)
- * @returns            format: tên định dạng · lead: chữ đứng trước mã (để thường) · tag: mã · value: chữ điền vào
- *                     · className: định dạng của mã, và cũng là của chữ điền vào
- */
-function formatExamples(exampleData: ExportData) {
-  const valueOf = (tag: string, fallback: string) => String(exampleData[tag] || fallback);
-  return [
-    { format: 'Chữ thường', lead: 'Họ và tên: ', tag: 'ho_ten', value: valueOf('ho_ten', 'Nguyễn Văn A'), className: '' },
-    { format: 'In đậm', lead: 'MSSV: ', tag: 'mssv', value: valueOf('mssv', '2253801010001'), className: styles.demoBold },
-    { format: 'In nghiêng', lead: 'Lớp: ', tag: 'lop', value: valueOf('lop', '47-LTM-A'), className: styles.demoItalic },
-    { format: 'Cỡ chữ lớn', lead: '', tag: 'loai_don', value: valueOf('loai_don', 'Xét miễn môn'), className: styles.demoLarge },
-  ];
-}
+/** Ví dụ của "Cách tạo một mẫu": mỗi dòng một kiểu định dạng của mã (thường, in đậm, in nghiêng, cỡ chữ lớn). Chỉ để minh họa. */
+const FORMAT_EXAMPLES = [
+  { format: 'Chữ thường', lead: 'Họ và tên: ', tag: 'ho_ten', value: 'Nguyễn Văn A', className: '' },
+  { format: 'In đậm', lead: 'MSSV: ', tag: 'mssv', value: '2253801010001', className: styles.demoBold },
+  { format: 'In nghiêng', lead: 'Lớp: ', tag: 'lop', value: '47-LTM-A', className: styles.demoItalic },
+  { format: 'Cỡ chữ lớn', lead: '', tag: 'loai_don', value: 'Xét miễn môn', className: styles.demoLarge },
+];
 
 /**
  * Mục "Cách tạo một mẫu" và "Bảng mã" (các mục thu gọn được, mặc định đóng).
  * @param props  xem ExportTagGuideProps
  * @returns      hai mục
  */
-export function ExportTagGuide({ questionTags, exampleData, exampleFormCode }: ExportTagGuideProps) {
+export function ExportTagGuide({ questionTags }: ExportTagGuideProps) {
   return (
     <>
       <details className={styles.guide}>
@@ -273,7 +238,7 @@ export function ExportTagGuide({ questionTags, exampleData, exampleFormCode }: E
             <span className={styles.demoLabel}>Trong file mẫu</span>
             <span aria-hidden="true" />
             <span className={styles.demoLabel}>Trong file xuất ra</span>
-            {formatExamples(exampleData).map((example) => (
+            {FORMAT_EXAMPLES.map((example) => (
               <Fragment key={example.tag}>
                 <span className={styles.demoFormat}>{example.format}</span>
                 <p>
@@ -299,9 +264,7 @@ export function ExportTagGuide({ questionTags, exampleData, exampleFormCode }: E
         <div className={styles.blockHead}>
           <h3>Bảng mã</h3>
         </div>
-        <p className={styles.hint}>
-          Bấm vào mã để sao chép, rồi dán vào file Word. Cột “Ví dụ” lấy {exampleFormCode ? `từ đơn ${exampleFormCode}` : 'từ dữ liệu mẫu'}.
-        </p>
+        <p className={styles.hint}>Bấm vào mã để sao chép, rồi dán vào file Word.</p>
         <div className={styles.tagGroups}>
           <details className={styles.tagGroup}>
             <summary>Câu trả lời trong đơn</summary>
@@ -312,7 +275,7 @@ export function ExportTagGuide({ questionTags, exampleData, exampleFormCode }: E
                   <tbody>
                     {/* khóa theo vị trí: lúc đang soạn hai câu có thể trùng mã (báo lỗi khi Lưu) */}
                     {questionTags.map((question, index) => (
-                      <QuestionTagRows key={index} question={question} exampleData={exampleData} />
+                      <QuestionTagRows key={index} question={question} />
                     ))}
                   </tbody>
                 </table>
@@ -329,7 +292,7 @@ export function ExportTagGuide({ questionTags, exampleData, exampleFormCode }: E
                   <TagTableHead />
                   <tbody>
                     {group.tags.map(({ tag, label }) => (
-                      <TagRow key={tag} tag={tag} meaning={label} example={exampleData[tag]} />
+                      <TagRow key={tag} tag={tag} meaning={label} />
                     ))}
                   </tbody>
                 </table>

@@ -29,9 +29,6 @@ export const EXPORT_ENDPOINTS = {
       EXPORT_TEMPLATE_FIELDS.draft) → ExportTemplateCheck: như templateCheck nhưng với file mẫu chưa lưu (gửi kèm, không lưu lại).
       Cần quyền manageFormTypes */
   fileCheck: '/export-templates/check',
-  /** POST ExportDraftRequest → ExportExampleResponse: dữ liệu ví dụ cho cột "Ví dụ" của Bảng mã, lấy từ đơn mới nhất
-      của loại đơn theo bản soạn hiện tại; chưa có đơn thì dữ liệu giả. Cần quyền manageFormTypes */
-  example: '/form-types/:formTypeId/export-example',
   /** POST ExportFormRequest → file .docx: điền dữ liệu của lá đơn vào một mẫu của loại đơn đó (nút Xuất file).
       Xem được đơn thì xuất được (người nộp đơn, hoặc cán bộ có quyền viewAll); không có đơn / không được xem thì 404 */
   formExport: '/forms/:code/export',
@@ -55,15 +52,6 @@ export function exportTemplatesPath(formTypeId: string): string {
  */
 export function exportTemplatePath(formTypeId: string, templateId: string, action: 'file' | 'check'): string {
   return `${exportTemplatesPath(formTypeId)}/${encodeURIComponent(templateId)}/${action}`;
-}
-
-/**
- * Đường dẫn API dữ liệu ví dụ của Bảng mã.
- * @param formTypeId  mã loại đơn
- * @returns           vd '/form-types/xmm/export-example'
- */
-export function exportExamplePath(formTypeId: string): string {
-  return EXPORT_ENDPOINTS.example.replace(':formTypeId', encodeURIComponent(formTypeId));
 }
 
 /**
@@ -139,17 +127,6 @@ export const ExportTemplateCheckSchema = z.object({
   error: z.string(),
 });
 export type ExportTemplateCheck = z.infer<typeof ExportTemplateCheckSchema>;
-
-/** Giá trị điền vào mẫu (như ExportData của business-rules/exports--tags.ts). */
-const ExportValueSchema = z.union([z.string(), z.number(), z.array(z.record(z.string(), z.union([z.string(), z.number()])))]);
-
-/** Trả về từ POST /form-types/:formTypeId/export-example. */
-export const ExportExampleResponseSchema = z.object({
-  data: z.record(z.string(), ExportValueSchema),
-  /** Mã đơn đã dùng; null = dữ liệu giả (loại đơn chưa có đơn nào) */
-  formCode: z.string().nullable(),
-});
-export type ExportExampleResponse = z.infer<typeof ExportExampleResponseSchema>;
 
 /** Body của POST /forms/:code/export. */
 export const ExportFormRequestSchema = z.object({ templateId: z.string().min(1) });
