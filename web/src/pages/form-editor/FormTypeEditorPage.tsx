@@ -1,6 +1,6 @@
 /* Trình soạn loại đơn (#/soan-don/<mã loại đơn>, tạo mới: #/soan-don/moi), như phần "Trình soạn" của artifact/js/forms-page.js.
-   Gồm: nút quay lại, tiêu đề, nhãn "Chưa lưu", thẻ Thông tin loại đơn, các phần và câu hỏi, nút "+ Thêm phần".
-   Phần này mới soạn trên trang; Xem trước và Lưu (kiểm tra, gửi lên máy chủ, Bỏ thay đổi, Xóa loại đơn) làm ở các phần sau. */
+   Gồm: nút quay lại, tiêu đề, tab Soạn / Xem trước, nhãn "Chưa lưu", thẻ Thông tin loại đơn, các phần và câu hỏi, nút "+ Thêm phần".
+   Lưu (kiểm tra, gửi lên máy chủ, Bỏ thay đổi, Xóa loại đơn) làm ở phần sau. */
 import { useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router';
 import type { FormSection } from '@ulaw/shared';
@@ -10,12 +10,20 @@ import { Button } from '../../components/Button';
 import { LoadError, loadErrorMessage } from '../../components/LoadError';
 import { RefreshButton } from '../../components/RefreshButton';
 import { FormTypeInfoCard } from './FormTypeInfoCard';
+import { FormTypePreview } from './FormTypePreview';
 import { draftFromFormType, moveItem, newFormTypeDraft, newSection, removeAt, replaceAt, type FormTypeDraft } from './formTypeDraft';
 import { SectionEditor, type SectionAction } from './SectionEditor';
 import styles from './FormTypeEditor.module.css';
 
 /** Câu báo khi không tải được loại đơn mà máy chủ không gửi kèm câu báo lỗi (vd mất mạng). */
 const LOAD_FAILED_TEXT = 'Không tải được loại đơn.';
+
+/** Hai chế độ của trình soạn: soạn, xem trước. */
+type EditorMode = 'edit' | 'preview';
+const EDITOR_MODES: readonly (readonly [EditorMode, string])[] = [
+  ['edit', 'Soạn'],
+  ['preview', 'Xem trước'],
+];
 
 /**
  * Trang trình soạn: tạo mới thì soạn ngay từ bản trống; sửa thì tải loại đơn rồi soạn.
@@ -76,6 +84,7 @@ function SavedFormTypeEditor({ formTypeId }: { formTypeId: string }) {
 function FormTypeEditor({ initialDraft, isNew }: { initialDraft: FormTypeDraft; isNew: boolean }) {
   const [draft, setDraft] = useState(initialDraft);
   const [dirty, setDirty] = useState(false);
+  const [editorMode, setEditorMode] = useState<EditorMode>('edit');
   // Phần / câu hỏi vừa thêm: đưa con trỏ vào ô đầu tiên của nó
   const [focusTarget, setFocusTarget] = useState<{ sectionId: string | null; questionId: string | null }>({ sectionId: null, questionId: null });
 
@@ -101,6 +110,17 @@ function FormTypeEditor({ initialDraft, isNew }: { initialDraft: FormTypeDraft; 
     else setSections((sections) => removeAt(sections, index));
   };
 
+  /**
+   * Chuyển giữa Soạn và Xem trước, về đầu trang.
+   * Bỏ đích đưa con trỏ, để quay lại tab Soạn không nhảy về ô vừa thêm lần trước.
+   * @param mode  chế độ muốn mở
+   */
+  const changeEditorMode = (mode: EditorMode) => {
+    setEditorMode(mode);
+    setFocusTarget({ sectionId: null, questionId: null });
+    window.scrollTo({ top: 0 });
+  };
+
   /** Thêm phần mới ở cuối (có sẵn một câu hỏi trống), đưa con trỏ vào ô tiêu đề phần. */
   const addSection = () => {
     const section = newSection();
@@ -112,10 +132,36 @@ function FormTypeEditor({ initialDraft, isNew }: { initialDraft: FormTypeDraft; 
     <>
       <div className={styles.head}>
         <h1 className={styles.title}>{isNew ? 'Tạo loại đơn' : `Soạn loại đơn ${initialDraft.name}`}</h1>
-        <div className={styles.headActions}>{dirty && <span className={styles.dirty}>Chưa lưu</span>}</div>
+        <div className={styles.headActions}>
+          <div className={styles.tabs} role="tablist" aria-label="Chế độ">
+            {EDITOR_MODES.map(([mode, label]) => (
+              <button
+                key={mode}
+                type="button"
+                role="tab"
+                id={`editor-tab-${mode}`}
+                aria-selected={editorMode === mode}
+                aria-controls={`editor-panel-${mode}`}
+                className={styles.tab}
+                onClick={() => changeEditorMode(mode)}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          {dirty && <span className={styles.dirty}>Chưa lưu</span>}
+        </div>
       </div>
 
-      <div className={styles.editor}>
+      {/* Xem trước: dựng lại mỗi lần mở tab, nên luôn theo bản đang soạn và câu trả lời thử bắt đầu từ trống */}
+      {editorMode === 'preview' && (
+        <div id="editor-panel-preview" role="tabpanel" aria-labelledby="editor-tab-preview">
+          <FormTypePreview draft={draft} />
+        </div>
+      )}
+
+      {/* Soạn: chỉ ẩn khi xem trước, không bỏ khỏi trang */}
+      <div id="editor-panel-edit" role="tabpanel" aria-labelledby="editor-tab-edit" className={styles.editor} hidden={editorMode !== 'edit'}>
         <FormTypeInfoCard draft={draft} onChange={(changes) => editDraft((current) => ({ ...current, ...changes }))} />
         {draft.sections.map((section, index) => (
           <SectionEditor
