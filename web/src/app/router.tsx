@@ -1,3 +1,4 @@
+import { RichTextDemoPage } from '../pages/dev/RichTextDemoPage';
 import { createHashRouter } from 'react-router';
 import { AccountsPage } from '../pages/accounts/AccountsPage';
 import { FormDetailPage } from '../pages/form/FormDetailPage';
@@ -54,6 +55,8 @@ export const router = createHashRouter([
         path: PAGE_PATH.accounts,
         element: <PageGuard page="accounts" permission="manageAccounts"><AccountsPage /></PageGuard>,
       },
+      // Trang thử tạm của trình soạn văn bản (xóa khi đã gắn vào câu hỏi / mô tả phần)
+      { path: '/thu-soan-van-ban', element: <RichTextDemoPage /> },
       { path: '*', element: <HomeRedirect /> },
     ],
   },
