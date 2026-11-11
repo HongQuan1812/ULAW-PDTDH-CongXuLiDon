@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { QuestionSchema, type Question } from '@ulaw/shared';
+import { EMPTY_RICH_TEXT_DOC, QuestionSchema, type Question } from '@ulaw/shared';
 import { changeQuestionType, cleanPrefix, duplicateQuestion, moveItem, newFormTypeDraft, newQuestion } from './formTypeDraft';
 
 describe('bản soạn loại đơn', () => {
@@ -12,12 +12,24 @@ describe('bản soạn loại đơn', () => {
 
   it('đổi loại câu hỏi: giữ id, nội dung; thêm cài đặt mặc định hợp lệ theo schema', () => {
     const question = { ...newQuestion(), label: 'Lí do', required: true };
-    (['radio', 'check', 'select', 'file', 'table', 'info', 'para'] as const).forEach((type) => {
+    (['radio', 'check', 'select', 'file', 'table', 'para'] as const).forEach((type) => {
       const changed = changeQuestionType(question, type);
       expect(changed).toMatchObject({ id: question.id, label: 'Lí do', type });
       expect(QuestionSchema.safeParse(changed).success).toBe(true);
     });
-    expect('required' in changeQuestionType(question, 'info')).toBe(false);
+  });
+
+  it('khối thông báo chỉ có id, loại và nội dung trống (không còn tiêu đề, không có "Bắt buộc")', () => {
+    const question = { ...newQuestion(), label: 'Lí do', required: true };
+    const info = changeQuestionType(question, 'info');
+    expect(info).toEqual({ id: question.id, type: 'info', content: EMPTY_RICH_TEXT_DOC });
+    expect(QuestionSchema.safeParse(info).success).toBe(true);
+  });
+
+  it('đổi khối thông báo sang loại khác thì câu hỏi trống tên; đổi lại khối thông báo thì giữ nguyên nội dung', () => {
+    const info = { id: 'i1', type: 'info', content: { type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Lưu ý' }] }] } } as Question;
+    expect(changeQuestionType(info, 'text')).toMatchObject({ id: 'i1', type: 'text', label: '' });
+    expect(changeQuestionType(info, 'info')).toBe(info);
   });
 
   it('đổi giữa các loại có lựa chọn thì giữ các lựa chọn', () => {

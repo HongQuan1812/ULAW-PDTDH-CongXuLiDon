@@ -21,7 +21,32 @@
 .content h1{font-size:1.5em;line-height:1.3;font-weight:700}
 .content h2{font-size:1.25em;line-height:1.35;font-weight:700}
 .content h3{font-size:1.1em;line-height:1.4;font-weight:600}
-.content :is(ul,ol){padding-left:1.4em}
+/* Danh sách: ký hiệu (• hoặc 1.) vẽ bằng CSS, căn trái cùng một cột để gạch đầu dòng và số thẳng hàng với nhau; chữ cách ký hiệu 1.7em */
+.content :is(ul,ol){padding-left:0;list-style:none}
+.content ol{counter-reset:item}
+.content li{display:grid;grid-template-columns:1.7em minmax(0,1fr)}
+.content li>*{grid-column:2}
+.content li::before{grid-column:1;grid-row:1;color:var(--muted)}
+/* kiểu ký hiệu đổi theo cấp thụt vào (Tab): • ◦ ▪ rồi lặp lại; 1. a. i. rồi lặp lại */
+.content ol>li{counter-increment:item}
+.content ul>li::before{content:"•"}
+.content ol>li::before{content:counter(item,decimal) "."}
+.content :is(ul,ol) ul>li::before{content:"◦"}
+.content :is(ul,ol) ol>li::before{content:counter(item,lower-alpha) "."}
+.content :is(ul,ol) :is(ul,ol) ul>li::before{content:"▪"}
+.content :is(ul,ol) :is(ul,ol) ol>li::before{content:counter(item,lower-roman) "."}
+.content :is(ul,ol) :is(ul,ol) :is(ul,ol) ul>li::before{content:"•"}
+.content :is(ul,ol) :is(ul,ol) :is(ul,ol) ol>li::before{content:counter(item,decimal) "."}
+.content :is(ul,ol) :is(ul,ol) :is(ul,ol) :is(ul,ol) ul>li::before{content:"◦"}
+.content :is(ul,ol) :is(ul,ol) :is(ul,ol) :is(ul,ol) ol>li::before{content:counter(item,lower-alpha) "."}
+.content :is(ul,ol) :is(ul,ol) :is(ul,ol) :is(ul,ol) :is(ul,ol) ul>li::before{content:"▪"}
+.content :is(ul,ol) :is(ul,ol) :is(ul,ol) :is(ul,ol) :is(ul,ol) ol>li::before{content:counter(item,lower-roman) "."}
+.content :is(ul,ol) :is(ul,ol) :is(ul,ol) :is(ul,ol) :is(ul,ol) :is(ul,ol) ul>li::before{content:"•"}
+.content :is(ul,ol) :is(ul,ol) :is(ul,ol) :is(ul,ol) :is(ul,ol) :is(ul,ol) ol>li::before{content:counter(item,decimal) "."}
+.content :is(ul,ol) :is(ul,ol) :is(ul,ol) :is(ul,ol) :is(ul,ol) :is(ul,ol) :is(ul,ol) ul>li::before{content:"◦"}
+.content :is(ul,ol) :is(ul,ol) :is(ul,ol) :is(ul,ol) :is(ul,ol) :is(ul,ol) :is(ul,ol) ol>li::before{content:counter(item,lower-alpha) "."}
+.content :is(ul,ol) :is(ul,ol) :is(ul,ol) :is(ul,ol) :is(ul,ol) :is(ul,ol) :is(ul,ol) :is(ul,ol) ul>li::before{content:"▪"}
+.content :is(ul,ol) :is(ul,ol) :is(ul,ol) :is(ul,ol) :is(ul,ol) :is(ul,ol) :is(ul,ol) :is(ul,ol) ol>li::before{content:counter(item,lower-roman) "."}
 .content li>p{margin:0}
 /* chữ mờ khi ô trống (tiện ích Placeholder gắn data-placeholder vào đoạn đầu) */
 .content :global(p.is-editor-empty:first-child::before){content:attr(data-placeholder);float:left;height:0;pointer-events:none;color:var(--faint)}

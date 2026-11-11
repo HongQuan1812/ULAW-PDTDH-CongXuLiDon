@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'vitest';
 import { FormSectionSchema } from '../aux-schema/form-types--sections';
+import { EMPTY_RICH_TEXT_DOC } from '../aux-schema/rich-text';
 import { buildExportData, columnTagOwners, knownExportTags, textToTag, type ExportSource } from './exports--tags';
 
 /** Loại đơn thử: một câu ngày, một câu chọn nhiều, một câu tải tệp, một bảng có cột tính tổng. */
@@ -8,7 +9,7 @@ const sections = [
     id: 's1',
     title: 'A',
     questions: [
-      { id: 'i1', type: 'info', label: 'Lưu ý' },
+      { id: 'i1', type: 'info', content: EMPTY_RICH_TEXT_DOC },
       { id: 'q1', type: 'date', label: 'Ngày bắt đầu' },
       { id: 'q2', type: 'check', label: 'Học kỳ', options: ['HK1', 'HK2'] },
       { id: 'q3', type: 'file', label: 'Tệp bảng điểm', accept: ['pdf'], maxMB: 10 },

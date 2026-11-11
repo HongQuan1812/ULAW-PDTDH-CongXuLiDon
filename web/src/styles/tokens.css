@@ -21,6 +21,8 @@
   --s-bsg-bg:#F2EFF7; --s-bsg-fg:#665092;
   --s-duyet-bg:#E6F2EE; --s-duyet-fg:#16705B;
   --s-tc-bg:#FBEEEB; --s-tc-fg:#A93C2C;
+  /* màu nền khối thông báo (lấy theo màu trạng thái nên tự đổi theo chế độ sáng / tối) */
+  --note-gray:var(--surface-2); --note-blue:var(--s-xet-bg); --note-green:var(--s-duyet-bg); --note-yellow:var(--s-bs-bg); --note-red:var(--s-tc-bg);
   --shadow-sm:0 1px 2px rgba(16,24,40,.05);
   --shadow:0 1px 2px rgba(16,24,40,.04),0 8px 24px -12px rgba(16,24,40,.14);
   --shadow-lg:0 24px 60px -20px rgba(16,24,40,.28);

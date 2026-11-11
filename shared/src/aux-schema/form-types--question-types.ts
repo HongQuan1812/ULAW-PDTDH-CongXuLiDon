@@ -3,6 +3,7 @@
    Thêm loại câu hỏi mới: thêm vào QUESTION_TYPES, QUESTION_TYPE_LABEL, một schema bên dưới và QuestionSchema,
    rồi thêm cách kiểm tra câu trả lời trong validators/forms--answers.ts và giao diện trong web/src/features/form-renderer/. */
 import { z } from 'zod';
+import { RichTextDocSchema } from './rich-text';
 
 export const QUESTION_TYPES = ['text', 'para', 'number', 'date', 'radio', 'check', 'select', 'file', 'table', 'info'] as const;
 export type QuestionType = (typeof QUESTION_TYPES)[number];
@@ -90,14 +91,27 @@ const TableQuestionSchema = z.object({
   rowName: z.string().min(1),
 });
 
-/** Khối thông báo: tiêu đề (không bắt buộc) và nội dung, không cần trả lời. */
+/** Màu nền của khối thông báo (bộ màu có sẵn, đã chỉnh cho cả nền sáng và nền tối). Không chọn = 'gray'. */
+export const INFO_BLOCK_COLORS = ['gray', 'blue', 'green', 'yellow', 'red'] as const;
+export type InfoBlockColor = (typeof INFO_BLOCK_COLORS)[number];
+
+/** Tên màu hiện trong trình soạn loại đơn. */
+export const INFO_BLOCK_COLOR_LABEL: Record<InfoBlockColor, string> = {
+  gray: 'Xám',
+  blue: 'Xanh dương',
+  green: 'Xanh lá',
+  yellow: 'Vàng',
+  red: 'Đỏ',
+};
+
+/** Khối thông báo: chỉ có nội dung (văn bản có định dạng, tiêu đề nếu cần thì gõ "# " ngay trong nội dung), không cần trả lời. */
 const InfoBlockSchema = z.object({
   id: z.string().min(1),
   type: z.literal('info'),
-  /** Tiêu đề khối, có thể bỏ trống */
-  label: z.string(),
   /** Nội dung thông báo */
-  help: z.string().optional(),
+  content: RichTextDocSchema,
+  /** Màu nền; bỏ trống = xám */
+  color: z.enum(INFO_BLOCK_COLORS).optional(),
 });
 
 /** Một câu hỏi của loại đơn; trường `type` quyết định có thêm thuộc tính nào. */

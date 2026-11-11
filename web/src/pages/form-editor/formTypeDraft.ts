@@ -1,6 +1,6 @@
 /* Bản đang soạn của một loại đơn và các phép sửa trên đó (như formDrafts, newQuestion, newSection, withTypeDefaults
    và các nút trong artifact/js/forms-page.js). Mọi hàm đều thuần: nhận bản cũ, trả bản mới, không sửa bản cũ. */
-import type { FormSection, FormTypeStatus, FormTypeVersion, Question, QuestionType } from '@ulaw/shared';
+import { EMPTY_RICH_TEXT_DOC, type FormSection, FormTypeStatus, FormTypeVersion, Question, QuestionType } from '@ulaw/shared';
 
 /** Phần thông tin chung và nội dung của loại đơn mà trình soạn sửa được. */
 export interface FormTypeDraft {
@@ -84,11 +84,10 @@ export function draftFromVersion(prefix: string, version: FormTypeVersion): Form
  * @returns         câu hỏi mới; khối thông báo thì không còn "Bắt buộc"
  */
 export function changeQuestionType(question: Question, type: QuestionType): Question {
-  const base = { id: question.id, label: question.label, help: question.help ?? '' };
+  // Khối thông báo: chỉ có nội dung, không cần trả lời (đổi sang loại khác thì không mang nội dung theo)
+  if (type === 'info') return question.type === 'info' ? question : { id: question.id, type, content: EMPTY_RICH_TEXT_DOC };
+  const base = { id: question.id, label: 'label' in question ? question.label : '', help: 'help' in question ? (question.help ?? '') : '' };
   const required = 'required' in question ? question.required : false;
-
-  // Khối thông báo: không cần trả lời
-  if (type === 'info') return { ...base, type };
 
   // Loại có cài đặt riêng: lấy cài đặt đang có, không có thì dùng mặc định
   if (type === 'radio' || type === 'check' || type === 'select') {

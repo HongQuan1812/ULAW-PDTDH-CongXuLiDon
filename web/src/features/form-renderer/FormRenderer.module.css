@@ -17,7 +17,12 @@
 .error{color:var(--danger);font-size:13.5px;font-weight:500;margin-top:-2px}
 .errorLine{display:block}
 /* khối thông báo */
-.infoBlock{background:var(--surface-2);border-radius:var(--r);padding:12px 14px;color:var(--muted);white-space:pre-wrap}
+.infoBlock{background:var(--note-gray);border-radius:var(--r);padding:12px 14px;color:var(--muted)}
+/* khối thông báo có màu: chữ đậm hơn cho dễ đọc trên nền màu */
+.infoBlock[data-color="blue"]{background:var(--note-blue);color:var(--fg)}
+.infoBlock[data-color="green"]{background:var(--note-green);color:var(--fg)}
+.infoBlock[data-color="yellow"]{background:var(--note-yellow);color:var(--fg)}
+.infoBlock[data-color="red"]{background:var(--note-red);color:var(--fg)}
 /* ô trả lời đang báo lỗi: viền đỏ */
 .invalid{border-color:var(--danger)!important;box-shadow:0 0 0 4px color-mix(in srgb,var(--danger) 12%,transparent)}
 

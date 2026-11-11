@@ -1,17 +1,21 @@
 /* Một câu hỏi trong trình soạn (như questionEditor() của artifact/js/forms-page.js): khung riêng có thanh tiêu đề
    (số thứ tự · loại câu hỏi · Bắt buộc · nút đưa lên / xuống / nhân bản / xóa), các ô có nhãn,
    khối cài đặt riêng theo loại câu hỏi, công tắc Bắt buộc trả lời và ô "Mã dùng trong file Word".
-   Khối thông báo chỉ có tiêu đề và nội dung. */
+   Khối thông báo chỉ có nội dung (soạn như Notion) và màu nền. */
 import {
   FORM_TYPE_ISSUE_TARGET,
+  INFO_BLOCK_COLORS,
+  INFO_BLOCK_COLOR_LABEL,
   QUESTION_TYPES,
   QUESTION_TYPE_LABEL,
   questionTag,
   type AnswerableQuestion,
+  type InfoBlockColor,
   type Question,
   type QuestionType,
 } from '@ulaw/shared';
 import { Field } from '../../components/Field';
+import { RichTextEditor } from '../../components/rich-text/RichTextEditor';
 import { GrowingTextarea } from '../../features/form-renderer/GrowingTextarea';
 import { useDraftIssues } from './draftIssues';
 import { EditorIconButton } from './EditorIconButton';
@@ -59,40 +63,46 @@ export function QuestionEditor({ question, index, questionCount, autoFocus, onCh
       </div>
 
       <div className={styles.questionBody}>
-        {/* Nội dung câu hỏi (khối thông báo: tiêu đề khối) và loại câu hỏi */}
+        {/* Bên trái: nội dung câu hỏi (khối thông báo: nội dung thông báo, soạn như Notion); bên phải: loại câu hỏi */}
         <div className={styles.questionRow}>
-          <Field label={isInfo ? 'Tiêu đề khối' : 'Nội dung câu hỏi'} required={!isInfo}>
-            <GrowingTextarea
-              className={`${styles.growing} ${styles.questionLabel}`}
-              value={question.label}
-              aria-invalid={invalidTargets.has(FORM_TYPE_ISSUE_TARGET.questionLabel(question.id)) || undefined}
-              placeholder={isInfo ? 'VD: Lưu ý khi nộp đơn' : 'VD: Lí do xin miễn'}
-              autoFocus={autoFocus}
-              onValueChange={(label) => onChange({ ...question, label })}
-            />
-          </Field>
-          <Field label="Loại câu hỏi">
-            <select value={question.type} onChange={(event) => onChange(changeQuestionType(question, event.target.value as QuestionType))}>
-              {QUESTION_TYPES.map((type) => (
-                <option key={type} value={type}>
-                  {QUESTION_TYPE_LABEL[type]}
-                </option>
-              ))}
-            </select>
-          </Field>
+          {question.type === 'info' ? (
+            <div className={styles.richField}>
+              <span>Nội dung thông báo</span>
+              <RichTextEditor
+                value={question.content}
+                onChange={(content) => onChange({ ...question, content })}
+                label="Nội dung thông báo"
+                placeholder="Nội dung thông báo, hướng dẫn cho người nộp đơn. Gõ # để làm tiêu đề, - để gạch đầu dòng."
+              />
+            </div>
+          ) : (
+            <Field label="Nội dung câu hỏi" required>
+              <GrowingTextarea
+                className={`${styles.growing} ${styles.questionLabel}`}
+                value={question.label}
+                aria-invalid={invalidTargets.has(FORM_TYPE_ISSUE_TARGET.questionLabel(question.id)) || undefined}
+                placeholder="VD: Lí do xin miễn"
+                autoFocus={autoFocus}
+                onValueChange={(label) => onChange({ ...question, label })}
+              />
+            </Field>
+          )}
+          <div className={styles.typeColumn}>
+            <Field label="Loại câu hỏi">
+              <select value={question.type} onChange={(event) => onChange(changeQuestionType(question, event.target.value as QuestionType))}>
+                {QUESTION_TYPES.map((type) => (
+                  <option key={type} value={type}>
+                    {QUESTION_TYPE_LABEL[type]}
+                  </option>
+                ))}
+              </select>
+            </Field>
+            {question.type === 'info' && <InfoColorPicker color={question.color ?? 'gray'} onChange={(color) => onChange({ ...question, color })} />}
+          </div>
         </div>
 
-        {/* Mô tả cho người nộp đơn (khối thông báo: nội dung thông báo) */}
-        {isInfo ? (
-          <Field label="Nội dung thông báo">
-            <textarea
-              rows={3}
-              value={question.help ?? ''}
-              placeholder="Nội dung thông báo, hướng dẫn cho người nộp đơn"
-              onChange={(event) => onChange({ ...question, help: event.target.value })}
-            />
-          </Field>
-        ) : (
+        {/* Mô tả ngắn cho người nộp đơn (khối thông báo không có, nội dung đã là phần thông báo) */}
+        {question.type !== 'info' && (
           <Field label="Mô tả ngắn, gợi ý cho người nộp đơn">
             <GrowingTextarea
               className={styles.growing}
@@ -114,6 +124,35 @@ export function QuestionEditor({ question, index, questionCount, autoFocus, onCh
             <TagField question={question} onChange={onChange} />
           </div>
         )}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Chọn màu nền của khối thông báo (bộ màu có sẵn).
+ * @param color     màu đang chọn
+ * @param onChange  gọi với màu mới
+ * @returns         nhóm nút chọn màu, mỗi nút một ô màu
+ */
+function InfoColorPicker({ color, onChange }: { color: InfoBlockColor; onChange: (nextColor: InfoBlockColor) => void }) {
+  return (
+    <div className={styles.richField} role="radiogroup" aria-label="Màu nền khối thông báo">
+      <span>Màu nền</span>
+      <div className={styles.swatches}>
+        {INFO_BLOCK_COLORS.map((option) => (
+          <button
+            key={option}
+            type="button"
+            role="radio"
+            aria-checked={option === color}
+            aria-label={INFO_BLOCK_COLOR_LABEL[option]}
+            title={INFO_BLOCK_COLOR_LABEL[option]}
+            className={styles.swatch}
+            style={{ background: `var(--note-${option})` }}
+            onClick={() => onChange(option)}
+          />
+        ))}
       </div>
     </div>
   );

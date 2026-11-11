@@ -83,6 +83,15 @@
 .questionBody>*{min-width:0}
 /* cột Loại câu hỏi rộng vừa lựa chọn dài nhất (ô chọn không xuống hàng được) nên chữ luôn hiện đủ */
 .questionRow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px}
+/* ô soạn văn bản có nhãn (nhãn như Field) */
+.richField{display:grid;gap:7px;min-width:0}
+/* cột bên phải: loại câu hỏi, và (khối thông báo) màu nền */
+.typeColumn{display:grid;gap:14px;align-content:start;min-width:0}
+.swatches{display:flex;gap:10px;flex-wrap:wrap}
+.swatch{width:34px;height:34px;border-radius:50%;border:2px solid var(--line-2);cursor:pointer;padding:0}
+.swatch:hover{border-color:var(--muted)}
+.swatch[aria-checked="true"]{border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 25%,transparent)}
+.richField>span{font-weight:500;font-size:13.5px}
 /* ô chữ tự xuống hàng (GrowingTextarea): trông như ô một dòng, chữ dài thì cao lên, không kéo giãn bằng tay */
 .growing{display:block;min-height:42px;line-height:1.45;resize:none;overflow:hidden;overflow-wrap:anywhere}
 .questionLabel{font-weight:500}

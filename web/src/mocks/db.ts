@@ -477,8 +477,19 @@ const FORM_TYPE_SEED: readonly FormType[] = [
           {
             id: 'info-dau',
             type: 'info',
-            label: 'Lưu ý',
-            help: 'Đây là khối thông báo: không cần trả lời.\nNội dung có thể xuống dòng.',
+            content: {
+              type: 'doc',
+              content: [
+                { type: 'heading', attrs: { level: 3 }, content: [{ type: 'text', text: 'Lưu ý' }] },
+                { type: 'paragraph', content: [{ type: 'text', text: 'Đây là khối thông báo: không cần trả lời.' }] },
+                {
+                  type: 'bulletList',
+                  content: [
+                    { type: 'listItem', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Nội dung có thể ' }, { type: 'text', text: 'in đậm', marks: [{ type: 'bold' }] }, { type: 'text', text: ' hoặc gạch đầu dòng.' }] }] },
+                  ],
+                },
+              ],
+            },
           },
           { id: 'tieu-de', type: 'text', label: 'Tiêu đề đơn', required: true, help: 'Trả lời ngắn: không xuống dòng bằng Enter.' },
           { id: 'li-do', type: 'para', label: 'Lí do', help: 'Đoạn văn, viết được nhiều dòng.' },

@@ -1,10 +1,10 @@
 /* Bộ định dạng cho trình soạn văn bản: gõ "- " hoặc "* " ra gạch đầu dòng, "1. " ra danh sách số, "# " ra tiêu đề,
    Ctrl+B in đậm, Ctrl+I in nghiêng, Ctrl+U gạch chân (như Notion). Chỉ mở các định dạng cần dùng, để dữ liệu lưu ra gọn và đoán được. */
-import type { JSONContent } from '@tiptap/react';
+import type { RichTextDoc } from '@ulaw/shared';
 import StarterKit from '@tiptap/starter-kit';
 
-/** Nội dung văn bản có định dạng, lưu dạng JSON của Tiptap (ProseMirror). */
-export type RichTextDoc = JSONContent;
+/** Nội dung văn bản có định dạng, lưu dạng JSON của Tiptap (ProseMirror); schema ở shared/src/aux-schema/rich-text.ts. */
+export type { RichTextDoc };
 
 /** Các cấp tiêu đề cho phép: "# ", "## ", "### ". */
 export const HEADING_LEVELS = [1, 2, 3] as const;

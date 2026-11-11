@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { FormSectionSchema, type FormSection } from '../aux-schema/form-types--sections';
+import { EMPTY_RICH_TEXT_DOC } from '../aux-schema/rich-text';
 import { FORM_TYPE_DRAFT_MESSAGES, FORM_TYPE_ISSUE_TARGET, issueMessages, validateFormTypeDraft, type FormTypeDraftInput } from './form-types';
 
 /** Bản soạn hợp lệ: một phần, một câu hỏi ngắn. */
@@ -28,7 +29,7 @@ describe('validateFormTypeDraft', () => {
       title: '',
       main: false,
       questions: [
-        { id: 'info', type: 'info', label: '', required: false },
+        { id: 'info', type: 'info', content: EMPTY_RICH_TEXT_DOC },
         { id: 'q1', type: 'radio', label: '', required: false, options: ['A', ' ', ''] },
         { id: 'q2', type: 'table', label: 'Bảng', required: false, rowName: 'dòng', columns: [{ label: '', type: 'text' }] },
         { id: 'q3', type: 'file', label: 'Tệp', required: false, accept: [], maxMB: 10 },
@@ -67,7 +68,7 @@ describe('validateFormTypeDraft', () => {
   });
 
   it('loại đơn đang mở phải có câu hỏi; nháp thì không cần', () => {
-    const onlyInfo = [FormSectionSchema.parse({ id: 's1', title: 'A', questions: [{ id: 'i', type: 'info', label: '' }] })];
+    const onlyInfo = [FormSectionSchema.parse({ id: 's1', title: 'A', questions: [{ id: 'i', type: 'info', content: EMPTY_RICH_TEXT_DOC }] })];
     expect(validateFormTypeDraft({ ...validDraft(), sections: onlyInfo }, [])).toEqual([
       { target: null, message: FORM_TYPE_DRAFT_MESSAGES.openWithoutQuestion },
     ]);

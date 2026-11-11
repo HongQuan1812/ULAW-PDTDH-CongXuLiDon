@@ -32,7 +32,7 @@ const XMM_SECTIONS = [
     title: 'Bảng điểm minh chứng',
     questions: [
       { id: 'files', type: 'file', label: 'Tệp bảng điểm', required: true, accept: ['pdf', 'jpg', 'png'], maxMB: 10 },
-      { id: 'note', type: 'info', label: 'Lưu ý', help: 'Bảng điểm phải có xác nhận.' },
+      { id: 'note', type: 'info', content: { type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Bảng điểm phải có xác nhận.' }] }] } },
     ],
   }),
 ];

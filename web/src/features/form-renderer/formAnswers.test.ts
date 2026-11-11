@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { FormSectionSchema, type QuestionOf } from '@ulaw/shared';
+import { EMPTY_RICH_TEXT_DOC, FormSectionSchema, type QuestionOf } from '@ulaw/shared';
 import { answersChanged, initialAnswers, sumColumn, tableTotalText } from './formAnswers';
 
 /* Một phần có đủ các kiểu câu trả lời trống. */
@@ -7,7 +7,7 @@ const SECTION = FormSectionSchema.parse({
   id: 's',
   title: 'Phần thử',
   questions: [
-    { id: 'thong-bao', type: 'info', label: 'Lưu ý' },
+    { id: 'thong-bao', type: 'info', content: EMPTY_RICH_TEXT_DOC },
     { id: 'ten', type: 'text', label: 'Tên' },
     { id: 'so', type: 'number', label: 'Số' },
     { id: 'chon', type: 'check', label: 'Chọn', options: ['A'] },

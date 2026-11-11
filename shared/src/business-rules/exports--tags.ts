@@ -6,7 +6,7 @@
      ngoài vòng lặp có {so_<mã bảng>} (số dòng) và {tong_<mã cột>} (tổng cột có tính tổng).
    Trình soạn (bảng mã, kiểm tra trùng mã), API giả và backend (điền mẫu, kiểm tra mẫu) cùng dùng file này. */
 import type { AnswerValue, FormAnswers, TableCell } from '../aux-schema/forms--answers';
-import type { Question, TableColumn } from '../aux-schema/form-types--question-types';
+import type { AnswerableQuestion, Question, TableColumn } from '../aux-schema/form-types--question-types';
 import type { FormSection } from '../aux-schema/form-types--sections';
 import { FORM_STATUS_LABEL, type FormStatus } from '../aux-schema/forms--statuses';
 
@@ -40,7 +40,7 @@ export function textToTag(text: string): string {
  * @param question  câu hỏi (có thể có mã riêng)
  * @returns         mã riêng, hoặc mã lấy theo nội dung câu hỏi
  */
-export function questionTag(question: Pick<Question, 'label'> & { tag?: string }): string {
+export function questionTag(question: Pick<AnswerableQuestion, 'label'> & { tag?: string }): string {
   return question.tag || textToTag(question.label);
 }
 

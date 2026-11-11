@@ -65,7 +65,8 @@ export function RichTextEditor({ value, onChange, label, placeholder, disabled =
     content: value ?? undefined,
     editable: !disabled,
     editorProps,
-    onUpdate: ({ editor: updatedEditor }) => onChange(updatedEditor.getJSON()),
+    // bộ định dạng đã giới hạn ở richTextExtensions.ts nên JSON luôn đúng RichTextDoc
+    onUpdate: ({ editor: updatedEditor }) => onChange(updatedEditor.getJSON() as RichTextDoc),
   });
 
   // Nội dung hoặc chế độ sửa đổi từ bên ngoài (vd đặt lại form) thì cập nhật ô soạn, không báo ngược lên

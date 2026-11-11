@@ -1,6 +1,7 @@
 /* Một câu hỏi: nhãn (dấu * nếu bắt buộc), mô tả, ô trả lời theo loại câu hỏi, câu báo lỗi (như renderQuestion của artifact/js/sections.js). */
 import { useId } from 'react';
 import type { AnswerValue, Question, QuestionOf } from '@ulaw/shared';
+import { RichTextView } from '../../components/rich-text/RichTextView';
 import { ChoiceAnswer } from './ChoiceAnswer';
 import { FileAnswer } from './FileAnswer';
 import { SimpleAnswer } from './SimpleAnswer';
@@ -20,7 +21,7 @@ interface QuestionBlockProps {
 }
 
 /**
- * Vẽ một câu hỏi. Khối thông báo chỉ có tiêu đề và nội dung, không có ô trả lời.
+ * Vẽ một câu hỏi. Khối thông báo chỉ có nội dung (văn bản có định dạng), không có ô trả lời.
  * @returns  khối câu hỏi; mang data-question-id để tìm câu bị lỗi đầu tiên (focusFirstError)
  */
 export function QuestionBlock({ question, answerValue, onAnswerChange, readOnly, error }: QuestionBlockProps) {
@@ -33,8 +34,9 @@ export function QuestionBlock({ question, answerValue, onAnswerChange, readOnly,
   if (question.type === 'info') {
     return (
       <div className={styles.question} data-question-id={question.id}>
-        {question.label && <p className={styles.questionLabel}>{question.label}</p>}
-        {question.help && <p className={styles.infoBlock}>{question.help}</p>}
+        <div className={styles.infoBlock} data-color={question.color ?? 'gray'}>
+          <RichTextView value={question.content} />
+        </div>
       </div>
     );
   }
