@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { EMPTY_RICH_TEXT_DOC, RichTextDocSchema } from './rich-text';
+import { EMPTY_RICH_TEXT_DOC, RichTextDocSchema, isRichTextEmpty, plainTextToRichText, richTextToPlainText } from './rich-text';
 import { INFO_BLOCK_COLORS, QuestionSchema } from './form-types--question-types';
 
 const sampleDoc = {
@@ -50,5 +50,50 @@ describe('khối thông báo', () => {
 
   it('từ chối màu ngoài bộ màu (vd mã màu tự gõ)', () => {
     expect(QuestionSchema.safeParse({ id: 'i1', type: 'info', content: sampleDoc, color: '#ff0000' }).success).toBe(false);
+  });
+});
+
+describe('richTextToPlainText', () => {
+  it('nối các đoạn bằng xuống dòng, danh sách có dấu đầu dòng / số thứ tự', () => {
+    const doc = {
+      type: 'doc',
+      content: [
+        { type: 'paragraph', content: [{ type: 'text', text: 'Mở đầu' }] },
+        { type: 'bulletList', content: [{ type: 'listItem', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'một' }] }] }] },
+        {
+          type: 'orderedList',
+          content: [
+            { type: 'listItem', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'a' }] }] },
+            { type: 'listItem', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'b' }] }] },
+          ],
+        },
+      ],
+    } as const;
+    expect(richTextToPlainText(doc as never)).toBe('Mở đầu\n- một\n1. a\n2. b');
+  });
+
+  it('văn bản trống cho chuỗi rỗng', () => {
+    expect(richTextToPlainText(EMPTY_RICH_TEXT_DOC)).toBe('');
+  });
+});
+
+describe('isRichTextEmpty', () => {
+  it('trống khi không có chữ hoặc chỉ có khoảng trắng', () => {
+    expect(isRichTextEmpty(EMPTY_RICH_TEXT_DOC)).toBe(true);
+    expect(isRichTextEmpty(plainTextToRichText('   '))).toBe(true);
+    expect(isRichTextEmpty(plainTextToRichText('có chữ'))).toBe(false);
+  });
+});
+
+describe('plainTextToRichText', () => {
+  it('mỗi dòng thành một đoạn; chuỗi rỗng cho văn bản trống', () => {
+    expect(plainTextToRichText('a\nb')).toEqual({
+      type: 'doc',
+      content: [
+        { type: 'paragraph', content: [{ type: 'text', text: 'a' }] },
+        { type: 'paragraph', content: [{ type: 'text', text: 'b' }] },
+      ],
+    });
+    expect(plainTextToRichText('')).toEqual(EMPTY_RICH_TEXT_DOC);
   });
 });

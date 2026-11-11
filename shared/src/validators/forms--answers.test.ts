@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { QuestionSchema, type AnswerableQuestion } from '../aux-schema/form-types--question-types';
 import { FormSectionSchema } from '../aux-schema/form-types--sections';
 import { emptyAnswer } from '../aux-schema/forms--answers';
+import { EMPTY_RICH_TEXT_DOC, plainTextToRichText } from '../aux-schema/rich-text';
 import { ANSWER_MESSAGES, formatFileSize, validateAnswer, validateAnswers, validateFile, validateSentFiles } from './forms--answers';
 
 /* Cấu trúc Xét miễn môn như TYPES.xmm trong artifact/js/config.js. */
@@ -59,6 +60,15 @@ describe('cấu trúc loại đơn', () => {
 });
 
 describe('validateAnswer', () => {
+  it('đoạn văn: bắt buộc thì phải có chữ (văn bản có định dạng hoặc chuỗi cũ)', () => {
+    const para = questionOf({ id: 'p', type: 'para', label: 'Lí do', required: true });
+    expect(validateAnswer(para, EMPTY_RICH_TEXT_DOC)).toBe(ANSWER_MESSAGES.required);
+    expect(validateAnswer(para, plainTextToRichText('  '))).toBe(ANSWER_MESSAGES.required);
+    expect(validateAnswer(para, plainTextToRichText('Học lại'))).toBe('');
+    expect(validateAnswer(para, 'Chuỗi cũ')).toBe('');
+    expect(validateAnswer(para, '')).toBe(ANSWER_MESSAGES.required);
+  });
+
   it('trả lời ngắn, số, ngày', () => {
     const text = questionOf({ id: 't', type: 'text', label: 'Lí do', required: true });
     expect(validateAnswer(text, '   ')).toBe(ANSWER_MESSAGES.required);
@@ -96,7 +106,7 @@ describe('validateAnswer', () => {
   it('câu trả lời trống theo loại câu hỏi', () => {
     expect(emptyAnswer(questionOf({ id: 'n', type: 'number', label: 'Số' }))).toBeNull();
     expect(emptyAnswer(XMM_SECTIONS[0]!.questions[0] as AnswerableQuestion)).toEqual([]);
-    expect(emptyAnswer(questionOf({ id: 't', type: 'para', label: 'Lí do' }))).toBe('');
+    expect(emptyAnswer(questionOf({ id: 't', type: 'para', label: 'Lí do' }))).toEqual(EMPTY_RICH_TEXT_DOC);
   });
 });
 

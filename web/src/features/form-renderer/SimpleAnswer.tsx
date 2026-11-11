@@ -1,11 +1,25 @@
-/* Ô trả lời một giá trị: trả lời ngắn, đoạn văn, số, ngày, danh sách thả xuống. */
+/* Ô trả lời một giá trị: trả lời ngắn, đoạn văn (soạn như Notion), số, ngày, danh sách thả xuống. */
+import { isRichTextEmpty, plainTextToRichText, type RichTextDoc } from '@ulaw/shared';
 import { DateInput } from '../../components/DateInput';
+import { RichTextEditor } from '../../components/rich-text/RichTextEditor';
+import { RichTextView } from '../../components/rich-text/RichTextView';
 import { formatDate } from '../../lib/format';
 import type { AnswerProps } from './answerProps';
 import { GrowingTextarea } from './GrowingTextarea';
 import styles from './FormRenderer.module.css';
 
 type SimpleType = 'text' | 'para' | 'number' | 'date' | 'select';
+
+/**
+ * Câu trả lời của đoạn văn thành văn bản có định dạng (đơn cũ còn lưu dạng chuỗi).
+ * @param answerValue  câu trả lời lưu
+ * @returns            văn bản có định dạng; chưa trả lời thì văn bản trống
+ */
+function paragraphDoc(answerValue: unknown): RichTextDoc {
+  if (typeof answerValue === 'string') return plainTextToRichText(answerValue);
+  if (typeof answerValue === 'object' && answerValue !== null && !Array.isArray(answerValue)) return answerValue as RichTextDoc;
+  return plainTextToRichText('');
+}
 
 /**
  * Câu trả lời để hiện ở chế độ chỉ xem.
@@ -33,6 +47,15 @@ export function SimpleAnswer({
   labelId,
   describedBy,
 }: AnswerProps<SimpleType>) {
+  // Đoạn văn: soạn như Notion; chỉ xem thì hiện văn bản đã định dạng
+  if (question.type === 'para') {
+    const doc = paragraphDoc(answerValue);
+    if (!readOnly) {
+      return <RichTextEditor value={doc} onChange={onAnswerChange} label={question.label || 'Câu trả lời'} invalid={invalid} />;
+    }
+    return isRichTextEmpty(doc) ? <p className={styles.emptyValue}>—</p> : <RichTextView value={doc} />;
+  }
+
   // Chỉ xem
   if (readOnly) {
     const text = readOnlyText(question.type, answerValue);
@@ -52,8 +75,6 @@ export function SimpleAnswer({
   const textValue = typeof answerValue === 'string' ? answerValue : '';
 
   switch (question.type) {
-    case 'para':
-      return <GrowingTextarea multiline value={textValue} onValueChange={onAnswerChange} {...inputProps} className={`${growingClassName} ${styles.paragraph}`} />;
     case 'number':
       return (
         <input

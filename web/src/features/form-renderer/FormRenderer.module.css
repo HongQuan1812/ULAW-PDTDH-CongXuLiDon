@@ -30,7 +30,6 @@
 .readValue{white-space:pre-wrap;overflow-wrap:anywhere}
 /* câu Trả lời ngắn, Đoạn văn: ô tự cao lên theo chữ, không thanh cuộn, không kéo giãn bằng tay; Đoạn văn thấp nhất 4 dòng */
 .growing{display:block;min-height:42px;line-height:1.45;resize:none;overflow:hidden;overflow-wrap:anywhere}
-.growing.paragraph{min-height:96px}
 .emptyValue{color:var(--faint);font-size:13.5px}
 
 /* ---------- chọn một / chọn nhiều ---------- */

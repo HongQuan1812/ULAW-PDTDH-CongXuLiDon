@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest';
 import { FormSectionSchema } from '../aux-schema/form-types--sections';
-import { EMPTY_RICH_TEXT_DOC } from '../aux-schema/rich-text';
+import { EMPTY_RICH_TEXT_DOC, plainTextToRichText } from '../aux-schema/rich-text';
 import { buildExportData, columnTagOwners, knownExportTags, textToTag, type ExportSource } from './exports--tags';
 
 /** Loại đơn thử: một câu ngày, một câu chọn nhiều, một câu tải tệp, một bảng có cột tính tổng. */
@@ -105,6 +105,13 @@ describe('buildExportData', () => {
     ]);
     expect(exportData.so_mon).toBe(2);
     expect(exportData.tong_so_tin_chi).toBe(3);
+  });
+
+  test('đoạn văn → chữ thường (đoạn nối bằng xuống dòng), câu trả lời cũ dạng chuỗi vẫn điền được', () => {
+    const paraSections = [FormSectionSchema.parse({ id: 's', title: 'A', questions: [{ id: 'p1', type: 'para', label: 'Lí do' }, { id: 'p2', type: 'para', label: 'Ghi chú' }] })];
+    const exportData = buildExportData({ ...source, sections: paraSections, answers: { p1: plainTextToRichText('Học lại\nChuyển ngành'), p2: 'Chuỗi cũ' } }, '2026-11-11');
+    expect(exportData.li_do).toBe('Học lại\nChuyển ngành');
+    expect(exportData.ghi_chu).toBe('Chuỗi cũ');
   });
 
   test('không có MSSV thì các mã sinh viên để trống', () => {

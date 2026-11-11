@@ -43,3 +43,62 @@ export type RichTextDoc = z.infer<typeof RichTextDocSchema>;
 
 /** Văn bản trống (một đoạn không có chữ), điểm bắt đầu của ô soạn. */
 export const EMPTY_RICH_TEXT_DOC: RichTextDoc = { type: 'doc', content: [{ type: 'paragraph' }] };
+
+/**
+ * Chữ của một nút và các nút con (không có dấu đầu dòng).
+ * @param node  nút cần lấy chữ
+ * @returns     chữ nối liền; xuống dòng cứng thành "\n"
+ */
+function inlineText(node: RichTextNode): string {
+  if (node.type === 'text') return node.text ?? '';
+  if (node.type === 'hardBreak') return '\n';
+  return (node.content ?? []).map(inlineText).join('');
+}
+
+/**
+ * Chữ của một khối (đoạn, tiêu đề, danh sách), mỗi dòng một phần tử.
+ * @param node    khối cần lấy chữ
+ * @param prefix  dấu đầu dòng của mục danh sách chứa khối này, vd "- " hoặc "2. "
+ * @returns       các dòng chữ
+ */
+function blockLines(node: RichTextNode, prefix = ''): string[] {
+  if (node.type === 'bulletList' || node.type === 'orderedList') {
+    return (node.content ?? []).flatMap((item, index) => blockLines(item, node.type === 'bulletList' ? '- ' : `${index + 1}. `));
+  }
+  if (node.type === 'listItem') {
+    const lines = (node.content ?? []).flatMap((child) => blockLines(child));
+    return lines.map((line, index) => (index === 0 ? prefix + line : `${' '.repeat(prefix.length)}${line}`));
+  }
+  return [prefix + inlineText(node)];
+}
+
+/**
+ * Văn bản có định dạng thành chữ thường, để điền vào file Word, tìm kiếm, kiểm tra "có trả lời chưa".
+ * @param doc  văn bản có định dạng
+ * @returns    chữ, mỗi đoạn / mục một dòng; danh sách có "- " hoặc "1. " đầu dòng; trống thì ""
+ */
+export function richTextToPlainText(doc: RichTextDoc): string {
+  return (doc.content ?? []).flatMap((block) => blockLines(block)).join('\n').trim();
+}
+
+/**
+ * Văn bản có định dạng có trống không (không có chữ nào ngoài khoảng trắng).
+ * @param doc  văn bản có định dạng
+ * @returns    true nếu trống
+ */
+export function isRichTextEmpty(doc: RichTextDoc): boolean {
+  return richTextToPlainText(doc) === '';
+}
+
+/**
+ * Chữ thường thành văn bản có định dạng (mỗi dòng một đoạn), để hiện câu trả lời cũ lưu dạng chuỗi.
+ * @param text  chữ thường
+ * @returns     văn bản có định dạng; chuỗi rỗng cho văn bản trống
+ */
+export function plainTextToRichText(text: string): RichTextDoc {
+  if (!text) return EMPTY_RICH_TEXT_DOC;
+  return {
+    type: 'doc',
+    content: text.split('\n').map((line): RichTextNode => (line ? { type: 'paragraph', content: [{ type: 'text', text: line }] } : { type: 'paragraph' })),
+  };
+}

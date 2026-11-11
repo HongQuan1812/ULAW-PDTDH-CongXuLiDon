@@ -7,6 +7,7 @@
    Trình soạn (bảng mã, kiểm tra trùng mã), API giả và backend (điền mẫu, kiểm tra mẫu) cùng dùng file này. */
 import type { AnswerValue, FormAnswers, TableCell } from '../aux-schema/forms--answers';
 import type { AnswerableQuestion, Question, TableColumn } from '../aux-schema/form-types--question-types';
+import { richTextToPlainText, type RichTextDoc } from '../aux-schema/rich-text';
 import type { FormSection } from '../aux-schema/form-types--sections';
 import { FORM_STATUS_LABEL, type FormStatus } from '../aux-schema/forms--statuses';
 
@@ -231,15 +232,19 @@ function spacedPhone(phone: string | null): string {
   return phone ? phone.replace(/^(\d{4})(\d{3})(\d{3})$/, '$1 $2 $3') : '';
 }
 
+/** Câu trả lời là văn bản có định dạng (câu hỏi đoạn văn) hay không. */
+const isRichTextAnswer = (value: AnswerValue): value is RichTextDoc => typeof value === 'object' && !Array.isArray(value);
+
 /**
  * Câu trả lời của một câu hỏi (không phải bảng) dưới dạng chữ để điền:
- * chọn nhiều → nối bằng dấu phẩy; tệp → tên các tệp; ngày → dd/mm/yyyy; chưa trả lời → "".
+ * đoạn văn → chữ thường (đoạn nối bằng xuống dòng); chọn nhiều → nối bằng dấu phẩy; tệp → tên các tệp; ngày → dd/mm/yyyy; chưa trả lời → "".
  * @param question  câu hỏi
  * @param value     câu trả lời
  * @returns         chữ hoặc số để điền
  */
 function answerText(question: Question, value: AnswerValue | undefined): string | number {
   if (value === undefined || value === null) return '';
+  if (isRichTextAnswer(value)) return richTextToPlainText(value);
   if (Array.isArray(value)) {
     return value.map((item) => (typeof item === 'object' && item !== null && 'name' in item ? item.name : String(item))).join(', ');
   }

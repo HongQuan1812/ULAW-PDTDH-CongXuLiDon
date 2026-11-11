@@ -2,6 +2,7 @@
    Trang nộp đơn, API giả và backend cùng dùng validateAnswers(), nên câu báo lỗi giống nhau ở mọi nơi. */
 import type { AnswerableQuestion, QuestionOf } from '../aux-schema/form-types--question-types';
 import type { FormSection } from '../aux-schema/form-types--sections';
+import { RichTextDocSchema, isRichTextEmpty, type RichTextDoc } from '../aux-schema/rich-text';
 import { isAnswerable, type AnswerValue, type FileRef, type FormAnswers, type TableCell } from '../aux-schema/forms--answers';
 
 /** Câu báo lỗi khi kiểm tra câu trả lời (hiện ngay dưới câu hỏi, hoặc dưới nút Gửi đơn). */
@@ -149,6 +150,8 @@ export function validateSentFiles(
 const isText = (value: unknown): value is string => typeof value === 'string';
 /** Mảng chuỗi hay không. */
 const isTextList = (value: unknown): value is string[] => Array.isArray(value) && value.every(isText);
+/** Văn bản có định dạng hay không (đúng hình dạng; nội dung lạ đã bị schema của API từ chối). */
+const isRichTextDoc = (value: unknown): value is RichTextDoc => RichTextDocSchema.safeParse(value).success;
 /** Danh sách tệp đã tải lên hay không. */
 const isFileList = (value: unknown): value is FileRef[] =>
   Array.isArray(value) && value.every((file) => typeof file === 'object' && file !== null && 'id' in file);
@@ -161,10 +164,14 @@ const isFileList = (value: unknown): value is FileRef[] =>
  */
 export function validateAnswer(question: AnswerableQuestion, value: AnswerValue | undefined): string {
   switch (question.type) {
-    case 'text':
-    case 'para': {
+    case 'text': {
       const text = isText(value) ? value.trim() : '';
       return question.required && !text ? ANSWER_MESSAGES.required : '';
+    }
+    case 'para': {
+      // Đoạn văn là văn bản có định dạng; đơn cũ còn lưu dạng chuỗi
+      const isEmpty = isText(value) ? !value.trim() : !isRichTextDoc(value) || isRichTextEmpty(value);
+      return question.required && isEmpty ? ANSWER_MESSAGES.required : '';
     }
     case 'number': {
       if (value === null || value === undefined || value === '') return question.required ? ANSWER_MESSAGES.required : '';
