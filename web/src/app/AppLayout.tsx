@@ -272,10 +272,12 @@ const PAGE_ICON: Record<Page, ReactNode> = {
       <path d="M14 3v5h5M9 13h6M9 17h6" />
     </Icon>
   ),
+  // Loại đơn: chồng nhiều lớp (nhiều loại, nhiều phiên bản), khác hẳn hình tờ giấy của Quản lí đơn
   formTypes: (
     <Icon>
-      <rect x="4" y="3" width="16" height="18" rx="2" />
-      <path d="M8 8h8M8 12h8M8 16h5" />
+      <path d="M12 3 3 7.5l9 4.5 9-4.5z" />
+      <path d="M3 12l9 4.5 9-4.5" />
+      <path d="M3 16.5 12 21l9-4.5" />
     </Icon>
   ),
   accounts: (
