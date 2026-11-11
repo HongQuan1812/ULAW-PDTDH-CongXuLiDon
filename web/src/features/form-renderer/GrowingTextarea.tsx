@@ -1,10 +1,12 @@
-/* Ô nhập chữ một đoạn, tự cao lên khi chữ dài phải xuống hàng (dùng cho ô chữ trong bảng). */
+/* Ô nhập chữ tự cao lên khi chữ dài phải xuống hàng, không bị che chữ (ô chữ trong bảng, câu Trả lời ngắn, Đoạn văn, ô chữ của trình soạn). */
 import { useLayoutEffect, useRef, type TextareaHTMLAttributes } from 'react';
 
 /** Thuộc tính của ô: như <textarea>, nhưng giá trị là chữ và đổi giá trị nhận thẳng chữ mới. */
 type GrowingTextareaProps = Omit<TextareaHTMLAttributes<HTMLTextAreaElement>, 'value' | 'onChange' | 'rows'> & {
   value: string;
   onValueChange: (text: string) => void;
+  /** true: cho Enter xuống dòng và giữ các dòng (vd câu Đoạn văn); mặc định một đoạn liền */
+  multiline?: boolean;
 };
 
 /**
@@ -26,12 +28,13 @@ function fitHeight(textarea: HTMLTextAreaElement): void {
 
 /**
  * Ô nhập chữ tự xuống hàng và cao lên theo nội dung, không có thanh cuộn, không kéo giãn bằng tay.
- * Giá trị luôn là một đoạn liền: không cho Enter xuống dòng, dán chữ có nhiều dòng thì nối lại bằng dấu cách.
+ * Mặc định giá trị là một đoạn liền: không cho Enter xuống dòng, dán chữ có nhiều dòng thì nối lại bằng dấu cách.
  * @param value          chữ đang nhập
  * @param onValueChange  nhận chữ mới mỗi khi người dùng gõ
+ * @param multiline      true: cho Enter xuống dòng, giữ nguyên các dòng
  * @returns              thẻ <textarea>
  */
-export function GrowingTextarea({ value, onValueChange, onKeyDown, ...textareaProps }: GrowingTextareaProps) {
+export function GrowingTextarea({ value, onValueChange, multiline = false, onKeyDown, ...textareaProps }: GrowingTextareaProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Chỉnh chiều cao khi chữ đổi
@@ -59,10 +62,10 @@ export function GrowingTextarea({ value, onValueChange, onKeyDown, ...textareaPr
       rows={1}
       value={value}
       onKeyDown={(event) => {
-        if (event.key === 'Enter') event.preventDefault();
+        if (event.key === 'Enter' && !multiline) event.preventDefault();
         onKeyDown?.(event);
       }}
-      onChange={(event) => onValueChange(event.target.value.replace(/\s*\n\s*/g, ' '))}
+      onChange={(event) => onValueChange(multiline ? event.target.value : event.target.value.replace(/\s*\n\s*/g, ' '))}
       {...textareaProps}
     />
   );

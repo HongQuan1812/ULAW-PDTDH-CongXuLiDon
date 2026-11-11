@@ -2,6 +2,7 @@
 import { DateInput } from '../../components/DateInput';
 import { formatDate } from '../../lib/format';
 import type { AnswerProps } from './answerProps';
+import { GrowingTextarea } from './GrowingTextarea';
 import styles from './FormRenderer.module.css';
 
 type SimpleType = 'text' | 'para' | 'number' | 'date' | 'select';
@@ -46,11 +47,13 @@ export function SimpleAnswer({
     'aria-required': question.required || undefined,
     className: invalid ? styles.invalid : undefined,
   };
+  // Ô chữ tự cao lên theo nội dung để luôn thấy hết chữ đã gõ
+  const growingClassName = `${styles.growing} ${invalid ? styles.invalid : ''}`;
   const textValue = typeof answerValue === 'string' ? answerValue : '';
 
   switch (question.type) {
     case 'para':
-      return <textarea rows={4} value={textValue} onChange={(event) => onAnswerChange(event.target.value)} {...inputProps} />;
+      return <GrowingTextarea multiline value={textValue} onValueChange={onAnswerChange} {...inputProps} className={`${growingClassName} ${styles.paragraph}`} />;
     case 'number':
       return (
         <input
@@ -76,6 +79,6 @@ export function SimpleAnswer({
         </select>
       );
     default:
-      return <input type="text" value={textValue} onChange={(event) => onAnswerChange(event.target.value)} {...inputProps} />;
+      return <GrowingTextarea value={textValue} onValueChange={onAnswerChange} {...inputProps} className={growingClassName} />;
   }
 }

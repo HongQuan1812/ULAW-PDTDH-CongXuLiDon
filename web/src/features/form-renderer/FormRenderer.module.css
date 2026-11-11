@@ -23,6 +23,9 @@
 
 /* chỉ xem: câu trả lời dạng chữ */
 .readValue{white-space:pre-wrap;overflow-wrap:anywhere}
+/* câu Trả lời ngắn, Đoạn văn: ô tự cao lên theo chữ, không thanh cuộn, không kéo giãn bằng tay; Đoạn văn thấp nhất 4 dòng */
+.growing{display:block;min-height:42px;line-height:1.45;resize:none;overflow:hidden;overflow-wrap:anywhere}
+.growing.paragraph{min-height:96px}
 .emptyValue{color:var(--faint);font-size:13.5px}
 
 /* ---------- chọn một / chọn nhiều ---------- */
@@ -79,11 +82,11 @@
 .dropZone strong{color:var(--fg);font-weight:500}
 .dropZone span{font-size:12.5px}
 .dropZone:hover,.dropZoneOver{border-color:var(--accent);background:var(--accent-soft)}
-/* cột minmax(0,1fr): tên tệp dài thì cắt bằng dấu …, không kéo dòng tệp rộng ra */
+/* cột minmax(0,1fr): tên tệp dài thì xuống dòng, không kéo dòng tệp rộng ra */
 .fileList{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:minmax(0,1fr);gap:8px}
-.fileList li{display:flex;align-items:center;gap:10px;min-height:46px;padding:6px 8px 6px 14px;border:1px solid var(--line);border-radius:var(--r)}
+.fileList li{display:flex;align-items:center;gap:10px;min-height:46px;padding:8px 8px 8px 14px;border:1px solid var(--line);border-radius:var(--r)}
 .fileType{display:inline-grid;place-items:center;min-width:38px;height:22px;padding:0 7px;border-radius:6px;background:var(--surface-2);color:var(--muted);font-size:10.5px;font-weight:600;letter-spacing:.05em}
-.fileName{flex:1;min-width:0;font:inherit;font-weight:500;color:var(--fg);text-align:left;background:none;border:0;padding:0;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fileName{flex:1;min-width:0;font:inherit;font-weight:500;color:var(--fg);text-align:left;background:none;border:0;padding:0;cursor:pointer;overflow-wrap:anywhere;line-height:1.45}
 .fileName:hover{color:var(--accent);text-decoration:underline}
 .fileName:focus-visible{outline:2px solid var(--focus);outline-offset:2px;border-radius:4px}
 .fileSize{font-size:12.5px;color:var(--muted);white-space:nowrap}
