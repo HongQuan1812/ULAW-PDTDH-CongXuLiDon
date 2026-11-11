@@ -35,7 +35,16 @@
 [data-menu="drawer"] .topbar{display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:30;min-height:58px;padding:8px 16px 8px 10px;
   background:color-mix(in srgb,var(--surface) 94%,transparent);backdrop-filter:blur(10px);border-bottom:1px solid var(--line);color:var(--fg)}
 [data-menu="drawer"] .topbar img{width:30px;height:30px}
-[data-menu="drawer"] .topbar .appName{flex:1;color:var(--fg)}
+[data-menu="drawer"] .topbar .appName{color:var(--fg)}
+/* icon các trang trên thanh trên cùng, nằm ngay sau tên ứng dụng (nav chiếm phần trống còn lại nên avatar vẫn ở mép phải);
+   trang đang mở tô màu như menu ngang */
+.iconNav{display:none}
+[data-menu="drawer"] .iconNav{display:flex;flex:1;align-items:center;gap:2px;margin-left:8px}
+[data-menu="drawer"] .iconNav a{display:grid;place-items:center;width:40px;height:40px;border-radius:50%;color:var(--side-fg);transition:background .12s,color .12s}
+[data-menu="drawer"] .iconNav a:hover{background:var(--side-2);color:var(--side-strong)}
+[data-menu="drawer"] .iconNav a[aria-current="page"]{background:var(--accent-soft);color:var(--accent)}
+/* điện thoại hẹp: bỏ tên ứng dụng để đủ chỗ cho icon */
+@media (max-width:480px){[data-menu="drawer"] .topbar .appName{display:none}}
 [data-menu="drawer"] .menuButton{display:grid;place-items:center;width:40px;height:40px;border:0;border-radius:50%;background:transparent;color:var(--fg);cursor:pointer}
 [data-menu="drawer"] .menuButton:hover{background:var(--hover)}
 

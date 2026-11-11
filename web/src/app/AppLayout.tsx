@@ -66,6 +66,7 @@ export function AppLayout() {
   // Lần đầu đăng nhập, chưa xác nhận họ tên: sang màn Bổ sung thông tin
   if (!session.data.profileCompleted) return <Navigate to={ONBOARDING_PATH} replace />;
   const { user, role } = session.data;
+  const visiblePages = PAGES.filter((page) => canSeePage(role, page));
 
   /** Đóng menu trượt và trả con trỏ bàn phím về nút mở menu. */
   function closeDrawer() {
@@ -75,7 +76,7 @@ export function AppLayout() {
 
   return (
     <div className={styles.shell} data-menu={menuMode}>
-      {/* Thanh trên cùng: chỉ hiện ở màn hình hẹp */}
+      {/* Thanh trên cùng: chỉ hiện khi dùng menu trượt. ☰ · logo · tên · icon các trang · menu tài khoản */}
       <header className={styles.topbar}>
         <button
           ref={menuButtonRef}
@@ -90,6 +91,16 @@ export function AppLayout() {
         </button>
         <img src="/assets/logo.png" alt="" />
         <span className={styles.appName}>Cổng xử lí đơn</span>
+
+        {/* Các trang dạng icon (rê chuột hiện tên trang), để chuyển trang nhanh mà không cần mở menu trượt */}
+        <nav className={styles.iconNav} aria-label="Chuyển trang nhanh">
+          {visiblePages.map((page) => (
+            <NavLink key={page} to={PAGE_PATH[page]} aria-label={PAGE_LABEL[page]} title={PAGE_LABEL[page]}>
+              {PAGE_ICON[page]}
+            </NavLink>
+          ))}
+        </nav>
+
         {/* chỉ một menu tài khoản tại một lúc: ở đây khi dùng menu trượt, ở cuối menu ngang khi không */}
         {narrow && (
           <AccountMenu
@@ -117,7 +128,7 @@ export function AppLayout() {
         </div>
 
         <nav ref={navRef} className={styles.nav} aria-label="Điều hướng">
-          {PAGES.filter((page) => canSeePage(role, page)).map((page) => (
+          {visiblePages.map((page) => (
             <NavLink key={page} to={PAGE_PATH[page]} onClick={() => setOpen(false)}>
               {PAGE_ICON[page]}
               <span>{PAGE_LABEL[page]}</span>
