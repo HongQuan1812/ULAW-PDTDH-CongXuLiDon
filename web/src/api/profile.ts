@@ -4,7 +4,9 @@ import {
   ENDPOINTS,
   profileCccdPath,
   profileFormsPath,
+  profileHandledFormsPath,
   profilePath,
+  type HandledFormsResponse,
   type MyFormsResponse,
   type FullCccdResponse,
   type Profile,
@@ -88,6 +90,21 @@ export function usePersonForms(userId: string) {
 }
 
 /**
+ * Các đơn một cán bộ khác tiếp nhận hoặc đang xử lí (mục "Đơn phụ trách" trên trang thông tin người khác).
+ * @param userId   id cán bộ cần xem
+ * @param enabled  true thì tải (chỉ khi người đó là cán bộ và người xem có quyền viewAll)
+ * @returns        kết quả useQuery; data = mảng đơn kèm người tiếp nhận, người xử lí (HandledFormSummary[])
+ */
+export function usePersonHandledForms(userId: string, enabled: boolean) {
+  return useQuery({
+    queryKey: ['profile', 'person', userId, 'handled-forms'] as const,
+    queryFn: () => apiFetch<HandledFormsResponse>(profileHandledFormsPath(userId)),
+    select: (response) => response.forms,
+    enabled,
+  });
+}
+
+/**
  * Chọn MSSV chính (hiện trên trang thông tin, điền vào file Word khi xuất đơn).
  * @returns  kết quả useMutation; gọi mutateAsync({ studentId }). Thành công thì hồ sơ mới được lưu ngay.
  */
@@ -103,7 +120,7 @@ export function useSetMainStudent() {
 /**
  * Lưu họ tên, CCCD, SĐT của mình (bổ sung thông tin lần đầu, sửa thông tin).
  * @returns  kết quả useMutation; gọi mutateAsync({ name, cccd, phone }). Thành công thì phiên mới
- *           (họ tên mới, đã bổ sung thông tin) được lưu ngay, và hồ sơ được tải lại.
+ *           (họ tên mới, đã bổ sung thông tin) được lưu ngay, hồ sơ và bảng Quản lí tài khoản được tải lại.
  */
 export function useUpdateProfile() {
   const queryClient = useQueryClient();
@@ -112,7 +129,10 @@ export function useUpdateProfile() {
       apiFetch<Session>(ENDPOINTS.profile.me, { method: 'PUT', body: JSON.stringify(body) }),
     onSuccess: (session) => {
       queryClient.setQueryData(SESSION_KEY, session);
-      return queryClient.invalidateQueries({ queryKey: ['profile'] });
+      return Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['profile'] }),
+        queryClient.invalidateQueries({ queryKey: ['accounts'] }),
+      ]);
     },
   });
 }

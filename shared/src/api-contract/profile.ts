@@ -1,6 +1,7 @@
 /* HỢP ĐỒNG nhóm API hồ sơ cá nhân: đường dẫn, dữ liệu gửi / nhận, câu thông báo.
    API giả (MSW), frontend và backend cùng theo file này. */
 import { z } from 'zod';
+import { ROLE_IDS } from '../aux-schema/accounts--roles';
 import { CCCD_PATTERN, PHONE_PATTERN, VALIDATION_MESSAGES, isFullName } from '../validators';
 
 /* ---------- Đường dẫn (phần sau /api) ---------- */
@@ -20,6 +21,8 @@ export const PROFILE_ENDPOINTS = {
   personCccd: '/profile/:userId/cccd',
   /** GET → MyFormsResponse: các đơn người đó đã nộp. Cần quyền viewApplicant */
   personForms: '/profile/:userId/forms',
+  /** GET → HandledFormsResponse: các đơn cán bộ đó tiếp nhận hoặc đang xử lí (mục "Đơn phụ trách"). Cần quyền viewAll */
+  personHandledForms: '/profile/:userId/handled-forms',
 } as const;
 
 /**
@@ -47,6 +50,15 @@ export function profileCccdPath(userId: string): string {
  */
 export function profileFormsPath(userId: string): string {
   return PROFILE_ENDPOINTS.personForms.replace(':userId', encodeURIComponent(userId));
+}
+
+/**
+ * Đường dẫn API các đơn một cán bộ khác tiếp nhận hoặc đang xử lí.
+ * @param userId  id người dùng
+ * @returns       vd '/profile/cb-1/handled-forms'
+ */
+export function profileHandledFormsPath(userId: string): string {
+  return PROFILE_ENDPOINTS.personHandledForms.replace(':userId', encodeURIComponent(userId));
 }
 
 /* ---------- Dữ liệu gửi / nhận ---------- */
@@ -90,6 +102,8 @@ export const STUDENT_INFO_LABELS: ReadonlyArray<{ key: keyof StudentInfo; label:
 export const ProfileSchema = z.object({
   name: z.string(),
   email: z.string(),
+  /** vai trò của tài khoản (vd để biết có mục "Đơn phụ trách" không) */
+  role: z.enum(ROLE_IDS),
   /** null = chưa có */
   phone: z.string().nullable(),
   /** vd "079•••••1234"; null = chưa có CCCD */
@@ -123,6 +137,8 @@ export const PROFILE_MESSAGES = {
   401: 'Bạn chưa đăng nhập.',
   /** GET /profile/:userId (và /cccd, /forms) khi không có quyền viewApplicant */
   403: 'Bạn không có quyền xem hồ sơ người khác.',
+  /** GET /profile/:userId/handled-forms khi không có quyền viewAll */
+  handledFormsForbidden: 'Bạn không có quyền xem đơn phụ trách của cán bộ khác.',
   /** GET /profile/:userId (và /cccd, /forms) khi không có người dùng này */
   404: 'Không có người dùng này.',
   /** PUT /profile/me: CCCD đã thuộc tài khoản khác */

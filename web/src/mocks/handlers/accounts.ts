@@ -1,4 +1,5 @@
-/* API giả: Quản lí tài khoản (xem mọi tài khoản, hiện CCCD, tạo, sửa). Chỉ vai trò có quyền manageAccounts. */
+/* API giả: Quản lí tài khoản (xem mọi tài khoản, hiện CCCD, tạo, sửa). Chỉ vai trò có quyền manageAccounts;
+   riêng sửa thì quyền editApplicant cũng được, nhưng không được đổi vai trò. */
 import { delay, http, HttpResponse } from 'msw';
 import {
   ACCOUNT_MESSAGES,
@@ -9,19 +10,23 @@ import {
   type Account,
   type AccountCccdsResponse,
   type AccountsResponse,
+  type Permission,
   type Session,
 } from '@ulaw/shared';
-import { createAccount, getAccountCccds, getAccounts, readSession, updateAccount } from '../db';
+import { createAccount, findPerson, getAccountCccds, getAccounts, readSession, updateAccount } from '../db';
 import { MOCK_DELAY_MS, api, apiError } from '../http';
 
 /**
- * Kiểm tra người đang đăng nhập có quyền quản lí tài khoản.
- * @returns  session: phiên của người đó · errorResponse: câu trả lỗi nếu chưa đăng nhập (401) hoặc không có quyền (403)
+ * Kiểm tra người đang đăng nhập có một trong các quyền cần có.
+ * @param permissions  các quyền chấp nhận, mặc định chỉ manageAccounts
+ * @returns            session: phiên của người đó · errorResponse: câu trả lỗi nếu chưa đăng nhập (401) hoặc không có quyền (403)
  */
-function managerSession(): { session: Session; errorResponse?: undefined } | { session?: undefined; errorResponse: Response } {
+function managerSession(
+  permissions: readonly Permission[] = ['manageAccounts'],
+): { session: Session; errorResponse?: undefined } | { session?: undefined; errorResponse: Response } {
   const session = readSession();
   if (!session) return { errorResponse: apiError(401, ACCOUNT_MESSAGES[401]) };
-  if (!can(session.role, 'manageAccounts')) return { errorResponse: apiError(403, ACCOUNT_MESSAGES[403]) };
+  if (!permissions.some((permission) => can(session.role, permission))) return { errorResponse: apiError(403, ACCOUNT_MESSAGES[403]) };
   return { session };
 }
 
@@ -58,15 +63,21 @@ export const accountHandlers = [
     return HttpResponse.json<Account>(created.account, { status: 201 });
   }),
 
-  // Sửa tài khoản: không tự đổi vai trò của mình, CCCD không trùng
+  // Sửa tài khoản (Quản lí tài khoản, hoặc "Sửa thông tin" ở trang thông tin người khác): không tự đổi vai trò, CCCD không trùng
   http.put(api(ENDPOINTS.accounts.account), async ({ request, params }) => {
     await delay(MOCK_DELAY_MS);
-    const { session, errorResponse } = managerSession();
+    const { session, errorResponse } = managerSession(['manageAccounts', 'editApplicant']);
     if (errorResponse) return errorResponse;
 
     // Body sai thì 422
     const parsed = UpdateAccountRequestSchema.safeParse(await request.json().catch(() => null));
     if (!parsed.success) return apiError(422, parsed.error.issues[0]?.message ?? ACCOUNT_MESSAGES[422]);
+
+    // Chỉ có editApplicant mà đổi vai trò thì 403
+    const currentRole = findPerson(String(params.userId))?.role;
+    if (currentRole && parsed.data.role !== currentRole && !can(session.role, 'manageAccounts')) {
+      return apiError(403, ACCOUNT_MESSAGES.roleForbidden);
+    }
 
     // Không có tài khoản 404, tự đổi vai trò 422, CCCD trùng 409; xong trả tài khoản sau khi sửa
     const updated = updateAccount(String(params.userId), parsed.data, session.user);

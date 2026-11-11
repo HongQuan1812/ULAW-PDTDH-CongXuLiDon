@@ -18,11 +18,11 @@ import { Pager } from '../../components/table/Pager';
 import { TableToolbar } from '../../components/table/TableToolbar';
 import { displayText, type SortRules, type TableField } from '../../components/table/tableTools';
 import { useTableTools } from '../../components/table/useTableTools';
+import { AccountDialog } from '../../features/accounts/AccountDialog';
 import { useAuth } from '../../features/auth/useAuth';
 import { EMPTY_TEXT, formatPhone } from '../../lib/format';
 import tableStyles from '../../components/table/table.module.css';
 import profileStyles from '../profile/ProfilePage.module.css';
-import { AccountDialog } from './AccountDialog';
 import styles from './AccountsPage.module.css';
 
 /** Các cột, như U_FIELDS của bản mẫu. */
@@ -101,11 +101,12 @@ export function AccountsPage() {
   const pageRows = table.getRowModel().rows;
   const errorMessage = loadErrorMessage(accountsQuery);
 
-  // Bấm dòng (hoặc Enter trên dòng đang chọn): mở trang thông tin của tài khoản; dòng của mình → Thông tin cá nhân
+  // Bấm dòng (hoặc Enter trên dòng đang chọn): mở trang thông tin của tài khoản; dòng của mình → Thông tin cá nhân.
+  // Trang mở ra có nút "‹ Quay lại Quản lí tài khoản"
   const openAccount = (account: Account) =>
-    account.id === user.id
-      ? navigate(PAGE_PATH.profile)
-      : navigate(personProfilePath(account.id), { state: { previousPageLabel: PAGE_LABEL.accounts } satisfies ReturnState });
+    navigate(account.id === user.id ? PAGE_PATH.profile : personProfilePath(account.id), {
+      state: { previousPageLabel: PAGE_LABEL.accounts } satisfies ReturnState,
+    });
   const openOnEnter = (event: KeyboardEvent<HTMLTableRowElement>, account: Account) => {
     if (event.target !== event.currentTarget || event.key !== 'Enter') return;
     event.preventDefault();

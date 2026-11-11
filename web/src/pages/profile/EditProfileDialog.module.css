@@ -1,7 +1,0 @@
-/* Hộp thoại Sửa thông tin tài khoản (như #uForm của bản mẫu). */
-.form{display:grid;gap:16px}
-.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}
-.muted{color:var(--muted)}
-.formError{color:var(--danger);font-size:13.5px;font-weight:500}
-.actions{display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap;margin-top:8px}
-@media (max-width:620px){.grid2{grid-template-columns:minmax(0,1fr)}}

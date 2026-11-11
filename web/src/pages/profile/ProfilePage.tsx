@@ -2,7 +2,7 @@
    và mục "Đơn phụ trách" (chỉ vai trò được xử lí đơn). */
 import { useCallback, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router';
-import { MAIN_STUDENT_MESSAGES, STUDENT_INFO_LABELS, type Profile, type StudentInfo } from '@ulaw/shared';
+import { MAIN_STUDENT_MESSAGES, STUDENT_INFO_LABELS, type Account, type Profile, type StudentInfo } from '@ulaw/shared';
 import { useMyFullCccd, useMyProfile, usePersonFullCccd, useSetMainStudent } from '../../api/profile';
 import { Avatar } from '../../components/Avatar';
 import { Button } from '../../components/Button';
@@ -11,9 +11,9 @@ import { useToast } from '../../components/Toast';
 import { LoadError, loadErrorMessage } from '../../components/LoadError';
 import { RefreshButton } from '../../components/RefreshButton';
 import { EMPTY_TEXT, formatPhone } from '../../lib/format';
-import { useCan } from '../../features/auth/useAuth';
+import { AccountDialog } from '../../features/accounts/AccountDialog';
+import { useAuth, useCan } from '../../features/auth/useAuth';
 import { readPreviousPageLabel } from '../../app/paths';
-import { EditProfileDialog } from './EditProfileDialog';
 import { HandledForms } from './HandledForms';
 import { SubmittedForms } from './SubmittedForms';
 import styles from './ProfilePage.module.css';
@@ -63,7 +63,7 @@ export function ProfilePage() {
 /**
  * Thẻ thông tin cá nhân: ảnh đại diện, họ tên, email, SĐT, CCCD (che, bấm Hiện để xem đủ)
  * và thông tin của MSSV chính. Có MSSV thì có nút "Thông tin sinh viên" mở khung chọn MSSV chính;
- * nút "Sửa thông tin" mở hộp thoại sửa họ tên, CCCD, SĐT.
+ * nút "Sửa thông tin" mở hộp sửa tài khoản dùng chung (họ tên, CCCD, SĐT; Admin thấy thêm Vai trò, bị khóa).
  * @param profile  hồ sơ của mình
  * @returns        thẻ thông tin
  */
@@ -72,6 +72,7 @@ function IdentityCard({ profile }: { profile: Profile }) {
   const [editOpen, setEditOpen] = useState(false);
   const closeEdit = useCallback(() => setEditOpen(false), []);
   const profileQuery = useMyProfile();
+  const { user } = useAuth();
   const mainStudent = profile.students.find((student) => student.studentId === profile.mainStudentId) ?? null;
 
   return (
@@ -124,9 +125,20 @@ function IdentityCard({ profile }: { profile: Profile }) {
         </Sheet>
       )}
 
-      <EditProfileDialog open={editOpen} onClose={closeEdit} profile={profile} />
+      <AccountDialog open={editOpen} onClose={closeEdit} account={myAccount(user.id, profile)} />
     </section>
   );
+}
+
+/**
+ * Đổi hồ sơ của mình sang dạng tài khoản mà hộp sửa tài khoản cần.
+ * @param userId   id của mình
+ * @param profile  hồ sơ của mình (CCCD che)
+ * @returns        tài khoản
+ */
+function myAccount(userId: string, profile: Profile): Account {
+  const { name, email, role, phone, maskedCccd } = profile;
+  return { id: userId, name, email, role, phone, maskedCccd };
 }
 
 /**

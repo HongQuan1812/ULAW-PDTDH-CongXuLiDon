@@ -1,4 +1,5 @@
-/* API giả: hồ sơ cá nhân (xem hồ sơ, xem số CCCD đầy đủ, chọn MSSV chính, lưu họ tên, CCCD, SĐT). */
+/* API giả: hồ sơ cá nhân (xem hồ sơ, xem số CCCD đầy đủ, chọn MSSV chính, lưu họ tên, CCCD, SĐT),
+   hồ sơ người khác (thông tin, CCCD, đơn đã nộp, đơn phụ trách). */
 import { delay, http, HttpResponse } from 'msw';
 import {
   ENDPOINTS,
@@ -9,12 +10,14 @@ import {
   can,
   maskCccd,
   type FullCccdResponse,
+  type HandledFormsResponse,
   type MyFormsResponse,
   type Profile,
   type Session,
 } from '@ulaw/shared';
 import {
   findPerson,
+  getFormsHandledBy,
   getFormsOf,
   getProfile,
   getStudents,
@@ -42,6 +45,7 @@ function toProfile(session: Session): Profile {
   return {
     name: profile.name,
     email: session.user.email,
+    role: session.role,
     phone: profile.phone,
     maskedCccd: maskCccd(profile.cccd),
     students,
@@ -131,6 +135,7 @@ export const profileHandlers = [
     return HttpResponse.json<Profile>({
       name: person.name,
       email: person.email,
+      role: person.role,
       phone: person.phone,
       maskedCccd: maskCccd(person.cccd),
       students: person.students,
@@ -152,5 +157,14 @@ export const profileHandlers = [
     const { person, errorResponse } = personToView(String(params.userId));
     if (!person) return errorResponse;
     return HttpResponse.json<MyFormsResponse>({ forms: getFormsOf(String(params.userId)) });
+  }),
+
+  // Các đơn một cán bộ khác tiếp nhận hoặc đang xử lí (mục "Đơn phụ trách"): cần thêm quyền viewAll
+  http.get(api(ENDPOINTS.profile.personHandledForms), async ({ params }) => {
+    await delay(MOCK_DELAY_MS);
+    const { person, errorResponse } = personToView(String(params.userId));
+    if (!person) return errorResponse;
+    if (!can(readSession()?.role, 'viewAll')) return apiError(403, PROFILE_MESSAGES.handledFormsForbidden);
+    return HttpResponse.json<HandledFormsResponse>({ forms: getFormsHandledBy(String(params.userId)) });
   }),
 ];

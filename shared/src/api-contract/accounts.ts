@@ -13,7 +13,9 @@ export const ACCOUNT_ENDPOINTS = {
   /** GET → AccountCccdsResponse: CCCD đầy đủ của mọi tài khoản (chỉ gọi khi bấm "Hiện CCCD").
       Đặt trước /accounts/:userId để 'cccds' không bị hiểu là id */
   cccds: '/accounts/cccds',
-  /** PUT UpdateAccountRequest → Account: sửa họ tên, CCCD, SĐT, vai trò của một tài khoản. Email không đổi được */
+  /** PUT UpdateAccountRequest → Account: sửa họ tên, CCCD, SĐT, vai trò của một tài khoản. Email không đổi được.
+      Ngoại lệ của nhóm: quyền editApplicant (nút "Sửa thông tin" ở trang thông tin người khác) cũng sửa được,
+      nhưng đổi vai trò vẫn cần manageAccounts */
   account: '/accounts/:userId',
 } as const;
 
@@ -85,8 +87,10 @@ export const ACCOUNT_MESSAGES = {
   /** PUT /accounts/:userId thành công */
   saved: (name: string) => `Đã lưu thay đổi tài khoản ${name}`,
   401: 'Bạn chưa đăng nhập.',
-  /** Mọi API của nhóm khi không có quyền manageAccounts */
+  /** Mọi API của nhóm khi không có quyền manageAccounts (PUT: không có cả editApplicant) */
   403: 'Bạn không có quyền quản lí tài khoản.',
+  /** PUT /accounts/:userId: có editApplicant nhưng không có manageAccounts mà đổi vai trò (403) */
+  roleForbidden: 'Bạn không có quyền đổi vai trò tài khoản.',
   /** PUT /accounts/:userId khi không có tài khoản này */
   404: 'Không có tài khoản này.',
   /** POST /accounts: email đã có tài khoản (409) */
