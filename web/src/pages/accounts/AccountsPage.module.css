@@ -4,8 +4,8 @@
 /* đầu thẻ: Hiện CCCD · + Tạo tài khoản */
 /* SĐT, CCCD: chữ số thẳng cột */
 .numberText{font-variant-numeric:tabular-nums;letter-spacing:.02em}
-/* nhãn "Bạn" cạnh họ tên của chính mình (như .you của bản mẫu) */
-.you{display:inline-block;margin-left:6px;padding:0 8px;border-radius:999px;font-size:11.5px;font-weight:500;background:var(--surface-2);color:var(--muted);vertical-align:1px;white-space:nowrap}
+/* nhãn "Bạn" cạnh họ tên của chính mình (như .you của bản mẫu), màu xanh lá (--ok) để dễ nhận ra dòng của mình */
+.you{display:inline-block;margin-left:6px;padding:0 8px;border-radius:999px;font-size:11.5px;font-weight:500;background:color-mix(in srgb,var(--ok) 14%,transparent);color:var(--ok);vertical-align:1px;white-space:nowrap}
 /* nhãn vai trò (như .role-badge của bản mẫu): đậm nhạt của màu trường — Người nộp đơn xám, Người xử lí đơn xanh nhạt, Admin xanh đậm */
 .rolePill{display:inline-block;padding:3px 11px;border-radius:999px;font-size:12.5px;font-weight:500;white-space:nowrap}
 .role_nguoiNopDon{background:var(--surface-2);color:var(--muted)}
