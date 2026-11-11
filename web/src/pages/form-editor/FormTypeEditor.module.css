@@ -1,0 +1,109 @@
+/* Trình soạn loại đơn (như .page-editor, .fe-*, .qe-*, .seg, .switch, .tabs của artifact/styles.css). */
+.page{display:grid;gap:24px;max-width:1080px;margin:0 auto;padding:40px 16px 64px}
+.back{display:inline-flex;align-items:center;gap:4px;border:0;background:none;color:var(--muted);font-weight:500;font-size:13.5px;cursor:pointer;padding:4px 0;margin-bottom:-12px;justify-self:start}
+.back:hover{color:var(--accent)}
+.muted{color:var(--muted)}
+.errorCard{display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);padding:28px}
+
+/* đầu trang: tiêu đề bên trái; nhãn "Chưa lưu" bên phải */
+.head{display:flex;align-items:center;justify-content:space-between;gap:16px 24px;flex-wrap:wrap}
+.title{font-size:clamp(24px,2.6vw,30px);line-height:1.2;font-weight:600;letter-spacing:-.03em;min-width:0}
+.headActions{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.dirty{font-size:12.5px;font-weight:500;color:var(--s-bs-fg);background:var(--s-bs-bg);padding:3px 11px;border-radius:999px}
+
+.editor{display:grid;gap:18px;min-width:0}
+
+/* thẻ: thông tin loại đơn, mỗi phần */
+.card{display:grid;gap:18px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);padding:28px;min-width:0}
+.card>*{min-width:0}
+.cardHead{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.cardHead h2{font-size:17px;font-weight:600;flex:1;min-width:0}
+.sectionNumber{display:inline-grid;place-items:center;width:26px;height:26px;border-radius:50%;background:var(--accent-soft);color:var(--accent);font-size:12.5px;font-weight:600;flex:none}
+.untitled{color:var(--faint)}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}
+.wide{grid-column:1/-1}
+.hint{color:var(--muted);font-size:13px}
+
+/* nút biểu tượng: ↑ ↓ nhân bản xóa */
+.iconActions{display:flex;gap:2px}
+.iconButton{display:inline-grid;place-items:center;width:34px;height:34px;border-radius:50%;border:0;background:transparent;color:var(--muted);cursor:pointer;flex:none}
+.iconButton:hover{background:var(--hover);color:var(--fg)}
+.iconButton:disabled{opacity:.35;cursor:not-allowed;background:transparent}
+.deleteButton{color:var(--danger)}
+.deleteButton:hover{background:var(--danger-soft);color:var(--danger)}
+.linkButton{border:0;background:none;color:var(--accent);font-weight:500;font-size:13px;cursor:pointer;padding:4px 2px;justify-self:start}
+.linkButton:hover{text-decoration:underline;text-underline-offset:3px}
+
+/* công tắc bật / tắt */
+.switch{display:inline-flex;align-items:center;gap:10px;font-size:13.5px;cursor:pointer;justify-self:start}
+.switch input[type=checkbox]{appearance:none;width:36px;height:21px;margin:0;border-radius:11px;background:var(--line-2);position:relative;cursor:pointer;transition:background .15s;flex:none}
+.switch input[type=checkbox]::after{content:"";position:absolute;top:2.5px;left:2.5px;width:16px;height:16px;border-radius:50%;background:var(--surface);box-shadow:0 1px 2px rgba(0,0,0,.2);transition:transform .15s}
+.switch input[type=checkbox]:checked{background:var(--accent)}
+.switch input[type=checkbox]:checked::after{transform:translateX(15px)}
+.switch input[type=checkbox]:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+
+/* chọn trạng thái: các nút tròn dài, chọn một */
+.segment{border:0;padding:0;margin:0;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.segment legend{font-weight:500;font-size:13.5px;margin-bottom:10px;padding:0}
+.segment label{position:relative;cursor:pointer}
+.segment label input{position:absolute;opacity:0}
+.segment label span{display:inline-flex;align-items:center;min-height:34px;padding:0 14px;border:1px solid var(--line-2);border-radius:999px;font-size:13.5px;font-weight:500;color:var(--muted)}
+.segment label input:checked+span{border-color:var(--accent);background:var(--accent-soft);color:var(--accent)}
+.segment label input:focus-visible+span{outline:2px solid var(--focus);outline-offset:2px}
+.segmentHint{flex-basis:100%}
+
+/* một câu hỏi: thanh tiêu đề nền nhạt, thân có các ô */
+.questionList{display:grid;gap:12px;min-width:0}
+.question{display:grid;border:1px solid var(--line-2);border-left:3px solid var(--accent);border-radius:var(--r-lg);background:var(--surface);overflow:hidden;min-width:0;transition:box-shadow .15s}
+.question:focus-within{box-shadow:var(--shadow)}
+.infoBlock{border-left-color:var(--line-2)}
+.questionHead{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 10px 8px 16px;background:var(--surface-2);border-bottom:1px solid var(--line)}
+.questionNumber{font-size:13.5px;font-weight:600}
+.badge{font-size:12px;font-weight:500;color:var(--muted);border:1px solid var(--line-2);border-radius:999px;padding:1px 9px;background:var(--surface)}
+.requiredBadge{font-size:12px;font-weight:500;color:var(--accent-ink);border:1px solid color-mix(in srgb,var(--accent) 45%,transparent);border-radius:999px;padding:1px 9px}
+.questionHead .iconActions{margin-left:auto}
+.questionBody{display:grid;gap:14px;padding:16px;min-width:0}
+.questionBody>*{min-width:0}
+.questionRow{display:grid;grid-template-columns:minmax(0,1fr) 240px;gap:10px;align-items:start}
+.questionLabel{font-weight:500}
+.questionFoot{display:flex;align-items:center;gap:12px 24px;flex-wrap:wrap;padding-top:14px;border-top:1px solid var(--line)}
+
+/* cài đặt riêng theo loại câu hỏi: khối nền nhạt viền đứt */
+.settings{display:grid;gap:10px;padding:14px;border-radius:var(--r);background:color-mix(in srgb,var(--surface-2) 70%,transparent);border:1px dashed var(--line-2);min-width:0}
+.settingsTitle{margin:0;font-size:12px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}
+.subLabel{font-size:13.5px;font-weight:500}
+.subLabel small{font-size:12px;font-weight:400;color:var(--muted)}
+
+/* lựa chọn */
+.options{display:grid;gap:6px}
+.option{display:flex;align-items:center;gap:8px}
+.optionMark{width:16px;height:16px;border:1.5px solid var(--line-2);flex:none;border-radius:4px}
+.optionMark_radio{border-radius:50%}
+.optionMark_select{border:0;text-align:center;line-height:16px}
+.optionMark_select::before{content:"▾";color:var(--faint)}
+
+/* bảng: tên gọi mỗi dòng, các cột */
+.tableSettings{display:grid;gap:8px;overflow-x:auto;min-width:0}
+.rowName{max-width:340px}
+.columnsHead,.column{display:grid;grid-template-columns:minmax(150px,1.4fr) minmax(120px,1fr) 90px 70px 34px;gap:8px;align-items:center;min-width:560px}
+.column>input,.column>select{height:43px}
+.columnSum{display:flex;align-items:center;justify-content:center;height:43px}
+
+/* tải tệp: định dạng cho phép | tối đa mỗi tệp */
+.fileSettings{display:grid;grid-template-columns:minmax(0,1fr) 160px;gap:12px 24px;align-items:start}
+.fileColumn{display:grid;gap:8px;align-content:start}
+.formats{display:flex;flex-wrap:wrap;gap:8px 18px;align-items:center;min-height:43px}
+.check{display:inline-flex;align-items:center;gap:8px;font-size:13.5px;cursor:pointer}
+
+/* hàng nút cuối trình soạn */
+.bottom{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+
+@media (max-width:760px){
+  .grid2,.questionRow{grid-template-columns:minmax(0,1fr)}
+  .card{padding:20px}
+}
+@media (max-width:560px){
+  .fileSettings{grid-template-columns:minmax(0,1fr)}
+  .fileSettings .fileColumn:last-child{max-width:160px}
+}
+.addButton{justify-self:start}
