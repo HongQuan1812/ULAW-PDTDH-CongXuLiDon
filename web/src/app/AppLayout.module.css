@@ -31,7 +31,7 @@
 [data-menu="compact"] .account{display:none}
 
 /* ---------- menu trượt: thanh trên cùng + menu trượt từ trái ----------
-   Bật khi màn hình hẹp (≤ 960px) hoặc khi các mục menu ngang không còn đủ chỗ (AppLayout gắn data-menu="drawer") */
+   Bật khi các mục menu ngang không còn đủ chỗ, kể cả đã ẩn tên tài khoản (AppLayout gắn data-menu="drawer") */
 [data-menu="drawer"] .topbar{display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:30;min-height:58px;padding:8px 16px 8px 10px;
   background:color-mix(in srgb,var(--surface) 94%,transparent);backdrop-filter:blur(10px);border-bottom:1px solid var(--line);color:var(--fg)}
 [data-menu="drawer"] .topbar img{width:30px;height:30px}

@@ -1,6 +1,7 @@
 /* Khung ứng dụng sau khi đăng nhập: thanh menu + vùng nội dung của từng trang.
-   Màn hình rộng: menu nằm ngang trên cùng; thiếu chỗ thì ẩn tên tài khoản và nhãn ô vai trò trước.
-   Màn hình hẹp, hoặc vẫn không đủ chỗ: thanh trên cùng + menu trượt ra từ bên trái. */
+   Đủ chỗ: menu nằm ngang trên cùng; thiếu chỗ thì ẩn tên tài khoản và nhãn ô vai trò trước;
+   vẫn không đủ: thanh trên cùng + menu trượt ra từ bên trái. Chỉ xét theo chỗ trống, không theo bề rộng màn hình cố định,
+   nên vai trò nào (nhiều hay ít mục) cũng thu gọn theo cùng một luật. */
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { Navigate, NavLink, Outlet, useLocation } from 'react-router';
 import { PAGES, canSeePage, type Page } from '@ulaw/shared';
@@ -12,7 +13,6 @@ import { AccountMenu } from './AccountMenu';
 import { DemoRoleSwitch } from '../features/auth/DemoRoleSwitch';
 import { useLogoutAction } from '../features/auth/useLogoutAction';
 import { SHOW_DEMO } from '../lib/env';
-import { useMediaQuery } from '../lib/useMediaQuery';
 import { LOGIN_PATH, ONBOARDING_PATH, PAGE_LABEL, PAGE_PATH } from './paths';
 import styles from './AppLayout.module.css';
 
@@ -25,10 +25,9 @@ export function AppLayout() {
   const logout = useLogoutAction();
   const location = useLocation();
 
-  // Menu trượt khi màn hình hẹp; màn hình rộng mà không đủ chỗ thì thu gọn dần (ẩn tên tài khoản → menu trượt)
-  const narrowScreen = useMediaQuery('(max-width: 960px)');
-  const { navRef, stage } = useMenuStage(narrowScreen, session.data?.role);
-  const narrow = narrowScreen || stage === 'drawer';
+  // Không đủ chỗ thì thu gọn dần: ẩn tên tài khoản và nhãn ô vai trò → menu trượt
+  const { navRef, stage } = useMenuStage(session.data?.role);
+  const narrow = stage === 'drawer';
   const menuMode = narrow ? 'drawer' : stage === 'compact' ? 'compact' : 'bar';
   const [open, setOpen] = useState(false);
   const drawerOpen = narrow && open;
@@ -194,39 +193,42 @@ type MenuStage = 'full' | 'compact' | 'drawer';
 /**
  * Chọn mức thu gọn của menu theo chỗ trống, thu gọn theo một chiều: đủ cả → gọn → menu trượt.
  * Ở mỗi mức, nếu các mục trong nav bị bóp (chữ tràn ra ngoài khung nav) thì xuống mức tiếp theo.
- * Đổi cỡ cửa sổ hoặc đổi vai trò (số mục đổi) thì thử lại từ mức "đủ cả" rồi đo;
+ * Đây là luật duy nhất, không có mốc bề rộng màn hình cố định: màn hình điện thoại cũng ra menu trượt vì đo thấy hết chỗ.
+ * Đổi bề ngang cửa sổ hoặc đổi vai trò (số mục đổi) thì thử lại từ mức "đủ cả" rồi đo;
  * việc thử chạy trước khi vẽ nên không nháy.
- * @param narrowScreen  màn hình đã hẹp (≤ 960px): luôn là menu trượt, không cần đo
- * @param role          vai trò hiện tại; đổi thì đo lại
- * @returns             navRef gắn vào thẻ <nav>; stage = mức thu gọn hiện tại
+ * @param role  vai trò hiện tại; đổi thì đo lại
+ * @returns     navRef gắn vào thẻ <nav>; stage = mức thu gọn hiện tại
  */
-function useMenuStage(narrowScreen: boolean, role: string | undefined) {
+function useMenuStage(role: string | undefined) {
   const navRef = useRef<HTMLElement>(null);
   const [stage, setStage] = useState<MenuStage>('full');
+  const measuredWidthRef = useRef(window.innerWidth);
 
   // Đổi vai trò: thử lại từ mức đủ cả rồi đo
   useLayoutEffect(() => setStage('full'), [role]);
 
-  // Đo khi mới vẽ, khi đổi cỡ cửa sổ và khi font tải xong (chữ rộng ra)
+  // Đo khi mới vẽ, khi đổi bề ngang cửa sổ và khi font tải xong (chữ rộng ra)
   useLayoutEffect(() => {
-    // Màn hình hẹp: luôn là menu trượt; bỏ kết quả đo cũ để rộng ra lại thì đo từ đầu
-    if (narrowScreen) {
-      setStage('full');
-      return;
-    }
-
     // Đang menu ngang mà chữ trong nav tràn ra ngoài: xuống mức tiếp theo
     const check = () => {
       const nav = navRef.current;
       if (stage !== 'drawer' && nav && nav.scrollWidth > nav.clientWidth) setStage(stage === 'full' ? 'compact' : 'drawer');
     };
-    // Đổi cỡ cửa sổ: đang thu gọn thì thử lại mức đủ cả (lần vẽ sau đo lại); đang đủ cả thì đo luôn
-    const retry = () => (stage === 'full' ? check() : setStage('full'));
+
+    // Đổi bề ngang: đang thu gọn thì thử lại mức đủ cả (lần vẽ sau đo lại); đang đủ cả thì đo luôn.
+    // Chỉ đổi chiều cao (điện thoại ẩn / hiện thanh địa chỉ khi cuộn) thì bỏ qua
+    const retry = () => {
+      if (window.innerWidth === measuredWidthRef.current) return;
+      measuredWidthRef.current = window.innerWidth;
+      if (stage === 'full') check();
+      else setStage('full');
+    };
+
     check();
     window.addEventListener('resize', retry);
     document.fonts?.ready.then(check);
     return () => window.removeEventListener('resize', retry);
-  }, [narrowScreen, stage, role]);
+  }, [stage, role]);
 
   return { navRef, stage };
 }
