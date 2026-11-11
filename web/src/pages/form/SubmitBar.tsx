@@ -1,5 +1,5 @@
 /* Hàng nút dính đáy của trang đơn: ô cam đoan bên trái, các nút bên phải (như .submit-row, #cam của bản mẫu).
-   Dùng chung cho trang nộp đơn mới (Hủy / Gửi đơn) và trang chi tiết đơn khi sửa được (Hủy thay đổi / Lưu thay đổi). */
+   Dùng chung cho trang nộp đơn mới (Hủy / Gửi đơn) và trang chi tiết đơn khi sửa được (Bỏ thay đổi / Lưu thay đổi, chỉ hiện khi đã sửa). */
 import { useRef, useState, type ReactNode } from 'react';
 import { ANSWER_MESSAGES, type AnswersValidation } from '@ulaw/shared';
 import type { ToastTone } from '../../components/Toast';

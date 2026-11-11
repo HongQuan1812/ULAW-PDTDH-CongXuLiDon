@@ -230,6 +230,8 @@ export const FORM_MESSAGES = {
   transferred: (code: string, staffName: string) => `Đã chuyển giao đơn ${code} cho ${staffName}.`,
   /** Bấm Lưu thay đổi mà câu trả lời vẫn như đã lưu (toast) */
   noChanges: 'Không có thay đổi nào để lưu.',
+  /** Bấm Bỏ thay đổi: câu trả lời về như đã lưu (toast) */
+  discarded: 'Đã bỏ các thay đổi chưa lưu.',
   /** Lưu thay đổi xong (toast), vd "Đã lưu thay đổi lúc 09:30 · 10/11/2026." */
   saved: (timeText: string) => `Đã lưu thay đổi lúc ${timeText}.`,
   /** Lưu đơn Cần bổ sung xong (toast) */

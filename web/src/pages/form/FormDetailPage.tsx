@@ -68,7 +68,7 @@ export function FormDetailPage() {
       {formQuery.isPending ? (
         <p className={styles.muted}>Đang tải đơn…</p>
       ) : formQuery.data ? (
-        <FormDetailView form={formQuery.data} onLeave={goBack} />
+        <FormDetailView form={formQuery.data} />
       ) : (
         <section className={styles.errorCard}>
           <LoadError message={loadErrorMessage(formQuery) ?? LOAD_FAILED_TEXT} />
@@ -81,15 +81,14 @@ export function FormDetailPage() {
 
 /**
  * Nội dung trang chi tiết của một lá đơn đã tải.
- * @param form     lá đơn đủ nội dung
- * @param onLeave  rời trang (nút Hủy thay đổi)
+ * @param form  lá đơn đủ nội dung
  * @returns        tiêu đề, khung thông báo, nội dung đơn (sửa được hoặc chỉ xem) và khung Thông tin đơn
  */
-function FormDetailView({ form, onLeave }: { form: FormDetail; onLeave: () => void }) {
+function FormDetailView({ form }: { form: FormDetail }) {
   const infoPanel = useFormInfoPanel();
   const { user, role } = useAuth();
   const editable = canEditForm({ id: user.id, role }, { status: form.status, applicantId: form.applicant.id });
-  const [savedCount, setSavedCount] = useState(0);
+  const [editorKey, setEditorKey] = useState(0);
   const [transferOpen, setTransferOpen] = useState(false);
 
   return (
@@ -108,8 +107,8 @@ function FormDetailView({ form, onLeave }: { form: FormDetail; onLeave: () => vo
 
       <div className={`${styles.grid} ${!infoPanel.isNarrow && infoPanel.isOpen ? styles.withSide : ''}`}>
         {editable ? (
-          // Mỗi lần lưu xong thì vẽ lại từ lá đơn mới (câu trả lời, tệp có id ở máy chủ, bỏ đánh dấu cam đoan)
-          <FormEditor key={savedCount} form={form} onCancel={onLeave} onSaved={() => setSavedCount((count) => count + 1)} />
+          // Lưu xong hoặc bỏ thay đổi thì vẽ lại từ lá đơn đã lưu (câu trả lời, tệp có id ở máy chủ, bỏ đánh dấu cam đoan)
+          <FormEditor key={editorKey} form={form} onReset={() => setEditorKey((count) => count + 1)} />
         ) : (
           <div className={styles.main}>
             <FormSections sections={form.sections} answers={form.answers} readOnly />
@@ -154,21 +153,20 @@ function FormDetailView({ form, onLeave }: { form: FormDetail; onLeave: () => vo
 }
 
 /**
- * Nội dung đơn sửa được (như openDetail với editable của bản mẫu): các phần câu hỏi, hàng nút có ô cam đoan,
- * "Hủy thay đổi" (rời trang) và "Lưu thay đổi".
- * Bấm Lưu thay đổi: chưa sửa gì thì báo không có thay đổi; còn lỗi thì báo như lúc nộp đơn;
- * hợp lệ thì gửi câu trả lời và tệp mới lên máy chủ trong một lần.
+ * Nội dung đơn sửa được (như openDetail với editable của bản mẫu): các phần câu hỏi, và khi đã sửa câu trả lời
+ * thì hiện hàng nút có ô cam đoan, "Bỏ thay đổi" và "Lưu thay đổi" (chưa sửa gì thì không hiện, để khỏi nhầm là phải bấm Lưu).
+ * Bấm Lưu thay đổi: còn lỗi thì báo như lúc nộp đơn; hợp lệ thì gửi câu trả lời và tệp mới lên máy chủ trong một lần.
  * Lưu xong: đơn Cần bổ sung chuyển sang Đã bổ sung; toast ghi giờ lưu.
- * @param form      lá đơn đang sửa
- * @param onCancel  bấm Hủy thay đổi
- * @param onSaved   lưu xong (lá đơn mới đã có trong cache): trang vẽ lại khung sửa từ lá đơn mới
- * @returns         thẻ <form> chiếm cột nội dung đơn
+ * @param form     lá đơn đang sửa
+ * @param onReset  vẽ lại khung sửa từ lá đơn đã lưu (sau khi lưu xong, lá đơn mới đã có trong cache; hoặc khi bỏ thay đổi)
+ * @returns        thẻ <form> chiếm cột nội dung đơn
  */
-function FormEditor({ form, onCancel, onSaved }: { form: FormDetail; onCancel: () => void; onSaved: () => void }) {
+function FormEditor({ form, onReset }: { form: FormDetail; onReset: () => void }) {
   const toast = useToast();
   const saveChanges = useSaveFormChanges(form);
   const { answers, setAnswer, questionErrors, validate } = useFormAnswers(form.sections, form.answers);
   const commitment = useCommitment();
+  const changed = answersChanged(form.sections, form.answers, answers);
 
   /**
    * Bấm Lưu thay đổi (đang lưu thì bỏ qua lần bấm thêm).
@@ -179,7 +177,7 @@ function FormEditor({ form, onCancel, onSaved }: { form: FormDetail; onCancel: (
     if (saveChanges.isPending) return;
 
     // Chưa sửa gì: không gửi
-    if (!answersChanged(form.sections, form.answers, answers)) {
+    if (!changed) {
       toast(FORM_MESSAGES.noChanges, 'info');
       return;
     }
@@ -193,24 +191,34 @@ function FormEditor({ form, onCancel, onSaved }: { form: FormDetail; onCancel: (
           const timeText = formatDateTime(savedForm.updatedAt);
           const supplemented = form.status === 'bs' && savedForm.status === 'bsg';
           toast(supplemented ? FORM_MESSAGES.supplemented(timeText) : FORM_MESSAGES.saved(timeText), 'success');
-          onSaved();
+          onReset();
         },
         onError: (error) => toast(error.message || SAVE_FAILED_TEXT, 'error'),
       },
     );
   };
 
+  /** Bỏ thay đổi: câu trả lời về như đã lưu (vẽ lại khung sửa), báo bằng toast. */
+  const discardChanges = () => {
+    onReset();
+    toast(FORM_MESSAGES.discarded, 'info');
+  };
+
   return (
     <form className={styles.main} onSubmit={save} noValidate>
       <FormSections sections={form.sections} answers={answers} onAnswerChange={setAnswer} questionErrors={questionErrors} />
-      <SubmitBar commitment={commitment}>
-        <Button variant="ghost" onClick={onCancel} disabled={saveChanges.isPending}>
-          Hủy thay đổi
-        </Button>
-        <Button variant="primary" type="submit" disabled={saveChanges.isPending}>
-          {saveChanges.isPending ? 'Đang lưu…' : 'Lưu thay đổi'}
-        </Button>
-      </SubmitBar>
+
+      {/* Cam đoan · Bỏ thay đổi · Lưu thay đổi: chỉ hiện khi đã sửa câu trả lời */}
+      {changed && (
+        <SubmitBar commitment={commitment}>
+          <Button variant="ghost" onClick={discardChanges} disabled={saveChanges.isPending}>
+            Bỏ thay đổi
+          </Button>
+          <Button variant="primary" type="submit" disabled={saveChanges.isPending}>
+            {saveChanges.isPending ? 'Đang lưu…' : 'Lưu thay đổi'}
+          </Button>
+        </SubmitBar>
+      )}
     </form>
   );
 }

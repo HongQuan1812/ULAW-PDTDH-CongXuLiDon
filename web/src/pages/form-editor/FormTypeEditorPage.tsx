@@ -1,6 +1,6 @@
 /* Trình soạn loại đơn (#/soan-don/<mã loại đơn>[?phien-ban=<số>], tạo mới: #/soan-don/moi), như phần "Trình soạn" của artifact/js/forms-page.js.
    Gồm: nút quay lại, tiêu đề, tab Soạn / Xem trước, khung Phiên bản bên phải (màn hình hẹp: trượt ra), nhãn "Chưa lưu", khung báo lỗi, câu nhắc về phiên bản,
-   thẻ Thông tin loại đơn, các phần và câu hỏi, hàng nút cuối (+ Thêm phần · Bỏ thay đổi · Xóa · Lưu).
+   thẻ Thông tin loại đơn, các phần và câu hỏi, hàng nút cuối (+ Thêm phần · Xóa · Bỏ thay đổi · Lưu; hai nút cuối chỉ hiện khi có thay đổi).
 
    Phiên bản (xem shared/src/api-contract/form-types.ts):
    - Phiên bản Nháp sửa được; Lưu ở Nháp để soạn tiếp, hoặc ở Đang mở để mở (nội dung khóa lại).
@@ -233,7 +233,9 @@ function FormTypeEditor({ managed, requestedVersion }: FormTypeEditorProps) {
   const shownDraft = editingSelected ? edit.draft : (savedDraft ?? edit?.draft ?? emptyDraft);
   const shownStatus = isLockedVersion && statusChange?.version === selectedVersion ? statusChange.status : shownDraft.status;
   const otherOpenVersion = versions.find((version) => version.status === 'open' && version.version !== selectedVersion)?.version ?? null;
-  const dirty = edit !== null || statusChange !== null;
+  // Chỉ tính thay đổi của phiên bản đang xem: phiên bản khác đang sửa dở thì "Chưa lưu", "Bỏ thay đổi" không hiện ở đây
+  // (khung Phiên bản vẫn ghi "Chưa lưu" ở phiên bản đó)
+  const dirty = editingSelected || statusChange?.version === selectedVersion;
 
   // Lỗi của bản soạn (chỉ sau khi đã bấm Lưu); mã đơn so với các loại đơn khác trong danh sách đã tải
   const otherPrefixes = useMemo(
@@ -599,15 +601,23 @@ function FormTypeEditor({ managed, requestedVersion }: FormTypeEditorProps) {
                 + Thêm phần
               </Button>
               <span className={styles.spacer} />
-              {dirty && !isNew && <Button onClick={discardChanges}>Bỏ thay đổi</Button>}
               {selectedSaved?.status === 'draft' && (
                 <Button variant="danger" onClick={() => setConfirmingDelete(true)}>
                   {deletesWholeFormType ? 'Xóa loại đơn' : 'Xóa bản nháp'}
                 </Button>
               )}
-              <Button variant="primary" onClick={save} disabled={isSaving}>
-                {isSaving ? 'Đang lưu…' : 'Lưu'}
-              </Button>
+
+              {/* Bỏ thay đổi · Lưu: đi thành cặp, chỉ hiện khi phiên bản đang xem có thay đổi */}
+              {dirty && (
+                <>
+                  <Button onClick={discardChanges} disabled={isSaving}>
+                    Bỏ thay đổi
+                  </Button>
+                  <Button variant="primary" onClick={save} disabled={isSaving}>
+                    {isSaving ? 'Đang lưu…' : 'Lưu'}
+                  </Button>
+                </>
+              )}
             </div>
           </div>
         </div>

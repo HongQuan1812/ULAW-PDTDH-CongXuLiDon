@@ -70,7 +70,7 @@ function EditProfileForm({ profile, fullCccd, onClose }: { profile: Profile; ful
     handleSubmit,
     setError,
     setFocus,
-    formState: { errors },
+    formState: { errors, isDirty },
   } = useForm<UpdateProfileRequest>({
     resolver: zodResolver(UpdateProfileRequestSchema),
     defaultValues: { name: profile.name, cccd: fullCccd, phone: profile.phone ?? '' },
@@ -140,13 +140,16 @@ function EditProfileForm({ profile, fullCccd, onClose }: { profile: Profile; ful
         </p>
       )}
 
+      {/* Hủy (đóng hộp thoại) · Lưu thay đổi: nút Lưu chỉ hiện khi đã sửa */}
       <div className={styles.actions}>
         <Button variant="ghost" onClick={onClose} disabled={updateProfile.isPending}>
           Hủy
         </Button>
-        <Button variant="primary" type="submit" disabled={updateProfile.isPending}>
-          {updateProfile.isPending ? 'Đang lưu…' : 'Lưu thay đổi'}
-        </Button>
+        {isDirty && (
+          <Button variant="primary" type="submit" disabled={updateProfile.isPending}>
+            {updateProfile.isPending ? 'Đang lưu…' : 'Lưu thay đổi'}
+          </Button>
+        )}
       </div>
     </form>
   );
