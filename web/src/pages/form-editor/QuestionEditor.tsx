@@ -93,7 +93,7 @@ export function QuestionEditor({ question, index, questionCount, autoFocus, onCh
             />
           </Field>
         ) : (
-          <Field label="Mô tả, gợi ý cho người nộp đơn">
+          <Field label="Mô tả ngắn, gợi ý cho người nộp đơn">
             <GrowingTextarea
               className={styles.growing}
               value={question.help ?? ''}

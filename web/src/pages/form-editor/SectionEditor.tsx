@@ -85,7 +85,7 @@ export function SectionEditor({ section, index, sectionCount, focusQuestionId, a
             onValueChange={(title) => onChange({ ...section, title })}
           />
         </Field>
-        <Field label="Mô tả phần">
+        <Field label="Mô tả ngắn của phần">
           <GrowingTextarea className={styles.growing} value={section.hint ?? ''} onValueChange={(hint) => onChange({ ...section, hint })} />
         </Field>
       </div>

@@ -113,7 +113,7 @@ function TableSettings({ question, onChange }: { question: QuestionOf<'table'>; 
           Cột
           <RequiredMark />
         </span>
-        <span>Mô tả nhỏ</span>
+        <span>Mô tả ngắn</span>
         <span>Kiểu</span>
         <span>Tính tổng</span>
         <span />
@@ -130,7 +130,7 @@ function TableSettings({ question, onChange }: { question: QuestionOf<'table'>; 
             onValueChange={(label) => changeColumn(i, { label })}
           />
           <code className={styles.columnCode} title="Mã của cột trong file Word">{`{${columnTag(column)}}`}</code>
-          <GrowingTextarea value={column.sub ?? ''} placeholder="Mô tả nhỏ" aria-label={`Mô tả cột ${i + 1}`} onValueChange={(sub) => changeColumn(i, { sub })} />
+          <GrowingTextarea value={column.sub ?? ''} placeholder="Mô tả ngắn" aria-label={`Mô tả ngắn cột ${i + 1}`} onValueChange={(sub) => changeColumn(i, { sub })} />
           <select
             value={column.type}
             aria-label={`Kiểu cột ${i + 1}`}
