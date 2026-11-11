@@ -2,6 +2,7 @@ import { createHashRouter } from 'react-router';
 import { AccountsPage } from '../pages/accounts/AccountsPage';
 import { FormDetailPage } from '../pages/form/FormDetailPage';
 import { NewFormPage } from '../pages/form/NewFormPage';
+import { FormTypeEditorPage } from '../pages/form-editor/FormTypeEditorPage';
 import { FormTypesPage } from '../pages/form-types/FormTypesPage';
 import { FormsPage } from '../pages/forms/FormsPage';
 import { LoginPage } from '../pages/login/LoginPage';
@@ -10,7 +11,7 @@ import { PersonProfilePage } from '../pages/profile/PersonProfilePage';
 import { ProfilePage } from '../pages/profile/ProfilePage';
 import { AppLayout } from './AppLayout';
 import { HomeRedirect, PageGuard } from './guards';
-import { LOGIN_PATH, NEW_FORM_ROUTE, ONBOARDING_PATH, PAGE_PATH, PERSON_PROFILE_ROUTE } from './paths';
+import { FORM_TYPE_EDITOR_ROUTE, LOGIN_PATH, NEW_FORM_ROUTE, ONBOARDING_PATH, PAGE_PATH, PERSON_PROFILE_ROUTE } from './paths';
 
 /* Đường dẫn dạng #/... như bản mẫu.
    Trang Đăng nhập và Bổ sung thông tin lần đầu nằm ngoài khung; các trang còn lại nằm trong AppLayout (phải đăng nhập). */
@@ -31,6 +32,10 @@ export const router = createHashRouter([
       {
         path: PAGE_PATH.formTypes,
         element: <PageGuard page="formTypes" permission="manageFormTypes"><FormTypesPage /></PageGuard>,
+      },
+      {
+        path: FORM_TYPE_EDITOR_ROUTE,
+        element: <PageGuard page="formTypes" permission="manageFormTypes"><FormTypeEditorPage /></PageGuard>,
       },
       {
         path: PAGE_PATH.accounts,

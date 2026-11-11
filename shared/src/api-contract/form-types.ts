@@ -4,10 +4,13 @@
 import { z } from 'zod';
 import { FormSectionSchema } from '../aux-schema/form-types--sections';
 import { FORM_TYPE_STATUSES } from '../aux-schema/form-types--statuses';
+import { StaffRefSchema } from './form';
 
 /* ---------- Đường dẫn (phần sau /api) ---------- */
 
 export const FORM_TYPE_ENDPOINTS = {
+  /** GET: mọi loại đơn (Nháp, Đang mở, Đã đóng) → FormTypesResponse (bảng trang Quản lí loại đơn). Cần quyền manageFormTypes */
+  list: '/form-types',
   /** GET: các loại đơn "Đang mở" (đang nhận đơn) → OpenFormTypesResponse. Dùng cho hộp "Chọn loại đơn" khi nộp đơn mới */
   open: '/form-types/open',
   /** GET: một loại đơn, đủ cấu trúc các phần, câu hỏi → FormType. Dùng cho trang nộp đơn mới.
@@ -50,11 +53,27 @@ export const FormTypeSchema = OpenFormTypeSchema.extend({
 });
 export type FormType = z.infer<typeof FormTypeSchema>;
 
+/** Một dòng trong bảng Quản lí loại đơn: thông tin chung, trạng thái, lần lưu gần nhất; chưa có cấu trúc các phần. */
+export const FormTypeSummarySchema = OpenFormTypeSchema.extend({
+  status: z.enum(FORM_TYPE_STATUSES),
+  /** Lần lưu gần nhất, giờ Việt Nam 'YYYY-MM-DDTHH:mm' */
+  updatedAt: z.string(),
+  /** Cán bộ lưu lần gần nhất */
+  updatedBy: StaffRefSchema,
+});
+export type FormTypeSummary = z.infer<typeof FormTypeSummarySchema>;
+
+/** Trả về từ GET /form-types: mọi loại đơn, máy chủ không phân trang (ít loại đơn). */
+export const FormTypesResponseSchema = z.object({ formTypes: z.array(FormTypeSummarySchema) });
+export type FormTypesResponse = z.infer<typeof FormTypesResponseSchema>;
+
 /* ---------- Câu thông báo ---------- */
 
 export const FORM_TYPE_MESSAGES = {
   /** Gọi API khi chưa đăng nhập */
   401: 'Bạn chưa đăng nhập.',
+  /** GET /form-types khi vai trò không có quyền manageFormTypes (403) */
+  403: 'Bạn không có quyền quản lí loại đơn.',
   /** Bấm "Nộp đơn mới" khi không có loại đơn nào đang mở */
   noneOpen: 'Hiện chưa có loại đơn nào đang nhận đơn.',
   /** Mở trang nộp đơn của loại đơn không có, hoặc không còn nhận đơn */

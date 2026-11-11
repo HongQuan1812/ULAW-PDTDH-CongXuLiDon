@@ -1,7 +1,22 @@
 /* Hook gọi API loại đơn. */
 import { useQuery } from '@tanstack/react-query';
-import { ENDPOINTS, formTypeDetailPath, type FormType, type OpenFormTypesResponse } from '@ulaw/shared';
+import { ENDPOINTS, formTypeDetailPath, type FormType, type FormTypesResponse, type OpenFormTypesResponse } from '@ulaw/shared';
 import { apiFetch } from './client';
+
+/** Khóa lưu tạm mọi loại đơn (trang Quản lí loại đơn). */
+export const FORM_TYPES_KEY = ['formTypes', 'all'] as const;
+
+/**
+ * Mọi loại đơn (Nháp, Đang mở, Đã đóng), cho trang Quản lí loại đơn. Cần quyền manageFormTypes.
+ * @returns  kết quả useQuery; data = mảng loại đơn (FormTypeSummary[])
+ */
+export function useFormTypes() {
+  return useQuery({
+    queryKey: FORM_TYPES_KEY,
+    queryFn: () => apiFetch<FormTypesResponse>(ENDPOINTS.formTypes.list),
+    select: (response) => response.formTypes,
+  });
+}
 
 /** Khóa lưu tạm danh sách loại đơn đang mở trong TanStack Query. */
 export const OPEN_FORM_TYPES_KEY = ['formTypes', 'open'] as const;

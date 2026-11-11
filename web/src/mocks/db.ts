@@ -10,6 +10,7 @@ import type {
   FormStatus,
   FormSummary,
   FormType,
+  FormTypeSummary,
   HandledFormSummary,
   ManagedFormSummary,
   OpenFormType,
@@ -322,6 +323,31 @@ const FORM_TYPES: FormType[] = [
     ],
   })),
 ].map((rawFormType) => FormTypeSchema.parse(rawFormType));
+
+/* Lần lưu gần nhất của từng loại đơn: lúc lưu, id cán bộ lưu (như updatedAt, updatedBy của TYPES trong config.js).
+   Xét miễn môn như bản mẫu; các loại khác lùi dần mỗi loại 6 ngày, giờ lưu trong giờ hành chính, lần lượt 3 cán bộ mẫu. */
+const FORM_TYPE_UPDATES = new Map<string, { updatedAt: string; updatedById: string }>(
+  FORM_TYPES.map(({ id }, i) => [
+    id,
+    i === 0
+      ? { updatedAt: '2026-09-01T08:00', updatedById: 'cb-1' }
+      : {
+          updatedAt: `${addHours('2026-11-05T00:00', -(i - 1) * 144).slice(0, 10)}T${String(8 + ((i * 3) % 9)).padStart(2, '0')}:${String((i * 17) % 60).padStart(2, '0')}`,
+          updatedById: `cb-${((i - 1) % 3) + 1}`,
+        },
+  ]),
+);
+
+/**
+ * Mọi loại đơn cho bảng Quản lí loại đơn (Nháp, Đang mở, Đã đóng).
+ * @returns  thông tin chung, trạng thái, lần lưu gần nhất của từng loại đơn
+ */
+export function getFormTypeSummaries(): FormTypeSummary[] {
+  return FORM_TYPES.map(({ id, name, prefix, description, status }) => {
+    const { updatedAt, updatedById } = FORM_TYPE_UPDATES.get(id)!;
+    return { id, name, prefix, description, status, updatedAt, updatedBy: staffOf(updatedById)! };
+  });
+}
 
 /**
  * Các loại đơn đang nhận đơn (trạng thái Đang mở).

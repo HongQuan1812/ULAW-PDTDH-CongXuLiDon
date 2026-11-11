@@ -32,6 +32,21 @@ export function formPath(code: string): string {
   return `/don/${encodeURIComponent(code)}`;
 }
 
+/** Trình soạn loại đơn, khai báo trong router: /soan-don/<mã loại đơn> (như #soan-don-<mã> của bản mẫu). */
+export const FORM_TYPE_EDITOR_ROUTE = '/soan-don/:formTypeId';
+
+/** Mã loại đơn trên đường dẫn khi tạo loại đơn mới: /soan-don/moi. */
+export const NEW_FORM_TYPE_ID = 'moi';
+
+/**
+ * Đường dẫn trình soạn của một loại đơn.
+ * @param formTypeId  mã loại đơn, vd 'xmm'; tạo mới thì NEW_FORM_TYPE_ID
+ * @returns           vd '/soan-don/xmm'
+ */
+export function formTypeEditorPath(formTypeId: string): string {
+  return `/soan-don/${encodeURIComponent(formTypeId)}`;
+}
+
 /** Trang hồ sơ người nộp đơn (chỉ xem), khai báo trong router: /ho-so/<id người dùng>. */
 export const PERSON_PROFILE_ROUTE = '/ho-so/:userId';
 

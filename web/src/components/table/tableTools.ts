@@ -28,6 +28,8 @@ export interface TableField<Row> {
   getLabel?: (row: Row) => string;
   /** Chỉ cột select: các lựa chọn cố định khi lọc. Không có thì lấy từ dữ liệu đang có */
   options?: readonly FieldOption[];
+  /** Chỉ cột select: thứ tự khi sắp xếp tăng dần (số nhỏ trước), vd Đang mở → Nháp → Đã đóng. Không có thì xếp theo tên hiển thị */
+  getOrder?: (row: Row) => number;
 }
 
 /**
@@ -79,7 +81,7 @@ export const SORT_DIRECTION_LABELS: Record<FieldType, [string, string]> = {
 
 /**
  * So sánh hai dòng theo một cột (tăng dần). Ô trống do TanStack Table xếp cuối, không qua hàm này.
- * Cột select so theo tên hiển thị; cột số so theo số; còn lại so chữ kiểu tiếng Việt, số trong chữ so theo giá trị.
+ * Cột select so theo thứ tự riêng (getOrder) nếu có, không thì theo tên hiển thị; cột số so theo số; còn lại so chữ kiểu tiếng Việt, số trong chữ so theo giá trị.
  * @param field  cột
  * @param rowA   dòng thứ nhất
  * @param rowB   dòng thứ hai
@@ -87,6 +89,7 @@ export const SORT_DIRECTION_LABELS: Record<FieldType, [string, string]> = {
  */
 export function compareRows<Row>(field: TableField<Row>, rowA: Row, rowB: Row): number {
   if (field.type === 'number') return Number(field.getValue(rowA)) - Number(field.getValue(rowB));
+  if (field.type === 'select' && field.getOrder) return field.getOrder(rowA) - field.getOrder(rowB);
   const textA = field.type === 'select' ? displayText(field, rowA) : String(field.getValue(rowA));
   const textB = field.type === 'select' ? displayText(field, rowB) : String(field.getValue(rowB));
   return textA.localeCompare(textB, 'vi', { numeric: true, sensitivity: 'base' });

@@ -1,0 +1,3 @@
+/* Trang Quản lí loại đơn: dùng lại khung thẻ của trang Thông tin cá nhân (ProfilePage.module.css), tiêu đề nằm trong thẻ
+   như trang Quản lí đơn; chỉ thêm phần riêng. */
+.title{font-size:17px;font-weight:600;min-width:0}

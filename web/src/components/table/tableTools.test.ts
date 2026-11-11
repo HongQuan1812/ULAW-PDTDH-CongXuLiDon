@@ -137,6 +137,21 @@ describe('sắp xếp bằng TanStack Table', () => {
     expect(sortedCodes([{ id: 'status', desc: true }])).toEqual([...ascending].reverse());
   });
 
+  it('cột lựa chọn có thứ tự riêng thì xếp theo thứ tự đó, không theo tên', () => {
+    const order = { xet: 0, nop: 1, duyet: 2 } as const;
+    const orderedFields = FIELDS.map((field) => (field.key === 'status' ? { ...field, getOrder: (row: TestRow) => order[row.status] } : field));
+    const table = createTable({
+      data: ROWS,
+      columns: buildColumns(orderedFields),
+      state: { sorting: [{ id: 'status', desc: false }] },
+      onStateChange: () => {},
+      renderFallbackValue: null,
+      getCoreRowModel: getCoreRowModel(),
+      getSortedRowModel: getSortedRowModel(),
+    });
+    expect(table.getRowModel().rows.map((row) => row.original.status)).toEqual(['xet', 'nop', 'duyet']);
+  });
+
   it('ô trống luôn nằm cuối, dù sắp xếp chiều nào', () => {
     expect(sortedCodes([{ id: 'credits', desc: false }]).at(-1)).toBe('XMM-2026-00010');
     expect(sortedCodes([{ id: 'credits', desc: true }]).at(-1)).toBe('XMM-2026-00010');
