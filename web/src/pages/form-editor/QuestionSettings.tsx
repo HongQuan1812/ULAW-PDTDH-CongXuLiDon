@@ -1,8 +1,9 @@
 /* Cài đặt riêng theo loại câu hỏi trong trình soạn (như typeEditor() của artifact/js/forms-page.js):
    các lựa chọn (Chọn một / Chọn nhiều / Danh sách thả xuống), các cột của bảng, định dạng và dung lượng tệp.
    Loại câu hỏi khác không có cài đặt riêng. */
-import type { Question, QuestionOf, TableColumn } from '@ulaw/shared';
+import { FORM_TYPE_ISSUE_TARGET, type Question, type QuestionOf, type TableColumn } from '@ulaw/shared';
 import { GrowingTextarea } from '../../features/form-renderer/GrowingTextarea';
+import { useDraftIssues } from './draftIssues';
 import { EditorIconButton } from './EditorIconButton';
 import { DEFAULT_MAX_MB, FILE_FORMAT_GROUPS, MAX_MB_LIMIT, removeAt, replaceAt } from './formTypeDraft';
 import styles from './FormTypeEditor.module.css';
@@ -50,12 +51,18 @@ export function QuestionSettings({ question, onChange }: QuestionSettingsProps) 
  */
 function ChoiceSettings({ question, onChange }: { question: QuestionOf<'radio' | 'check' | 'select'>; onChange: (nextQuestion: Question) => void }) {
   const setOptions = (options: string[]) => onChange({ ...question, options });
+  const invalidTargets = useDraftIssues();
   return (
     <div className={styles.options}>
       {question.options.map((option, i) => (
         <div key={i} className={styles.option}>
           <span className={`${styles.optionMark} ${styles[`optionMark_${question.type}`] ?? ''}`} aria-hidden="true" />
-          <input value={option} aria-label={`Lựa chọn ${i + 1}`} onChange={(event) => setOptions(replaceAt(question.options, i, event.target.value))} />
+          <input
+            value={option}
+            aria-label={`Lựa chọn ${i + 1}`}
+            aria-invalid={invalidTargets.has(FORM_TYPE_ISSUE_TARGET.option(question.id, i)) || undefined}
+            onChange={(event) => setOptions(replaceAt(question.options, i, event.target.value))}
+          />
           <EditorIconButton
             icon="remove"
             label="Xóa lựa chọn"
@@ -83,6 +90,7 @@ function TableSettings({ question, onChange }: { question: QuestionOf<'table'>; 
   const setColumns = (columns: TableColumn[]) => onChange({ ...question, columns });
   const changeColumn = (index: number, changes: Partial<TableColumn>) =>
     setColumns(replaceAt(question.columns, index, { ...question.columns[index]!, ...changes }));
+  const invalidTargets = useDraftIssues();
 
   return (
     <div className={styles.tableSettings}>
@@ -102,7 +110,13 @@ function TableSettings({ question, onChange }: { question: QuestionOf<'table'>; 
       {question.columns.map((column, i) => (
         <div key={i} className={styles.column}>
           {/* Tên cột, mô tả dài thì tự xuống hàng; hai ô cùng hàng cao bằng nhau */}
-          <GrowingTextarea value={column.label} placeholder="Tên cột" aria-label={`Tên cột ${i + 1}`} onValueChange={(label) => changeColumn(i, { label })} />
+          <GrowingTextarea
+            value={column.label}
+            placeholder="Tên cột"
+            aria-label={`Tên cột ${i + 1}`}
+            aria-invalid={invalidTargets.has(FORM_TYPE_ISSUE_TARGET.column(question.id, i)) || undefined}
+            onValueChange={(label) => changeColumn(i, { label })}
+          />
           <GrowingTextarea value={column.sub ?? ''} placeholder="Không bắt buộc" aria-label={`Mô tả cột ${i + 1}`} onValueChange={(sub) => changeColumn(i, { sub })} />
           <select
             value={column.type}
@@ -152,17 +166,19 @@ function FileSettings({ question, onChange }: { question: QuestionOf<'file'>; on
     const ordered = FILE_FORMAT_GROUPS.flatMap(([groupExtensions]) => groupExtensions).filter((extension) => accepted.has(extension));
     onChange({ ...question, accept: ordered });
   };
+  const formatsInvalid = useDraftIssues().has(FORM_TYPE_ISSUE_TARGET.fileFormats(question.id));
 
   return (
     <div className={styles.fileSettings}>
       <div className={styles.fileColumn}>
         <span className={styles.subLabel}>Định dạng cho phép</span>
-        <div className={styles.formats}>
+        <div className={`${styles.formats} ${formatsInvalid ? styles.formatsInvalid : ''}`}>
           {FILE_FORMAT_GROUPS.map(([extensions, label]) => (
             <label key={label} className={styles.check}>
               <input
                 type="checkbox"
                 checked={extensions.every((extension) => question.accept.includes(extension))}
+                aria-invalid={formatsInvalid || undefined}
                 onChange={(event) => toggleFormats(extensions, event.target.checked)}
               />
               <span>{label}</span>

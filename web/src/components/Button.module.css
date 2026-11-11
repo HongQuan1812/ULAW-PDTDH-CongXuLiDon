@@ -6,3 +6,5 @@
 .primary:hover{background:var(--accent-ink);border-color:var(--accent-ink)}
 .ghost{background:transparent;border-color:transparent;color:var(--muted)}
 .ghost:hover{background:var(--hover);color:var(--fg)}
+.danger{color:var(--danger)}
+.danger:hover{background:var(--danger-soft);border-color:color-mix(in srgb,var(--danger) 35%,var(--line-2))}

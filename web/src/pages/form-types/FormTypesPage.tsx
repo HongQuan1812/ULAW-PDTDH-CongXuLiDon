@@ -11,6 +11,7 @@ import { Button } from '../../components/Button';
 import { LoadError, loadErrorMessage } from '../../components/LoadError';
 import { RefreshButton } from '../../components/RefreshButton';
 import { FormTypeStatusPill } from '../../components/StatusPill';
+import { discardFormTypeDraft, hasFormTypeDraft } from '../form-editor/formTypeDrafts';
 import { HeaderCell } from '../../components/table/HeaderCell';
 import { Highlight } from '../../components/table/Highlight';
 import { Pager } from '../../components/table/Pager';
@@ -95,7 +96,13 @@ export function FormTypesPage() {
             </h1>
             <RefreshButton query={formTypesQuery} label="Quản lí loại đơn" size="small" />
           </div>
-          <Button variant="primary" onClick={() => openEditor(NEW_FORM_TYPE_ID)}>
+          <Button
+            variant="primary"
+            onClick={() => {
+              discardFormTypeDraft(NEW_FORM_TYPE_ID);
+              openEditor(NEW_FORM_TYPE_ID);
+            }}
+          >
             + Tạo loại đơn
           </Button>
         </div>
@@ -199,6 +206,7 @@ function FormTypeCell({ field, formType, query }: { field: TableField<FormTypeSu
   return (
     <td className={cellClass}>
       {text ? <Highlight text={text} query={query} /> : <span className={tableStyles.dash}>{EMPTY_TEXT}</span>}
+      {field.key === 'name' && hasFormTypeDraft(formType.id) && <span className={styles.draftNote}>Có thay đổi chưa lưu</span>}
     </td>
   );
 }

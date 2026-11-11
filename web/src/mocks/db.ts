@@ -15,6 +15,7 @@ import type {
   ManagedFormSummary,
   OpenFormType,
   RoleId,
+  SaveFormTypeRequest,
   Session,
   SessionUser,
   StaffRef,
@@ -181,7 +182,7 @@ export function getStudents(userId: string): StudentInfo[] {
    - Xét miễn môn: như TYPES.xmm trong artifact/js/config.js.
    - Đơn thử nghiệm: đủ 10 loại câu hỏi, để xem giao diện từng loại khi chưa có trình soạn loại đơn (bước 7).
    Cấu trúc khai báo dạng thô rồi cho qua FormTypeSchema, để điền sẵn giá trị mặc định (required, main…) như máy chủ. */
-const FORM_TYPES: FormType[] = [
+const FORM_TYPE_SEED: readonly FormType[] = [
   {
     id: 'xmm',
     name: 'Xét miễn môn',
@@ -324,10 +325,14 @@ const FORM_TYPES: FormType[] = [
   })),
 ].map((rawFormType) => FormTypeSchema.parse(rawFormType));
 
+/** Các loại đơn hiện có (trình soạn tạo, sửa, xóa được); tải lại trang thì về FORM_TYPE_SEED. */
+let FORM_TYPES: FormType[] = structuredClone([...FORM_TYPE_SEED]);
+
 /* Lần lưu gần nhất của từng loại đơn: lúc lưu, id cán bộ lưu (như updatedAt, updatedBy của TYPES trong config.js).
    Xét miễn môn như bản mẫu; các loại khác lùi dần mỗi loại 6 ngày, giờ lưu trong giờ hành chính, lần lượt 3 cán bộ mẫu. */
-const FORM_TYPE_UPDATES = new Map<string, { updatedAt: string; updatedById: string }>(
-  FORM_TYPES.map(({ id }, i) => [
+const seedFormTypeUpdates = () =>
+  new Map<string, { updatedAt: string; updatedById: string }>(
+  FORM_TYPE_SEED.map(({ id }, i) => [
     id,
     i === 0
       ? { updatedAt: '2026-09-01T08:00', updatedById: 'cb-1' }
@@ -337,6 +342,7 @@ const FORM_TYPE_UPDATES = new Map<string, { updatedAt: string; updatedById: stri
         },
   ]),
 );
+let FORM_TYPE_UPDATES = seedFormTypeUpdates();
 
 /**
  * Mọi loại đơn cho bảng Quản lí loại đơn (Nháp, Đang mở, Đã đóng).
@@ -345,8 +351,73 @@ const FORM_TYPE_UPDATES = new Map<string, { updatedAt: string; updatedById: stri
 export function getFormTypeSummaries(): FormTypeSummary[] {
   return FORM_TYPES.map(({ id, name, prefix, description, status }) => {
     const { updatedAt, updatedById } = FORM_TYPE_UPDATES.get(id)!;
-    return { id, name, prefix, description, status, updatedAt, updatedBy: staffOf(updatedById)! };
+    return { id, name, prefix, description, status, updatedAt, updatedBy: staffOf(updatedById)!, formCount: countFormsOfType(id) };
   });
+}
+
+/**
+ * Đếm đơn đã nộp theo một loại đơn.
+ * @param formTypeId  mã loại đơn
+ * @returns           số đơn
+ */
+export function countFormsOfType(formTypeId: string): number {
+  return FORMS.filter((form) => form.formTypeId === formTypeId).length;
+}
+
+/**
+ * Mã đơn của các loại đơn khác, để báo trùng.
+ * @param exceptFormTypeId  loại đơn đang lưu (không tính); tạo mới thì null
+ * @returns                 các mã đơn
+ */
+export function otherFormTypePrefixes(exceptFormTypeId: string | null): string[] {
+  return FORM_TYPES.filter((formType) => formType.id !== exceptFormTypeId).map((formType) => formType.prefix);
+}
+
+/**
+ * Tạo loại đơn. Mã loại đơn lấy theo mã đơn viết thường (trùng thì thêm số), như bản mẫu.
+ * Bản soạn đã được kiểm tra trước (validateFormTypeDraft).
+ * @param input    thông tin và cấu trúc loại đơn
+ * @param staffId  cán bộ tạo
+ * @returns        loại đơn vừa tạo
+ */
+export function createFormType(input: SaveFormTypeRequest, staffId: string): FormType {
+  const baseId = input.prefix.toLowerCase();
+  let id = baseId;
+  for (let n = 2; FORM_TYPES.some((formType) => formType.id === id); n += 1) id = `${baseId}-${n}`;
+  const formType: FormType = { id, ...structuredClone(input) };
+  FORM_TYPES.push(formType);
+  FORM_TYPE_UPDATES.set(id, { updatedAt: vietnamNow(), updatedById: staffId });
+  return formType;
+}
+
+/**
+ * Lưu đè một loại đơn. Đơn đã nộp giữ bản chụp lúc nộp nên không đổi theo.
+ * Bản soạn đã được kiểm tra trước (validateFormTypeDraft, mã đơn không đổi khi đã có đơn).
+ * @param formTypeId  mã loại đơn
+ * @param input       thông tin và cấu trúc mới
+ * @param staffId     cán bộ lưu
+ * @returns           loại đơn sau khi lưu; không có thì null
+ */
+export function updateFormType(formTypeId: string, input: SaveFormTypeRequest, staffId: string): FormType | null {
+  const index = FORM_TYPES.findIndex((formType) => formType.id === formTypeId);
+  if (index < 0) return null;
+  const formType: FormType = { id: formTypeId, ...structuredClone(input) };
+  FORM_TYPES[index] = formType;
+  FORM_TYPE_UPDATES.set(formTypeId, { updatedAt: vietnamNow(), updatedById: staffId });
+  return formType;
+}
+
+/**
+ * Xóa một loại đơn (chỉ gọi khi loại đơn chưa có đơn nào).
+ * @param formTypeId  mã loại đơn
+ * @returns           true nếu đã xóa; không có thì false
+ */
+export function deleteFormType(formTypeId: string): boolean {
+  const index = FORM_TYPES.findIndex((formType) => formType.id === formTypeId);
+  if (index < 0) return false;
+  FORM_TYPES.splice(index, 1);
+  FORM_TYPE_UPDATES.delete(formTypeId);
+  return true;
 }
 
 /**
@@ -469,7 +540,7 @@ function sampleAnswers(code: string, subjects: TableCell[][], fileName: string):
 }
 
 /** Bản chụp loại đơn Xét miễn môn cho đơn mẫu. */
-const xmmSnapshot = () => structuredClone(FORM_TYPES.find((formType) => formType.id === 'xmm')!);
+const xmmSnapshot = () => structuredClone(FORM_TYPE_SEED.find((formType) => formType.id === 'xmm')!);
 
 /**
  * Sinh 18 đơn Xét miễn môn mẫu cho sinh viên đăng nhập thử, như hàm seed() trong artifact/js/sample-data.js
@@ -983,6 +1054,8 @@ export function getFileContent(fileId: string, viewer: { id: string; role: RoleI
 export function resetMockDb(): void {
   profiles = cloneSeed();
   FORMS = seedForms();
+  FORM_TYPES = structuredClone([...FORM_TYPE_SEED]);
+  FORM_TYPE_UPDATES = seedFormTypeUpdates();
   FILES.clear();
   try {
     sessionStorage.removeItem(PROFILES_KEY);

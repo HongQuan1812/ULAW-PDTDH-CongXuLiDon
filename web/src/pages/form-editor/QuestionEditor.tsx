@@ -1,8 +1,9 @@
 /* Một câu hỏi trong trình soạn (như questionEditor() của artifact/js/forms-page.js): khung riêng có thanh tiêu đề
    (số thứ tự · loại câu hỏi · Bắt buộc · nút đưa lên / xuống / nhân bản / xóa), các ô có nhãn,
    khối cài đặt riêng theo loại câu hỏi, công tắc Bắt buộc trả lời. Khối thông báo chỉ có tiêu đề và nội dung. */
-import { QUESTION_TYPES, QUESTION_TYPE_LABEL, type Question, type QuestionType } from '@ulaw/shared';
+import { FORM_TYPE_ISSUE_TARGET, QUESTION_TYPES, QUESTION_TYPE_LABEL, type Question, type QuestionType } from '@ulaw/shared';
 import { Field } from '../../components/Field';
+import { useDraftIssues } from './draftIssues';
 import { EditorIconButton } from './EditorIconButton';
 import { changeQuestionType } from './formTypeDraft';
 import { QuestionSettings } from './QuestionSettings';
@@ -31,6 +32,7 @@ interface QuestionEditorProps {
 export function QuestionEditor({ question, index, questionCount, autoFocus, onChange, onAction }: QuestionEditorProps) {
   const isInfo = question.type === 'info';
   const required = 'required' in question && question.required;
+  const invalidTargets = useDraftIssues();
 
   return (
     <div className={`${styles.question} ${isInfo ? styles.infoBlock : ''}`}>
@@ -53,6 +55,7 @@ export function QuestionEditor({ question, index, questionCount, autoFocus, onCh
             <input
               className={styles.questionLabel}
               value={question.label}
+              aria-invalid={invalidTargets.has(FORM_TYPE_ISSUE_TARGET.questionLabel(question.id)) || undefined}
               placeholder={isInfo ? 'VD: Lưu ý khi nộp đơn' : 'VD: Lí do xin miễn'}
               autoFocus={autoFocus}
               onChange={(event) => onChange({ ...question, label: event.target.value })}

@@ -1,8 +1,9 @@
 /* Một phần trong trình soạn (như .fe-sec của artifact/js/forms-page.js): số thứ tự, tiêu đề, nút đưa lên / xuống / xóa phần,
    công tắc Nội dung chính, ô tiêu đề và mô tả phần, các câu hỏi, nút "+ Thêm câu hỏi". */
-import type { FormSection, Question } from '@ulaw/shared';
+import { FORM_TYPE_ISSUE_TARGET, type FormSection, type Question } from '@ulaw/shared';
 import { Button } from '../../components/Button';
 import { Field } from '../../components/Field';
+import { useDraftIssues } from './draftIssues';
 import { EditorIconButton } from './EditorIconButton';
 import { duplicateQuestion, moveItem, newQuestion, removeAt, replaceAt } from './formTypeDraft';
 import { QuestionEditor, type QuestionAction } from './QuestionEditor';
@@ -33,6 +34,7 @@ interface SectionEditorProps {
  */
 export function SectionEditor({ section, index, sectionCount, focusQuestionId, autoFocus, onChange, onAction, onQuestionAdded }: SectionEditorProps) {
   const setQuestions = (questions: Question[]) => onChange({ ...section, questions });
+  const invalidTargets = useDraftIssues();
 
   /**
    * Làm một việc với câu hỏi ở vị trí questionIndex.
@@ -73,7 +75,13 @@ export function SectionEditor({ section, index, sectionCount, focusQuestionId, a
 
       <div className={styles.grid2}>
         <Field label="Tiêu đề phần">
-          <input value={section.title} placeholder="VD: Lí do bảo lưu" autoFocus={autoFocus} onChange={(event) => onChange({ ...section, title: event.target.value })} />
+          <input
+            value={section.title}
+            placeholder="VD: Lí do bảo lưu"
+            aria-invalid={invalidTargets.has(FORM_TYPE_ISSUE_TARGET.sectionTitle(section.id)) || undefined}
+            autoFocus={autoFocus}
+            onChange={(event) => onChange({ ...section, title: event.target.value })}
+          />
         </Field>
         <Field label="Mô tả phần" optional>
           <input value={section.hint ?? ''} onChange={(event) => onChange({ ...section, hint: event.target.value })} />
