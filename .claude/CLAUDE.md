@@ -24,7 +24,7 @@ Xem @plan.md
 - **Vòng đời đơn**: `nop` Đã nộp → (Tiếp nhận) → `xet` Đang xét → `duyet` Đã duyệt / `tc` Từ chối / `bs` Cần bổ sung
   → sinh viên sửa → `bsg` Đã bổ sung → tiếp nhận lại.
   Sửa được khi `nop|bs|bsg` · tiếp nhận được khi `nop|bsg` · chuyển giao được khi `xet|bs|bsg` · ra quyết định khi `xet`.
-- **Loại đơn**: gồm các phần → câu hỏi (text, số, bảng, tệp…). Trạng thái Nháp / Đang mở / Đã đóng. Mã đơn `<TIỀN TỐ>-<NĂM>-<STT>`, vd `XMM-2026-00001`.
+- **Loại đơn**: gồm các phần → câu hỏi (text, số, bảng, tệp…). Mỗi loại đơn có nhiều phiên bản; mỗi phiên bản Nháp / Đang mở / Đã đóng. Mã đơn `<TIỀN TỐ>-<NĂM>-<PHIÊN BẢN>-<STT>`, vd `XMM-2026-001-00001`.
 - **Xuất file**: mẫu Word theo từng loại đơn, có mã thay thế `{...}`.
 
 ---
