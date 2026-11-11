@@ -70,11 +70,10 @@ export function FormStatsPanel({ statsQuery, activeStatus, activeFormTypeId, onT
           </div>
           {stats ? <span className={styles.total}>{stats.byType.length} loại đơn</span> : null}
         </div>
-        {stats ? (
-          <TypeChart stats={stats} activeFormTypeId={activeFormTypeId} onToggleFormType={onToggleFormType} />
-        ) : (
-          <div className={styles.placeholder} aria-busy={!errorMessage} />
-        )}
+        {/* Lỗi tải: câu báo đỏ như khung Theo trạng thái; đang tải: khung trống */}
+        {errorMessage ? <LoadError message={errorMessage} /> : null}
+        {stats ? <TypeChart stats={stats} activeFormTypeId={activeFormTypeId} onToggleFormType={onToggleFormType} /> : null}
+        {!stats && !errorMessage ? <div className={styles.placeholder} aria-busy="true" /> : null}
       </section>
     </div>
   );
