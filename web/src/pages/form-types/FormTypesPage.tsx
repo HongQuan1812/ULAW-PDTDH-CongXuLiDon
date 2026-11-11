@@ -93,6 +93,17 @@ export function FormTypesPage() {
       return next;
     });
 
+  // Nút ở đầu bảng: xổ ra / thu lại mọi loại đơn có phiên bản cũ trong trang đang xem (như nút mở xem nhanh tất cả của bảng đơn)
+  const expandableIds = pageRows.filter(({ original: formType }) => formType.olderVersions.length > 0).map(({ original: formType }) => formType.id);
+  const allExpanded = expandableIds.length > 0 && expandableIds.every((formTypeId) => expandedIds.has(formTypeId));
+  /** Xổ ra hết các loại đơn có phiên bản cũ của trang đang xem; đang xổ hết thì thu lại hết. */
+  const toggleAllExpanded = () =>
+    setExpandedIds((current) => {
+      const next = new Set(current);
+      expandableIds.forEach((formTypeId) => (allExpanded ? next.delete(formTypeId) : next.add(formTypeId)));
+      return next;
+    });
+
   // Mở trình soạn (trang soạn có nút "‹ Quay lại Quản lí loại đơn") ở phiên bản của dòng; Enter trên dòng đang chọn cũng mở
   const openEditor = (formTypeId: string, version?: number) =>
     navigate(formTypeEditorPath(formTypeId, version), { state: { previousPageLabel: PAGE_LABEL.formTypes } satisfies ReturnState });
@@ -143,7 +154,17 @@ export function FormTypesPage() {
             <thead>
               <tr>
                 <th className={quickStyles.expandCell}>
-                  <span className="sr-only">Các phiên bản cũ</span>
+                  <button
+                    type="button"
+                    className={`${quickStyles.expand} ${allExpanded ? quickStyles.open : ''}`}
+                    aria-expanded={allExpanded}
+                    aria-label={allExpanded ? 'Thu lại phiên bản cũ của tất cả loại đơn' : 'Xem phiên bản cũ của tất cả loại đơn'}
+                    title="Mở / đóng tất cả"
+                    disabled={expandableIds.length === 0}
+                    onClick={toggleAllExpanded}
+                  >
+                    ›
+                  </button>
                 </th>
                 {FORM_TYPE_FIELDS.map((field) => (
                   <HeaderCell key={field.key} field={field} sorting={sorting} filterRules={filterRules} />
