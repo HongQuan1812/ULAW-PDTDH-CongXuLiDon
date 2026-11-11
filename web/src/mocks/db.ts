@@ -252,7 +252,7 @@ const FORM_TYPE_SEED: readonly FormType[] = [
             label: 'Lưu ý',
             help: 'Đây là khối thông báo: không cần trả lời.\nNội dung có thể xuống dòng.',
           },
-          { id: 'tieu-de', type: 'text', label: 'Tiêu đề đơn', required: true, help: 'Trả lời ngắn, một dòng.' },
+          { id: 'tieu-de', type: 'text', label: 'Tiêu đề đơn', required: true, help: 'Trả lời ngắn: không xuống dòng bằng Enter.' },
           { id: 'li-do', type: 'para', label: 'Lí do', help: 'Đoạn văn, viết được nhiều dòng.' },
           { id: 'so-tin-chi', type: 'number', label: 'Số tín chỉ đã tích lũy', required: true },
           { id: 'ngay-nghi', type: 'date', label: 'Ngày bắt đầu nghỉ học' },
