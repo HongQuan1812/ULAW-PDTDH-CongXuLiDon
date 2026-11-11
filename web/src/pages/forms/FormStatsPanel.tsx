@@ -68,7 +68,11 @@ export function FormStatsPanel({ statsQuery, activeStatus, activeFormTypeId, onT
             <h2 id="stats-type-title">Theo loại đơn</h2>
             <RefreshButton query={statsQuery} label="thống kê theo loại đơn" size="small" />
           </div>
-          {stats ? <span className={styles.total}>{stats.byType.length} loại đơn</span> : null}
+          {stats ? (
+            <span className={styles.total}>
+              <b>{stats.byType.length}</b> loại đơn
+            </span>
+          ) : null}
         </div>
         {/* Lỗi tải: câu báo đỏ như khung Theo trạng thái; đang tải: khung trống */}
         {errorMessage ? <LoadError message={errorMessage} /> : null}
