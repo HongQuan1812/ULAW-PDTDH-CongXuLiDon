@@ -14,7 +14,7 @@ Mỗi bước làm trên một nhánh riêng. Xong thì tạo Pull Request vào 
 | 5 | Chi tiết, xử lí đơn | `xu-li-don` | trang chi tiết đơn · sửa đơn · tiếp nhận · yêu cầu bổ sung · duyệt · từ chối · chuyển giao · xem hồ sơ người nộp đơn · câu thông báo | ✓ |
 | 6 | Quản lí đơn | `quan-li-don` | bảng tìm, lọc, sắp xếp, phân trang · xem nhanh · thống kê | ✓ |
 | 7 | Loại đơn, trình soạn form | `soan-loai-don` | danh sách loại đơn · mở / đóng · trình soạn kiểu Google Form | ✓ |
-| 8 | Quản lí tài khoản | `tai-khoan` | tạo, sửa tài khoản · phân vai trò (Admin) || ✓ |
+| 8 | Quản lí tài khoản | `tai-khoan` | tạo, sửa tài khoản · phân vai trò (Admin) | ✓ |
 | 9 | Xem tệp, xuất Word | `xuat-file` | xem ảnh / PDF / Word · xuất theo mẫu Word | |
 
 ### Làm một màn hình
