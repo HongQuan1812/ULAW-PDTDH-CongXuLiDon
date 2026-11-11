@@ -300,8 +300,17 @@ function FormTypeCell({
   const cellClass = field.key === 'name' ? tableStyles.nameCell : field.key === 'prefix' ? tableStyles.codeCell : '';
   return (
     <td className={cellClass}>
-      {text ? <Highlight text={text} query={query} /> : <span className={tableStyles.dash}>{EMPTY_TEXT}</span>}
-      {field.key === 'name' && showUnsavedNote && hasUnsavedEdit(formType.id) && <span className={styles.draftNote}>Có thay đổi chưa lưu</span>}
+      {!text ? (
+        <span className={tableStyles.dash}>{EMPTY_TEXT}</span>
+      ) : field.key === 'name' || field.key === 'updatedBy' ? (
+        // Tên loại đơn, người cập nhật: dài quá thì xuống dòng (ghi chú "Có thay đổi chưa lưu" đi liền sau tên)
+        <span className={tableStyles.wrapText}>
+          <Highlight text={text} query={query} />
+          {field.key === 'name' && showUnsavedNote && hasUnsavedEdit(formType.id) && <span className={styles.draftNote}>Có thay đổi chưa lưu</span>}
+        </span>
+      ) : (
+        <Highlight text={text} query={query} />
+      )}
     </td>
   );
 }

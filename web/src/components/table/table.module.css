@@ -58,6 +58,9 @@
 .rowLink:focus-visible{outline:2px solid var(--focus);outline-offset:-2px}
 .codeCell{font-weight:600;color:var(--fg)}
 .nameCell{font-weight:500}
+/* chữ tự do (tên loại đơn, họ tên, người xử lí, email…): cột rộng theo chữ nhưng có giới hạn,
+   tới 320px thì xuống dòng (chữ liền dài cũng ngắt); không hẹp hơn 120px để bảng chật thì cuộn ngang chứ không bóp cột */
+.wrapText{display:block;min-width:120px;max-width:320px;white-space:normal;overflow-wrap:break-word}
 .dash{color:var(--faint)}
 /* đường kẻ dọc mở đầu nhóm cột bên phải (vd Người tiếp nhận / Người xử lí) */
 .table .groupStart{border-left:1px solid var(--line)}

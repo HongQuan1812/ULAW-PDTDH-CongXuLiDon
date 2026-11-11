@@ -173,7 +173,13 @@ export function FormTable<Row extends FormSummary>({
     const text = displayText(field, form);
     return (
       <td key={field.key} className={`${field.key === 'formType' ? '' : tableStyles.nameCell} ${groupClass(field.key)}`}>
-        {text ? <Highlight text={text} query={query} /> : <span className={tableStyles.dash}>{EMPTY_TEXT}</span>}
+        {text ? (
+          <span className={tableStyles.wrapText}>
+            <Highlight text={text} query={query} />
+          </span>
+        ) : (
+          <span className={tableStyles.dash}>{EMPTY_TEXT}</span>
+        )}
       </td>
     );
   };
