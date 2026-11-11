@@ -2,6 +2,7 @@
    các lựa chọn (Chọn một / Chọn nhiều / Danh sách thả xuống), các cột của bảng, định dạng và dung lượng tệp.
    Loại câu hỏi khác không có cài đặt riêng. */
 import { FORM_TYPE_ISSUE_TARGET, type Question, type QuestionOf, type TableColumn } from '@ulaw/shared';
+import { RequiredMark } from '../../components/Field';
 import { GrowingTextarea } from '../../features/form-renderer/GrowingTextarea';
 import { useDraftIssues } from './draftIssues';
 import { EditorIconButton } from './EditorIconButton';
@@ -31,10 +32,15 @@ interface QuestionSettingsProps {
 export function QuestionSettings({ question, onChange }: QuestionSettingsProps) {
   const title = SETTINGS_TITLE[question.type];
   if (!title) return null;
+  const isChoice = question.type === 'radio' || question.type === 'check' || question.type === 'select';
   return (
     <div className={styles.settings}>
-      <p className={styles.settingsTitle}>{title}</p>
-      {(question.type === 'radio' || question.type === 'check' || question.type === 'select') && (
+      {/* Tiêu đề khối; các lựa chọn không được để trống nên có dấu * */}
+      <p className={styles.settingsTitle}>
+        {title}
+        {isChoice && <RequiredMark />}
+      </p>
+      {isChoice && (
         <ChoiceSettings question={question} onChange={onChange} />
       )}
       {question.type === 'table' && <TableSettings question={question} onChange={onChange} />}
@@ -102,7 +108,10 @@ function TableSettings({ question, onChange }: { question: QuestionOf<'table'>; 
       </label>
 
       <div className={`${styles.columnsHead} ${styles.subLabel}`} aria-hidden="true">
-        <span>Cột</span>
+        <span>
+          Cột
+          <RequiredMark />
+        </span>
         <span>Mô tả nhỏ</span>
         <span>Kiểu</span>
         <span>Tính tổng</span>
@@ -118,7 +127,7 @@ function TableSettings({ question, onChange }: { question: QuestionOf<'table'>; 
             aria-invalid={invalidTargets.has(FORM_TYPE_ISSUE_TARGET.column(question.id, i)) || undefined}
             onValueChange={(label) => changeColumn(i, { label })}
           />
-          <GrowingTextarea value={column.sub ?? ''} placeholder="Không bắt buộc" aria-label={`Mô tả cột ${i + 1}`} onValueChange={(sub) => changeColumn(i, { sub })} />
+          <GrowingTextarea value={column.sub ?? ''} placeholder="Mô tả nhỏ" aria-label={`Mô tả cột ${i + 1}`} onValueChange={(sub) => changeColumn(i, { sub })} />
           <select
             value={column.type}
             aria-label={`Kiểu cột ${i + 1}`}
@@ -172,7 +181,10 @@ function FileSettings({ question, onChange }: { question: QuestionOf<'file'>; on
   return (
     <div className={styles.fileSettings}>
       <div className={styles.fileColumn}>
-        <span className={styles.subLabel}>Định dạng cho phép</span>
+        <span className={styles.subLabel}>
+          Định dạng cho phép
+          <RequiredMark />
+        </span>
         <div className={`${styles.formats} ${formatsInvalid ? styles.formatsInvalid : ''}`}>
           {FILE_FORMAT_GROUPS.map(([extensions, label]) => (
             <label key={label} className={styles.check}>

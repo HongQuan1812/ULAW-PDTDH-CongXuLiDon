@@ -92,7 +92,7 @@ export function DecideBar({ form }: { form: FormDetail }) {
 
       <Modal open={noteDialog !== null} onClose={closeDialog} title={noteDialog ? `${noteDialog.title} ${form.code}` : ''}>
         <p className={styles.dialogSubtitle}>{noteDialog?.subtitle}</p>
-        <Field label="Lí do" optional hint="Người nộp đơn sẽ thấy nội dung này.">
+        <Field label="Lí do" hint="Người nộp đơn sẽ thấy nội dung này.">
           <textarea rows={4} placeholder="Nhập lí do (có thể bỏ trống)" value={note} onChange={(event) => setNote(event.target.value)} />
         </Field>
         <div className={styles.dialogButtons}>

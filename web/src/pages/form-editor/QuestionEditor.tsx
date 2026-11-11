@@ -52,7 +52,7 @@ export function QuestionEditor({ question, index, questionCount, autoFocus, onCh
       <div className={styles.questionBody}>
         {/* Nội dung câu hỏi (khối thông báo: tiêu đề khối) và loại câu hỏi */}
         <div className={styles.questionRow}>
-          <Field label={isInfo ? 'Tiêu đề khối' : 'Nội dung câu hỏi'} optional={isInfo}>
+          <Field label={isInfo ? 'Tiêu đề khối' : 'Nội dung câu hỏi'} required={!isInfo}>
             <GrowingTextarea
               className={`${styles.growing} ${styles.questionLabel}`}
               value={question.label}
@@ -84,7 +84,7 @@ export function QuestionEditor({ question, index, questionCount, autoFocus, onCh
             />
           </Field>
         ) : (
-          <Field label="Mô tả, gợi ý cho người nộp đơn" optional>
+          <Field label="Mô tả, gợi ý cho người nộp đơn">
             <GrowingTextarea
               className={styles.growing}
               value={question.help ?? ''}

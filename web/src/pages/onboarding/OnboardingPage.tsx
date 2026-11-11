@@ -104,7 +104,7 @@ function OnboardingForm({ session }: { session: Session }) {
           </Field>
 
           <div className={styles.grid2}>
-            <Field label="Số CCCD" optional error={errors.cccd?.message}>
+            <Field label="Số CCCD" error={errors.cccd?.message}>
               <input
                 inputMode="numeric"
                 maxLength={12}
@@ -114,7 +114,7 @@ function OnboardingForm({ session }: { session: Session }) {
                 {...register('cccd', { onChange: digitsOnly })}
               />
             </Field>
-            <Field label="Số điện thoại" optional error={errors.phone?.message}>
+            <Field label="Số điện thoại" error={errors.phone?.message}>
               <input
                 inputMode="tel"
                 maxLength={10}

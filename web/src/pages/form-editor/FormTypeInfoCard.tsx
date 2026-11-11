@@ -41,7 +41,7 @@ export function FormTypeInfoCard({ draft, prefixLocked, contentLocked, status, s
 
       {/* Tên, mã đơn, mô tả */}
       <div className={styles.grid2}>
-        <Field label="Tên loại đơn" hint="Dùng ở mọi nơi: tiêu đề trang đơn, danh sách chọn loại đơn, bảng và thống kê">
+        <Field label="Tên loại đơn" required hint="Dùng ở mọi nơi: tiêu đề trang đơn, danh sách chọn loại đơn, bảng và thống kê">
           <GrowingTextarea
             className={styles.growing}
             value={draft.name}
@@ -53,6 +53,7 @@ export function FormTypeInfoCard({ draft, prefixLocked, contentLocked, status, s
         </Field>
         <Field
           label="Mã đơn"
+          required
           hint={
             prefixLocked
               ? 'Loại đơn đã phát hành nên không đổi được mã đơn'

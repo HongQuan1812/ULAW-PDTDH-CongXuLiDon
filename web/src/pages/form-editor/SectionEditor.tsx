@@ -75,7 +75,7 @@ export function SectionEditor({ section, index, sectionCount, focusQuestionId, a
       </label>
 
       <div className={styles.grid2}>
-        <Field label="Tiêu đề phần">
+        <Field label="Tiêu đề phần" required>
           <GrowingTextarea
             className={styles.growing}
             value={section.title}
@@ -85,7 +85,7 @@ export function SectionEditor({ section, index, sectionCount, focusQuestionId, a
             onValueChange={(title) => onChange({ ...section, title })}
           />
         </Field>
-        <Field label="Mô tả phần" optional>
+        <Field label="Mô tả phần">
           <GrowingTextarea className={styles.growing} value={section.hint ?? ''} onValueChange={(hint) => onChange({ ...section, hint })} />
         </Field>
       </div>
