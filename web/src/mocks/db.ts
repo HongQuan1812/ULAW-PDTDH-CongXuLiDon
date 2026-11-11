@@ -3,6 +3,8 @@ import type {
   Account,
   ApplicantRef,
   CreateAccountRequest,
+  ExportSource,
+  ExportTemplate,
   FileRef,
   FormAnswers,
   FormDecision,
@@ -41,6 +43,7 @@ import {
   nextFormCode,
 } from '@ulaw/shared';
 import { buildSamplePdf } from './samplePdf';
+import { SAMPLE_EXPORT_TEMPLATE_BASE64 } from './sampleExportTemplate';
 
 /* ---------- Tài khoản (hồ sơ, vai trò) ---------- */
 
@@ -873,6 +876,8 @@ function addHours(dateTime: string, hours: number): string {
 /** Lá đơn trong API giả: dòng tóm tắt, kèm id người nộp, cán bộ, các mốc thời gian, nội dung và bản chụp loại đơn lúc nộp. */
 interface MockForm extends FormSummary {
   ownerId: string;
+  /** Lúc Duyệt / Từ chối gần nhất (mã {ngay_xu_li} khi xuất file); đơn mẫu không có thì lấy lần lưu gần nhất */
+  decidedAt?: string | null;
   updatedAt: string;
   note: string;
   receiverId: string | null;
@@ -1351,6 +1356,7 @@ export function decideForm(code: string, decision: FormDecision, note: string): 
   const form = FORMS.find((candidate) => candidate.code === code);
   if (!form) return null;
   Object.assign(form, { status: decision, note: decision === 'duyet' ? '' : note });
+  if (decision !== 'bs') form.decidedAt = vietnamNow();
   return toDetail(form);
 }
 
@@ -1440,11 +1446,174 @@ export function resetMockDb(): void {
   FORMS = seedForms();
   FORM_TYPES = seedFormTypes();
   FILES.clear();
+  EXPORT_TEMPLATES = seedExportTemplates();
   try {
     sessionStorage.removeItem(ACCOUNTS_KEY);
   } catch {
     // Không có sessionStorage (vd chạy test): bỏ qua
   }
+}
+
+/* ---------- Mẫu xuất file ---------- */
+
+/** Mẫu xuất file trong API giả: thông tin trả cho giao diện và nội dung file .docx. */
+interface MockExportTemplate {
+  template: ExportTemplate;
+  bytes: ArrayBuffer;
+}
+
+/**
+ * Mẫu ban đầu: loại đơn Xét miễn môn có sẵn một mẫu (như PRINT_TEMPLATES.xmm của artifact/js/sample-template.js).
+ * @returns  mẫu theo mã loại đơn
+ */
+function seedExportTemplates(): Map<string, MockExportTemplate[]> {
+  const binary = atob(SAMPLE_EXPORT_TEMPLATE_BASE64);
+  const bytes = Uint8Array.from(binary, (character) => character.charCodeAt(0)).buffer;
+  const template: ExportTemplate = {
+    id: 'tpl-demo',
+    name: 'Đơn gửi phòng Đào tạo',
+    fileName: 'mau-don-xet-mien-mon.docx',
+    sizeBytes: bytes.byteLength,
+    uploadedAt: '2026-10-01T09:00',
+    uploadedBy: 'Phạm Thu Hà',
+  };
+  return new Map([['xmm', [{ template, bytes }]]]);
+}
+
+/** Mẫu xuất file theo mã loại đơn. Giữ trong bộ nhớ, tải lại trang là về ban đầu. */
+let EXPORT_TEMPLATES = seedExportTemplates();
+
+/**
+ * Loại đơn có tồn tại không (để quản lí mẫu của nó).
+ * @param formTypeId  mã loại đơn
+ * @returns           true nếu có
+ */
+export function formTypeExists(formTypeId: string): boolean {
+  return Boolean(findFormType(formTypeId));
+}
+
+/**
+ * Các mẫu xuất file của một loại đơn, theo thứ tự tải lên.
+ * @param formTypeId  mã loại đơn
+ * @returns           thông tin các mẫu; không có thì []
+ */
+export function getExportTemplates(formTypeId: string): ExportTemplate[] {
+  return (EXPORT_TEMPLATES.get(formTypeId) ?? []).map(({ template }) => ({ ...template }));
+}
+
+/**
+ * Một mẫu xuất file kèm nội dung.
+ * @param formTypeId  mã loại đơn
+ * @param templateId  id mẫu
+ * @returns           thông tin và nội dung; không có thì null
+ */
+export function findExportTemplate(formTypeId: string, templateId: string): { template: ExportTemplate; bytes: ArrayBuffer } | null {
+  const stored = (EXPORT_TEMPLATES.get(formTypeId) ?? []).find(({ template }) => template.id === templateId);
+  return stored ? { template: { ...stored.template }, bytes: stored.bytes } : null;
+}
+
+/**
+ * Thêm mẫu xuất file (đã kiểm tra là .docx đọc được).
+ * @param formTypeId  mã loại đơn
+ * @param upload      tên mẫu, tên file, nội dung file
+ * @param staffId     cán bộ tải lên
+ * @returns           thông tin mẫu mới
+ */
+export function addExportTemplate(formTypeId: string, upload: { name: string; fileName: string; bytes: ArrayBuffer }, staffId: string): ExportTemplate {
+  const template: ExportTemplate = {
+    id: `tpl-${crypto.randomUUID()}`,
+    name: upload.name,
+    fileName: upload.fileName,
+    sizeBytes: upload.bytes.byteLength,
+    uploadedAt: vietnamNow(),
+    uploadedBy: personRef(staffId).name,
+  };
+  EXPORT_TEMPLATES.set(formTypeId, [...(EXPORT_TEMPLATES.get(formTypeId) ?? []), { template, bytes: upload.bytes }]);
+  return { ...template };
+}
+
+/**
+ * Đổi tên một mẫu xuất file.
+ * @param formTypeId  mã loại đơn
+ * @param templateId  id mẫu
+ * @param name        tên mới (đã bỏ khoảng trắng đầu cuối)
+ * @returns           thông tin mẫu sau khi đổi; không có mẫu thì null
+ */
+export function renameExportTemplate(formTypeId: string, templateId: string, name: string): ExportTemplate | null {
+  const stored = (EXPORT_TEMPLATES.get(formTypeId) ?? []).find(({ template }) => template.id === templateId);
+  if (!stored) return null;
+  stored.template = { ...stored.template, name };
+  return { ...stored.template };
+}
+
+/**
+ * Xóa một mẫu xuất file.
+ * @param formTypeId  mã loại đơn
+ * @param templateId  id mẫu
+ * @returns           true nếu đã xóa; không có mẫu thì false
+ */
+export function deleteExportTemplate(formTypeId: string, templateId: string): boolean {
+  const list = EXPORT_TEMPLATES.get(formTypeId) ?? [];
+  const remaining = list.filter(({ template }) => template.id !== templateId);
+  EXPORT_TEMPLATES.set(formTypeId, remaining);
+  return remaining.length < list.length;
+}
+
+/**
+ * Thông tin của một lá đơn để điền mẫu: người nộp đơn (CCCD đầy đủ, MSSV chính), cán bộ, câu trả lời.
+ * @param code    mã đơn
+ * @param viewer  người xuất file: phải là người nộp, hoặc được xem mọi đơn; bỏ trống = không kiểm tra (ví dụ cho Bảng mã của cán bộ)
+ * @returns       source: thông tin để điền · formTypeId: loại đơn của đơn; không có đơn, hoặc không được xem, thì null
+ */
+export function getExportSource(code: string, viewer?: { id: string; role: RoleId }): { source: ExportSource; formTypeId: string } | null {
+  const form = FORMS.find((candidate) => candidate.code === code);
+  if (!form || (viewer && form.ownerId !== viewer.id && !can(viewer.role, 'viewAll'))) return null;
+  return { source: toExportSource(form), formTypeId: form.formTypeId };
+}
+
+/**
+ * Dựng thông tin điền mẫu của một lá đơn.
+ * @param form  lá đơn trong API giả
+ * @returns     thông tin để điền
+ */
+function toExportSource(form: MockForm): ExportSource {
+  const owner = getProfile(form.ownerId);
+  const students = getStudents(form.ownerId);
+  const mainStudent = students.find((student) => student.studentId === owner.mainStudentId) ?? students[0] ?? null;
+  const decided = form.status === 'duyet' || form.status === 'tc';
+  return {
+    code: form.code,
+    formTypeName: form.formTypeName,
+    submittedAt: form.submittedAt,
+    status: form.status,
+    receiverName: staffOf(form.receiverId)?.name ?? null,
+    handlerName: staffOf(form.handlerId)?.name ?? null,
+    decidedAt: decided ? (form.decidedAt ?? form.updatedAt) : null,
+    note: form.note,
+    applicant: { name: owner.name, email: personRef(form.ownerId).email, phone: owner.phone, cccd: owner.cccd },
+    mainStudent,
+    sections: structuredClone(form.formTypeSnapshot.sections),
+    answers: structuredClone(form.answers),
+  };
+}
+
+/**
+ * Mã đơn mới nộp nhất của một loại đơn (để lấy ví dụ cho Bảng mã).
+ * @param formTypeId  mã loại đơn
+ * @returns           mã đơn; loại đơn chưa có đơn nào thì null
+ */
+export function latestFormCodeOfType(formTypeId: string): string | null {
+  const forms = FORMS.filter((form) => form.formTypeId === formTypeId);
+  forms.sort((first, second) => second.submittedAt.localeCompare(first.submittedAt));
+  return forms[0]?.code ?? null;
+}
+
+/**
+ * Ngày hôm nay theo giờ Việt Nam (mã {ngay_xuat}).
+ * @returns  vd '2026-11-11'
+ */
+export function vietnamToday(): string {
+  return vietnamNow().slice(0, 10);
 }
 
 /* ---------- Phiên đăng nhập ---------- */

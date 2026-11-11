@@ -19,6 +19,10 @@ export interface PreviewFile extends FileRef {
   content?: Blob;
   /** Chữ trên nút tải về; mặc định "Tải về", vd "Tải file Word" */
   downloadLabel?: string;
+  /** Tiêu đề trên thanh xem; mặc định là tên tệp (tên tệp vẫn dùng khi tải về), vd "XMM-2026-001-00001 · Đơn gửi phòng Đào tạo" */
+  title?: string;
+  /** Ghi chú thêm sau dung lượng, vd "Xem trước gần đúng · dữ liệu đơn XMM-…" */
+  note?: string;
 }
 
 /**
@@ -70,7 +74,7 @@ function OpenFilePreview({ file, onClose }: { file: PreviewFile; onClose: () => 
   }, [onClose]);
 
   const kind = previewKindOf(file.name);
-  const metaText = [formatFileSize(file.sizeBytes), extraMeta].filter(Boolean).join(' · ');
+  const metaText = [formatFileSize(file.sizeBytes), file.note, extraMeta].filter(Boolean).join(' · ');
 
   /** Phần xem tệp theo trạng thái: đang tải, lỗi, hoặc cách xem theo loại tệp. */
   const renderBody = () => {
@@ -94,7 +98,7 @@ function OpenFilePreview({ file, onClose }: { file: PreviewFile; onClose: () => 
     <div className={styles.overlay} role="dialog" aria-modal="true" aria-labelledby="file-preview-name">
       <div className={styles.bar}>
         <span id="file-preview-name" className={styles.name}>
-          {file.name}
+          {file.title ?? file.name}
         </span>
         <span className={styles.meta}>{metaText}</span>
         {downloadUrl && (

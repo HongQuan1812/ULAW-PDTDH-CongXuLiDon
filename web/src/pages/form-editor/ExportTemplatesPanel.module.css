@@ -1,0 +1,103 @@
+/* Khung "Mẫu xuất file" của trình soạn (như .fe-tpl, .tpl*, .tags, .tag-tbl, .code-chip, .loop, .word-tbl của artifact/styles.css). */
+.card{display:grid;gap:12px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);padding:28px;min-width:0}
+.card>*{min-width:0}
+/* đầu khung: bấm cả hàng để thu / mở; tiêu đề, nút ↻ ngay cạnh, nút mũi tên ở cuối hàng */
+.cardHead{display:flex;align-items:center;gap:10px;cursor:pointer}
+.cardHead h2{font-size:17px;font-weight:600}
+.cardHead:hover h2{color:var(--accent)}
+.headRefresh{display:inline-flex;cursor:default}
+.toggle{margin-left:auto;display:inline-grid;place-items:center;width:30px;height:30px;border:0;border-radius:50%;background:none;padding:0;color:var(--muted);cursor:pointer;flex:none}
+.toggle:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+/* mũi tên: đóng thì chỉ sang phải, mở thì quay xuống (như các mục thu gọn bên trong) */
+.chevron{transition:transform .18s;transform:rotate(-90deg)}
+.cardHead:hover .toggle{color:var(--accent)}
+.toggle[aria-expanded="true"] .chevron{transform:rotate(0deg)}
+.intro{color:var(--muted);font-size:14px}
+.body{display:grid;gap:20px;min-width:0}
+
+/* mục con: Mẫu đã tải lên, Bảng mã */
+.block{display:grid;gap:12px;padding-top:20px;border-top:1px solid var(--line);min-width:0}
+.blockHead{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.blockHead h3{font-size:15px;font-weight:600}
+.count{font-size:12.5px;color:var(--faint)}
+.notice{border-radius:var(--r);padding:12px 16px;font-size:13.5px;background:var(--s-nop-bg);color:var(--fg)}
+.empty{margin:0;padding:18px;border-radius:var(--r);background:var(--surface-2);color:var(--muted);font-size:13.5px;text-align:center}
+.hint{color:var(--muted);font-size:13px}
+
+/* file bị bỏ khi chọn (không phải .docx, trùng tên), mỗi lí do một dòng */
+.rejected{display:grid;gap:2px;color:var(--danger);font-size:13px}
+/* mẫu đã lưu vừa bấm xóa, chờ Lưu */
+.removedNote{font-size:13px;color:var(--muted)}
+.undo{border:0;background:none;padding:0;font:inherit;color:var(--accent);cursor:pointer;text-decoration:underline}
+.smallButton{min-height:32px;padding:0 12px;font-size:13px}
+
+/* danh sách mẫu */
+.list{display:grid;gap:8px}
+.template{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:12px 14px;border:1px solid var(--line);border-radius:var(--r)}
+.fileType{font-size:11px;font-weight:600;letter-spacing:.04em;color:var(--accent);background:var(--accent-soft);border-radius:6px;padding:3px 7px;flex:none}
+.templateName{flex:1 1 200px;min-width:0;display:grid;text-align:left;border:0;background:none;cursor:pointer;padding:0;color:inherit;font:inherit}
+.templateName b{font-weight:600;font-size:14px}.templateName:hover b{color:var(--accent)}
+.templateName span{font-size:12.5px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.renameInput{flex:1 1 200px;min-width:0;min-height:36px;padding:4px 12px}
+.actions{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.result{flex-basis:100%;font-size:13px;white-space:pre-line;color:var(--muted)}
+.bad{color:var(--danger)}
+
+/* Cách tạo một mẫu */
+.guide{border-radius:var(--r-lg);background:var(--surface-2)}
+.guide>summary,.tagGroup>summary{cursor:pointer;list-style:none;display:flex;align-items:center;gap:10px;font-weight:500;font-size:14px}
+.guide>summary{padding:14px 18px}
+.guide>summary::-webkit-details-marker,.tagGroup>summary::-webkit-details-marker{display:none}
+.guide>summary::before,.tagGroup>summary::before{content:"";width:7px;height:7px;border-right:1.5px solid var(--muted);border-bottom:1.5px solid var(--muted);transform:rotate(-45deg);transition:transform .18s;flex:none}
+.guide[open]>summary::before,.tagGroup[open]>summary::before{transform:rotate(45deg)}
+.guide>summary:hover,.tagGroup>summary:hover{color:var(--accent)}
+.guideBody{display:grid;gap:12px;padding:0 18px 18px}
+.steps{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;counter-reset:step}
+.steps li{counter-increment:step;display:grid;gap:6px;align-content:start;padding:16px;border-radius:var(--r-lg);background:var(--surface);font-size:13px;color:var(--muted)}
+.steps li b{color:var(--fg);font-size:14px;font-weight:600;display:flex;gap:8px;align-items:center}
+.steps li b::before{content:counter(step);display:inline-grid;place-items:center;width:22px;height:22px;border-radius:50%;background:var(--accent);color:var(--on-accent);font-size:12px;flex:none}
+/* ví dụ: 3 cột (trong file mẫu · → · trong file xuất ra); mỗi kiểu định dạng có tên ghi nhỏ trải hết bề ngang ở trên,
+   nên khung hẹp vẫn đủ chỗ cho chữ */
+.demo{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center;column-gap:14px;padding:14px 16px;border-radius:var(--r-lg);background:var(--surface);border:1px solid var(--line)}
+.demo p{font-size:13.5px;min-width:0;overflow-wrap:break-word}
+.demo .code{overflow-wrap:anywhere}
+.demoLabel{font-size:12px;color:var(--muted);font-weight:500}
+.demoFormat{grid-column:1/-1;margin-top:10px;padding-top:10px;border-top:1px solid var(--line);font-size:12px;color:var(--faint)}
+/* định dạng của mã trong file mẫu; chữ điền vào mang đúng định dạng đó */
+.demo .demoBold{font-weight:700}
+.demo .demoItalic{font-style:italic}
+.demo .demoLarge{font-size:20px}
+.arrow{color:var(--faint);font-size:18px}
+.code{color:var(--accent);font-family:ui-monospace,Menlo,Consolas,monospace;font-weight:500}
+
+/* Bảng mã: các nhóm thu gọn được */
+.tagGroups{display:grid;gap:8px}
+/* không dùng grid + gap: lúc đóng, phần nội dung ẩn vẫn tính một ô nên dư khoảng trống dưới tiêu đề */
+.tagGroup{display:block;border:1px solid var(--line);border-radius:var(--r);padding:12px 14px}
+.tagGroup[open]>summary{margin-bottom:10px}
+.tagTableScroll{overflow-x:auto}
+/* như .tag-tbl của bản mẫu; độ rộng cột cố định để mọi nhóm mã thẳng cột với nhau */
+.tagTable{width:100%;min-width:600px;table-layout:fixed;border-collapse:collapse;font-size:13px}
+.tagColumn{width:32%}
+.meaningColumn{width:40%}
+.tagTable th{text-align:left;font-size:12px;font-weight:500;color:var(--faint);padding:12px 18px;border-bottom:1px solid var(--line)}
+.tagTable td{padding:15px 18px;border-bottom:1px solid var(--line);vertical-align:middle;overflow-wrap:anywhere}
+.questionGroup td{background:var(--surface-2);font-weight:600}
+.kind{font-weight:400;color:var(--muted)}
+.example{color:var(--muted);overflow-wrap:anywhere}
+.exampleEmpty{color:var(--faint);font-style:italic}
+.codeChip{border:0;background:var(--accent-soft);color:var(--accent);border-radius:6px;padding:2px 8px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;cursor:pointer;max-width:100%;text-align:left;overflow-wrap:anywhere}
+.codeChip:hover{background:color-mix(in srgb,var(--accent) 18%,var(--surface))}
+.loopBox{display:grid;gap:10px;background:var(--surface)}
+.loopBox p{font-size:13px;line-height:1.6;color:var(--muted)}
+.loopBox>button{justify-self:start}
+.loop{color:var(--s-bsg-fg);font-family:ui-monospace,Menlo,Consolas,monospace}
+.wordTableScroll{overflow-x:auto}
+.wordTable{border-collapse:collapse;border:1px solid var(--line-2)}
+.wordTable th,.wordTable td{border:1px solid var(--line-2);padding:6px 10px;font-size:12.5px;background:var(--surface);text-align:left;font-family:ui-monospace,Menlo,Consolas,monospace}
+.wordTable th{font-family:inherit;font-weight:600}
+
+@media (max-width:760px){
+  .card{padding:20px}
+  .steps{grid-template-columns:minmax(0,1fr)}
+}

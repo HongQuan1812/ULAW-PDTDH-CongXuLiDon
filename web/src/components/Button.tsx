@@ -1,10 +1,11 @@
 /* Nút bấm dùng chung (như .btn của artifact/styles.css). */
-import type { ButtonHTMLAttributes } from 'react';
+import type { ComponentProps } from 'react';
 import styles from './Button.module.css';
 
 type ButtonVariant = 'default' | 'primary' | 'ghost' | 'danger';
 
-interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
+/** Mọi thuộc tính của thẻ <button> (kể cả ref) và kiểu nút. */
+interface ButtonProps extends ComponentProps<'button'> {
   /** Kiểu nút: 'default' viền mảnh · 'primary' nền xanh (việc chính) · 'ghost' không viền (việc phụ) · 'danger' chữ đỏ (việc xóa) */
   variant?: ButtonVariant;
 }

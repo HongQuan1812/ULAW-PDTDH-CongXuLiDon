@@ -10,22 +10,26 @@ import styles from './RefreshButton.module.css';
  * @param query  kết quả useQuery của khung
  * @param label  tên khung, cho trình đọc màn hình và chữ khi rê chuột, vd "Đơn đã nộp"
  * @param size   'small': nút nhỏ đặt ngay bên phải tiêu đề khung · 'normal' (mặc định): cạnh câu báo lỗi
+ * @param onRefresh  việc làm thêm khi bấm (vd kiểm tra lại, tải lại dữ liệu khác của khung); bỏ trống = chỉ tải lại query
  * @returns      nút tròn có biểu tượng ↻
  */
 export function RefreshButton({
   query,
   label,
   size = 'normal',
+  onRefresh,
 }: {
   query: UseQueryResult<unknown>;
   label: string;
   size?: 'normal' | 'small';
+  onRefresh?: () => void;
 }) {
   const toast = useToast();
   const refreshing = query.isFetching;
 
-  // Tải lại; lỗi mà vẫn còn dữ liệu cũ thì báo bằng toast
+  // Tải lại (kèm việc làm thêm nếu có); lỗi mà vẫn còn dữ liệu cũ thì báo bằng toast
   const refresh = async () => {
+    onRefresh?.();
     const result = await query.refetch();
     if (result.isError && result.data !== undefined) toast(result.error.message, 'error');
   };

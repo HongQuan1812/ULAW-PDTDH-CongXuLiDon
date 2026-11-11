@@ -6,11 +6,14 @@
    - Phiên bản Nháp sửa được; Lưu ở Nháp để soạn tiếp, hoặc ở Đang mở để mở (nội dung khóa lại).
    - Phiên bản đã khóa (Đang mở / Đã đóng) chỉ đổi được trạng thái. Sửa nội dung của nó thì trình soạn tự chép ra phiên bản mới;
      nếu đang có phiên bản Nháp thì phiên bản đã khóa chỉ xem được.
+   Mẫu xuất file thuộc loại đơn (mọi phiên bản): thêm, đổi tên, xóa mẫu cũng là thay đổi chưa lưu, bấm Lưu thì gửi lên
+   sau khi lưu loại đơn (kể cả khi đang xem phiên bản đã khóa).
    Thay đổi chưa lưu được giữ lại khi đi trang khác (formTypeDrafts.ts). */
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router';
 import {
   DRAFT_SAVE_STATUSES,
+  EXPORT_MESSAGES,
   FORM_TYPE_MESSAGES,
   FORM_TYPE_STATUS_LABEL,
   LOCKED_VERSION_STATUSES,
@@ -29,6 +32,7 @@ import {
   useSetFormTypeVersionStatus,
   type SaveFormTypeVersionTarget,
 } from '../../api/form-types';
+import { useSaveExportTemplates } from '../../api/exports';
 import { FORM_TYPE_VERSION_PARAM, NEW_FORM_TYPE_ID, PAGE_LABEL, PAGE_PATH, formTypeEditorPath, readPreviousPageLabel } from '../../app/paths';
 import { Button } from '../../components/Button';
 import { LoadError, loadErrorMessage } from '../../components/LoadError';
@@ -36,12 +40,22 @@ import { Modal } from '../../components/Modal';
 import { RefreshButton } from '../../components/RefreshButton';
 import { useToast } from '../../components/Toast';
 import { DraftIssuesContext } from './draftIssues';
+import { ExportTemplatesPanel } from './ExportTemplatesPanel';
+import { NO_TEMPLATE_CHANGES, hasTemplateChanges, toSaveTemplatesRequest } from './exportTemplateChanges';
 import { FormTypeInfoCard } from './FormTypeInfoCard';
 import { FormInfoPanelToggle, useFormInfoPanel } from '../form/FormInfoPanel';
 import { FormTypePreview } from './FormTypePreview';
 import { FormTypeVersionPanel, VERSION_PANEL_STORAGE_KEY, VERSION_PANEL_TITLE, type VersionChoice } from './FormTypeVersionPanel';
 import { draftFromVersion, moveItem, newFormTypeDraft, newSection, removeAt, replaceAt, type FormTypeDraft } from './formTypeDraft';
-import { discardUnsavedEdit, keepUnsavedEdit, readUnsavedEdit, type UnsavedEdit } from './formTypeDrafts';
+import {
+  discardTemplateChanges,
+  discardUnsavedEdit,
+  keepTemplateChanges,
+  keepUnsavedEdit,
+  readTemplateChanges,
+  readUnsavedEdit,
+  type UnsavedEdit,
+} from './formTypeDrafts';
 import { SectionEditor, type SectionAction } from './SectionEditor';
 import styles from './FormTypeEditor.module.css';
 
@@ -184,10 +198,13 @@ function FormTypeEditor({ managed, requestedVersion }: FormTypeEditorProps) {
   const saveVersion = useSaveFormTypeVersion();
   const setVersionStatus = useSetFormTypeVersionStatus(formTypeId);
   const deleteVersion = useDeleteFormTypeVersion(formTypeId);
+  const saveTemplates = useSaveExportTemplates();
   const versionPanel = useFormInfoPanel(VERSION_PANEL_STORAGE_KEY);
 
   // Thay đổi chưa lưu (giữ lại từ lần trước nếu có), phiên bản đang xem, trạng thái mới chọn cho phiên bản đã khóa
   const [edit, setEdit] = useState<UnsavedEdit | null>(() => readUnsavedEdit(formTypeId) ?? null);
+  // Thay đổi chưa lưu về mẫu xuất file (không theo phiên bản)
+  const [templateChanges, setTemplateChanges] = useState(() => readTemplateChanges(formTypeId) ?? NO_TEMPLATE_CHANGES);
   const [selectedVersion, setSelectedVersion] = useState(() => {
     if (requestedVersion && versions.some((version) => version.version === requestedVersion)) return requestedVersion;
     return edit?.version ?? versions[0]?.version ?? 1;
@@ -216,6 +233,7 @@ function FormTypeEditor({ managed, requestedVersion }: FormTypeEditorProps) {
   useEffect(() => {
     if (edit) keepUnsavedEdit(formTypeId, edit);
   }, [formTypeId, edit]);
+  useEffect(() => keepTemplateChanges(formTypeId, templateChanges), [formTypeId, templateChanges]);
 
   // Phiên bản đang xem: đã lưu chưa, có đang sửa không, sửa được không
   const selectedSaved = versions.find((version) => version.version === selectedVersion) ?? null;
@@ -231,11 +249,18 @@ function FormTypeEditor({ managed, requestedVersion }: FormTypeEditorProps) {
   // Bản soạn đang hiện
   const savedDraft = useMemo(() => (managed && selectedSaved ? draftFromVersion(managed.prefix, selectedSaved) : null), [managed, selectedSaved]);
   const shownDraft = editingSelected ? edit.draft : (savedDraft ?? edit?.draft ?? emptyDraft);
+  // Bản soạn đang hiện cho khung Mẫu xuất file (kiểm tra mã, ví dụ theo câu hỏi đang soạn)
+  const exportDraft = useMemo(
+    () => ({ name: shownDraft.name, prefix: shownDraft.prefix, sections: shownDraft.sections }),
+    [shownDraft.name, shownDraft.prefix, shownDraft.sections],
+  );
   const shownStatus = isLockedVersion && statusChange?.version === selectedVersion ? statusChange.status : shownDraft.status;
   const otherOpenVersion = versions.find((version) => version.status === 'open' && version.version !== selectedVersion)?.version ?? null;
   // Chỉ tính thay đổi của phiên bản đang xem: phiên bản khác đang sửa dở thì "Chưa lưu", "Bỏ thay đổi" không hiện ở đây
-  // (khung Phiên bản vẫn ghi "Chưa lưu" ở phiên bản đó)
-  const dirty = editingSelected || statusChange?.version === selectedVersion;
+  // (khung Phiên bản vẫn ghi "Chưa lưu" ở phiên bản đó). Thay đổi về mẫu xuất file thì tính ở mọi phiên bản.
+  const statusChanged = isLockedVersion && statusChange?.version === selectedVersion;
+  const templatesChanged = hasTemplateChanges(templateChanges);
+  const dirty = editingSelected || statusChanged || templatesChanged;
 
   // Lỗi của bản soạn (chỉ sau khi đã bấm Lưu); mã đơn so với các loại đơn khác trong danh sách đã tải
   const otherPrefixes = useMemo(
@@ -335,86 +360,104 @@ function FormTypeEditor({ managed, requestedVersion }: FormTypeEditorProps) {
     setFocusTarget({ sectionId: null, questionId: null });
   };
 
-  /** Phiên bản đã khóa: Lưu đổi trạng thái (mở thì phiên bản đang mở khác tự đóng). */
-  const saveStatus = () => {
-    if (!statusChange || !selectedSaved) {
-      toast('Không có thay đổi để lưu.', 'info');
-      return;
-    }
-    const name = selectedSaved.name;
-    const { version, status } = statusChange;
-    setVersionStatus.mutate(
-      { version, status: status === 'open' ? 'open' : 'closed' },
-      {
-        onSuccess: () => {
-          setStatusChange(null);
-          toast(status === 'open' ? FORM_TYPE_MESSAGES.opened(name, version, otherOpenVersion) : FORM_TYPE_MESSAGES.closed(name, version), 'success');
-        },
-        onError: (error) => toast(error.message, 'error'),
-      },
-    );
-  };
-
   /**
-   * Lưu: về tab Soạn. Phiên bản đã khóa thì lưu trạng thái. Phiên bản Nháp thì kiểm tra bản soạn (còn lỗi: tô đỏ, liệt kê,
-   * đưa con trỏ tới ô lỗi đầu tiên) rồi gửi lên: tạo loại đơn, thêm phiên bản mới, hoặc lưu đè phiên bản Nháp.
+   * Lưu (về tab Soạn), lần lượt từng phần có thay đổi; một phần lỗi thì báo và dừng, các thay đổi chưa lưu vẫn giữ:
+   * 1. Phiên bản đã khóa: đổi trạng thái (mở thì phiên bản đang mở khác tự đóng).
+   * 2. Phiên bản Nháp / loại đơn mới: kiểm tra bản soạn (còn lỗi: tô đỏ, liệt kê, đưa con trỏ tới ô lỗi đầu tiên, không lưu gì)
+   *    rồi tạo loại đơn, thêm phiên bản mới, hoặc lưu đè phiên bản Nháp.
+   * 3. Mẫu xuất file: gửi mọi thay đổi cùng các file mới trong một lần (loại đơn mới thì sau khi đã tạo).
    */
-  const save = () => {
+  const save = async () => {
     setEditorMode('edit');
-    if (isLockedVersion) {
-      saveStatus();
-      return;
-    }
-    if (!editingSelected && !isNew) {
+    const contentChanged = !isLockedVersion && (editingSelected || isNew);
+    if (!contentChanged && !statusChanged && !templatesChanged) {
       toast('Không có thay đổi để lưu.', 'info');
       return;
     }
 
-    // Kiểm tra trước khi gửi
-    setShowIssues(true);
-    if (validateFormTypeDraft(shownDraft, otherPrefixes).length) {
-      setTimeout(focusFirstIssue);
-      return;
+    // Kiểm tra bản soạn trước khi gửi
+    if (contentChanged) {
+      setShowIssues(true);
+      if (validateFormTypeDraft(shownDraft, otherPrefixes).length) {
+        setTimeout(focusFirstIssue);
+        return;
+      }
     }
 
-    // Gửi lên máy chủ
-    const target: SaveFormTypeVersionTarget = isNew
-      ? { kind: 'createFormType' }
-      : edit?.isNewVersion
-        ? { kind: 'addVersion', formTypeId }
-        : { kind: 'saveDraft', formTypeId, version: selectedVersion };
-    saveVersion.mutate(
-      { target, saveRequest: toSaveRequest(shownDraft) },
-      {
-        onSuccess: (savedFormType) => {
-          const savedVersion = target.kind === 'saveDraft' ? selectedVersion : savedFormType.versions[0]!.version;
-          const name = shownDraft.name.trim();
-          discardUnsavedEdit(formTypeId);
-          setEdit(null);
-          setShowIssues(false);
-          toast(
-            shownDraft.status === 'open'
-              ? FORM_TYPE_MESSAGES.opened(name, savedVersion, otherOpenVersion)
-              : FORM_TYPE_MESSAGES.saved(name, savedVersion, FORM_TYPE_STATUS_LABEL.draft),
-            'success',
-          );
-          if (isNew)
-            navigate(formTypeEditorPath(savedFormType.id), {
-              replace: true,
-              state: location.state,
-            });
-          else setSelectedVersion(savedVersion);
-        },
-        onError: (error) => toast(error.message, 'error'),
-      },
-    );
+    // 1. Trạng thái của phiên bản đã khóa
+    if (statusChanged && statusChange && selectedSaved) {
+      const { version, status } = statusChange;
+      try {
+        await setVersionStatus.mutateAsync({ version, status: status === 'open' ? 'open' : 'closed' });
+      } catch (error) {
+        toast(error instanceof Error ? error.message : String(error), 'error');
+        return;
+      }
+      setStatusChange(null);
+      toast(
+        status === 'open' ? FORM_TYPE_MESSAGES.opened(selectedSaved.name, version, otherOpenVersion) : FORM_TYPE_MESSAGES.closed(selectedSaved.name, version),
+        'success',
+      );
+    }
+
+    // 2. Nội dung: tạo loại đơn, thêm phiên bản mới, hoặc lưu đè phiên bản Nháp
+    let savedFormTypeId = formTypeId;
+    let savedVersion: number | null = null;
+    if (contentChanged) {
+      const target: SaveFormTypeVersionTarget = isNew
+        ? { kind: 'createFormType' }
+        : edit?.isNewVersion
+          ? { kind: 'addVersion', formTypeId }
+          : { kind: 'saveDraft', formTypeId, version: selectedVersion };
+      try {
+        const savedFormType = await saveVersion.mutateAsync({ target, saveRequest: toSaveRequest(shownDraft) });
+        savedFormTypeId = savedFormType.id;
+        savedVersion = target.kind === 'saveDraft' ? selectedVersion : savedFormType.versions[0]!.version;
+      } catch (error) {
+        toast(error instanceof Error ? error.message : String(error), 'error');
+        return;
+      }
+      const name = shownDraft.name.trim();
+      discardUnsavedEdit(formTypeId);
+      setEdit(null);
+      setShowIssues(false);
+      toast(
+        shownDraft.status === 'open'
+          ? FORM_TYPE_MESSAGES.opened(name, savedVersion, otherOpenVersion)
+          : FORM_TYPE_MESSAGES.saved(name, savedVersion, FORM_TYPE_STATUS_LABEL.draft),
+        'success',
+      );
+    }
+
+    // 3. Mẫu xuất file. Lỗi thì giữ các thay đổi (loại đơn vừa tạo thì chuyển sang giữ theo mã mới) để bấm Lưu lại
+    if (templatesChanged) {
+      try {
+        await saveTemplates.mutateAsync({ formTypeId: savedFormTypeId, ...toSaveTemplatesRequest(templateChanges) });
+        discardTemplateChanges(formTypeId);
+        setTemplateChanges(NO_TEMPLATE_CHANGES);
+        if (!contentChanged && !statusChanged) toast(EXPORT_MESSAGES.saved, 'success');
+      } catch (error) {
+        const reason = error instanceof Error ? error.message : String(error);
+        toast(contentChanged || statusChanged ? EXPORT_MESSAGES.notSaved(reason) : reason, 'error');
+        if (isNew) {
+          keepTemplateChanges(savedFormTypeId, templateChanges);
+          discardTemplateChanges(formTypeId);
+        }
+      }
+    }
+
+    // Loại đơn mới: mở trình soạn của loại đơn vừa tạo; còn lại xem phiên bản vừa lưu
+    if (isNew) navigate(formTypeEditorPath(savedFormTypeId), { replace: true, state: location.state });
+    else if (savedVersion !== null) setSelectedVersion(savedVersion);
   };
 
-  /** Bỏ thay đổi: về bản đã lưu; đang soạn phiên bản mới (chưa lưu) thì quay về phiên bản đã chép ra. */
+  /** Bỏ thay đổi (cả thay đổi về mẫu xuất file): về bản đã lưu; đang soạn phiên bản mới (chưa lưu) thì quay về phiên bản đã chép ra. */
   const discardChanges = () => {
     if (edit?.isNewVersion) setSelectedVersion(edit.baseVersion ?? versions[0]?.version ?? 1);
     discardUnsavedEdit(formTypeId);
+    discardTemplateChanges(formTypeId);
     setEdit(null);
+    setTemplateChanges(NO_TEMPLATE_CHANGES);
     setStatusChange(null);
     setShowIssues(false);
     toast(FORM_TYPE_MESSAGES.discarded, 'info');
@@ -430,6 +473,7 @@ function FormTypeEditor({ managed, requestedVersion }: FormTypeEditorProps) {
         setEdit(null);
         setConfirmingDelete(false);
         if (!remaining) {
+          discardTemplateChanges(formTypeId);
           toast(FORM_TYPE_MESSAGES.deleted(name), 'success');
           navigate(PAGE_PATH.formTypes, { replace: true });
           return;
@@ -510,7 +554,7 @@ function FormTypeEditor({ managed, requestedVersion }: FormTypeEditorProps) {
     );
   }
   const deletesWholeFormType = versions.length === 1;
-  const isSaving = saveVersion.isPending || setVersionStatus.isPending;
+  const isSaving = saveVersion.isPending || setVersionStatus.isPending || saveTemplates.isPending;
 
   return (
     <DraftIssuesContext.Provider value={invalidTargets}>
@@ -596,6 +640,15 @@ function FormTypeEditor({ managed, requestedVersion }: FormTypeEditorProps) {
               ))}
             </fieldset>
 
+            {/* Mẫu xuất file: thuộc loại đơn (mọi phiên bản) nên không bị khóa theo phiên bản; thay đổi chờ bấm Lưu */}
+            <ExportTemplatesPanel
+              formTypeId={managed?.id ?? null}
+              draft={exportDraft}
+              changes={templateChanges}
+              onChangesChange={setTemplateChanges}
+              saving={isSaving}
+            />
+
             <div className={styles.bottom}>
               <Button onClick={addSection} disabled={contentLocked}>
                 + Thêm phần
@@ -613,7 +666,7 @@ function FormTypeEditor({ managed, requestedVersion }: FormTypeEditorProps) {
                   <Button onClick={discardChanges} disabled={isSaving}>
                     Bỏ thay đổi
                   </Button>
-                  <Button variant="primary" onClick={save} disabled={isSaving}>
+                  <Button variant="primary" onClick={() => void save()} disabled={isSaving}>
                     {isSaving ? 'Đang lưu…' : 'Lưu'}
                   </Button>
                 </>

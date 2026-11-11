@@ -1,0 +1,8 @@
+/* Khung chọn tệp: bấm hoặc kéo thả (như .drop của artifact/styles.css). */
+.dropZone{display:grid;justify-items:center;gap:4px;padding:28px 16px;border:1.5px dashed var(--line-2);border-radius:var(--r-lg);background:var(--surface-2);text-align:center;color:var(--muted);cursor:pointer;transition:border-color .15s,background .15s}
+.dropZone svg{color:var(--accent);margin-bottom:4px}
+.dropZone strong{color:var(--fg);font-weight:500}
+.dropZone span{font-size:12.5px}
+.dropZone:hover,.dropZoneOver{border-color:var(--accent);background:var(--accent-soft)}
+.dropZone:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+.invalid{border-color:var(--danger)!important;box-shadow:0 0 0 4px color-mix(in srgb,var(--danger) 12%,transparent)}

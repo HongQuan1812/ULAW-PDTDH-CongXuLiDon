@@ -1,7 +1,16 @@
 /* Một câu hỏi trong trình soạn (như questionEditor() của artifact/js/forms-page.js): khung riêng có thanh tiêu đề
    (số thứ tự · loại câu hỏi · Bắt buộc · nút đưa lên / xuống / nhân bản / xóa), các ô có nhãn,
-   khối cài đặt riêng theo loại câu hỏi, công tắc Bắt buộc trả lời. Khối thông báo chỉ có tiêu đề và nội dung. */
-import { FORM_TYPE_ISSUE_TARGET, QUESTION_TYPES, QUESTION_TYPE_LABEL, type Question, type QuestionType } from '@ulaw/shared';
+   khối cài đặt riêng theo loại câu hỏi, công tắc Bắt buộc trả lời và ô "Mã dùng trong file Word".
+   Khối thông báo chỉ có tiêu đề và nội dung. */
+import {
+  FORM_TYPE_ISSUE_TARGET,
+  QUESTION_TYPES,
+  QUESTION_TYPE_LABEL,
+  questionTag,
+  type AnswerableQuestion,
+  type Question,
+  type QuestionType,
+} from '@ulaw/shared';
 import { Field } from '../../components/Field';
 import { GrowingTextarea } from '../../features/form-renderer/GrowingTextarea';
 import { useDraftIssues } from './draftIssues';
@@ -102,9 +111,65 @@ export function QuestionEditor({ question, index, questionCount, autoFocus, onCh
               <input type="checkbox" checked={required} onChange={(event) => onChange({ ...question, required: event.target.checked })} />
               <span>Bắt buộc trả lời</span>
             </label>
+            <TagField question={question} onChange={onChange} />
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+/**
+ * Câu giải thích ô mã theo loại câu hỏi (như TAG_HELP của artifact/js/forms-page.js).
+ * @param type  loại câu hỏi
+ * @param tag   mã đang dùng (mã riêng, hoặc mã tự lấy theo nội dung câu hỏi)
+ * @returns     câu giải thích
+ */
+function tagHelp(type: AnswerableQuestion['type'], tag: string): string {
+  if (type === 'table') {
+    return `Mã của cả bảng. Trong file Word, gõ {#${tag}} ở ô đầu và {/${tag}} ở ô cuối của một dòng mẫu; khi xuất file, đơn có bao nhiêu dòng thì bảng có bấy nhiêu dòng. Mỗi cột có mã riêng, hiện dưới tên cột.`;
+  }
+  if (type === 'check') return `Chỗ nào trong file Word có {${tag}} sẽ được điền các lựa chọn, nối bằng dấu phẩy.`;
+  if (type === 'file') return `Chỗ nào trong file Word có {${tag}} sẽ được điền tên các tệp đã tải lên.`;
+  return `Chỗ nào trong file Word có {${tag}} sẽ được điền câu trả lời của câu này.`;
+}
+
+/**
+ * Ô "Mã dùng trong file Word" (như tagField() của bản mẫu): gõ chỉ nhận chữ thường không dấu, số, dấu _;
+ * bỏ trống thì dùng mã tự lấy theo nội dung câu hỏi (hiện mờ trong ô).
+ * @param question  câu hỏi cần trả lời
+ * @param onChange  gọi với câu hỏi đã sửa mã
+ * @returns         ô nhập mã kèm câu giải thích
+ */
+function TagField({ question, onChange }: { question: AnswerableQuestion; onChange: (nextQuestion: Question) => void }) {
+  const invalid = useDraftIssues().has(FORM_TYPE_ISSUE_TARGET.questionTag(question.id));
+  const autoTag = questionTag({ label: question.label });
+
+  // Bỏ ký tự không hợp lệ ngay khi gõ; ô trống thì xóa mã riêng
+  const changeTag = (typedText: string) => {
+    const tag = typedText.toLowerCase().replace(/[^a-z0-9_]/g, '');
+    const { tag: _oldTag, ...withoutTag } = question;
+    onChange(tag ? { ...question, tag } : withoutTag);
+  };
+
+  return (
+    <div className={styles.tagField}>
+      <label className={styles.tagRow}>
+        <span>Mã dùng trong file Word</span>
+        <span className={styles.tagInput}>
+          <span aria-hidden="true">{'{'}</span>
+          <input
+            value={question.tag ?? ''}
+            placeholder={autoTag}
+            spellCheck={false}
+            autoComplete="off"
+            aria-invalid={invalid || undefined}
+            onChange={(event) => changeTag(event.target.value)}
+          />
+          <span aria-hidden="true">{'}'}</span>
+        </span>
+      </label>
+      <small>{tagHelp(question.type, questionTag(question))} Bỏ trống thì tự lấy theo nội dung câu hỏi.</small>
     </div>
   );
 }

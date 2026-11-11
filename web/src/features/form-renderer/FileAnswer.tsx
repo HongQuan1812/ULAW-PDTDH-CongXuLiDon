@@ -1,6 +1,7 @@
 /* Ô trả lời tải tệp (như QUESTION_UI.file của artifact/js/sections.js). */
-import { useCallback, useId, useRef, useState, type DragEvent, type KeyboardEvent } from 'react';
+import { useCallback, useId, useState } from 'react';
 import { acceptedExtensions, acceptedExtensionsText, formatFileSize, validateFile, type FileRef } from '@ulaw/shared';
+import { FileDropZone } from '../../components/FileDropZone';
 import { FilePreview } from '../file-preview/FilePreview';
 import type { AnswerProps } from './answerProps';
 import { keepLocalFile } from './localFiles';
@@ -53,10 +54,8 @@ export function FileAnswer({
   describedBy,
 }: AnswerProps<'file'>) {
   const files = readFiles(answerValue);
-  const inputRef = useRef<HTMLInputElement>(null);
   const rejectedId = useId();
   const [rejectedMessages, setRejectedMessages] = useState<string[]>([]);
-  const [draggingOver, setDraggingOver] = useState(false);
   const [previewedFile, setPreviewedFile] = useState<FileRef | null>(null);
   const closePreview = useCallback(() => setPreviewedFile(null), []);
 
@@ -64,8 +63,7 @@ export function FileAnswer({
    * Thêm các tệp vừa chọn: bỏ tệp sai định dạng / quá dung lượng (ghi lí do), bỏ tệp trùng tên đã có.
    * @param chosenFiles  tệp từ hộp chọn tệp hoặc kéo thả
    */
-  const addFiles = (chosenFiles: FileList | null) => {
-    if (!chosenFiles?.length) return;
+  const addFiles = (chosenFiles: FileList) => {
     const messages: string[] = [];
     const addedFiles: FileRef[] = [];
     Array.from(chosenFiles).forEach((file) => {
@@ -83,27 +81,6 @@ export function FileAnswer({
    */
   const removeFile = (fileId: string) => onAnswerChange(files.filter((file) => file.id !== fileId));
 
-  // Kéo tệp vào / ra khỏi khung chọn tệp
-  const onDragOver = (event: DragEvent<HTMLDivElement>) => {
-    event.preventDefault();
-    setDraggingOver(true);
-  };
-  const onDragLeave = (event: DragEvent<HTMLDivElement>) => {
-    event.preventDefault();
-    setDraggingOver(false);
-  };
-  const onDrop = (event: DragEvent<HTMLDivElement>) => {
-    event.preventDefault();
-    setDraggingOver(false);
-    addFiles(event.dataTransfer.files);
-  };
-  // Enter hoặc phím cách trên khung: mở hộp chọn tệp
-  const onDropZoneKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
-    if (event.key !== 'Enter' && event.key !== ' ') return;
-    event.preventDefault();
-    inputRef.current?.click();
-  };
-
   const extensions = acceptedExtensions(question);
   const acceptAttribute = [
     ...extensions.map((extension) => `.${extension}`),
@@ -113,44 +90,14 @@ export function FileAnswer({
   return (
     <>
       {!readOnly && (
-        <>
-          <div
-            role="button"
-            tabIndex={0}
-            className={`${styles.dropZone} ${draggingOver ? styles.dropZoneOver : ''} ${invalid ? styles.invalid : ''}`}
-            aria-labelledby={labelId}
-            aria-describedby={[describedBy, rejectedMessages.length ? rejectedId : ''].filter(Boolean).join(' ') || undefined}
-            aria-invalid={invalid || undefined}
-            onClick={() => inputRef.current?.click()}
-            onKeyDown={onDropZoneKeyDown}
-            onDragEnter={onDragOver}
-            onDragOver={onDragOver}
-            onDragLeave={onDragLeave}
-            onDrop={onDrop}
-          >
-            <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" />
-              <path d="M14 3v5h5" />
-              <path d="M12 17v-6" />
-              <path d="m9 13 3-3 3 3" />
-            </svg>
-            <strong>Kéo thả tệp vào đây hoặc bấm để chọn</strong>
-            <span>
-              {acceptedExtensionsText(question)} — tối đa {question.maxMB} MB/tệp
-            </span>
-          </div>
-          <input
-            ref={inputRef}
-            type="file"
-            multiple
-            hidden
-            accept={acceptAttribute}
-            onChange={(event) => {
-              addFiles(event.target.files);
-              event.target.value = '';
-            }}
-          />
-        </>
+        <FileDropZone
+          accept={acceptAttribute}
+          hint={`${acceptedExtensionsText(question)} — tối đa ${question.maxMB} MB/tệp`}
+          invalid={invalid}
+          labelledBy={labelId}
+          describedBy={[describedBy, rejectedMessages.length ? rejectedId : ''].filter(Boolean).join(' ') || undefined}
+          onFiles={addFiles}
+        />
       )}
 
       {files.length ? (

@@ -2,6 +2,7 @@
    Trình soạn dùng để báo lỗi và tô đỏ ô sai; API giả và backend dùng lại để kiểm tra lần cuối, nên câu báo giống nhau. */
 import type { FormSection } from '../aux-schema/form-types--sections';
 import type { FormTypeStatus } from '../aux-schema/form-types--statuses';
+import { COMMON_EXPORT_TAGS, EXPORT_TAG_PATTERN, ROW_NUMBER_TAG, columnTag, questionTag } from '../business-rules/exports--tags';
 
 /** Câu báo lỗi của bản soạn loại đơn. "Phần 1, câu 2" đếm như trình soạn: câu hỏi đếm cả khối thông báo. */
 export const FORM_TYPE_DRAFT_MESSAGES = {
@@ -15,6 +16,15 @@ export const FORM_TYPE_DRAFT_MESSAGES = {
   emptyColumn: (sectionNumber: number, questionNumber: number) => `Phần ${sectionNumber}, câu ${questionNumber}: đặt tên cho mọi cột.`,
   noFileFormat: (sectionNumber: number, questionNumber: number) => `Phần ${sectionNumber}, câu ${questionNumber}: chọn ít nhất một định dạng tệp.`,
   openWithoutQuestion: 'Loại đơn đang mở phải có ít nhất một câu hỏi.',
+  /** Mã dùng trong file Word sai dạng */
+  tagFormat: (sectionNumber: number, questionNumber: number) =>
+    `Phần ${sectionNumber}, câu ${questionNumber}: mã trường chỉ gồm chữ thường không dấu, số và dấu _, không bắt đầu bằng số.`,
+  /** Mã của câu hỏi (hoặc của một cột) trùng mã có sẵn */
+  tagReserved: (sectionNumber: number, questionNumber: number, tag: string) =>
+    `Phần ${sectionNumber}, câu ${questionNumber}: mã {${tag}} trùng mã có sẵn, hãy đặt mã khác.`,
+  /** Mã của câu hỏi (hoặc của một cột) trùng mã đã dùng ở câu trước */
+  tagTaken: (sectionNumber: number, questionNumber: number, tag: string, usedAt: string, isColumn: boolean) =>
+    `Phần ${sectionNumber}, câu ${questionNumber}: mã {${tag}} trùng với ${usedAt}. Đặt mã trường khác${isColumn ? ' hoặc đổi tên cột' : ''}.`,
 } as const;
 
 /** Mã đơn hợp lệ: 2–5 chữ in hoa không dấu. */
@@ -32,6 +42,7 @@ export const FORM_TYPE_ISSUE_TARGET = {
   option: (questionId: string, optionIndex: number) => `option:${questionId}:${optionIndex}`,
   column: (questionId: string, columnIndex: number) => `column:${questionId}:${columnIndex}`,
   fileFormats: (questionId: string) => `file-formats:${questionId}`,
+  questionTag: (questionId: string) => `question-tag:${questionId}`,
 } as const;
 
 /** Một lỗi của bản soạn: câu báo và ô bị lỗi (null = không gắn với ô nào). */
@@ -84,6 +95,27 @@ export function validateFormTypeDraft(draft: FormTypeDraftInput, otherPrefixes: 
       if (question.type === 'file' && !question.accept.length) {
         add(FORM_TYPE_ISSUE_TARGET.fileFormats(question.id), FORM_TYPE_DRAFT_MESSAGES.noFileFormat(sectionNumber, questionNumber));
       }
+    });
+  });
+
+  // Mã dùng trong file Word: đúng dạng, không trùng mã có sẵn, không trùng nhau (kể cả mã cột của bảng)
+  const tagUsedAt = new Map<string, string>();
+  draft.sections.forEach((section, sectionIndex) => {
+    section.questions.forEach((question, questionIndex) => {
+      if (question.type === 'info') return;
+      const [sectionNumber, questionNumber] = [sectionIndex + 1, questionIndex + 1];
+      const target = FORM_TYPE_ISSUE_TARGET.questionTag(question.id);
+      const ownTag = questionTag(question);
+      if (!EXPORT_TAG_PATTERN.test(ownTag)) add(target, FORM_TYPE_DRAFT_MESSAGES.tagFormat(sectionNumber, questionNumber));
+      // Câu hỏi / cột chưa có tên (đã báo lỗi ở trên) thì chưa có mã để so trùng
+      const tags = [question.tag || question.label.trim() ? ownTag : null, ...(question.type === 'table' ? question.columns.map((column) => (column.tag || column.label.trim() ? columnTag(column) : null)) : [])];
+      tags.forEach((tag, i) => {
+        if (tag === null) return;
+        const usedAt = tagUsedAt.get(tag);
+        if (COMMON_EXPORT_TAGS.has(tag) || tag === ROW_NUMBER_TAG) add(target, FORM_TYPE_DRAFT_MESSAGES.tagReserved(sectionNumber, questionNumber, tag));
+        else if (usedAt) add(target, FORM_TYPE_DRAFT_MESSAGES.tagTaken(sectionNumber, questionNumber, tag, usedAt, i > 0));
+        else tagUsedAt.set(tag, `phần ${sectionNumber}, câu ${questionNumber}`);
+      });
     });
   });
 

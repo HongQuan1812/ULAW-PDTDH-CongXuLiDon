@@ -1,7 +1,7 @@
 /* Cài đặt riêng theo loại câu hỏi trong trình soạn (như typeEditor() của artifact/js/forms-page.js):
    các lựa chọn (Chọn một / Chọn nhiều / Danh sách thả xuống), các cột của bảng, định dạng và dung lượng tệp.
    Loại câu hỏi khác không có cài đặt riêng. */
-import { FORM_TYPE_ISSUE_TARGET, type Question, type QuestionOf, type TableColumn } from '@ulaw/shared';
+import { FORM_TYPE_ISSUE_TARGET, columnTag, type Question, type QuestionOf, type TableColumn } from '@ulaw/shared';
 import { RequiredMark } from '../../components/Field';
 import { GrowingTextarea } from '../../features/form-renderer/GrowingTextarea';
 import { useDraftIssues } from './draftIssues';
@@ -87,6 +87,7 @@ function ChoiceSettings({ question, onChange }: { question: QuestionOf<'radio' |
 
 /**
  * Cài đặt bảng: tên gọi mỗi dòng, rồi mỗi cột một hàng (tên, mô tả nhỏ, kiểu Chữ / Số, tính tổng, nút bỏ).
+ * Dưới tên cột là mã của cột trong file Word (lấy theo tên cột).
  * Tên cột và mô tả dài thì tự xuống hàng như ô chữ trong bảng trả lời.
  * Chỉ cột Số mới tính tổng được; đổi sang Chữ thì bỏ tính tổng. Còn một cột thì không bỏ được.
  * @param question  câu hỏi Bảng nhiều dòng
@@ -119,7 +120,8 @@ function TableSettings({ question, onChange }: { question: QuestionOf<'table'>; 
       </div>
       {question.columns.map((column, i) => (
         <div key={i} className={styles.column}>
-          {/* Tên cột, mô tả dài thì tự xuống hàng; hai ô cùng hàng cao bằng nhau */}
+          {/* Tên cột, mô tả dài thì tự xuống hàng; các ô cùng hàng trên cao bằng nhau.
+              Mã của cột trong file Word nằm ở hàng dưới, ngay dưới ô tên cột */}
           <GrowingTextarea
             value={column.label}
             placeholder="Tên cột"
@@ -127,6 +129,7 @@ function TableSettings({ question, onChange }: { question: QuestionOf<'table'>; 
             aria-invalid={invalidTargets.has(FORM_TYPE_ISSUE_TARGET.column(question.id, i)) || undefined}
             onValueChange={(label) => changeColumn(i, { label })}
           />
+          <code className={styles.columnCode} title="Mã của cột trong file Word">{`{${columnTag(column)}}`}</code>
           <GrowingTextarea value={column.sub ?? ''} placeholder="Mô tả nhỏ" aria-label={`Mô tả cột ${i + 1}`} onValueChange={(sub) => changeColumn(i, { sub })} />
           <select
             value={column.type}

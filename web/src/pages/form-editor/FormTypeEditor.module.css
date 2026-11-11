@@ -86,7 +86,14 @@
 /* ô chữ tự xuống hàng (GrowingTextarea): trông như ô một dòng, chữ dài thì cao lên, không kéo giãn bằng tay */
 .growing{display:block;min-height:42px;line-height:1.45;resize:none;overflow:hidden;overflow-wrap:anywhere}
 .questionLabel{font-weight:500}
-.questionFoot{display:flex;align-items:center;gap:12px 24px;flex-wrap:wrap;padding-top:14px;border-top:1px solid var(--line)}
+.questionFoot{display:flex;align-items:flex-start;justify-content:space-between;gap:12px 24px;flex-wrap:wrap;padding-top:14px;border-top:1px solid var(--line)}
+.questionFoot>.switch{margin-top:4px}
+/* ô "Mã dùng trong file Word" (như .qe-tag của bản mẫu) */
+.tagField{display:grid;gap:4px;flex:0 1 520px;min-width:0}
+.tagRow{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:13px;font-weight:500;color:var(--muted)}
+.tagInput{display:inline-flex;align-items:center;gap:2px;font-family:ui-monospace,Menlo,Consolas,monospace;color:var(--faint)}
+.tagInput input{width:220px;max-width:100%;min-height:32px;padding:4px 10px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px}
+.tagField small{font-size:12px;color:var(--muted)}
 
 /* cài đặt riêng theo loại câu hỏi: khối nền nhạt viền đứt */
 .settings{display:grid;gap:10px;padding:14px;border-radius:var(--r);background:color-mix(in srgb,var(--surface-2) 70%,transparent);border:1px dashed var(--line-2);min-width:0}
@@ -106,8 +113,11 @@
 .tableSettings{display:grid;gap:8px;overflow-x:auto;min-width:0}
 .rowName{max-width:340px}
 .columnsHead,.column{display:grid;grid-template-columns:minmax(140px,1fr) minmax(140px,1fr) 90px 70px 34px;gap:8px;align-items:center;min-width:560px}
-.column{align-items:stretch}
+/* mỗi cột: hàng trên là các ô nhập (cao bằng nhau theo ô cao nhất), hàng dưới là mã của cột ngay dưới ô tên cột */
+.column{align-items:stretch;grid-template-rows:auto auto;row-gap:4px}
+.column>*{grid-row:1}
 .column>textarea{display:block;height:100%;min-height:43px;padding:10px 14px;line-height:1.45;resize:none;overflow:hidden;overflow-wrap:anywhere}
+.column>.columnCode{grid-row:2;grid-column:1;font-size:11px;color:var(--muted);justify-self:start;overflow-wrap:anywhere}
 .column>select{height:43px;align-self:start}
 .column>button{align-self:start;margin-top:4.5px}
 .columnSum{display:flex;align-items:center;justify-content:center;height:43px;align-self:start}

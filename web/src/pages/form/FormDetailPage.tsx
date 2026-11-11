@@ -4,6 +4,7 @@
    Nội dung đơn sửa được khi canEditForm (đơn của mình hoặc Admin, đơn Đã nộp / Cần bổ sung / Đã bổ sung), còn lại chỉ xem.
    Cán bộ có quyền receive thấy nút "Tiếp nhận" ở đầu trang khi đơn Đã nộp / Đã bổ sung.
    Đơn Đang xét mà mình được ra quyết định (canDecideOn) thì có hàng nút Yêu cầu bổ sung / Từ chối / Duyệt ở đáy trang.
+   Loại đơn có mẫu xuất file thì có nút "Xuất file" ở đầu trang (điền đơn vào mẫu Word, xem trước rồi tải về).
    Lịch sử: thêm ở phần sau của bước 5. */
 import { useState, type FormEvent } from 'react';
 import { Link, useParams } from 'react-router';
@@ -16,6 +17,7 @@ import { RefreshButton } from '../../components/RefreshButton';
 import { StatusPill } from '../../components/StatusPill';
 import { useToast } from '../../components/Toast';
 import { useAuth } from '../../features/auth/useAuth';
+import { ExportButton } from '../../features/export/ExportButton';
 import { FormSections } from '../../features/form-renderer/FormSections';
 import { answersChanged } from '../../features/form-renderer/formAnswers';
 import { useFormAnswers } from '../../features/form-renderer/useFormAnswers';
@@ -99,6 +101,7 @@ function FormDetailView({ form }: { form: FormDetail }) {
         </div>
         <div className={styles.headActions}>
           <FormInfoPanelToggle panel={infoPanel} />
+          <ExportButton form={form} />
           {canReceiveForm(role, form.status) && <ReceiveButton form={form} />}
         </div>
       </div>

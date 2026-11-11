@@ -12,7 +12,7 @@ import { Button } from '../../components/Button';
 import { LoadError, loadErrorMessage } from '../../components/LoadError';
 import { RefreshButton } from '../../components/RefreshButton';
 import { FormTypeStatusPill } from '../../components/StatusPill';
-import { discardUnsavedEdit, hasUnsavedEdit } from '../form-editor/formTypeDrafts';
+import { discardTemplateChanges, discardUnsavedEdit, hasUnsavedEdit } from '../form-editor/formTypeDrafts';
 import { HeaderCell } from '../../components/table/HeaderCell';
 import { Highlight } from '../../components/table/Highlight';
 import { Pager } from '../../components/table/Pager';
@@ -127,6 +127,7 @@ export function FormTypesPage() {
             variant="primary"
             onClick={() => {
               discardUnsavedEdit(NEW_FORM_TYPE_ID);
+              discardTemplateChanges(NEW_FORM_TYPE_ID);
               openEditor(NEW_FORM_TYPE_ID);
             }}
           >

@@ -76,12 +76,7 @@
 .iconButton{display:inline-grid;place-items:center;width:32px;height:32px;border-radius:50%;border:0;background:transparent;color:var(--muted);cursor:pointer;flex:none}
 .iconButton:hover{background:var(--hover);color:var(--fg)}
 
-/* ---------- tải tệp ---------- */
-.dropZone{display:grid;justify-items:center;gap:4px;padding:28px 16px;border:1.5px dashed var(--line-2);border-radius:var(--r-lg);background:var(--surface-2);text-align:center;color:var(--muted);cursor:pointer;transition:border-color .15s,background .15s}
-.dropZone svg{color:var(--accent);margin-bottom:4px}
-.dropZone strong{color:var(--fg);font-weight:500}
-.dropZone span{font-size:12.5px}
-.dropZone:hover,.dropZoneOver{border-color:var(--accent);background:var(--accent-soft)}
+/* ---------- tải tệp (khung chọn tệp: components/FileDropZone) ---------- */
 /* cột minmax(0,1fr): tên tệp dài thì xuống dòng, không kéo dòng tệp rộng ra */
 .fileList{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:minmax(0,1fr);gap:8px}
 .fileList li{display:flex;align-items:center;gap:10px;min-height:46px;padding:8px 8px 8px 14px;border:1px solid var(--line);border-radius:var(--r)}
