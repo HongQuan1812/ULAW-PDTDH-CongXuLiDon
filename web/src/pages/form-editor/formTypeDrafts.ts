@@ -3,33 +3,44 @@
    Bấm "+ Tạo loại đơn" thì bắt đầu bản trống (bỏ bản tạo mới đang dở). */
 import type { FormTypeDraft } from './formTypeDraft';
 
-/** Bản soạn theo mã loại đơn; tạo mới dùng NEW_FORM_TYPE_ID. Chỉ giữ bản có thay đổi chưa lưu. */
-const draftsByFormType = new Map<string, FormTypeDraft>();
+/** Các thay đổi chưa lưu của một loại đơn: đang sửa phiên bản nào, và bản soạn. Mỗi loại đơn chỉ sửa một phiên bản một lúc. */
+export interface UnsavedEdit {
+  /** Số phiên bản đang sửa (phiên bản Nháp đã lưu, hoặc phiên bản mới sẽ tạo) */
+  version: number;
+  /** true: phiên bản mới, chưa có trên máy chủ (tạo loại đơn mới, hoặc chép từ phiên bản đã khóa) */
+  isNewVersion: boolean;
+  /** Phiên bản đã khóa được chép ra khi tạo phiên bản mới; còn lại null */
+  baseVersion: number | null;
+  draft: FormTypeDraft;
+}
+
+/** Thay đổi chưa lưu theo mã loại đơn; tạo mới dùng NEW_FORM_TYPE_ID. */
+const editsByFormType = new Map<string, UnsavedEdit>();
 
 /**
- * Lấy bản soạn chưa lưu của một loại đơn.
+ * Lấy thay đổi chưa lưu của một loại đơn.
  * @param formTypeId  mã loại đơn, hoặc NEW_FORM_TYPE_ID
- * @returns           bản soạn, hoặc undefined nếu không có thay đổi chưa lưu
+ * @returns           thay đổi chưa lưu, hoặc undefined nếu không có
  */
-export function readFormTypeDraft(formTypeId: string): FormTypeDraft | undefined {
-  return draftsByFormType.get(formTypeId);
+export function readUnsavedEdit(formTypeId: string): UnsavedEdit | undefined {
+  return editsByFormType.get(formTypeId);
 }
 
 /**
- * Giữ bản soạn chưa lưu (ghi đè bản cũ).
+ * Giữ thay đổi chưa lưu (ghi đè bản cũ).
  * @param formTypeId  mã loại đơn, hoặc NEW_FORM_TYPE_ID
- * @param draft       bản đang soạn
+ * @param edit        thay đổi hiện tại
  */
-export function keepFormTypeDraft(formTypeId: string, draft: FormTypeDraft): void {
-  draftsByFormType.set(formTypeId, draft);
+export function keepUnsavedEdit(formTypeId: string, edit: UnsavedEdit): void {
+  editsByFormType.set(formTypeId, edit);
 }
 
 /**
- * Bỏ bản soạn chưa lưu (đã lưu, bỏ thay đổi, đã xóa loại đơn, hoặc bắt đầu tạo mới).
+ * Bỏ thay đổi chưa lưu (đã lưu, bỏ thay đổi, đã xóa, hoặc bắt đầu tạo mới).
  * @param formTypeId  mã loại đơn, hoặc NEW_FORM_TYPE_ID
  */
-export function discardFormTypeDraft(formTypeId: string): void {
-  draftsByFormType.delete(formTypeId);
+export function discardUnsavedEdit(formTypeId: string): void {
+  editsByFormType.delete(formTypeId);
 }
 
 /**
@@ -37,6 +48,6 @@ export function discardFormTypeDraft(formTypeId: string): void {
  * @param formTypeId  mã loại đơn
  * @returns           true nếu có
  */
-export function hasFormTypeDraft(formTypeId: string): boolean {
-  return draftsByFormType.has(formTypeId);
+export function hasUnsavedEdit(formTypeId: string): boolean {
+  return editsByFormType.has(formTypeId);
 }

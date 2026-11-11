@@ -1,12 +1,18 @@
-/* Hook gọi API loại đơn: danh sách, loại đơn đang mở, một loại đơn; tạo, lưu, xóa loại đơn. */
+/* Hook gọi API loại đơn: danh sách, loại đơn đang mở, phiên bản đang mở (để nộp đơn);
+   các phiên bản (trình soạn): xem, tạo loại đơn, thêm phiên bản, lưu phiên bản Nháp, mở / đóng, xóa phiên bản Nháp. */
 import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
 import {
   ENDPOINTS,
   formTypeDetailPath,
+  formTypeVersionPath,
+  formTypeVersionStatusPath,
+  formTypeVersionsPath,
   type FormType,
   type FormTypesResponse,
+  type ManagedFormType,
   type OpenFormTypesResponse,
-  type SaveFormTypeRequest,
+  type SaveFormTypeVersionRequest,
+  type SetFormTypeVersionStatusRequest,
 } from '@ulaw/shared';
 import { apiFetch } from './client';
 import { FORM_STATS_KEY } from './forms';
@@ -15,7 +21,7 @@ import { FORM_STATS_KEY } from './forms';
 export const FORM_TYPES_KEY = ['formTypes', 'all'] as const;
 
 /**
- * Mọi loại đơn (Nháp, Đang mở, Đã đóng), cho trang Quản lí loại đơn. Cần quyền manageFormTypes.
+ * Mọi loại đơn, mỗi loại một dòng theo phiên bản mới nhất, cho trang Quản lí loại đơn. Cần quyền manageFormTypes.
  * @returns  kết quả useQuery; data = mảng loại đơn (FormTypeSummary[])
  */
 export function useFormTypes() {
@@ -44,16 +50,16 @@ export function useOpenFormTypes(enabled: boolean) {
 }
 
 /**
- * Khóa lưu tạm một loại đơn.
+ * Khóa lưu tạm phiên bản đang mở của một loại đơn (trang nộp đơn).
  * @param formTypeId  mã loại đơn
  * @returns           vd ['formTypes', 'detail', 'xmm']
  */
 export const formTypeDetailKey = (formTypeId: string) => ['formTypes', 'detail', formTypeId] as const;
 
 /**
- * Một loại đơn, đủ cấu trúc các phần, câu hỏi (để vẽ trang nộp đơn).
+ * Phiên bản đang mở của một loại đơn, đủ cấu trúc các phần, câu hỏi (để vẽ trang nộp đơn).
  * @param formTypeId  mã loại đơn, vd 'xmm'
- * @returns           kết quả useQuery; data = loại đơn (FormType)
+ * @returns           kết quả useQuery; data = loại đơn (FormType); không có phiên bản nào đang mở thì lỗi 404
  */
 export function useFormType(formTypeId: string) {
   return useQuery({
@@ -63,48 +69,87 @@ export function useFormType(formTypeId: string) {
 }
 
 /**
- * Tải lại những nơi hiện loại đơn sau khi tạo / lưu / xóa: bảng Quản lí loại đơn, hộp chọn loại đơn khi nộp đơn,
- * thống kê theo loại đơn ở Quản lí đơn.
- * @param queryClient  TanStack Query client
+ * Khóa lưu tạm loại đơn kèm mọi phiên bản (trình soạn).
+ * @param formTypeId  mã loại đơn
+ * @returns           vd ['formTypes', 'versions', 'xmm']
  */
-function refreshFormTypeLists(queryClient: QueryClient): void {
-  void queryClient.invalidateQueries({ queryKey: FORM_TYPES_KEY });
-  void queryClient.invalidateQueries({ queryKey: OPEN_FORM_TYPES_KEY });
-  void queryClient.invalidateQueries({ queryKey: FORM_STATS_KEY });
-}
+export const managedFormTypeKey = (formTypeId: string) => ['formTypes', 'versions', formTypeId] as const;
 
 /**
- * Lưu loại đơn: tạo mới (POST) hoặc lưu đè (PUT). Thành công thì trình soạn dùng ngay loại đơn máy chủ trả về, các danh sách tải lại.
- * @param formTypeId  mã loại đơn đang sửa; tạo mới thì null
- * @returns           kết quả useMutation; gọi mutate(loại đơn cần lưu). data = loại đơn đã lưu (tạo mới thì có mã loại đơn mới)
+ * Loại đơn kèm mọi phiên bản, cho trình soạn. Cần quyền manageFormTypes.
+ * @param formTypeId  mã loại đơn
+ * @returns           kết quả useQuery; data = ManagedFormType (phiên bản mới nhất trước)
  */
-export function useSaveFormType(formTypeId: string | null) {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (saveRequest: SaveFormTypeRequest) =>
-      apiFetch<FormType>(formTypeId ? formTypeDetailPath(formTypeId) : ENDPOINTS.formTypes.create, {
-        method: formTypeId ? 'PUT' : 'POST',
-        body: JSON.stringify(saveRequest),
-      }),
-    onSuccess: (savedFormType) => {
-      queryClient.setQueryData(formTypeDetailKey(savedFormType.id), savedFormType);
-      refreshFormTypeLists(queryClient);
-    },
+export function useManagedFormType(formTypeId: string) {
+  return useQuery({
+    queryKey: managedFormTypeKey(formTypeId),
+    queryFn: () => apiFetch<ManagedFormType>(formTypeVersionsPath(formTypeId)),
   });
 }
 
 /**
- * Xóa loại đơn chưa có đơn nào. Thành công thì bỏ loại đơn khỏi bộ nhớ tạm, các danh sách tải lại.
- * @param formTypeId  mã loại đơn
- * @returns           kết quả useMutation; gọi mutate()
+ * Sau một lệnh sửa loại đơn: trình soạn dùng ngay loại đơn máy chủ trả về; bảng Quản lí loại đơn, hộp chọn loại đơn khi nộp đơn,
+ * trang nộp đơn và thống kê theo loại đơn tải lại.
+ * @param queryClient  TanStack Query client
+ * @param formTypeId   mã loại đơn vừa sửa
+ * @param formType     loại đơn sau khi sửa; đã xóa loại đơn thì null
  */
-export function useDeleteFormType(formTypeId: string) {
+function afterFormTypeChange(queryClient: QueryClient, formTypeId: string, formType: ManagedFormType | null): void {
+  if (formType) queryClient.setQueryData(managedFormTypeKey(formTypeId), formType);
+  else queryClient.removeQueries({ queryKey: managedFormTypeKey(formTypeId) });
+  void queryClient.invalidateQueries({ queryKey: FORM_TYPES_KEY });
+  void queryClient.invalidateQueries({ queryKey: OPEN_FORM_TYPES_KEY });
+  void queryClient.invalidateQueries({ queryKey: formTypeDetailKey(formTypeId) });
+  void queryClient.invalidateQueries({ queryKey: FORM_STATS_KEY });
+}
+
+/** Lưu bản soạn: tạo loại đơn mới, thêm phiên bản mới, hoặc lưu đè phiên bản Nháp. */
+export type SaveFormTypeVersionTarget =
+  | { kind: 'createFormType' }
+  | { kind: 'addVersion'; formTypeId: string }
+  | { kind: 'saveDraft'; formTypeId: string; version: number };
+
+/**
+ * Lưu bản soạn của trình soạn.
+ * @returns  kết quả useMutation; gọi mutate({ target, saveRequest }). data = loại đơn kèm mọi phiên bản sau khi lưu
+ */
+export function useSaveFormTypeVersion() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: () => apiFetch<void>(formTypeDetailPath(formTypeId), { method: 'DELETE' }),
-    onSuccess: () => {
-      queryClient.removeQueries({ queryKey: formTypeDetailKey(formTypeId) });
-      refreshFormTypeLists(queryClient);
+    mutationFn: ({ target, saveRequest }: { target: SaveFormTypeVersionTarget; saveRequest: SaveFormTypeVersionRequest }) => {
+      const body = JSON.stringify(saveRequest);
+      if (target.kind === 'createFormType') return apiFetch<ManagedFormType>(ENDPOINTS.formTypes.create, { method: 'POST', body });
+      if (target.kind === 'addVersion') return apiFetch<ManagedFormType>(formTypeVersionsPath(target.formTypeId), { method: 'POST', body });
+      return apiFetch<ManagedFormType>(formTypeVersionPath(target.formTypeId, target.version), { method: 'PUT', body });
     },
+    onSuccess: (formType) => afterFormTypeChange(queryClient, formType.id, formType),
+  });
+}
+
+/**
+ * Mở / đóng một phiên bản đã khóa.
+ * @param formTypeId  mã loại đơn
+ * @returns           kết quả useMutation; gọi mutate({ version, status }). data = loại đơn sau khi đổi
+ */
+export function useSetFormTypeVersionStatus(formTypeId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ version, status }: { version: number } & SetFormTypeVersionStatusRequest) =>
+      apiFetch<ManagedFormType>(formTypeVersionStatusPath(formTypeId, version), { method: 'PUT', body: JSON.stringify({ status }) }),
+    onSuccess: (formType) => afterFormTypeChange(queryClient, formTypeId, formType),
+  });
+}
+
+/**
+ * Xóa phiên bản Nháp; phiên bản duy nhất thì máy chủ xóa luôn loại đơn.
+ * @param formTypeId  mã loại đơn
+ * @returns           kết quả useMutation; gọi mutate(số phiên bản). data = loại đơn còn lại, hoặc null khi đã xóa loại đơn
+ */
+export function useDeleteFormTypeVersion(formTypeId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (version: number) =>
+      (await apiFetch<ManagedFormType | undefined>(formTypeVersionPath(formTypeId, version), { method: 'DELETE' })) ?? null,
+    onSuccess: (formType) => afterFormTypeChange(queryClient, formTypeId, formType),
   });
 }

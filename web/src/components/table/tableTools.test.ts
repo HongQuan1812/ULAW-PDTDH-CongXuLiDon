@@ -34,9 +34,9 @@ const FIELDS: TableField<TestRow>[] = [
   { key: 'credits', label: 'Số tín chỉ', type: 'number', getValue: (row) => row.credits },
 ];
 const ROWS: TestRow[] = [
-  { code: 'XMM-2026-00002', status: 'xet', submittedAt: '2026-10-30T07:00', credits: 3 },
-  { code: 'XMM-2026-00010', status: 'nop', submittedAt: '2026-10-12T09:30', credits: null },
-  { code: 'XMM-2026-00001', status: 'duyet', submittedAt: '2026-09-01T08:15', credits: 2 },
+  { code: 'XMM-2026-001-00002', status: 'xet', submittedAt: '2026-10-30T07:00', credits: 3 },
+  { code: 'XMM-2026-001-00010', status: 'nop', submittedAt: '2026-10-12T09:30', credits: null },
+  { code: 'XMM-2026-001-00001', status: 'duyet', submittedAt: '2026-09-01T08:15', credits: 2 },
 ];
 
 /**
@@ -95,31 +95,31 @@ describe('selectOptions', () => {
 
 describe('filterRows', () => {
   it('tìm không phân biệt dấu, hoa thường, trong chữ đang hiện', () => {
-    expect(codesOf(filterRows(ROWS, FIELDS, 'DA NOP', []))).toEqual(['XMM-2026-00010']);
-    expect(codesOf(filterRows(ROWS, FIELDS, '01/09', []))).toEqual(['XMM-2026-00001']);
+    expect(codesOf(filterRows(ROWS, FIELDS, 'DA NOP', []))).toEqual(['XMM-2026-001-00010']);
+    expect(codesOf(filterRows(ROWS, FIELDS, '01/09', []))).toEqual(['XMM-2026-001-00001']);
     expect(filterRows(ROWS, FIELDS, '   ', [])).toHaveLength(3);
   });
 
   it('lọc theo lựa chọn, chữ nguyên ô, ngày, khoảng ngày', () => {
-    expect(codesOf(filterRows(ROWS, FIELDS, '', [ruleOf('status', { value: 'xet' })]))).toEqual(['XMM-2026-00002']);
-    expect(codesOf(filterRows(ROWS, FIELDS, '', [ruleOf('code', { value: ' xmm-2026-00001 ' })]))).toEqual([
-      'XMM-2026-00001',
+    expect(codesOf(filterRows(ROWS, FIELDS, '', [ruleOf('status', { value: 'xet' })]))).toEqual(['XMM-2026-001-00002']);
+    expect(codesOf(filterRows(ROWS, FIELDS, '', [ruleOf('code', { value: ' xmm-2026-001-00001 ' })]))).toEqual([
+      'XMM-2026-001-00001',
     ]);
     expect(codesOf(filterRows(ROWS, FIELDS, '', [ruleOf('submittedAt', { value: '2026-10-12' })]))).toEqual([
-      'XMM-2026-00010',
+      'XMM-2026-001-00010',
     ]);
     const fromOctober = ruleOf('submittedAt', { operator: 'range', from: '2026-10-01' });
-    expect(codesOf(filterRows(ROWS, FIELDS, '', [fromOctober]))).toEqual(['XMM-2026-00002', 'XMM-2026-00010']);
+    expect(codesOf(filterRows(ROWS, FIELDS, '', [fromOctober]))).toEqual(['XMM-2026-001-00002', 'XMM-2026-001-00010']);
   });
 
   it('ô trống không thỏa điều kiện nào', () => {
     const anyCredits = ruleOf('credits', { operator: 'range', from: '0' });
-    expect(codesOf(filterRows(ROWS, FIELDS, '', [anyCredits]))).toEqual(['XMM-2026-00002', 'XMM-2026-00001']);
+    expect(codesOf(filterRows(ROWS, FIELDS, '', [anyCredits]))).toEqual(['XMM-2026-001-00002', 'XMM-2026-001-00001']);
   });
 
   it('nhiều điều kiện phải thỏa tất cả; điều kiện chưa có giá trị thì bỏ qua', () => {
     const rules = [ruleOf('submittedAt', { operator: 'range', from: '2026-10-01' }), ruleOf('status', { value: 'nop' })];
-    expect(codesOf(filterRows(ROWS, FIELDS, '', rules))).toEqual(['XMM-2026-00010']);
+    expect(codesOf(filterRows(ROWS, FIELDS, '', rules))).toEqual(['XMM-2026-001-00010']);
     expect(isFilterActive(createFilterRule('status'))).toBe(false);
     expect(filterRows(ROWS, FIELDS, '', [createFilterRule('status')])).toHaveLength(3);
   });
@@ -127,7 +127,7 @@ describe('filterRows', () => {
 
 describe('sắp xếp bằng TanStack Table', () => {
   it('chữ có số so theo giá trị số', () => {
-    expect(sortedCodes([{ id: 'code', desc: false }])).toEqual(['XMM-2026-00001', 'XMM-2026-00002', 'XMM-2026-00010']);
+    expect(sortedCodes([{ id: 'code', desc: false }])).toEqual(['XMM-2026-001-00001', 'XMM-2026-001-00002', 'XMM-2026-001-00010']);
   });
 
   it('cột lựa chọn so theo tên hiển thị; đổi chiều thì đảo ngược', () => {
@@ -153,8 +153,8 @@ describe('sắp xếp bằng TanStack Table', () => {
   });
 
   it('ô trống luôn nằm cuối, dù sắp xếp chiều nào', () => {
-    expect(sortedCodes([{ id: 'credits', desc: false }]).at(-1)).toBe('XMM-2026-00010');
-    expect(sortedCodes([{ id: 'credits', desc: true }]).at(-1)).toBe('XMM-2026-00010');
+    expect(sortedCodes([{ id: 'credits', desc: false }]).at(-1)).toBe('XMM-2026-001-00010');
+    expect(sortedCodes([{ id: 'credits', desc: true }]).at(-1)).toBe('XMM-2026-001-00010');
   });
 
   it('thứ tự mặc định của bảng Đơn đã nộp: ngày nộp mới trước', () => {
@@ -162,7 +162,7 @@ describe('sắp xếp bằng TanStack Table', () => {
       { id: 'submittedAt', desc: true },
       { id: 'code', desc: true },
     ]);
-    expect(newestFirst).toEqual(['XMM-2026-00002', 'XMM-2026-00010', 'XMM-2026-00001']);
+    expect(newestFirst).toEqual(['XMM-2026-001-00002', 'XMM-2026-001-00010', 'XMM-2026-001-00001']);
   });
 });
 

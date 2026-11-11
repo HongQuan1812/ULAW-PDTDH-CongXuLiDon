@@ -3,6 +3,9 @@
 /* màn hình rộng: thẻ dính khi cuộn, nằm cột bên phải */
 .side{position:sticky;top:calc(var(--nav-h) + 24px + env(safe-area-inset-top,0px));min-width:0}
 .card{display:grid;overflow:hidden;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg)}
+/* không cao quá màn hình: tiêu đề đứng yên, các mục bên dưới cuộn riêng (vd khung Phiên bản có nhiều phiên bản) */
+.side .card{grid-template-rows:auto minmax(0,1fr);max-height:calc(100vh - var(--nav-h) - 48px - env(safe-area-inset-top,0px))}
+.side .sections{overflow-y:auto;overscroll-behavior:contain}
 .head{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 10px 10px 20px;border-bottom:1px solid var(--line)}
 .head h2{font-size:14px;font-weight:600}
 .hide{display:inline-grid;place-items:center;width:36px;height:36px;border-radius:50%;border:0;background:transparent;color:var(--muted);cursor:pointer;flex:none}

@@ -92,7 +92,7 @@ export const formHandlers = [
     const { filesByTempId } = multipart;
 
     // Loại đơn không có hoặc không còn nhận đơn thì 404
-    const formType = getFormType(formTypeId, false);
+    const formType = getFormType(formTypeId);
     if (!formType) return apiError(404, FORM_MESSAGES.formTypeClosed);
 
     // Câu trả lời sai, chưa cam đoan, hoặc tệp thiếu / sai định dạng / quá dung lượng / thừa thì 422; câu báo giống trang nộp đơn

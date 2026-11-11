@@ -14,8 +14,8 @@ describe('TransferFormRequestSchema', () => {
 
 describe('đường dẫn chuyển giao', () => {
   test('ghép mã đơn vào đường dẫn Chuyển giao và danh sách cán bộ nhận', () => {
-    expect(formTransferPath('XMM-2026-00001')).toBe('/forms/XMM-2026-00001/transfer');
-    expect(formTransferTargetsPath('XMM-2026-00001')).toBe('/forms/XMM-2026-00001/transfer-targets');
+    expect(formTransferPath('XMM-2026-001-00001')).toBe('/forms/XMM-2026-001-00001/transfer');
+    expect(formTransferTargetsPath('XMM-2026-001-00001')).toBe('/forms/XMM-2026-001-00001/transfer-targets');
   });
 });
 
@@ -43,6 +43,6 @@ describe('DecideFormRequestSchema', () => {
 
 describe('formDecisionPath', () => {
   test('ghép mã đơn vào đường dẫn Ra quyết định', () => {
-    expect(formDecisionPath('XMM-2026-00001')).toBe('/forms/XMM-2026-00001/decision');
+    expect(formDecisionPath('XMM-2026-001-00001')).toBe('/forms/XMM-2026-001-00001/decision');
   });
 });

@@ -3,7 +3,7 @@ import { FORMS_ENDPOINTS, FormCccdsResponseSchema, FormStatsSchema, ManagedForms
 
 describe('danh sách mọi đơn (Quản lí đơn)', () => {
   const managedForm = {
-    code: 'XMM-2026-00001',
+    code: 'XMM-2026-001-00001',
     formTypeId: 'xmm',
     formTypeName: 'Xét miễn môn',
     submittedAt: '2026-11-01T08:30',

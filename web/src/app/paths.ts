@@ -25,8 +25,8 @@ export function newFormPath(formTypeId: string): string {
 
 /**
  * Đường dẫn trang chi tiết của một lá đơn.
- * @param code  mã đơn, vd 'XMM-2026-00001'
- * @returns     vd '/don/XMM-2026-00001'
+ * @param code  mã đơn, vd 'XMM-2026-001-00001'
+ * @returns     vd '/don/XMM-2026-001-00001'
  */
 export function formPath(code: string): string {
   return `/don/${encodeURIComponent(code)}`;
@@ -38,13 +38,18 @@ export const FORM_TYPE_EDITOR_ROUTE = '/soan-don/:formTypeId';
 /** Mã loại đơn trên đường dẫn khi tạo loại đơn mới: /soan-don/moi. */
 export const NEW_FORM_TYPE_ID = 'moi';
 
+/** Tên tham số trên đường dẫn trình soạn để mở đúng một phiên bản: /soan-don/xmm?phien-ban=2. */
+export const FORM_TYPE_VERSION_PARAM = 'phien-ban';
+
 /**
  * Đường dẫn trình soạn của một loại đơn.
  * @param formTypeId  mã loại đơn, vd 'xmm'; tạo mới thì NEW_FORM_TYPE_ID
- * @returns           vd '/soan-don/xmm'
+ * @param version     phiên bản muốn mở; bỏ trống thì mở phiên bản mới nhất
+ * @returns           vd '/soan-don/xmm', '/soan-don/xmm?phien-ban=2'
  */
-export function formTypeEditorPath(formTypeId: string): string {
-  return `/soan-don/${encodeURIComponent(formTypeId)}`;
+export function formTypeEditorPath(formTypeId: string, version?: number): string {
+  const path = `/soan-don/${encodeURIComponent(formTypeId)}`;
+  return version === undefined ? path : `${path}?${FORM_TYPE_VERSION_PARAM}=${version}`;
 }
 
 /** Trang hồ sơ người nộp đơn (chỉ xem), khai báo trong router: /ho-so/<id người dùng>. */

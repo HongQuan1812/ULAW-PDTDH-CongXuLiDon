@@ -1,0 +1,37 @@
+/* Khung "Phiên bản" của trình soạn loại đơn: danh sách phiên bản, cùng kiểu các mục của khung "Thông tin đơn". */
+
+/* mỗi phiên bản một mục, ngăn nhau bằng đường kẻ */
+.list{list-style:none;margin:0;padding:0;display:grid}
+.list>li{border-bottom:1px solid var(--line)}
+.list>li:last-child{border-bottom:0}
+
+/* mỗi mục: nút chọn phiên bản, dưới là nút "Xem thêm" (nếu mô tả dài); cả mục đổi nền khi rê chuột */
+.item{display:grid;border-left:3px solid transparent}
+.item:hover{background:var(--hover)}
+.choice{display:grid;gap:12px;width:100%;padding:16px 20px 16px 17px;border:0;background:transparent;color:inherit;font:inherit;text-align:left;cursor:pointer}
+.choice:focus-visible{outline:2px solid var(--focus);outline-offset:-2px}
+/* phiên bản đang xem: nền nhạt, vạch màu bên trái */
+.selected,.selected:hover{background:var(--accent-soft);border-left-color:var(--accent)}
+
+/* hàng đầu mục: số phiên bản, ghi chú */
+.choiceHead{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.versionNumber{font-size:12px;font-weight:500;color:var(--faint);text-transform:uppercase;letter-spacing:.05em;margin-right:auto}
+.selected .versionNumber{color:var(--accent-ink)}
+.viewing{font-size:12px;font-weight:500;color:var(--accent-ink)}
+.unsaved{font-size:12px;font-weight:500;color:var(--s-bs-fg);background:var(--s-bs-bg);padding:1px 9px;border-radius:999px}
+
+/* dòng nhãn – giá trị (như .meta của khung Thông tin đơn) */
+.meta{display:grid;gap:9px;margin:0}
+.meta>div{display:grid;grid-template-columns:96px minmax(0,1fr);gap:10px;align-items:baseline}
+.meta dt{font-size:13px;color:var(--muted)}
+.meta dd{margin:0;font-weight:500;overflow-wrap:anywhere;font-size:13.5px}
+.empty{color:var(--faint);font-weight:400}
+
+/* mô tả ngắn: thu gọn còn 2 dòng */
+.meta dd.statusValue{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.meta dd.description{white-space:pre-line;font-weight:400}
+.clamped{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2;overflow:hidden}
+/* nút "Xem thêm" / "Thu gọn": thẳng cột giá trị (lề trái 17px + cột nhãn 96px + khoảng cách 10px) */
+.more{justify-self:start;margin:-10px 0 0 123px;padding:2px 0 14px;border:0;background:none;color:var(--accent);font:inherit;font-size:13px;font-weight:500;cursor:pointer}
+.more:hover{text-decoration:underline;text-underline-offset:3px}
+.more:focus-visible{outline:2px solid var(--focus);outline-offset:2px;border-radius:4px}

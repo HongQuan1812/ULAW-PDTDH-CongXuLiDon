@@ -2,7 +2,14 @@ import { beforeEach, describe, expect, test } from 'vitest';
 import { QUESTION_TYPES, type FileRef } from '@ulaw/shared';
 import {
   addForm,
+  addFormTypeVersion,
+  createFormType,
   decideForm,
+  deleteFormTypeVersion,
+  getFormTypeSummaries,
+  getManagedFormType,
+  saveFormTypeVersion,
+  setFormTypeVersionStatus,
   getAllForms,
   getApplicantCccds,
   getFileContent,
@@ -109,7 +116,7 @@ describe('đơn đã nộp', () => {
     expect(forms).toHaveLength(18);
     expect(new Set(forms.map((form) => form.code)).size).toBe(18);
     expect(new Set(forms.map((form) => form.status))).toEqual(new Set(['nop', 'xet', 'bs', 'bsg', 'duyet', 'tc']));
-    expect(forms[0]).toMatchObject({ code: 'XMM-2026-01520', submittedAt: '2026-10-30T07:00', status: 'nop' });
+    expect(forms[0]).toMatchObject({ code: 'XMM-2026-001-01520', submittedAt: '2026-10-30T07:00', status: 'nop' });
     expect(getFormsOf('cb-1')).toEqual([]);
   });
 });
@@ -128,15 +135,67 @@ describe('loại đơn', () => {
   });
 
   test('loại đơn đủ cấu trúc: Xét miễn môn như bản mẫu, đơn thử nghiệm có đủ 10 loại câu hỏi', () => {
-    const xmm = getFormType('xmm', false);
+    const xmm = getFormType('xmm');
     expect(xmm?.sections.map((section) => section.id)).toEqual(['s-mon', 's-files']);
     expect(xmm?.sections[0]?.main).toBe(true);
 
-    const testFormType = getFormType('thu', false);
+    const testFormType = getFormType('thu');
     const questionTypes = new Set(testFormType?.sections.flatMap((section) => section.questions.map((question) => question.type)));
     expect(questionTypes).toEqual(new Set(QUESTION_TYPES));
 
-    expect(getFormType('khong-co', true)).toBeNull();
+    expect(getFormType('khong-co')).toBeNull();
+  });
+});
+
+describe('phiên bản loại đơn', () => {
+  /** Bản soạn hợp lệ dựng từ phiên bản đang mở của Xét miễn môn, đổi tên và trạng thái. */
+  const xmmInput = (name: string, status: 'draft' | 'open') => {
+    const { prefix, description, sections } = getFormType('xmm')!;
+    return { prefix, name, description, status, sections };
+  };
+
+  test('thêm phiên bản Nháp; đang có Nháp thì không thêm được nữa; phiên bản đã khóa không sửa được', () => {
+    const added = addFormTypeVersion('xmm', xmmInput('Xét miễn môn mới', 'draft'), 'cb-1');
+    expect(added.ok && added.formType.versions.map((version) => [version.version, version.status])).toEqual([
+      [2, 'draft'],
+      [1, 'open'],
+    ]);
+    expect(addFormTypeVersion('xmm', xmmInput('Bản khác', 'draft'), 'cb-1')).toMatchObject({ ok: false, status: 409 });
+    expect(saveFormTypeVersion('xmm', 1, xmmInput('Sửa bản đã khóa', 'draft'), 'cb-1')).toMatchObject({ ok: false, status: 409 });
+
+    // Bảng Quản lí loại đơn hiện phiên bản mới nhất, phiên bản cũ xổ ra
+    const row = getFormTypeSummaries().find((formType) => formType.id === 'xmm')!;
+    expect([row.version, row.status, row.name]).toEqual([2, 'draft', 'Xét miễn môn mới']);
+    expect(row.olderVersions.map((version) => version.version)).toEqual([1]);
+  });
+
+  test('mở phiên bản mới thì phiên bản đang mở tự đóng; nộp đơn theo phiên bản đang mở, mã đơn có số phiên bản', () => {
+    addFormTypeVersion('xmm', xmmInput('Xét miễn môn mới', 'draft'), 'cb-1');
+    saveFormTypeVersion('xmm', 2, xmmInput('Xét miễn môn mới', 'open'), 'cb-1');
+    expect(getManagedFormType('xmm')!.versions.map((version) => version.status)).toEqual(['open', 'closed']);
+    expect(getFormType('xmm')).toMatchObject({ version: 2, name: 'Xét miễn môn mới' });
+
+    const year = new Date().getFullYear();
+    const newForm = addForm('sv-1', getFormType('xmm')!, { mon: [['Triết học', 3, 'Triết học', 'ĐH KHXH&NV']], files: [] }, new Map());
+    expect(newForm.code).toMatch(new RegExp(`^XMM-${year}-002-[0-9]{5}$`));
+
+    // Mở lại phiên bản 1: phiên bản 2 tự đóng
+    setFormTypeVersionStatus('xmm', 1, 'open', 'cb-2');
+    expect(getManagedFormType('xmm')!.versions.map((version) => version.status)).toEqual(['closed', 'open']);
+    expect(setFormTypeVersionStatus('xmm', 3, 'open', 'cb-2')).toMatchObject({ ok: false, status: 404 });
+  });
+
+  test('chỉ xóa được phiên bản Nháp; phiên bản duy nhất thì xóa luôn loại đơn; mã đơn khóa khi đã mở', () => {
+    expect(deleteFormTypeVersion('xmm', 1)).toMatchObject({ ok: false, status: 409 });
+
+    const created = createFormType({ ...xmmInput('Xin bảo lưu', 'draft'), prefix: 'BL' }, 'cb-1');
+    expect([created.id, created.prefixLocked]).toEqual(['bl', false]);
+    expect(deleteFormTypeVersion('bl', 1)).toEqual({ ok: true, formType: null });
+    expect(getManagedFormType('bl')).toBeNull();
+
+    // Đã mở: mã đơn khóa, đổi mã khi thêm phiên bản thì 409
+    expect(getManagedFormType('xmm')!.prefixLocked).toBe(true);
+    expect(addFormTypeVersion('xmm', { ...xmmInput('Đổi mã', 'draft'), prefix: 'XM' }, 'cb-1')).toMatchObject({ ok: false, status: 409 });
   });
 });
 
@@ -158,7 +217,7 @@ describe('đơn phụ trách', () => {
 
 describe('nộp đơn mới', () => {
   test('sinh mã kế tiếp của tiền tố và năm, trạng thái Đã nộp, đứng đầu bảng Đơn đã nộp; tệp lưu cùng đơn với id mới', () => {
-    const xmm = getFormType('xmm', false)!;
+    const xmm = getFormType('xmm')!;
     const bangDiem = new File(['%PDF'], 'bang-diem.pdf');
     const answers = { mon: [['Triết học', 3, 'Triết học', 'ĐH KHXH&NV']], files: [{ id: 'local-1', name: 'bang-diem.pdf', sizeBytes: 4 }] };
 
@@ -172,7 +231,7 @@ describe('nộp đơn mới', () => {
 
     // Nộp xong: mã kế tiếp, Đã nộp, đứng đầu bảng
     const newForm = addForm('sv-1', xmm, answers, new Map([['local-1', bangDiem]]));
-    expect(newForm.code).toMatch(new RegExp(`^XMM-${year}-[0-9]{5}$`));
+    expect(newForm.code).toMatch(new RegExp(`^XMM-${year}-001-[0-9]{5}$`));
     expect(Number(newForm.code.slice(-5))).toBeGreaterThan(Math.max(0, ...sameYearSequences));
     expect(newForm.status).toBe('nop');
     expect(getFormsOf('sv-1')[0]).toEqual(newForm);
@@ -187,7 +246,7 @@ describe('nộp đơn mới', () => {
 
 describe('chi tiết đơn', () => {
   test('người nộp xem được đơn của mình, đủ nội dung như bản mẫu', () => {
-    const form = getFormDetail('XMM-2026-01520', { id: 'sv-1', role: 'nguoiNopDon' });
+    const form = getFormDetail('XMM-2026-001-01520', { id: 'sv-1', role: 'nguoiNopDon' });
     expect(form).toMatchObject({
       status: 'nop',
       note: '',
@@ -213,7 +272,7 @@ describe('chi tiết đơn', () => {
     const otherCode = getFormsHandledBy('cb-1').find((form) => !getFormsOf('sv-1').some((own) => own.code === form.code))!.code;
     expect(getFormDetail(otherCode, { id: 'sv-1', role: 'nguoiNopDon' })).toBeNull();
     expect(getFormDetail(otherCode, { id: 'cb-1', role: 'nguoiXuLiDon' })?.applicant.id).toMatch(/^sv-([2-9]|1[01])$/);
-    expect(getFormDetail('XMM-2026-99999', { id: 'cb-3', role: 'admin' })).toBeNull();
+    expect(getFormDetail('XMM-2026-001-99999', { id: 'cb-3', role: 'admin' })).toBeNull();
   });
 });
 
@@ -236,7 +295,7 @@ describe('sửa đơn', () => {
   });
 
   test('gỡ tệp rồi lưu: tệp bị xóa hẳn, không còn trong kho tệp', () => {
-    const xmm = getFormType('xmm', false)!;
+    const xmm = getFormType('xmm')!;
     const files = [new File(['%PDF'], 'a.pdf'), new File(['%PDF'], 'b.pdf')];
     const answers = { mon: [['Logic học', 2, 'Logic', 'ĐH Mở']], files: files.map((file, i) => ({ id: `local-${i}`, name: file.name, sizeBytes: 4 })) };
     const { code } = addForm('sv-1', xmm, answers, new Map(files.map((file, i) => [`local-${i}`, file])));
@@ -387,9 +446,9 @@ describe('nội dung tệp đính kèm', () => {
   const otherStudent = { id: 'sv-2', role: 'nguoiNopDon' } as const;
   const staff = { id: 'cb-1', role: 'nguoiXuLiDon' } as const;
 
-  /** Tệp mẫu (không có nội dung thật) của đơn có sẵn XMM-2026-01437 của sv-1. */
+  /** Tệp mẫu (không có nội dung thật) của đơn có sẵn XMM-2026-001-01437 của sv-1. */
   const sampleFile = () => {
-    const detail = getFormDetail('XMM-2026-01437', student)!;
+    const detail = getFormDetail('XMM-2026-001-01437', student)!;
     return (detail.answers.files as FileRef[])[0]!;
   };
 
@@ -401,7 +460,7 @@ describe('nội dung tệp đính kèm', () => {
   });
 
   test('tệp người nộp vừa tải lên thì trả về đúng nội dung đã lưu', async () => {
-    const newForm = addForm('sv-1', getFormType('xmm', false)!, { files: [{ id: 'local-1', name: 'ghi-chu.png', sizeBytes: 3 }] }, new Map([['local-1', new File(['abc'], 'ghi-chu.png')]]));
+    const newForm = addForm('sv-1', getFormType('xmm')!, { files: [{ id: 'local-1', name: 'ghi-chu.png', sizeBytes: 3 }] }, new Map([['local-1', new File(['abc'], 'ghi-chu.png')]]));
     const savedFile = getFilesOfForm(newForm.code)[0]!;
     expect(await getFileContent(savedFile.id, student)?.text()).toBe('abc');
   });

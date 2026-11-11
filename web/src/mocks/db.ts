@@ -10,12 +10,15 @@ import type {
   FormStatus,
   FormSummary,
   FormType,
+  FormTypeStatus,
   FormTypeSummary,
+  FormTypeVersion,
   HandledFormSummary,
+  ManagedFormType,
   ManagedFormSummary,
   OpenFormType,
   RoleId,
-  SaveFormTypeRequest,
+  SaveFormTypeVersionRequest,
   Session,
   SessionUser,
   StaffRef,
@@ -23,7 +26,7 @@ import type {
   TableCell,
   UpdateProfileRequest,
 } from '@ulaw/shared';
-import { FORM_STATUSES, FormTypeSchema, can, isAnswerable, maskCccd, nextFormCode } from '@ulaw/shared';
+import { FORM_STATUSES, FORM_TYPE_MESSAGES, FormTypeSchema, can, formatFormCode, isAnswerable, maskCccd, nextFormCode } from '@ulaw/shared';
 import { buildSamplePdf } from './samplePdf';
 
 /* Tài khoản mẫu để đăng nhập thử: mỗi vai trò một người (lấy từ artifact/js/auth.js và sample-data.js). */
@@ -325,38 +328,122 @@ const FORM_TYPE_SEED: readonly FormType[] = [
   })),
 ].map((rawFormType) => FormTypeSchema.parse(rawFormType));
 
-/** Các loại đơn hiện có (trình soạn tạo, sửa, xóa được); tải lại trang thì về FORM_TYPE_SEED. */
-let FORM_TYPES: FormType[] = structuredClone([...FORM_TYPE_SEED]);
+/** Một phiên bản loại đơn trong API giả: nội dung, trạng thái, lần lưu gần nhất (id cán bộ). */
+interface MockFormTypeVersion {
+  version: number;
+  status: FormTypeStatus;
+  name: string;
+  description: string | null;
+  sections: FormSection[];
+  updatedAt: string;
+  updatedById: string;
+}
 
-/* Lần lưu gần nhất của từng loại đơn: lúc lưu, id cán bộ lưu (như updatedAt, updatedBy của TYPES trong config.js).
-   Xét miễn môn như bản mẫu; các loại khác lùi dần mỗi loại 6 ngày, giờ lưu trong giờ hành chính, lần lượt 3 cán bộ mẫu. */
-const seedFormTypeUpdates = () =>
-  new Map<string, { updatedAt: string; updatedById: string }>(
-  FORM_TYPE_SEED.map(({ id }, i) => [
-    id,
-    i === 0
-      ? { updatedAt: '2026-09-01T08:00', updatedById: 'cb-1' }
-      : {
-          updatedAt: `${addHours('2026-11-05T00:00', -(i - 1) * 144).slice(0, 10)}T${String(8 + ((i * 3) % 9)).padStart(2, '0')}:${String((i * 17) % 60).padStart(2, '0')}`,
-          updatedById: `cb-${((i - 1) % 3) + 1}`,
-        },
-  ]),
-);
-let FORM_TYPE_UPDATES = seedFormTypeUpdates();
+/** Một loại đơn trong API giả: mã loại đơn, mã đơn, các phiên bản (cũ trước, mới sau). */
+interface MockFormType {
+  id: string;
+  prefix: string;
+  versions: MockFormTypeVersion[];
+}
 
 /**
- * Mọi loại đơn cho bảng Quản lí loại đơn (Nháp, Đang mở, Đã đóng).
- * @returns  thông tin chung, trạng thái, lần lưu gần nhất của từng loại đơn
+ * Lần lưu gần nhất của loại đơn mẫu thứ i (như updatedAt, updatedBy của TYPES trong config.js):
+ * Xét miễn môn như bản mẫu; các loại khác lùi dần mỗi loại 6 ngày, giờ lưu trong giờ hành chính, lần lượt 3 cán bộ mẫu.
+ * @param i  vị trí trong FORM_TYPE_SEED
+ * @returns  lúc lưu, id cán bộ lưu
+ */
+function seedUpdate(i: number): { updatedAt: string; updatedById: string } {
+  if (i === 0) return { updatedAt: '2026-09-01T08:00', updatedById: 'cb-1' };
+  return {
+    updatedAt: `${addHours('2026-11-05T00:00', -(i - 1) * 144).slice(0, 10)}T${String(8 + ((i * 3) % 9)).padStart(2, '0')}:${String((i * 17) % 60).padStart(2, '0')}`,
+    updatedById: `cb-${((i - 1) % 3) + 1}`,
+  };
+}
+
+/**
+ * Dựng các loại đơn ban đầu, mỗi loại một phiên bản (phiên bản 1) theo FORM_TYPE_SEED.
+ * Riêng đơn thử nghiệm có thêm phiên bản 1 cũ (Đã đóng, chỉ có phần đầu), để thấy cách hiện nhiều phiên bản.
+ * @returns  các loại đơn
+ */
+function seedFormTypes(): MockFormType[] {
+  return FORM_TYPE_SEED.map((formType, i) => {
+    const { id, prefix, name, description, status, sections } = structuredClone(formType);
+    const latest: MockFormTypeVersion = { version: 1, status, name, description, sections, ...seedUpdate(i) };
+    if (id !== 'thu') return { id, prefix, versions: [latest] };
+    const firstVersion: MockFormTypeVersion = {
+      ...structuredClone(latest),
+      status: 'closed',
+      sections: structuredClone(sections.slice(0, 1)),
+      updatedAt: '2026-08-14T09:30',
+      updatedById: 'cb-2',
+    };
+    return { id, prefix, versions: [firstVersion, { ...latest, version: 2 }] };
+  });
+}
+
+/** Các loại đơn hiện có (trình soạn tạo, sửa, xóa được); tải lại trang thì về ban đầu. */
+let FORM_TYPES: MockFormType[] = seedFormTypes();
+
+/** Mã đơn khóa khi đã có phiên bản từng được mở (Đang mở hoặc Đã đóng). */
+const isPrefixLocked = (formType: MockFormType) => formType.versions.some((version) => version.status !== 'draft');
+/** Phiên bản mới nhất. */
+const latestVersion = (formType: MockFormType) => formType.versions[formType.versions.length - 1]!;
+/** Phiên bản đang mở; không có thì undefined. */
+const openVersion = (formType: MockFormType) => formType.versions.find((version) => version.status === 'open');
+/** Tìm loại đơn theo mã. */
+const findFormType = (formTypeId: string) => FORM_TYPES.find((formType) => formType.id === formTypeId);
+
+/**
+ * Đổi phiên bản trong API giả sang dạng gửi cho trình soạn (cán bộ lưu: id → tên).
+ * @param version  phiên bản
+ * @returns        phiên bản kèm cán bộ lưu
+ */
+function toVersion({ updatedById, ...version }: MockFormTypeVersion): FormTypeVersion {
+  return { ...structuredClone(version), updatedBy: staffOf(updatedById)! };
+}
+
+/**
+ * Loại đơn kèm mọi phiên bản, cho trình soạn.
+ * @param formTypeId  mã loại đơn
+ * @returns           loại đơn (phiên bản mới nhất trước); không có thì null
+ */
+export function getManagedFormType(formTypeId: string): ManagedFormType | null {
+  const formType = findFormType(formTypeId);
+  if (!formType) return null;
+  return {
+    id: formType.id,
+    prefix: formType.prefix,
+    prefixLocked: isPrefixLocked(formType),
+    formCount: countFormsOfType(formType.id),
+    versions: formType.versions.map(toVersion).reverse(),
+  };
+}
+
+/**
+ * Mọi loại đơn cho bảng Quản lí loại đơn: mỗi loại một dòng theo phiên bản mới nhất, kèm các phiên bản cũ hơn.
+ * @returns  các dòng của bảng
  */
 export function getFormTypeSummaries(): FormTypeSummary[] {
-  return FORM_TYPES.map(({ id, name, prefix, description, status }) => {
-    const { updatedAt, updatedById } = FORM_TYPE_UPDATES.get(id)!;
-    return { id, name, prefix, description, status, updatedAt, updatedBy: staffOf(updatedById)!, formCount: countFormsOfType(id) };
+  return FORM_TYPES.map((formType) => {
+    const [latest, ...olderVersions] = formType.versions.map(toVersion).reverse();
+    const { version, status, name, description, updatedAt, updatedBy } = latest!;
+    return {
+      id: formType.id,
+      prefix: formType.prefix,
+      name,
+      description,
+      version,
+      status,
+      updatedAt,
+      updatedBy,
+      formCount: countFormsOfType(formType.id),
+      olderVersions: olderVersions.map(({ sections: _sections, description: _description, ...summary }) => summary),
+    };
   });
 }
 
 /**
- * Đếm đơn đã nộp theo một loại đơn.
+ * Đếm đơn đã nộp theo một loại đơn (mọi phiên bản).
  * @param formTypeId  mã loại đơn
  * @returns           số đơn
  */
@@ -374,75 +461,170 @@ export function otherFormTypePrefixes(exceptFormTypeId: string | null): string[]
 }
 
 /**
- * Tạo loại đơn. Mã loại đơn lấy theo mã đơn viết thường (trùng thì thêm số), như bản mẫu.
- * Bản soạn đã được kiểm tra trước (validateFormTypeDraft).
- * @param input    thông tin và cấu trúc loại đơn
- * @param staffId  cán bộ tạo
- * @returns        loại đơn vừa tạo
+ * Đặt trạng thái cho một phiên bản; mở thì phiên bản đang mở khác tự chuyển sang Đã đóng.
+ * @param formType  loại đơn
+ * @param target    phiên bản cần đặt
+ * @param status    trạng thái mới
  */
-export function createFormType(input: SaveFormTypeRequest, staffId: string): FormType {
+function applyVersionStatus(formType: MockFormType, target: MockFormTypeVersion, status: FormTypeStatus): void {
+  if (status === 'open') {
+    formType.versions.forEach((version) => {
+      if (version !== target && version.status === 'open') version.status = 'closed';
+    });
+  }
+  target.status = status;
+}
+
+/**
+ * Dựng một phiên bản từ bản soạn gửi lên.
+ * @param version  số phiên bản
+ * @param input    bản soạn (trạng thái chưa đặt, gọi applyVersionStatus sau)
+ * @param staffId  cán bộ lưu
+ * @returns        phiên bản ở trạng thái Nháp
+ */
+function versionFromInput(version: number, input: SaveFormTypeVersionRequest, staffId: string): MockFormTypeVersion {
+  return {
+    version,
+    status: 'draft',
+    name: input.name,
+    description: input.description,
+    sections: structuredClone(input.sections),
+    updatedAt: vietnamNow(),
+    updatedById: staffId,
+  };
+}
+
+/**
+ * Tạo loại đơn với phiên bản 1. Mã loại đơn lấy theo mã đơn viết thường (trùng thì thêm số), như bản mẫu.
+ * Bản soạn đã được kiểm tra trước (validateFormTypeDraft).
+ * @param input    bản soạn
+ * @param staffId  cán bộ tạo
+ * @returns        loại đơn vừa tạo kèm phiên bản
+ */
+export function createFormType(input: SaveFormTypeVersionRequest, staffId: string): ManagedFormType {
   const baseId = input.prefix.toLowerCase();
   let id = baseId;
-  for (let n = 2; FORM_TYPES.some((formType) => formType.id === id); n += 1) id = `${baseId}-${n}`;
-  const formType: FormType = { id, ...structuredClone(input) };
+  for (let n = 2; findFormType(id); n += 1) id = `${baseId}-${n}`;
+  const formType: MockFormType = { id, prefix: input.prefix, versions: [versionFromInput(1, input, staffId)] };
+  applyVersionStatus(formType, formType.versions[0]!, input.status);
   FORM_TYPES.push(formType);
-  FORM_TYPE_UPDATES.set(id, { updatedAt: vietnamNow(), updatedById: staffId });
-  return formType;
+  return getManagedFormType(id)!;
 }
 
+/** Kết quả một lệnh sửa loại đơn: thành công kèm loại đơn sau khi sửa, hoặc lỗi (mã HTTP + câu báo). */
+export type FormTypeChange = { ok: true; formType: ManagedFormType } | { ok: false; status: number; message: string };
+
 /**
- * Lưu đè một loại đơn. Đơn đã nộp giữ bản chụp lúc nộp nên không đổi theo.
- * Bản soạn đã được kiểm tra trước (validateFormTypeDraft, mã đơn không đổi khi đã có đơn).
+ * Thêm phiên bản mới (Nháp hoặc mở luôn). Không được khi đang có phiên bản Nháp. Mã đơn đã khóa thì giữ nguyên.
  * @param formTypeId  mã loại đơn
- * @param input       thông tin và cấu trúc mới
+ * @param input       bản soạn đã kiểm tra
  * @param staffId     cán bộ lưu
- * @returns           loại đơn sau khi lưu; không có thì null
+ * @returns           kết quả
  */
-export function updateFormType(formTypeId: string, input: SaveFormTypeRequest, staffId: string): FormType | null {
-  const index = FORM_TYPES.findIndex((formType) => formType.id === formTypeId);
-  if (index < 0) return null;
-  const formType: FormType = { id: formTypeId, ...structuredClone(input) };
-  FORM_TYPES[index] = formType;
-  FORM_TYPE_UPDATES.set(formTypeId, { updatedAt: vietnamNow(), updatedById: staffId });
-  return formType;
+export function addFormTypeVersion(formTypeId: string, input: SaveFormTypeVersionRequest, staffId: string): FormTypeChange {
+  const formType = findFormType(formTypeId);
+  if (!formType) return { ok: false, status: 404, message: FORM_TYPE_MESSAGES.notFound };
+  const draftVersion = formType.versions.find((version) => version.status === 'draft');
+  if (draftVersion) return { ok: false, status: 409, message: FORM_TYPE_MESSAGES.draftExists(draftVersion.version) };
+  if (input.prefix !== formType.prefix && isPrefixLocked(formType)) return { ok: false, status: 409, message: FORM_TYPE_MESSAGES.prefixLocked };
+
+  const added = versionFromInput(latestVersion(formType).version + 1, input, staffId);
+  formType.versions.push(added);
+  applyVersionStatus(formType, added, input.status);
+  formType.prefix = input.prefix;
+  return { ok: true, formType: getManagedFormType(formTypeId)! };
 }
 
 /**
- * Xóa một loại đơn (chỉ gọi khi loại đơn chưa có đơn nào).
+ * Lưu phiên bản Nháp (nội dung, và mở luôn nếu chọn Đang mở). Phiên bản đã khóa thì không sửa được.
  * @param formTypeId  mã loại đơn
- * @returns           true nếu đã xóa; không có thì false
+ * @param version     số phiên bản
+ * @param input       bản soạn đã kiểm tra
+ * @param staffId     cán bộ lưu
+ * @returns           kết quả
  */
-export function deleteFormType(formTypeId: string): boolean {
-  const index = FORM_TYPES.findIndex((formType) => formType.id === formTypeId);
-  if (index < 0) return false;
-  FORM_TYPES.splice(index, 1);
-  FORM_TYPE_UPDATES.delete(formTypeId);
-  return true;
+export function saveFormTypeVersion(formTypeId: string, version: number, input: SaveFormTypeVersionRequest, staffId: string): FormTypeChange {
+  const formType = findFormType(formTypeId);
+  if (!formType) return { ok: false, status: 404, message: FORM_TYPE_MESSAGES.notFound };
+  const index = formType.versions.findIndex((candidate) => candidate.version === version);
+  if (index < 0) return { ok: false, status: 404, message: FORM_TYPE_MESSAGES.versionNotFound };
+  if (formType.versions[index]!.status !== 'draft') return { ok: false, status: 409, message: FORM_TYPE_MESSAGES.versionLocked };
+  if (input.prefix !== formType.prefix && isPrefixLocked(formType)) return { ok: false, status: 409, message: FORM_TYPE_MESSAGES.prefixLocked };
+
+  const saved = versionFromInput(version, input, staffId);
+  formType.versions[index] = saved;
+  applyVersionStatus(formType, saved, input.status);
+  formType.prefix = input.prefix;
+  return { ok: true, formType: getManagedFormType(formTypeId)! };
 }
 
 /**
- * Các loại đơn đang nhận đơn (trạng thái Đang mở).
+ * Mở / đóng phiên bản đã khóa (lưu lại lúc đổi và người đổi).
+ * @param formTypeId  mã loại đơn
+ * @param version     số phiên bản
+ * @param status      Đang mở hoặc Đã đóng
+ * @param staffId     cán bộ đổi
+ * @returns           kết quả
+ */
+export function setFormTypeVersionStatus(formTypeId: string, version: number, status: 'open' | 'closed', staffId: string): FormTypeChange {
+  const formType = findFormType(formTypeId);
+  if (!formType) return { ok: false, status: 404, message: FORM_TYPE_MESSAGES.notFound };
+  const target = formType.versions.find((candidate) => candidate.version === version);
+  if (!target) return { ok: false, status: 404, message: FORM_TYPE_MESSAGES.versionNotFound };
+  if (target.status === 'draft') return { ok: false, status: 409, message: FORM_TYPE_MESSAGES.draftNotLocked };
+
+  applyVersionStatus(formType, target, status);
+  target.updatedAt = vietnamNow();
+  target.updatedById = staffId;
+  return { ok: true, formType: getManagedFormType(formTypeId)! };
+}
+
+/**
+ * Xóa phiên bản Nháp; nếu đó là phiên bản duy nhất thì xóa luôn loại đơn.
+ * @param formTypeId  mã loại đơn
+ * @param version     số phiên bản
+ * @returns           kết quả; xóa luôn loại đơn thì formType = null
+ */
+export function deleteFormTypeVersion(
+  formTypeId: string,
+  version: number,
+): { ok: true; formType: ManagedFormType | null } | { ok: false; status: number; message: string } {
+  const formType = findFormType(formTypeId);
+  if (!formType) return { ok: false, status: 404, message: FORM_TYPE_MESSAGES.notFound };
+  const target = formType.versions.find((candidate) => candidate.version === version);
+  if (!target) return { ok: false, status: 404, message: FORM_TYPE_MESSAGES.versionNotFound };
+  if (target.status !== 'draft') return { ok: false, status: 409, message: FORM_TYPE_MESSAGES.onlyDraftDeletable };
+
+  if (formType.versions.length === 1) {
+    FORM_TYPES = FORM_TYPES.filter((candidate) => candidate !== formType);
+    return { ok: true, formType: null };
+  }
+  formType.versions = formType.versions.filter((candidate) => candidate !== target);
+  return { ok: true, formType: getManagedFormType(formTypeId) };
+}
+
+/**
+ * Các loại đơn đang nhận đơn (có phiên bản Đang mở), theo tên của phiên bản đang mở.
  * @returns  loại đơn, chưa có cấu trúc các phần; không có thì []
  */
 export function getOpenFormTypes(): OpenFormType[] {
-  return FORM_TYPES.filter((formType) => formType.status === 'open').map(({ id, name, prefix, description }) => ({
-    id,
-    name,
-    prefix,
-    description,
-  }));
+  return FORM_TYPES.flatMap((formType) => {
+    const opened = openVersion(formType);
+    return opened ? [{ id: formType.id, name: opened.name, prefix: formType.prefix, description: opened.description }] : [];
+  });
 }
 
 /**
- * Một loại đơn, đủ cấu trúc các phần, câu hỏi.
- * @param formTypeId         mã loại đơn, vd 'xmm'
- * @param canSeeUnpublished  true: lấy được cả loại đơn Nháp / Đã đóng (người quản lí loại đơn)
- * @returns                  loại đơn; không có, hoặc không được xem, thì null
+ * Phiên bản đang mở của một loại đơn, đủ cấu trúc các phần, câu hỏi (để nộp đơn).
+ * @param formTypeId  mã loại đơn, vd 'xmm'
+ * @returns           phiên bản đang mở; loại đơn không có, hoặc không có phiên bản nào đang mở, thì null
  */
-export function getFormType(formTypeId: string, canSeeUnpublished: boolean): FormType | null {
-  const formType = FORM_TYPES.find((candidate) => candidate.id === formTypeId);
-  if (!formType || (formType.status !== 'open' && !canSeeUnpublished)) return null;
-  return formType;
+export function getFormType(formTypeId: string): FormType | null {
+  const formType = findFormType(formTypeId);
+  const opened = formType && openVersion(formType);
+  if (!formType || !opened) return null;
+  const { version, status, name, description, sections } = structuredClone(opened);
+  return { id: formType.id, prefix: formType.prefix, name, description, version, status, sections };
 }
 
 /* ---------- Lá đơn ---------- */
@@ -557,7 +739,7 @@ function seedStudentForms(): UnassignedForm[] {
   return statuses.map((status, i) => {
     // Ngày nộp lùi dần, giờ nộp trong buổi sáng; cứ 4 đơn có 1 đơn sửa lại buổi chiều cùng ngày
     const date = dateText(day);
-    const code = `XMM-${day.getFullYear()}-${String(1520 - i * 83).padStart(5, '0')}`;
+    const code = formatFormCode('XMM', day.getFullYear(), 1, 1520 - i * 83);
     const submittedAt = `${date}T${twoDigits(7 + (i % 4))}:${twoDigits((i * 17) % 60)}`;
     const updatedAt = i % 4 === 1 ? `${date}T${twoDigits(13 + (i % 5))}:${twoDigits((i * 29) % 60)}` : submittedAt;
 
@@ -597,7 +779,7 @@ function seedOtherStudentForms(): UnassignedForm[] {
     for (let j = 0; j < 1 + (student % 3); j++, formIndex++) {
       // Ngày nộp rải trong khoảng 200 ngày; đơn Đã bổ sung sửa sau 30 giờ, vài đơn khác sửa sau 5 giờ
       const day = new Date(2026, 9, 31 - ((formIndex * 11) % 200));
-      const code = `XMM-${day.getFullYear()}-${String(1500 - formIndex * 37).padStart(5, '0')}`;
+      const code = formatFormCode('XMM', day.getFullYear(), 1, 1500 - formIndex * 37);
       const submittedAt = `${dateText(day)}T${twoDigits(8 + (formIndex % 9))}:${twoDigits((formIndex * 13) % 60)}`;
       const status = statuses[formIndex % statuses.length]!;
       const updatedAt = status === 'bsg' ? addHours(submittedAt, 30) : formIndex % 5 === 2 ? addHours(submittedAt, 5) : submittedAt;
@@ -763,11 +945,12 @@ export function getFormStats(): FormStats {
     byStatus[form.status] += 1;
     countByType.set(form.formTypeId, (countByType.get(form.formTypeId) ?? 0) + 1);
   }
-  const byType = FORM_TYPES.map(({ id, name, status }) => ({
-    formTypeId: id,
-    formTypeName: name,
-    formTypeStatus: status,
-    count: countByType.get(id) ?? 0,
+  // Tên, trạng thái theo phiên bản mới nhất, như dòng của bảng Quản lí loại đơn
+  const byType = FORM_TYPES.map((formType) => ({
+    formTypeId: formType.id,
+    formTypeName: latestVersion(formType).name,
+    formTypeStatus: latestVersion(formType).status,
+    count: countByType.get(formType.id) ?? 0,
   })).sort((a, b) => b.count - a.count || a.formTypeName.localeCompare(b.formTypeName, 'vi'));
   return { total: FORMS.length, byStatus, byType };
 }
@@ -836,7 +1019,7 @@ function vietnamNow(): string {
  */
 export function addForm(ownerId: string, formType: FormType, answers: FormAnswers, filesByTempId: ReadonlyMap<string, File>): FormSummary {
   const submittedAt = vietnamNow();
-  const code = nextFormCode(formType.prefix, Number(submittedAt.slice(0, 4)), FORMS.map((form) => form.code));
+  const code = nextFormCode(formType.prefix, Number(submittedAt.slice(0, 4)), formType.version, FORMS.map((form) => form.code));
   const keptAnswers = storeAnswers(code, formType.sections, answers, filesByTempId, {});
 
   // Lưu đơn, đơn mới đứng đầu
@@ -1054,8 +1237,7 @@ export function getFileContent(fileId: string, viewer: { id: string; role: RoleI
 export function resetMockDb(): void {
   profiles = cloneSeed();
   FORMS = seedForms();
-  FORM_TYPES = structuredClone([...FORM_TYPE_SEED]);
-  FORM_TYPE_UPDATES = seedFormTypeUpdates();
+  FORM_TYPES = seedFormTypes();
   FILES.clear();
   try {
     sessionStorage.removeItem(PROFILES_KEY);

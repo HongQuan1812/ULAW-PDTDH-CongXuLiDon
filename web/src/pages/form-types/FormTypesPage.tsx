@@ -1,8 +1,9 @@
 /* Trang Quản lí loại đơn (#/quan-li-loai-don), như phần "Danh sách loại đơn" của artifact/js/forms-page.js.
-   Bảng mọi loại đơn: tên, mã đơn, trạng thái, lần lưu gần nhất; tìm kiếm / Sắp xếp / Lọc / phân trang dùng chung với các bảng khác.
-   Mặc định xếp theo trạng thái (Đang mở → Nháp → Đã đóng) rồi theo tên. Bấm một dòng để mở trình soạn của loại đơn đó;
+   Bảng mọi loại đơn, mỗi mã đơn một dòng theo phiên bản mới nhất: tên, mã đơn, phiên bản, trạng thái, lần lưu gần nhất;
+   tìm kiếm / Sắp xếp / Lọc / phân trang dùng chung với các bảng khác. Nút › đầu dòng xổ ra các phiên bản cũ hơn.
+   Mặc định xếp theo trạng thái (Đang mở → Nháp → Đã đóng) rồi theo tên. Bấm một dòng để mở trình soạn ở phiên bản đó;
    "+ Tạo loại đơn" mở trình soạn trống. */
-import type { KeyboardEvent } from 'react';
+import { Fragment, useState, type KeyboardEvent } from 'react';
 import { useNavigate } from 'react-router';
 import { FORM_TYPE_STATUSES, FORM_TYPE_STATUS_LABEL, type FormTypeStatus, type FormTypeSummary } from '@ulaw/shared';
 import { useFormTypes } from '../../api/form-types';
@@ -11,7 +12,7 @@ import { Button } from '../../components/Button';
 import { LoadError, loadErrorMessage } from '../../components/LoadError';
 import { RefreshButton } from '../../components/RefreshButton';
 import { FormTypeStatusPill } from '../../components/StatusPill';
-import { discardFormTypeDraft, hasFormTypeDraft } from '../form-editor/formTypeDrafts';
+import { discardUnsavedEdit, hasUnsavedEdit } from '../form-editor/formTypeDrafts';
 import { HeaderCell } from '../../components/table/HeaderCell';
 import { Highlight } from '../../components/table/Highlight';
 import { Pager } from '../../components/table/Pager';
@@ -21,15 +22,17 @@ import { useTableTools } from '../../components/table/useTableTools';
 import { EMPTY_TEXT } from '../../lib/format';
 import tableStyles from '../../components/table/table.module.css';
 import profileStyles from '../profile/ProfilePage.module.css';
+import quickStyles from '../profile/QuickView.module.css';
 import styles from './FormTypesPage.module.css';
 
 /** Thứ tự trạng thái khi sắp xếp tăng dần, như FM_ORDER của bản mẫu: Đang mở → Nháp → Đã đóng. */
 const STATUS_ORDER: Record<FormTypeStatus, number> = { open: 0, draft: 1, closed: 2 };
 
-/** Các cột, như FM_FIELDS của bản mẫu. */
+/** Các cột, như FM_FIELDS của bản mẫu, thêm cột Phiên bản. */
 const FORM_TYPE_FIELDS: TableField<FormTypeSummary>[] = [
   { key: 'name', label: 'Tên loại đơn', type: 'text', getValue: (formType) => formType.name },
   { key: 'prefix', label: 'Mã đơn', type: 'text', getValue: (formType) => formType.prefix },
+  { key: 'version', label: 'Phiên bản', type: 'number', getValue: (formType) => formType.version },
   {
     key: 'status',
     label: 'Trạng thái',
@@ -55,8 +58,8 @@ const PAGE_SIZE = 10;
 /** Mảng rỗng dùng chung khi chưa tải xong, để bảng không bị tính lại mỗi lần vẽ. */
 const NO_FORM_TYPES: FormTypeSummary[] = [];
 
-/** Số cột của bảng: các cột dữ liệu và cột "Soạn ›". */
-const COLUMN_COUNT = FORM_TYPE_FIELDS.length + 1;
+/** Số cột của bảng: cột nút ›, các cột dữ liệu và cột "Soạn ›". */
+const COLUMN_COUNT = FORM_TYPE_FIELDS.length + 2;
 
 /**
  * Trang Quản lí loại đơn.
@@ -76,14 +79,27 @@ export function FormTypesPage() {
     });
   const pageRows = table.getRowModel().rows;
   const errorMessage = loadErrorMessage(formTypesQuery);
+  // Các loại đơn đang xổ ra phiên bản cũ
+  const [expandedIds, setExpandedIds] = useState<ReadonlySet<string>>(new Set());
 
-  // Mở trình soạn (trang soạn có nút "‹ Quay lại Quản lí loại đơn"); Enter trên dòng đang chọn cũng mở
-  const openEditor = (formTypeId: string) =>
-    navigate(formTypeEditorPath(formTypeId), { state: { previousPageLabel: PAGE_LABEL.formTypes } satisfies ReturnState });
-  const openOnEnter = (event: KeyboardEvent<HTMLTableRowElement>, formTypeId: string) => {
+  /**
+   * Xổ ra / thu lại các phiên bản cũ của một loại đơn.
+   * @param formTypeId  mã loại đơn
+   */
+  const toggleExpanded = (formTypeId: string) =>
+    setExpandedIds((current) => {
+      const next = new Set(current);
+      if (!next.delete(formTypeId)) next.add(formTypeId);
+      return next;
+    });
+
+  // Mở trình soạn (trang soạn có nút "‹ Quay lại Quản lí loại đơn") ở phiên bản của dòng; Enter trên dòng đang chọn cũng mở
+  const openEditor = (formTypeId: string, version?: number) =>
+    navigate(formTypeEditorPath(formTypeId, version), { state: { previousPageLabel: PAGE_LABEL.formTypes } satisfies ReturnState });
+  const openOnEnter = (event: KeyboardEvent<HTMLTableRowElement>, formTypeId: string, version?: number) => {
     if (event.target !== event.currentTarget || event.key !== 'Enter') return;
     event.preventDefault();
-    openEditor(formTypeId);
+    openEditor(formTypeId, version);
   };
 
   return (
@@ -99,7 +115,7 @@ export function FormTypesPage() {
           <Button
             variant="primary"
             onClick={() => {
-              discardFormTypeDraft(NEW_FORM_TYPE_ID);
+              discardUnsavedEdit(NEW_FORM_TYPE_ID);
               openEditor(NEW_FORM_TYPE_ID);
             }}
           >
@@ -126,6 +142,9 @@ export function FormTypesPage() {
           <table className={tableStyles.table}>
             <thead>
               <tr>
+                <th className={quickStyles.expandCell}>
+                  <span className="sr-only">Các phiên bản cũ</span>
+                </th>
                 {FORM_TYPE_FIELDS.map((field) => (
                   <HeaderCell key={field.key} field={field} sorting={sorting} filterRules={filterRules} />
                 ))}
@@ -152,22 +171,66 @@ export function FormTypesPage() {
                   }
                 />
               ) : (
-                pageRows.map(({ original: formType }) => (
-                  <tr
-                    key={formType.id}
-                    className={tableStyles.rowLink}
-                    tabIndex={0}
-                    onClick={() => openEditor(formType.id)}
-                    onKeyDown={(event) => openOnEnter(event, formType.id)}
-                  >
-                    {FORM_TYPE_FIELDS.map((field) => (
-                      <FormTypeCell key={field.key} field={field} formType={formType} query={query} />
-                    ))}
-                    <td className={tableStyles.goCell}>
-                      <span className={tableStyles.goLabel}>Soạn ›</span>
-                    </td>
-                  </tr>
-                ))
+                pageRows.map(({ original: formType }) => {
+                  const isExpanded = expandedIds.has(formType.id);
+                  const olderCount = formType.olderVersions.length;
+                  return (
+                    <Fragment key={formType.id}>
+                      <tr
+                        className={tableStyles.rowLink}
+                        tabIndex={0}
+                        onClick={() => openEditor(formType.id)}
+                        onKeyDown={(event) => openOnEnter(event, formType.id)}
+                      >
+                        <td className={quickStyles.expandCell}>
+                          <button
+                            type="button"
+                            className={`${quickStyles.expand} ${isExpanded ? quickStyles.open : ''}`}
+                            aria-expanded={isExpanded}
+                            aria-label={olderCount ? `Xem ${olderCount} phiên bản cũ của ${formType.name}` : `${formType.name} chưa có phiên bản cũ`}
+                            title={olderCount ? `${olderCount} phiên bản cũ` : 'Chưa có phiên bản cũ'}
+                            disabled={!olderCount}
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              toggleExpanded(formType.id);
+                            }}
+                          >
+                            ›
+                          </button>
+                        </td>
+                        {FORM_TYPE_FIELDS.map((field) => (
+                          <FormTypeCell key={field.key} field={field} formType={formType} query={query} showUnsavedNote />
+                        ))}
+                        <td className={tableStyles.goCell}>
+                          <span className={tableStyles.goLabel}>Soạn ›</span>
+                        </td>
+                      </tr>
+
+                      {/* Các phiên bản cũ, mới trước: cùng các cột, nền nhạt; bấm để mở trình soạn ở phiên bản đó */}
+                      {isExpanded &&
+                        formType.olderVersions.map((olderVersion) => {
+                          const versionRow: FormTypeSummary = { ...formType, ...olderVersion, olderVersions: [] };
+                          return (
+                            <tr
+                              key={olderVersion.version}
+                              className={`${tableStyles.rowLink} ${styles.olderRow}`}
+                              tabIndex={0}
+                              onClick={() => openEditor(formType.id, olderVersion.version)}
+                              onKeyDown={(event) => openOnEnter(event, formType.id, olderVersion.version)}
+                            >
+                              <td className={quickStyles.expandCell} />
+                              {FORM_TYPE_FIELDS.map((field) => (
+                                <FormTypeCell key={field.key} field={field} formType={versionRow} query={query} showUnsavedNote={false} />
+                              ))}
+                              <td className={tableStyles.goCell}>
+                                <span className={tableStyles.goLabel}>Xem ›</span>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                    </Fragment>
+                  );
+                })
               )}
             </tbody>
           </table>
@@ -188,12 +251,23 @@ export function FormTypesPage() {
 
 /**
  * Một ô của bảng loại đơn: tên in đậm, mã đơn kiểu mã, trạng thái là nhãn màu, còn lại là chữ; ô trống ghi "—".
- * @param field     cột
- * @param formType  loại đơn của dòng
- * @param query     chữ đang tìm, để tô sáng
- * @returns         thẻ <td>
+ * @param field            cột
+ * @param formType         loại đơn của dòng (dòng phiên bản cũ: thông tin của phiên bản đó)
+ * @param query            chữ đang tìm, để tô sáng
+ * @param showUnsavedNote  true: ghi "Có thay đổi chưa lưu" cạnh tên khi trình soạn đang có thay đổi chưa lưu
+ * @returns                thẻ <td>
  */
-function FormTypeCell({ field, formType, query }: { field: TableField<FormTypeSummary>; formType: FormTypeSummary; query: string }) {
+function FormTypeCell({
+  field,
+  formType,
+  query,
+  showUnsavedNote,
+}: {
+  field: TableField<FormTypeSummary>;
+  formType: FormTypeSummary;
+  query: string;
+  showUnsavedNote: boolean;
+}) {
   if (field.key === 'status') {
     return (
       <td>
@@ -206,7 +280,7 @@ function FormTypeCell({ field, formType, query }: { field: TableField<FormTypeSu
   return (
     <td className={cellClass}>
       {text ? <Highlight text={text} query={query} /> : <span className={tableStyles.dash}>{EMPTY_TEXT}</span>}
-      {field.key === 'name' && hasFormTypeDraft(formType.id) && <span className={styles.draftNote}>Có thay đổi chưa lưu</span>}
+      {field.key === 'name' && showUnsavedNote && hasUnsavedEdit(formType.id) && <span className={styles.draftNote}>Có thay đổi chưa lưu</span>}
     </td>
   );
 }

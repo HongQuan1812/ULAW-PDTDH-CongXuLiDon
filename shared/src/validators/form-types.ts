@@ -17,16 +17,6 @@ export const FORM_TYPE_DRAFT_MESSAGES = {
   openWithoutQuestion: 'Loại đơn đang mở phải có ít nhất một câu hỏi.',
 } as const;
 
-/**
- * Loại đơn có được chọn trạng thái Nháp không. Nháp là loại đơn đang soạn, chưa phát hành;
- * đã lưu ở Đang mở hoặc Đã đóng (đã phát hành) thì không về Nháp được nữa, muốn ngừng nhận đơn thì chọn Đã đóng.
- * @param savedStatus  trạng thái đang lưu; tạo mới thì null
- * @returns            true nếu chọn được Nháp
- */
-export function canChooseDraftStatus(savedStatus: FormTypeStatus | null): boolean {
-  return savedStatus === null || savedStatus === 'draft';
-}
-
 /** Mã đơn hợp lệ: 2–5 chữ in hoa không dấu. */
 export const FORM_TYPE_PREFIX_PATTERN = /^[A-Z]{2,5}$/;
 

@@ -37,10 +37,7 @@ export function FormTypePreview({ draft }: { draft: FormTypeDraft }) {
 
   return (
     <div className={styles.preview}>
-      {/* Khung báo, tên và mô tả loại đơn */}
-      <p className={styles.previewNotice} role="note">
-        Đây là bản xem trước, giống như người nộp đơn sẽ thấy. Bạn có thể thử điền nhưng không có gì được lưu.
-      </p>
+      {/* Tên và mô tả loại đơn (khung báo "Đây là bản xem trước" nằm ở đầu trang trình soạn) */}
       <div className={styles.previewIntro}>
         <h2 className={styles.title}>{draft.name.trim() || 'Loại đơn chưa có tên'}</h2>
         {draft.description.trim() && <p className={styles.hint}>{draft.description}</p>}

@@ -1,6 +1,6 @@
 /* Bản đang soạn của một loại đơn và các phép sửa trên đó (như formDrafts, newQuestion, newSection, withTypeDefaults
    và các nút trong artifact/js/forms-page.js). Mọi hàm đều thuần: nhận bản cũ, trả bản mới, không sửa bản cũ. */
-import type { FormSection, FormType, FormTypeStatus, Question, QuestionType } from '@ulaw/shared';
+import type { FormSection, FormTypeStatus, FormTypeVersion, Question, QuestionType } from '@ulaw/shared';
 
 /** Phần thông tin chung và nội dung của loại đơn mà trình soạn sửa được. */
 export interface FormTypeDraft {
@@ -62,17 +62,18 @@ export function newFormTypeDraft(): FormTypeDraft {
 }
 
 /**
- * Bản soạn từ loại đơn đã lưu (bản sao, sửa không ảnh hưởng dữ liệu đã tải).
- * @param formType  loại đơn tải từ máy chủ
- * @returns         bản soạn
+ * Bản soạn từ một phiên bản đã lưu (bản sao, sửa không ảnh hưởng dữ liệu đã tải).
+ * @param prefix   mã đơn của loại đơn
+ * @param version  phiên bản tải từ máy chủ
+ * @returns        bản soạn
  */
-export function draftFromFormType(formType: FormType): FormTypeDraft {
+export function draftFromVersion(prefix: string, version: FormTypeVersion): FormTypeDraft {
   return {
-    name: formType.name,
-    prefix: formType.prefix,
-    description: formType.description ?? '',
-    status: formType.status,
-    sections: structuredClone(formType.sections),
+    name: version.name,
+    prefix,
+    description: version.description ?? '',
+    status: version.status,
+    sections: structuredClone(version.sections),
   };
 }
 

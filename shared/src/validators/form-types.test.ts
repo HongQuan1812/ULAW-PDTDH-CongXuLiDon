@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { FormSectionSchema, type FormSection } from '../aux-schema/form-types--sections';
-import { FORM_TYPE_DRAFT_MESSAGES, canChooseDraftStatus, FORM_TYPE_ISSUE_TARGET, issueMessages, validateFormTypeDraft, type FormTypeDraftInput } from './form-types';
+import { FORM_TYPE_DRAFT_MESSAGES, FORM_TYPE_ISSUE_TARGET, issueMessages, validateFormTypeDraft, type FormTypeDraftInput } from './form-types';
 
 /** Bản soạn hợp lệ: một phần, một câu hỏi ngắn. */
 const validDraft = (): FormTypeDraftInput => ({
@@ -56,11 +56,3 @@ describe('validateFormTypeDraft', () => {
   });
 });
 
-describe('canChooseDraftStatus', () => {
-  it('chỉ chọn được Nháp khi tạo mới hoặc đang lưu ở Nháp', () => {
-    expect(canChooseDraftStatus(null)).toBe(true);
-    expect(canChooseDraftStatus('draft')).toBe(true);
-    expect(canChooseDraftStatus('open')).toBe(false);
-    expect(canChooseDraftStatus('closed')).toBe(false);
-  });
-});

@@ -22,13 +22,13 @@ import { ALL_FORMS_KEY, FORM_STATS_KEY, HANDLED_FORMS_KEY, MY_FORMS_KEY } from '
 /**
  * Khóa lưu tạm nội dung một lá đơn.
  * @param code  mã đơn
- * @returns     vd ['forms', 'detail', 'XMM-2026-00001']
+ * @returns     vd ['forms', 'detail', 'XMM-2026-001-00001']
  */
 export const formDetailKey = (code: string) => ['forms', 'detail', code] as const;
 
 /**
  * Một lá đơn đủ nội dung (trang chi tiết đơn).
- * @param code  mã đơn, vd 'XMM-2026-00001'
+ * @param code  mã đơn, vd 'XMM-2026-001-00001'
  * @returns     kết quả useQuery; data = lá đơn (FormDetail); không có hoặc không được xem thì lỗi 404
  */
 export function useFormDetail(code: string) {

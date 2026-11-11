@@ -41,8 +41,8 @@ export const FORM_ENDPOINTS = {
 
 /**
  * Đường dẫn API của một lá đơn.
- * @param code  mã đơn, vd 'XMM-2026-00001'
- * @returns     vd '/forms/XMM-2026-00001'
+ * @param code  mã đơn, vd 'XMM-2026-001-00001'
+ * @returns     vd '/forms/XMM-2026-001-00001'
  */
 export function formDetailPath(code: string): string {
   return FORM_ENDPOINTS.detail.replace(':code', encodeURIComponent(code));
@@ -51,7 +51,7 @@ export function formDetailPath(code: string): string {
 /**
  * Đường dẫn API Tiếp nhận một lá đơn.
  * @param code  mã đơn
- * @returns     vd '/forms/XMM-2026-00001/receive'
+ * @returns     vd '/forms/XMM-2026-001-00001/receive'
  */
 export function formReceivePath(code: string): string {
   return FORM_ENDPOINTS.receive.replace(':code', encodeURIComponent(code));
@@ -60,7 +60,7 @@ export function formReceivePath(code: string): string {
 /**
  * Đường dẫn API Ra quyết định (Yêu cầu bổ sung / Duyệt / Từ chối) về một lá đơn.
  * @param code  mã đơn
- * @returns     vd '/forms/XMM-2026-00001/decision'
+ * @returns     vd '/forms/XMM-2026-001-00001/decision'
  */
 export function formDecisionPath(code: string): string {
   return FORM_ENDPOINTS.decide.replace(':code', encodeURIComponent(code));
@@ -69,7 +69,7 @@ export function formDecisionPath(code: string): string {
 /**
  * Đường dẫn API danh sách cán bộ có thể nhận đơn khi Chuyển giao.
  * @param code  mã đơn
- * @returns     vd '/forms/XMM-2026-00001/transfer-targets'
+ * @returns     vd '/forms/XMM-2026-001-00001/transfer-targets'
  */
 export function formTransferTargetsPath(code: string): string {
   return FORM_ENDPOINTS.transferTargets.replace(':code', encodeURIComponent(code));
@@ -78,7 +78,7 @@ export function formTransferTargetsPath(code: string): string {
 /**
  * Đường dẫn API Chuyển giao một lá đơn.
  * @param code  mã đơn
- * @returns     vd '/forms/XMM-2026-00001/transfer'
+ * @returns     vd '/forms/XMM-2026-001-00001/transfer'
  */
 export function formTransferPath(code: string): string {
   return FORM_ENDPOINTS.transfer.replace(':code', encodeURIComponent(code));
@@ -88,7 +88,7 @@ export function formTransferPath(code: string): string {
 
 /** Một dòng trong bảng đơn: các cột thông tin chính của lá đơn, chưa có nội dung đơn. */
 export const FormSummarySchema = z.object({
-  /** Mã đơn, vd 'XMM-2026-00001' */
+  /** Mã đơn, vd 'XMM-2026-001-00001' */
   code: z.string(),
   /** Mã loại đơn, vd 'xmm' */
   formTypeId: z.string(),
@@ -208,13 +208,13 @@ export const FORM_MESSAGES = {
   receiveForbidden: 'Bạn không có quyền tiếp nhận đơn.',
   /** POST /forms/:code/receive khi đơn không còn chờ tiếp nhận, vd cán bộ khác vừa tiếp nhận (409) */
   notReceivable: 'Đơn không còn chờ tiếp nhận (có thể đã được tiếp nhận).',
-  /** Tiếp nhận xong (toast), vd "Đã tiếp nhận đơn XMM-2026-01521 lúc 09:30 · 10/11/2026." */
+  /** Tiếp nhận xong (toast), vd "Đã tiếp nhận đơn XMM-2026-001-01521 lúc 09:30 · 10/11/2026." */
   received: (code: string, timeText: string) => `Đã tiếp nhận đơn ${code} lúc ${timeText}.`,
   /** POST /forms/:code/decision khi mình không được ra quyết định về đơn này: không có quyền decide, hoặc đơn do người khác phụ trách (403) */
   decideForbidden: 'Bạn không có quyền xử lí đơn này.',
   /** POST /forms/:code/decision khi đơn không còn Đang xét, vd cán bộ khác vừa xử lí xong (409) */
   notDecidable: 'Đơn không còn ở trạng thái Đang xét (có thể đã được xử lí).',
-  /** Ra quyết định xong (toast), vd "Đã duyệt đơn XMM-2026-01521." */
+  /** Ra quyết định xong (toast), vd "Đã duyệt đơn XMM-2026-001-01521." */
   decided: {
     bs: (code: string) => `Đã yêu cầu bổ sung đơn ${code}.`,
     duyet: (code: string) => `Đã duyệt đơn ${code}.`,
@@ -226,7 +226,7 @@ export const FORM_MESSAGES = {
   notTransferable: 'Đơn không còn chuyển giao được (có thể đã có kết quả).',
   /** POST /forms/:code/transfer khi cán bộ nhận không có trong danh sách transfer-targets (422) */
   invalidTransferTarget: 'Cán bộ nhận đơn không hợp lệ.',
-  /** Chuyển giao xong (toast), vd "Đã chuyển giao đơn XMM-2026-01521 cho Trần Quốc Việt." */
+  /** Chuyển giao xong (toast), vd "Đã chuyển giao đơn XMM-2026-001-01521 cho Trần Quốc Việt." */
   transferred: (code: string, staffName: string) => `Đã chuyển giao đơn ${code} cho ${staffName}.`,
   /** Bấm Lưu thay đổi mà câu trả lời vẫn như đã lưu (toast) */
   noChanges: 'Không có thay đổi nào để lưu.',
@@ -234,6 +234,6 @@ export const FORM_MESSAGES = {
   saved: (timeText: string) => `Đã lưu thay đổi lúc ${timeText}.`,
   /** Lưu đơn Cần bổ sung xong (toast) */
   supplemented: (timeText: string) => `Đã bổ sung đơn lúc ${timeText}, đơn chuyển sang “Đã bổ sung”.`,
-  /** Nộp đơn xong (toast), vd "Đã nộp đơn XMM-2026-01521." */
+  /** Nộp đơn xong (toast), vd "Đã nộp đơn XMM-2026-001-01521." */
   submitted: (code: string) => `Đã nộp đơn ${code}.`,
 } as const;
