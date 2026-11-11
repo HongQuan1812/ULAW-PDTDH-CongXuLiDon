@@ -86,8 +86,11 @@
 .tableSettings{display:grid;gap:8px;overflow-x:auto;min-width:0}
 .rowName{max-width:340px}
 .columnsHead,.column{display:grid;grid-template-columns:minmax(150px,1.4fr) minmax(120px,1fr) 90px 70px 34px;gap:8px;align-items:center;min-width:560px}
-.column>input,.column>select{height:43px}
-.columnSum{display:flex;align-items:center;justify-content:center;height:43px}
+.column{align-items:stretch}
+.column>textarea{display:block;height:100%;min-height:43px;padding:10px 14px;line-height:1.45;resize:none;overflow:hidden;overflow-wrap:anywhere}
+.column>select{height:43px;align-self:start}
+.column>button{align-self:start;margin-top:4.5px}
+.columnSum{display:flex;align-items:center;justify-content:center;height:43px;align-self:start}
 
 /* tải tệp: định dạng cho phép | tối đa mỗi tệp */
 .fileSettings{display:grid;grid-template-columns:minmax(0,1fr) 160px;gap:12px 24px;align-items:start}

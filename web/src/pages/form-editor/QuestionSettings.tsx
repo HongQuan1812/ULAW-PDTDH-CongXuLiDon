@@ -2,6 +2,7 @@
    các lựa chọn (Chọn một / Chọn nhiều / Danh sách thả xuống), các cột của bảng, định dạng và dung lượng tệp.
    Loại câu hỏi khác không có cài đặt riêng. */
 import type { Question, QuestionOf, TableColumn } from '@ulaw/shared';
+import { GrowingTextarea } from '../../features/form-renderer/GrowingTextarea';
 import { EditorIconButton } from './EditorIconButton';
 import { DEFAULT_MAX_MB, FILE_FORMAT_GROUPS, MAX_MB_LIMIT, removeAt, replaceAt } from './formTypeDraft';
 import styles from './FormTypeEditor.module.css';
@@ -72,6 +73,7 @@ function ChoiceSettings({ question, onChange }: { question: QuestionOf<'radio' |
 
 /**
  * Cài đặt bảng: tên gọi mỗi dòng, rồi mỗi cột một hàng (tên, mô tả nhỏ, kiểu Chữ / Số, tính tổng, nút bỏ).
+ * Tên cột và mô tả dài thì tự xuống hàng như ô chữ trong bảng trả lời.
  * Chỉ cột Số mới tính tổng được; đổi sang Chữ thì bỏ tính tổng. Còn một cột thì không bỏ được.
  * @param question  câu hỏi Bảng nhiều dòng
  * @param onChange  gọi với câu hỏi đã sửa
@@ -99,8 +101,9 @@ function TableSettings({ question, onChange }: { question: QuestionOf<'table'>; 
       </div>
       {question.columns.map((column, i) => (
         <div key={i} className={styles.column}>
-          <input value={column.label} placeholder="Tên cột" aria-label={`Tên cột ${i + 1}`} onChange={(event) => changeColumn(i, { label: event.target.value })} />
-          <input value={column.sub ?? ''} placeholder="Không bắt buộc" aria-label={`Mô tả cột ${i + 1}`} onChange={(event) => changeColumn(i, { sub: event.target.value })} />
+          {/* Tên cột, mô tả dài thì tự xuống hàng; hai ô cùng hàng cao bằng nhau */}
+          <GrowingTextarea value={column.label} placeholder="Tên cột" aria-label={`Tên cột ${i + 1}`} onValueChange={(label) => changeColumn(i, { label })} />
+          <GrowingTextarea value={column.sub ?? ''} placeholder="Không bắt buộc" aria-label={`Mô tả cột ${i + 1}`} onValueChange={(sub) => changeColumn(i, { sub })} />
           <select
             value={column.type}
             aria-label={`Kiểu cột ${i + 1}`}
