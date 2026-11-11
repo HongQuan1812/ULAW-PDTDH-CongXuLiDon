@@ -110,19 +110,14 @@ export function ExportTemplatesPanel({ formTypeId, draft, changes, onChangesChan
   const [checkRound, setCheckRound] = useState(0);
   const toggle = () => setOpen((isOpen) => !isOpen);
 
-  /** Nút ↻: ngoài tải lại danh sách mẫu, còn kiểm tra lại mã mọi mẫu. */
+  /** Nút ↻ cạnh chữ "Các mẫu": ngoài tải lại danh sách mẫu, còn kiểm tra lại mã mọi mẫu. */
   const refreshAll = () => setCheckRound((round) => round + 1);
 
   return (
     <section className={styles.card} aria-labelledby={`${bodyId}-title`}>
-      {/* Đầu khung: bấm cả hàng để thu / mở (nút mũi tên cho bàn phím), nút ↻ ngay cạnh tiêu đề */}
+      {/* Đầu khung: bấm cả hàng để thu / mở (nút mũi tên cho bàn phím) */}
       <div className={styles.cardHead} onClick={toggle}>
         <h2 id={`${bodyId}-title`}>Mẫu xuất file</h2>
-        {formTypeId !== null && (
-          <span className={styles.headRefresh} onClick={(event) => event.stopPropagation()}>
-            <RefreshButton query={templatesQuery} label="mẫu xuất file" size="small" onRefresh={refreshAll} />
-          </span>
-        )}
         <button
           type="button"
           className={styles.toggle}
@@ -147,6 +142,7 @@ export function ExportTemplatesPanel({ formTypeId, draft, changes, onChangesChan
             formTypeId={formTypeId}
             templatesQuery={templatesQuery}
             checkRound={checkRound}
+            onRefresh={refreshAll}
             checkDraft={settledDraft}
             changes={changes}
             onChangesChange={onChangesChange}
@@ -165,13 +161,14 @@ export function ExportTemplatesPanel({ formTypeId, draft, changes, onChangesChan
  * Mã trong mỗi mẫu tự được kiểm tra khi mẫu vừa thêm / vừa mở khung, và mỗi khi câu hỏi đổi (sau lúc ngừng gõ);
  * có vấn đề thì hiện cảnh báo ngay dưới mẫu, hợp lệ thì không hiện gì.
  * @param props  xem ExportTemplatesPanelProps; templatesQuery: danh sách mẫu ở máy chủ;
- *               checkRound: lượt kiểm tra (nút ↻ tăng lên thì kiểm tra lại mọi mẫu); checkDraft: bản soạn đã ngừng gõ, dùng để kiểm tra mã
+ *               checkRound: lượt kiểm tra (nút ↻ tăng lên thì kiểm tra lại mọi mẫu); onRefresh: bấm nút ↻; checkDraft: bản soạn đã ngừng gõ, dùng để kiểm tra mã
  * @returns      mục các mẫu, và trình xem mẫu gốc
  */
 function TemplateList({
   formTypeId,
   templatesQuery,
   checkRound,
+  onRefresh,
   checkDraft,
   changes,
   onChangesChange,
@@ -179,6 +176,8 @@ function TemplateList({
 }: Omit<ExportTemplatesPanelProps, 'draft'> & {
   templatesQuery: ReturnType<typeof useExportTemplates>;
   checkRound: number;
+  /** Bấm nút ↻ */
+  onRefresh: () => void;
   checkDraft: ExportDraftRequest;
 }) {
   const toast = useToast();
@@ -285,6 +284,7 @@ function TemplateList({
     <div className={styles.block}>
       <div className={styles.blockHead}>
         <h3>Các mẫu</h3>
+        {formTypeId !== null && <RefreshButton query={templatesQuery} label="các mẫu xuất file" size="small" onRefresh={onRefresh} />}
         {!listLoading && <span className={styles.count}>{rows.length} mẫu</span>}
       </div>
 

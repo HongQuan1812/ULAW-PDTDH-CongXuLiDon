@@ -5,7 +5,6 @@
 .cardHead{display:flex;align-items:center;gap:10px;cursor:pointer}
 .cardHead h2{font-size:17px;font-weight:600}
 .cardHead:hover h2{color:var(--accent)}
-.headRefresh{display:inline-flex;cursor:default}
 .toggle{margin-left:auto;display:inline-grid;place-items:center;width:30px;height:30px;border:0;border-radius:50%;background:none;padding:0;color:var(--muted);cursor:pointer;flex:none}
 .toggle:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
 /* mũi tên: đóng thì chỉ sang phải, mở thì quay xuống (như các mục thu gọn bên trong) */
@@ -17,7 +16,7 @@
 
 /* mục con: Mẫu đã tải lên, Bảng mã */
 .block{display:grid;gap:12px;padding-top:20px;border-top:1px solid var(--line);min-width:0}
-.blockHead{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.blockHead{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .blockHead h3{font-size:15px;font-weight:600}
 .count{font-size:12.5px;color:var(--faint)}
 .notice{border-radius:var(--r);padding:12px 16px;font-size:13.5px;background:var(--s-nop-bg);color:var(--fg)}
