@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   ENDPOINTS,
   accountPath,
+  userIdsParams,
   type Account,
   type AccountCccdsResponse,
   type AccountsResponse,
@@ -11,33 +12,33 @@ import {
 } from '@ulaw/shared';
 import { SESSION_KEY } from './auth';
 import { apiFetch } from './client';
+import { listPath, toListPage, type ListSource } from './lists';
 
 /** Khóa lưu tạm danh sách tài khoản trong TanStack Query. */
 export const ACCOUNTS_KEY = ['accounts'] as const;
 
-/**
- * Mọi tài khoản (người nộp đơn và cán bộ), CCCD đã che.
- * @returns  kết quả useQuery; data = mảng tài khoản (Account[])
- */
-export function useAccounts() {
-  return useQuery({
-    queryKey: ACCOUNTS_KEY,
-    queryFn: () => apiFetch<AccountsResponse>(ENDPOINTS.accounts.list),
-    select: (response) => response.accounts,
-  });
-}
+/** Bảng Quản lí tài khoản: từng trang trong mọi tài khoản (người nộp đơn và cán bộ), CCCD đã che. */
+export const ACCOUNTS_SOURCE: ListSource<Account> = {
+  queryKey: ACCOUNTS_KEY,
+  fetchPage: async (listQuery) => {
+    const { accounts, ...pageMeta } = await apiFetch<AccountsResponse>(listPath(ENDPOINTS.accounts.list, listQuery));
+    return toListPage(accounts, pageMeta);
+  },
+};
 
 /**
- * CCCD đầy đủ của mọi tài khoản; chỉ tải khi bấm "Hiện CCCD", không giữ lại sau khi ẩn.
- * @param enabled  true = tải
- * @returns        kết quả useQuery; data = CCCD theo id tài khoản
+ * CCCD đầy đủ của các tài khoản đang có trên trang bảng; chỉ tải khi bấm "Hiện CCCD", không giữ lại sau khi ẩn.
+ * @param enabled     true = tải
+ * @param accountIds  id các tài khoản đang có trên trang bảng
+ * @returns           kết quả useQuery; data = CCCD theo id tài khoản
  */
-export function useAccountCccds(enabled: boolean) {
+export function useAccountCccds(enabled: boolean, accountIds: readonly string[]) {
+  const sortedIds = [...new Set(accountIds)].sort();
   return useQuery({
-    queryKey: [...ACCOUNTS_KEY, 'cccds'],
-    queryFn: () => apiFetch<AccountCccdsResponse>(ENDPOINTS.accounts.cccds),
+    queryKey: [...ACCOUNTS_KEY, 'cccds', sortedIds],
+    queryFn: () => apiFetch<AccountCccdsResponse>(`${ENDPOINTS.accounts.cccds}?${new URLSearchParams(userIdsParams(sortedIds))}`),
     select: (response) => response.cccds,
-    enabled,
+    enabled: enabled && sortedIds.length > 0,
     gcTime: 0,
   });
 }

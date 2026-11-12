@@ -3,7 +3,7 @@
 import {
   createFilterRule,
   filterOperators,
-  selectOptions,
+  type FieldOption,
   type FilterOperator,
   type FilterRule,
   type TableField,
@@ -14,8 +14,8 @@ import styles from './table.module.css';
 
 interface FilterPanelProps<Row> {
   fields: readonly TableField<Row>[];
-  /** Toàn bộ dữ liệu, để lấy các lựa chọn của cột select */
-  rows: readonly Row[];
+  /** Lựa chọn của các cột select không có lựa chọn cố định, theo tên cột (máy chủ gửi kèm trang, xem filterOptionsOf) */
+  filterOptions: Readonly<Record<string, FieldOption[]>>;
   filterRules: FilterRule[];
   onChange: (filterRules: FilterRule[]) => void;
   /** Cột của điều kiện mới thêm, vd 'status' */
@@ -27,7 +27,7 @@ interface FilterPanelProps<Row> {
  * @param props  xem FilterPanelProps
  * @returns      danh sách điều kiện lọc và các nút thêm / xóa
  */
-export function FilterPanel<Row>({ fields, rows, filterRules, onChange, defaultFieldKey }: FilterPanelProps<Row>) {
+export function FilterPanel<Row>({ fields, filterOptions, filterRules, onChange, defaultFieldKey }: FilterPanelProps<Row>) {
   // Sửa một điều kiện; đổi cột hoặc đổi "=" / "Trong khoảng" thì xóa giá trị cũ
   const updateRule = (ruleId: number, changes: Partial<FilterRule>) =>
     onChange(filterRules.map((rule) => (rule.id === ruleId ? { ...rule, ...changes } : rule)));
@@ -70,7 +70,7 @@ export function FilterPanel<Row>({ fields, rows, filterRules, onChange, defaultF
                   </option>
                 ))}
               </select>
-              <FilterValueInputs field={field} rows={rows} rule={rule} onChange={(changes) => updateRule(rule.id, changes)} />
+              <FilterValueInputs field={field} filterOptions={filterOptions} rule={rule} onChange={(changes) => updateRule(rule.id, changes)} />
               <button
                 type="button"
                 className={`${styles.iconButton} ${styles.removeButton}`}
@@ -107,20 +107,20 @@ export function FilterPanel<Row>({ fields, rows, filterRules, onChange, defaultF
 /**
  * Ô nhập giá trị của một điều kiện lọc, theo kiểu cột và điều kiện:
  * select → danh sách chọn · chữ → ô chữ · số / ngày → một ô, hoặc hai ô "Từ … đến …" khi lọc trong khoảng.
- * @param field     cột của điều kiện
- * @param rows      toàn bộ dữ liệu (lấy lựa chọn cho cột select)
- * @param rule      điều kiện đang sửa
- * @param onChange  gọi với phần giá trị thay đổi, vd { value: 'xet' }
- * @returns         các ô nhập
+ * @param field          cột của điều kiện
+ * @param filterOptions  lựa chọn của các cột select không có lựa chọn cố định
+ * @param rule           điều kiện đang sửa
+ * @param onChange       gọi với phần giá trị thay đổi, vd { value: 'xet' }
+ * @returns              các ô nhập
  */
 function FilterValueInputs<Row>({
   field,
-  rows,
+  filterOptions,
   rule,
   onChange,
 }: {
   field: TableField<Row>;
-  rows: readonly Row[];
+  filterOptions: Readonly<Record<string, FieldOption[]>>;
   rule: FilterRule;
   onChange: (changes: Partial<FilterRule>) => void;
 }) {
@@ -128,7 +128,7 @@ function FilterValueInputs<Row>({
     return (
       <select aria-label="Giá trị" value={rule.value} onChange={(event) => onChange({ value: event.target.value })}>
         <option value="">Chọn…</option>
-        {selectOptions(field, rows).map((option) => (
+        {(field.options ?? filterOptions[field.key] ?? []).map((option) => (
           <option key={option.value} value={option.value}>
             {option.label}
           </option>

@@ -2,29 +2,37 @@
    Một lá đơn (nộp, chi tiết, sửa, xử lí) nằm ở form.ts.
    API giả (MSW), frontend và backend cùng theo file này. */
 import { z } from 'zod';
-import { FORM_STATUSES, FORM_TYPE_STATUSES } from '../aux-schema';
-import { FormSummarySchema, StaffRefSchema } from './form';
+import { FORM_STATUSES, FORM_STATUS_LABEL, FORM_TYPE_STATUSES, type ListSortRule } from '../aux-schema';
+import type { TableField } from '../business-rules/lists--query';
+import { ListPageMetaSchema } from './common';
+import { FormSummarySchema, StaffRefSchema, type FormSummary } from './form';
 
 /* ---------- Đường dẫn (phần sau /api) ---------- */
 
+/* Các danh sách đơn phân trang ở máy chủ: gửi trang, tìm, sắp xếp, lọc theo listQueryParams() (xem common.ts),
+   tên cột lấy theo các bảng cột bên dưới (FORM_LIST_FIELDS…). */
 export const FORMS_ENDPOINTS = {
-  /** GET: mọi đơn của mọi người nộp → ManagedFormsResponse (bảng ở trang Quản lí đơn). Cần quyền viewAll.
-      CCCD người nộp trả dạng che; muốn xem đủ thì gọi cccds */
+  /** GET ?<một trang> → ManagedFormsResponse: một trang trong mọi đơn của mọi người nộp (bảng ở trang Quản lí đơn),
+      cột theo MANAGED_FORM_LIST_FIELDS. Cần quyền viewAll.
+      CCCD người nộp trả dạng che; người có quyền viewApplicant tìm được theo số CCCD đầy đủ. Muốn xem đủ thì gọi cccds */
   list: '/forms',
-  /** GET: CCCD đầy đủ của mọi người nộp đơn → FormCccdsResponse (nút "Hiện CCCD" ở trang Quản lí đơn). Cần quyền viewApplicant */
+  /** GET ?userIds=… → FormCccdsResponse: CCCD đầy đủ của những người nộp đang có trên trang bảng (nút "Hiện CCCD" ở trang Quản lí đơn).
+      Cần quyền viewApplicant */
   cccds: '/forms/cccds',
   /** GET: số đơn theo trạng thái và theo loại đơn → FormStats (hai khung thống kê đầu trang Quản lí đơn). Cần quyền viewAll */
   stats: '/forms/stats',
-  /** GET: các đơn mình đã nộp → MyFormsResponse (bảng "Đơn đã nộp" trên trang Thông tin cá nhân) */
+  /** GET ?<một trang> → MyFormsResponse: một trang trong các đơn mình đã nộp (bảng "Đơn đã nộp" trên trang Thông tin cá nhân),
+      cột theo FORM_LIST_FIELDS */
   mine: '/forms/mine',
-  /** GET: các đơn mình là người tiếp nhận hoặc người xử lí → HandledFormsResponse (mục "Đơn phụ trách"). Cần quyền decide */
+  /** GET ?<một trang> → HandledFormsResponse: một trang trong các đơn mình là người tiếp nhận hoặc người xử lí (mục "Đơn phụ trách"),
+      cột theo HANDLED_FORM_LIST_FIELDS. Cần quyền decide */
   handled: '/forms/handled',
 } as const;
 
 /* ---------- Dữ liệu gửi / nhận ---------- */
 
-/** Trả về từ GET /forms/mine: mọi đơn của mình, máy chủ không phân trang (mỗi người ít đơn). */
-export const MyFormsResponseSchema = z.object({ forms: z.array(FormSummarySchema) });
+/** Trả về từ GET /forms/mine (và GET /profile/:userId/forms): một trang đơn, kèm tổng số đơn khớp và lựa chọn lọc. */
+export const MyFormsResponseSchema = ListPageMetaSchema.extend({ forms: z.array(FormSummarySchema) });
 export type MyFormsResponse = z.infer<typeof MyFormsResponseSchema>;
 
 /** Một dòng trong bảng "Đơn phụ trách": thông tin chính của đơn, kèm người tiếp nhận và người xử lí. */
@@ -36,8 +44,8 @@ export const HandledFormSummarySchema = FormSummarySchema.extend({
 });
 export type HandledFormSummary = z.infer<typeof HandledFormSummarySchema>;
 
-/** Trả về từ GET /forms/handled: mọi đơn mình tiếp nhận hoặc đang xử lí, không phân trang. */
-export const HandledFormsResponseSchema = z.object({ forms: z.array(HandledFormSummarySchema) });
+/** Trả về từ GET /forms/handled (và GET /profile/:userId/handled-forms): một trang đơn phụ trách, kèm tổng số và lựa chọn lọc. */
+export const HandledFormsResponseSchema = ListPageMetaSchema.extend({ forms: z.array(HandledFormSummarySchema) });
 export type HandledFormsResponse = z.infer<typeof HandledFormsResponseSchema>;
 
 /** Người nộp đơn ở một dòng của bảng Quản lí đơn: họ tên, email, SĐT và CCCD (che). */
@@ -60,11 +68,11 @@ export const ManagedFormSummarySchema = FormSummarySchema.extend({
 });
 export type ManagedFormSummary = z.infer<typeof ManagedFormSummarySchema>;
 
-/** Trả về từ GET /forms: mọi đơn, máy chủ không phân trang (bảng tự tìm, lọc, sắp xếp, chia trang). */
-export const ManagedFormsResponseSchema = z.object({ forms: z.array(ManagedFormSummarySchema) });
+/** Trả về từ GET /forms: một trang trong mọi đơn, kèm tổng số đơn khớp và lựa chọn lọc. */
+export const ManagedFormsResponseSchema = ListPageMetaSchema.extend({ forms: z.array(ManagedFormSummarySchema) });
 export type ManagedFormsResponse = z.infer<typeof ManagedFormsResponseSchema>;
 
-/** Trả về từ GET /forms/cccds: CCCD đầy đủ theo id người nộp (người chưa có CCCD thì không có mặt). */
+/** Trả về từ GET /forms/cccds: CCCD đầy đủ theo id người nộp đã hỏi (người chưa có CCCD, hoặc chưa nộp đơn nào, thì không có mặt). */
 export const FormCccdsResponseSchema = z.object({ cccds: z.record(z.string(), z.string()) });
 export type FormCccdsResponse = z.infer<typeof FormCccdsResponseSchema>;
 
@@ -86,6 +94,64 @@ export const FormStatsSchema = z.object({
   byType: z.array(FormTypeCountSchema),
 });
 export type FormStats = z.infer<typeof FormStatsSchema>;
+
+/* ---------- Các cột của bảng đơn (tên cột để sắp xếp, lọc; cách hiện, cách tìm) ---------- */
+
+/** Các cột thông tin đơn của mọi bảng đơn (như P_FIELDS của bản mẫu): Mã đơn, Loại đơn, Ngày nộp, Trạng thái. */
+export const FORM_LIST_FIELDS: TableField<FormSummary>[] = [
+  { key: 'code', label: 'Mã đơn', type: 'text', getValue: (form) => form.code },
+  {
+    key: 'formType',
+    label: 'Loại đơn',
+    type: 'select',
+    getValue: (form) => form.formTypeId,
+    getLabel: (form) => form.formTypeName,
+  },
+  { key: 'submittedAt', label: 'Ngày nộp', type: 'date', getValue: (form) => form.submittedAt },
+  {
+    key: 'status',
+    label: 'Trạng thái',
+    type: 'select',
+    getValue: (form) => form.status,
+    getLabel: (form) => FORM_STATUS_LABEL[form.status],
+    options: FORM_STATUSES.map((status) => ({ value: status, label: FORM_STATUS_LABEL[status] })),
+  },
+];
+
+/** Bảng "Đơn phụ trách": thông tin đơn, rồi Người tiếp nhận, Người xử lí (lựa chọn lọc theo tên cán bộ có trong dữ liệu). */
+export const HANDLED_FORM_LIST_FIELDS: TableField<HandledFormSummary>[] = [
+  ...FORM_LIST_FIELDS,
+  {
+    key: 'receiver',
+    label: 'Người tiếp nhận',
+    type: 'select',
+    getValue: (form) => form.receiver?.id ?? null,
+    getLabel: (form) => form.receiver?.name ?? '',
+  },
+  {
+    key: 'handler',
+    label: 'Người xử lí',
+    type: 'select',
+    getValue: (form) => form.handler?.id ?? null,
+    getLabel: (form) => form.handler?.name ?? '',
+  },
+];
+
+/** Bảng Quản lí đơn: thông tin đơn, lúc tiếp nhận, rồi thông tin người nộp. */
+export const MANAGED_FORM_LIST_FIELDS: TableField<ManagedFormSummary>[] = [
+  ...FORM_LIST_FIELDS,
+  { key: 'receivedAt', label: 'Thời gian tiếp nhận', type: 'datetime', getValue: (form) => form.receivedAt },
+  { key: 'name', label: 'Họ và tên', type: 'text', getValue: (form) => form.applicant.name },
+  { key: 'cccd', label: 'Số CCCD', type: 'text', getValue: (form) => form.applicant.maskedCccd },
+  { key: 'phone', label: 'Số điện thoại', type: 'text', getValue: (form) => form.applicant.phone },
+  { key: 'email', label: 'Email', type: 'text', getValue: (form) => form.applicant.email },
+];
+
+/** Thứ tự mọi bảng đơn khi chưa chọn sắp xếp: đơn mới nộp lên trên, cùng lúc thì mã đơn lớn lên trên. */
+export const FORM_LIST_DEFAULT_SORTING: ListSortRule[] = [
+  { id: 'submittedAt', desc: true },
+  { id: 'code', desc: true },
+];
 
 /* ---------- Câu thông báo ---------- */
 

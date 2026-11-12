@@ -6,4 +6,5 @@ export * from './form-types--sections';
 export * from './form-types--statuses';
 export * from './forms--answers';
 export * from './forms--statuses';
+export * from './lists';
 export * from './rich-text';

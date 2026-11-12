@@ -6,10 +6,10 @@
    và chọn được MSSV chính trong khung "Thông tin sinh viên".
    Có quyền submitForApplicant (Admin) thì mục "Đơn đã nộp" có nút "Nộp đơn mới" để nộp đơn thay cho người đó.
    Người đó là cán bộ (vai trò có quyền decide) và người xem có quyền viewAll thì có thêm mục "Đơn phụ trách". */
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate, useLocation, useParams } from 'react-router';
-import { can, type Account, type FormSummary, type Profile } from '@ulaw/shared';
-import { usePersonForms, usePersonProfile, usePersonStudents, useSetPersonMainStudent } from '../../api/profile';
+import { FORM_LIST_FIELDS, can, type Account, type Profile } from '@ulaw/shared';
+import { personFormsSource, usePersonProfile, usePersonStudents, useSetPersonMainStudent } from '../../api/profile';
 import { Avatar } from '../../components/Avatar';
 import { Button } from '../../components/Button';
 import { Sheet } from '../../components/Sheet';
@@ -19,7 +19,8 @@ import { formatPhone } from '../../lib/format';
 import { PERSON_PROFILE_LABEL, readPreviousPageLabel } from '../../app/paths';
 import { useCan } from '../../features/auth/useAuth';
 import { AccountDialog } from '../../features/accounts/AccountDialog';
-import { BASE_FORM_FIELDS, FormTable } from './FormTable';
+import { useServerTable } from '../../components/table/useServerTable';
+import { FORM_PAGE_SIZE, FormTable } from './FormTable';
 import { PersonHandledForms } from './HandledForms';
 import { NewFormButton } from './NewFormButton';
 import { CccdValue, StudentInfoButton, StudentPicker, StudentRow, StudentsLoadState, findMainStudent } from './ProfilePage';
@@ -36,7 +37,8 @@ export function PersonProfilePage() {
   const { userId = '' } = useParams();
   const profileQuery = usePersonProfile(userId);
   const studentsQuery = usePersonStudents(userId);
-  const formsQuery = usePersonForms(userId);
+  const formsSource = useMemo(() => personFormsSource(userId), [userId]);
+  const formsTable = useServerTable({ tableId: 'person.submittedForms', source: formsSource, pageSize: FORM_PAGE_SIZE });
   const navigate = useNavigate();
   const previousPageLabel = readPreviousPageLabel(useLocation().state);
   const profile = profileQuery.data;
@@ -123,16 +125,13 @@ export function PersonProfilePage() {
         <div className={styles.sectionHead}>
           <div className={styles.titleGroup}>
             <h2 id="person-forms-title">Đơn đã nộp</h2>
-            <RefreshButton query={formsQuery} label="Đơn đã nộp" size="small" />
+            <RefreshButton query={formsTable.pageQuery} label="Đơn đã nộp" size="small" />
           </div>
           {canSubmitForApplicant && <NewFormButton applicantId={userId} previousPageLabel={PERSON_PROFILE_LABEL} />}
         </div>
         <FormTable
-          tableId="person.submittedForms"
-          fields={BASE_FORM_FIELDS}
-          rows={formsQuery.data ?? NO_FORMS}
-          isPending={formsQuery.isPending}
-          errorMessage={loadErrorMessage(formsQuery)}
+          table={formsTable}
+          fields={FORM_LIST_FIELDS}
           searchPlaceholder="Tìm theo mã đơn, loại đơn, ngày nộp, trạng thái"
           searchLabel="Tìm đơn đã nộp"
           emptyText={canSubmitForApplicant ? 'Chưa có đơn nào. Bấm “Nộp đơn mới” để nộp đơn thay cho người này.' : 'Chưa có đơn nào.'}
@@ -159,7 +158,4 @@ function toAccount(userId: string, profile: Profile): Account {
   const { name, email, role, phone, maskedCccd } = profile;
   return { id: userId, name, email, role, phone, maskedCccd };
 }
-
-/** Mảng rỗng dùng chung khi chưa tải xong, để bảng không bị tính lại mỗi lần vẽ. */
-const NO_FORMS: FormSummary[] = [];
 

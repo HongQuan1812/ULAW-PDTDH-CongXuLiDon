@@ -4,14 +4,14 @@ import { useCallback, useState, type ReactNode } from 'react';
 import { FilterPanel } from './FilterPanel';
 import { FilterIcon, SearchIcon, SortIcon } from './icons';
 import { SortPanel } from './SortPanel';
-import { createFilterRule, isFilterActive, type FilterRule, type SortRules, type TableField } from './tableTools';
+import { createFilterRule, isFilterActive, type FieldOption, type FilterRule, type SortRules, type TableField } from './tableTools';
 import { ToolPopover } from './ToolPopover';
 import styles from './table.module.css';
 
 interface TableToolbarProps<Row> {
   fields: readonly TableField<Row>[];
-  /** Toàn bộ dữ liệu, để bảng Lọc lấy các lựa chọn */
-  rows: readonly Row[];
+  /** Lựa chọn của các cột select không có lựa chọn cố định, theo tên cột (máy chủ gửi kèm trang, hoặc filterOptionsOf) */
+  filterOptions: Readonly<Record<string, FieldOption[]>>;
   query: string;
   onQueryChange: (query: string) => void;
   /** Gợi ý trong ô tìm kiếm, vd "Tìm theo mã đơn, loại đơn…" */
@@ -38,7 +38,7 @@ type OpenTool = 'sort' | 'filter' | null;
  * @returns      ô tìm kiếm, hai nút Sắp xếp / Lọc và các nút thêm (nếu có)
  */
 export function TableToolbar<Row>(props: TableToolbarProps<Row>) {
-  const { fields, rows, query, onQueryChange, searchPlaceholder, searchLabel } = props;
+  const { fields, filterOptions, query, onQueryChange, searchPlaceholder, searchLabel } = props;
   const { sorting, onSortingChange, defaultSortNote, filterRules, onFilterRulesChange, defaultFilterKey, extraButtons } = props;
   const [openTool, setOpenTool] = useState<OpenTool>(null);
 
@@ -87,7 +87,7 @@ export function TableToolbar<Row>(props: TableToolbarProps<Row>) {
         >
           <FilterPanel
             fields={fields}
-            rows={rows}
+            filterOptions={filterOptions}
             filterRules={filterRules}
             onChange={onFilterRulesChange}
             defaultFieldKey={defaultFilterKey}

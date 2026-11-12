@@ -2,12 +2,17 @@
    hồ sơ người khác (thông tin, CCCD, thông tin sinh viên, đơn đã nộp, đơn phụ trách). */
 import { delay, http, HttpResponse } from 'msw';
 import {
+  COMMON_MESSAGES,
   ENDPOINTS,
+  FORM_LIST_DEFAULT_SORTING,
+  FORM_LIST_FIELDS,
+  HANDLED_FORM_LIST_FIELDS,
   MAIN_STUDENT_MESSAGES,
   PROFILE_MESSAGES,
   STUDENTS_MESSAGES,
   SetMainStudentRequestSchema,
   UpdateProfileRequestSchema,
+  applyListQuery,
   can,
   maskCccd,
   type FullCccdResponse,
@@ -31,7 +36,7 @@ import {
   saveProfile,
   toSession,
 } from '../db';
-import { MOCK_DELAY_MS, api, apiError } from '../http';
+import { MOCK_DELAY_MS, api, apiError, readListQuery } from '../http';
 
 /**
  * Dựng hồ sơ trả về cho giao diện: CCCD đã che.
@@ -181,21 +186,29 @@ export const profileHandlers = [
     return HttpResponse.json<StudentsResponse>(toStudentsResponse(person.students, person.mainStudentId));
   }),
 
-  // Các đơn người khác đã nộp
-  http.get(api(ENDPOINTS.profile.personForms), async ({ params }) => {
+  // Một trang trong các đơn người khác đã nộp
+  http.get(api(ENDPOINTS.profile.personForms), async ({ params, request }) => {
     await delay(MOCK_DELAY_MS);
     const { person, errorResponse } = personToView(String(params.userId));
     if (!person) return errorResponse;
-    return HttpResponse.json<MyFormsResponse>({ forms: getFormsOf(String(params.userId)) });
+    const listQuery = readListQuery(request, FORM_LIST_FIELDS);
+    if (!listQuery) return apiError(422, COMMON_MESSAGES.listQuery);
+    const personForms = getFormsOf(String(params.userId));
+    const { rows, ...pageMeta } = applyListQuery(personForms, FORM_LIST_FIELDS, listQuery, FORM_LIST_DEFAULT_SORTING);
+    return HttpResponse.json<MyFormsResponse>({ forms: rows, ...pageMeta });
   }),
 
-  // Các đơn một cán bộ khác tiếp nhận hoặc đang xử lí (mục "Đơn phụ trách"): cần thêm quyền viewAll
-  http.get(api(ENDPOINTS.profile.personHandledForms), async ({ params }) => {
+  // Một trang trong các đơn một cán bộ khác tiếp nhận hoặc đang xử lí (mục "Đơn phụ trách"): cần thêm quyền viewAll
+  http.get(api(ENDPOINTS.profile.personHandledForms), async ({ params, request }) => {
     await delay(MOCK_DELAY_MS);
     const { person, errorResponse } = personToView(String(params.userId));
     if (!person) return errorResponse;
     if (!can(readSession()?.role, 'viewAll')) return apiError(403, PROFILE_MESSAGES.handledFormsForbidden);
-    return HttpResponse.json<HandledFormsResponse>({ forms: getFormsHandledBy(String(params.userId)) });
+    const listQuery = readListQuery(request, HANDLED_FORM_LIST_FIELDS);
+    if (!listQuery) return apiError(422, COMMON_MESSAGES.listQuery);
+    const handledForms = getFormsHandledBy(String(params.userId));
+    const { rows, ...pageMeta } = applyListQuery(handledForms, HANDLED_FORM_LIST_FIELDS, listQuery, FORM_LIST_DEFAULT_SORTING);
+    return HttpResponse.json<HandledFormsResponse>({ forms: rows, ...pageMeta });
   }),
 
   // Chọn MSSV chính cho người khác: cần thêm quyền editApplicant, MSSV phải thuộc email của người đó

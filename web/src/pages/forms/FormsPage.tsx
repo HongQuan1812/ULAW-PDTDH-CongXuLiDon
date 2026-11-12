@@ -1,38 +1,27 @@
 /* Trang Quản lí đơn (như applications-page.js của bản mẫu): bảng mọi đơn của mọi người nộp, gộp thông tin đơn
-   và thông tin người nộp; tìm kiếm / Sắp xếp / Lọc / phân trang dùng chung với các bảng đơn khác.
-   Cột "Thời gian tiếp nhận" có nút Tiếp nhận cho đơn đang chờ; nút Hiện CCCD (thanh công cụ, sau nút Lọc) bỏ che số CCCD. */
+   và thông tin người nộp (cột theo MANAGED_FORM_LIST_FIELDS, Họ và tên mở đầu nhóm bên phải);
+   tìm kiếm / Sắp xếp / Lọc / phân trang ở máy chủ, dùng chung với các bảng đơn khác.
+   Cột "Thời gian tiếp nhận" có nút Tiếp nhận cho đơn đang chờ; nút Hiện CCCD (thanh công cụ, sau nút Lọc) bỏ che số CCCD
+   của những người đang có trên trang bảng. */
 import { useEffect, useMemo, useState, type ReactElement } from 'react';
-import { FORM_MESSAGES, canReceiveForm, type ManagedFormSummary } from '@ulaw/shared';
+import { FORM_MESSAGES, MANAGED_FORM_LIST_FIELDS, canReceiveForm, type ManagedFormSummary } from '@ulaw/shared';
 import { useReceiveForm } from '../../api/form';
-import { useAllForms, useApplicantCccds, useFormStats } from '../../api/forms';
+import { ALL_FORMS_SOURCE, useApplicantCccds, useFormStats } from '../../api/forms';
 import { Button } from '../../components/Button';
-import { loadErrorMessage } from '../../components/LoadError';
 import { RefreshButton } from '../../components/RefreshButton';
 import { CccdToggleButton } from '../../components/table/CccdToggleButton';
 import { Highlight } from '../../components/table/Highlight';
 import { readTableState } from '../../components/table/tableStateStore';
 import { equalsFilterValue, toggleEqualsFilter, type FilterRule, type TableField } from '../../components/table/tableTools';
+import { useServerTable } from '../../components/table/useServerTable';
 import { useToast } from '../../components/Toast';
 import { useAuth } from '../../features/auth/useAuth';
 import { EMPTY_TEXT, formatDateTime, formatPhone } from '../../lib/format';
 import tableStyles from '../../components/table/table.module.css';
 import profileStyles from '../profile/ProfilePage.module.css';
-import { BASE_FORM_FIELDS, FormTable } from '../profile/FormTable';
+import { FORM_PAGE_SIZE, FormTable } from '../profile/FormTable';
 import { FormStatsPanel } from './FormStatsPanel';
 import styles from './FormsPage.module.css';
-
-/** Các cột: thông tin đơn, lúc tiếp nhận, rồi thông tin người nộp (Họ và tên mở đầu nhóm bên phải). */
-const MANAGED_FORM_FIELDS: TableField<ManagedFormSummary>[] = [
-  ...BASE_FORM_FIELDS,
-  { key: 'receivedAt', label: 'Thời gian tiếp nhận', type: 'datetime', getValue: (form) => form.receivedAt },
-  { key: 'name', label: 'Họ và tên', type: 'text', getValue: (form) => form.applicant.name },
-  { key: 'cccd', label: 'Số CCCD', type: 'text', getValue: (form) => form.applicant.maskedCccd },
-  { key: 'phone', label: 'Số điện thoại', type: 'text', getValue: (form) => form.applicant.phone },
-  { key: 'email', label: 'Email', type: 'text', getValue: (form) => form.applicant.email },
-];
-
-/** Mảng rỗng dùng chung khi chưa tải xong, để bảng không bị tính lại mỗi lần vẽ. */
-const NO_FORMS: ManagedFormSummary[] = [];
 
 /** Tên bảng, để nhớ cách xem khi đi qua trang khác. */
 const TABLE_ID = 'forms.all';
@@ -47,24 +36,32 @@ const CCCD_FAILED_TEXT = 'Chưa tải được số CCCD. Kiểm tra kết nối
 export function FormsPage() {
   const { role } = useAuth();
   const toast = useToast();
-  const formsQuery = useAllForms();
-  const [showCccd, setShowCccd] = useState(false);
-  const cccdsQuery = useApplicantCccds(showCccd);
   const statsQuery = useFormStats();
 
   // Điều kiện lọc của bảng do trang giữ, để ô thống kê bấm được là lọc bảng (bắt đầu từ cách xem đã nhớ)
   const [filterRules, setFilterRules] = useState<FilterRule[]>(() => readTableState(TABLE_ID)?.filterRules ?? []);
+  const formsTable = useServerTable({
+    tableId: TABLE_ID,
+    source: ALL_FORMS_SOURCE,
+    pageSize: FORM_PAGE_SIZE,
+    filterRules,
+    onFilterRulesChange: setFilterRules,
+  });
+
+  // Hiện CCCD: chỉ tải CCCD của những người nộp đang có trên trang bảng
+  const [showCccd, setShowCccd] = useState(false);
+  const pageForms = formsTable.rows;
+  const cccdsQuery = useApplicantCccds(showCccd, pageForms.map((form) => form.applicant.id));
 
   // Đang hiện CCCD thì thay số che bằng số đầy đủ (người chưa có CCCD giữ nguyên null)
   const revealed = showCccd && cccdsQuery.data ? cccdsQuery.data : null;
   const rows = useMemo(() => {
-    const forms = formsQuery.data ?? NO_FORMS;
-    if (!revealed) return forms;
-    return forms.map((form) => ({
+    if (!revealed) return pageForms;
+    return pageForms.map((form) => ({
       ...form,
       applicant: { ...form.applicant, maskedCccd: revealed[form.applicant.id] ?? form.applicant.maskedCccd },
     }));
-  }, [formsQuery.data, revealed]);
+  }, [pageForms, revealed]);
 
   // Tải CCCD lỗi thì báo và tự ẩn lại (bấm Hiện CCCD để thử lần nữa)
   const cccdsError = cccdsQuery.isError ? cccdsQuery.error : null;
@@ -121,28 +118,24 @@ export function FormsPage() {
             <h1 id="all-forms-title" className={styles.title}>
               Quản lí đơn
             </h1>
-            <RefreshButton query={formsQuery} label="Quản lí đơn" size="small" />
+            <RefreshButton query={formsTable.pageQuery} label="Quản lí đơn" size="small" />
           </div>
         </div>
 
         <FormTable
-          tableId={TABLE_ID}
-          fields={MANAGED_FORM_FIELDS}
+          table={formsTable}
+          fields={MANAGED_FORM_LIST_FIELDS}
           rows={rows}
-          isPending={formsQuery.isPending}
-          errorMessage={loadErrorMessage(formsQuery)}
           searchPlaceholder="Tìm theo mã đơn, loại đơn, họ tên, CCCD, số điện thoại, email"
           searchLabel="Tìm đơn"
           emptyText="Chưa có đơn nào."
           groupStartKey="name"
           pageLabel="Quản lí đơn"
           renderCell={renderCell}
-          filterRules={filterRules}
-          onFilterRulesChange={setFilterRules}
           extraButtons={
             <CccdToggleButton
               shown={showCccd}
-              loading={showCccd && cccdsQuery.isPending}
+              loading={showCccd && cccdsQuery.isFetching}
               onToggle={() => setShowCccd((isShown) => !isShown)}
             />
           }

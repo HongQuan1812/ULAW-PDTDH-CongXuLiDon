@@ -5,58 +5,35 @@
    nút Hiện CCCD trên thanh công cụ (sau nút Lọc, như bản mẫu). */
 import { useEffect, useMemo, useState, type KeyboardEvent } from 'react';
 import { useNavigate } from 'react-router';
-import { ROLES, ROLE_IDS, type Account, type RoleId } from '@ulaw/shared';
-import { useAccountCccds, useAccounts } from '../../api/accounts';
+import { ACCOUNT_LIST_FIELDS, ROLES, type Account, type RoleId } from '@ulaw/shared';
+import { ACCOUNTS_SOURCE, useAccountCccds } from '../../api/accounts';
 import { PAGE_LABEL, PAGE_PATH, personProfilePath, type ReturnState } from '../../app/paths';
 import { Button } from '../../components/Button';
-import { LoadError, loadErrorMessage } from '../../components/LoadError';
+import { LoadError } from '../../components/LoadError';
 import { RefreshButton } from '../../components/RefreshButton';
 import { useToast } from '../../components/Toast';
 import { HeaderCell } from '../../components/table/HeaderCell';
 import { Highlight } from '../../components/table/Highlight';
 import { Pager } from '../../components/table/Pager';
 import { TableToolbar } from '../../components/table/TableToolbar';
-import { displayText, type SortRules, type TableField } from '../../components/table/tableTools';
+import { displayText, type TableField } from '../../components/table/tableTools';
 import { CccdToggleButton } from '../../components/table/CccdToggleButton';
-import { useTableTools } from '../../components/table/useTableTools';
+import { useServerTable } from '../../components/table/useServerTable';
 import { AccountDialog } from '../../features/accounts/AccountDialog';
 import { useAuth } from '../../features/auth/useAuth';
-import { EMPTY_TEXT, formatPhone } from '../../lib/format';
+import { EMPTY_TEXT } from '../../lib/format';
 import tableStyles from '../../components/table/table.module.css';
 import profileStyles from '../profile/ProfilePage.module.css';
 import styles from './AccountsPage.module.css';
 
-/** Các cột, như U_FIELDS của bản mẫu. */
-const ACCOUNT_FIELDS: TableField<Account>[] = [
-  { key: 'name', label: 'Họ và tên', type: 'text', getValue: (account) => account.name },
-  { key: 'email', label: 'Email', type: 'text', getValue: (account) => account.email },
-  {
-    key: 'role',
-    label: 'Vai trò',
-    type: 'select',
-    getValue: (account) => account.role,
-    getLabel: (account) => ROLES[account.role].name,
-    options: ROLE_IDS.map((roleId) => ({ value: roleId, label: ROLES[roleId].name })),
-    getOrder: (account) => ROLE_IDS.indexOf(account.role),
-  },
-  { key: 'phone', label: 'Số điện thoại', type: 'text', getValue: (account) => (account.phone ? formatPhone(account.phone) : null) },
-  { key: 'cccd', label: 'Số CCCD', type: 'text', getValue: (account) => account.maskedCccd },
-];
-
-/** Thứ tự khi chưa chọn sắp xếp: họ tên A → Z. */
-const DEFAULT_SORTING: SortRules = [{ id: 'name', desc: false }];
-
-/** Số tài khoản mỗi trang, như U_PER của bản mẫu. */
+/** Số tài khoản mỗi trang (cũng là số tài khoản mỗi lần tải), như U_PER của bản mẫu. */
 const PAGE_SIZE = 10;
 
 /** Tên bảng, để nhớ cách xem khi đi qua trang khác rồi quay lại. */
 const TABLE_ID = 'accounts.all';
 
-/** Mảng rỗng dùng chung khi chưa tải xong, để bảng không bị tính lại mỗi lần vẽ. */
-const NO_ACCOUNTS: Account[] = [];
-
-/** Số cột của bảng: các cột dữ liệu và cột nút Sửa. */
-const COLUMN_COUNT = ACCOUNT_FIELDS.length + 1;
+/** Số cột của bảng: các cột dữ liệu (ACCOUNT_LIST_FIELDS, như U_FIELDS của bản mẫu) và cột nút Sửa. */
+const COLUMN_COUNT = ACCOUNT_LIST_FIELDS.length + 1;
 
 /** Câu báo khi không tải được số CCCD mà máy chủ không gửi kèm câu báo lỗi (vd mất mạng). */
 const CCCD_FAILED_TEXT = 'Chưa tải được số CCCD. Kiểm tra kết nối mạng rồi bấm Hiện CCCD lại.';
@@ -69,19 +46,22 @@ export function AccountsPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const toast = useToast();
-  const accountsQuery = useAccounts();
-  const [showCccd, setShowCccd] = useState(false);
-  const cccdsQuery = useAccountCccds(showCccd);
+  const accountsTable = useServerTable({ tableId: TABLE_ID, source: ACCOUNTS_SOURCE, pageSize: PAGE_SIZE });
+  const { searchText: query, sorting, filterRules, hasCriteria, isPageLoading, errorMessage } = accountsTable;
   // Hộp tạo / sửa: null = đóng; account null = tạo mới
   const [dialog, setDialog] = useState<{ account: Account | null } | null>(null);
 
+  // Hiện CCCD: chỉ tải CCCD của các tài khoản đang có trên trang bảng
+  const [showCccd, setShowCccd] = useState(false);
+  const pageAccounts = accountsTable.rows;
+  const cccdsQuery = useAccountCccds(showCccd, pageAccounts.map((account) => account.id));
+
   // Đang hiện CCCD thì thay số che bằng số đầy đủ (tài khoản chưa có CCCD giữ nguyên null)
   const revealed = showCccd && cccdsQuery.data ? cccdsQuery.data : null;
-  const rows = useMemo(() => {
-    const accounts = accountsQuery.data ?? NO_ACCOUNTS;
-    if (!revealed) return accounts;
-    return accounts.map((account) => ({ ...account, maskedCccd: revealed[account.id] ?? account.maskedCccd }));
-  }, [accountsQuery.data, revealed]);
+  const pageRows = useMemo(() => {
+    if (!revealed) return pageAccounts;
+    return pageAccounts.map((account) => ({ ...account, maskedCccd: revealed[account.id] ?? account.maskedCccd }));
+  }, [pageAccounts, revealed]);
 
   // Tải CCCD lỗi thì báo và tự ẩn lại (bấm Hiện CCCD để thử lần nữa)
   const cccdsError = cccdsQuery.isError ? cccdsQuery.error : null;
@@ -90,17 +70,6 @@ export function AccountsPage() {
     toast(cccdsError.message || CCCD_FAILED_TEXT, 'error');
     setShowCccd(false);
   }, [cccdsError, toast]);
-
-  const { table, query, setQuery, sorting, setSorting, filterRules, setFilterRules, matchedCount, hasCriteria } = useTableTools({
-    tableId: TABLE_ID,
-    rows,
-    fields: ACCOUNT_FIELDS,
-    defaultSorting: DEFAULT_SORTING,
-    pageSize: PAGE_SIZE,
-    getRowId: (account) => account.id,
-  });
-  const pageRows = table.getRowModel().rows;
-  const errorMessage = loadErrorMessage(accountsQuery);
 
   // Bấm dòng (hoặc Enter trên dòng đang chọn): mở trang thông tin của tài khoản; dòng của mình → Thông tin cá nhân.
   // Trang mở ra có nút "‹ Quay lại Quản lí tài khoản"
@@ -119,8 +88,8 @@ export function AccountsPage() {
    * @param account  tài khoản vừa tạo
    */
   const showCreated = (account: Account) => {
-    setFilterRules([]);
-    setQuery(account.email);
+    accountsTable.setFilterRules([]);
+    accountsTable.setQuery(account.email);
   };
 
   return (
@@ -131,7 +100,7 @@ export function AccountsPage() {
             <h1 id="accounts-title" className={styles.title}>
               Quản lí tài khoản
             </h1>
-            <RefreshButton query={accountsQuery} label="Quản lí tài khoản" size="small" />
+            <RefreshButton query={accountsTable.pageQuery} label="Quản lí tài khoản" size="small" />
           </div>
           <Button variant="primary" onClick={() => setDialog({ account: null })}>
             + Tạo tài khoản
@@ -139,32 +108,33 @@ export function AccountsPage() {
         </div>
 
         <TableToolbar
-          fields={ACCOUNT_FIELDS}
-          rows={rows}
-          query={query}
-          onQueryChange={setQuery}
+          fields={ACCOUNT_LIST_FIELDS}
+          filterOptions={accountsTable.filterOptions}
+          query={accountsTable.query}
+          onQueryChange={accountsTable.setQuery}
           searchPlaceholder="Tìm theo họ tên, email, vai trò, số điện thoại, CCCD"
           searchLabel="Tìm tài khoản"
           sorting={sorting}
-          onSortingChange={setSorting}
+          onSortingChange={accountsTable.setSorting}
           defaultSortNote="Bảng đang xếp theo họ tên A → Z."
           filterRules={filterRules}
-          onFilterRulesChange={setFilterRules}
+          onFilterRulesChange={accountsTable.setFilterRules}
           defaultFilterKey="role"
           extraButtons={
             <CccdToggleButton
               shown={showCccd}
-              loading={showCccd && cccdsQuery.isPending}
+              loading={showCccd && cccdsQuery.isFetching}
               onToggle={() => setShowCccd((isShown) => !isShown)}
             />
           }
         />
 
-        <div className={tableStyles.tableWrap}>
-          <table className={tableStyles.table}>
+        {/* Đang chờ trang mới: trang cũ mờ đi, không bấm được, có vạch tải ở mép trên bảng */}
+        <div className={`${tableStyles.tableWrap} ${isPageLoading ? tableStyles.pageLoading : ''}`}>
+          <table className={tableStyles.table} aria-busy={isPageLoading}>
             <thead>
               <tr>
-                {ACCOUNT_FIELDS.map((field) => (
+                {ACCOUNT_LIST_FIELDS.map((field) => (
                   <HeaderCell key={field.key} field={field} sorting={sorting} filterRules={filterRules} />
                 ))}
                 <th>
@@ -173,7 +143,7 @@ export function AccountsPage() {
               </tr>
             </thead>
             <tbody>
-              {accountsQuery.isPending ? (
+              {accountsTable.isFirstLoad ? (
                 <MessageRow text="Đang tải danh sách tài khoản…" />
               ) : errorMessage ? (
                 <tr>
@@ -184,7 +154,7 @@ export function AccountsPage() {
               ) : pageRows.length === 0 ? (
                 <MessageRow text={hasCriteria ? 'Không có tài khoản nào khớp điều kiện tìm kiếm và bộ lọc.' : 'Chưa có tài khoản nào.'} />
               ) : (
-                pageRows.map(({ original: account }) => (
+                pageRows.map((account) => (
                   <tr
                     key={account.id}
                     className={tableStyles.rowLink}
@@ -192,7 +162,7 @@ export function AccountsPage() {
                     onClick={() => openAccount(account)}
                     onKeyDown={(event) => openOnEnter(event, account)}
                   >
-                    {ACCOUNT_FIELDS.map((field) => (
+                    {ACCOUNT_LIST_FIELDS.map((field) => (
                       <AccountCell key={field.key} field={field} account={account} query={query} isMe={account.id === user.id} />
                     ))}
                     <td className={tableStyles.goCell}>
@@ -215,12 +185,13 @@ export function AccountsPage() {
         </div>
 
         <Pager
-          pageIndex={table.getState().pagination.pageIndex}
-          pageCount={table.getPageCount()}
+          pageIndex={accountsTable.pageIndex}
+          pageCount={accountsTable.pageCount}
           pageSize={PAGE_SIZE}
-          total={matchedCount}
+          total={accountsTable.total}
           unit="tài khoản"
-          onPageChange={table.setPageIndex}
+          onPageChange={accountsTable.setPageIndex}
+          loading={isPageLoading}
         />
       </section>
 

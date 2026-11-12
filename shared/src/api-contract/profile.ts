@@ -24,9 +24,11 @@ export const PROFILE_ENDPOINTS = {
   personCccd: '/profile/:userId/cccd',
   /** GET → StudentsResponse: các MSSV của người khác, lấy từ database trường. Cần quyền viewApplicant; database trường lỗi thì 503 */
   personStudents: '/profile/:userId/students',
-  /** GET → MyFormsResponse: các đơn người đó đã nộp. Cần quyền viewApplicant */
+  /** GET ?<một trang> (xem listQueryParams() ở common.ts) → MyFormsResponse: một trang trong các đơn người đó đã nộp,
+      cột theo FORM_LIST_FIELDS. Cần quyền viewApplicant */
   personForms: '/profile/:userId/forms',
-  /** GET → HandledFormsResponse: các đơn cán bộ đó tiếp nhận hoặc đang xử lí (mục "Đơn phụ trách"). Cần quyền viewAll */
+  /** GET ?<một trang> → HandledFormsResponse: một trang trong các đơn cán bộ đó tiếp nhận hoặc đang xử lí (mục "Đơn phụ trách"),
+      cột theo HANDLED_FORM_LIST_FIELDS. Cần quyền viewAll */
   personHandledForms: '/profile/:userId/handled-forms',
   /** PUT SetMainStudentRequest → StudentsResponse: chọn MSSV chính cho người khác. Cần quyền editApplicant */
   personMainStudent: '/profile/:userId/main-student',

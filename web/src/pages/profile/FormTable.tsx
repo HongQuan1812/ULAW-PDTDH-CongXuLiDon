@@ -1,10 +1,10 @@
-/* Bảng đơn trên trang Thông tin cá nhân, dùng chung cho mục "Đơn đã nộp" và "Đơn phụ trách"
+/* Bảng đơn dùng chung cho mục "Đơn đã nộp", "Đơn phụ trách" và trang Quản lí đơn
    (như createAppTable() trong artifact/js/profile.js): cùng các cột thông tin đơn, tìm kiếm / Sắp xếp / Lọc,
-   phân trang; bấm một dòng để mở trang chi tiết đơn.
+   phân trang ở máy chủ (trạng thái do useServerTable giữ); bấm một dòng để mở trang chi tiết đơn.
    Nút › đầu dòng (và nút mở / đóng tất cả ở tiêu đề) sổ xuống phần xem nhanh ngay trong bảng (QuickView). */
 import { Fragment, useState, type KeyboardEvent, type ReactElement, type ReactNode } from 'react';
 import { useNavigate } from 'react-router';
-import { FORM_STATUSES, FORM_STATUS_LABEL, type FormSummary } from '@ulaw/shared';
+import type { FormSummary } from '@ulaw/shared';
 import { formPath, PAGE_LABEL, type ReturnState } from '../../app/paths';
 import { StatusPill } from '../../components/StatusPill';
 import { LoadError } from '../../components/LoadError';
@@ -12,54 +12,23 @@ import { HeaderCell } from '../../components/table/HeaderCell';
 import { Highlight } from '../../components/table/Highlight';
 import { Pager } from '../../components/table/Pager';
 import { TableToolbar } from '../../components/table/TableToolbar';
-import { displayText, type FilterRule, type SortRules, type TableField } from '../../components/table/tableTools';
-import { useTableTools } from '../../components/table/useTableTools';
+import { displayText, type TableField } from '../../components/table/tableTools';
+import type { ServerTable } from '../../components/table/useServerTable';
 import { EMPTY_TEXT, formatDate } from '../../lib/format';
 import tableStyles from '../../components/table/table.module.css';
 import { QuickView } from './QuickView';
 import quickStyles from './QuickView.module.css';
 
-/** Các cột thông tin đơn của mọi bảng đơn (như P_FIELDS của bản mẫu): Mã đơn, Loại đơn, Ngày nộp, Trạng thái. */
-export const BASE_FORM_FIELDS: TableField<FormSummary>[] = [
-  { key: 'code', label: 'Mã đơn', type: 'text', getValue: (form) => form.code },
-  {
-    key: 'formType',
-    label: 'Loại đơn',
-    type: 'select',
-    getValue: (form) => form.formTypeId,
-    getLabel: (form) => form.formTypeName,
-  },
-  { key: 'submittedAt', label: 'Ngày nộp', type: 'date', getValue: (form) => form.submittedAt },
-  {
-    key: 'status',
-    label: 'Trạng thái',
-    type: 'select',
-    getValue: (form) => form.status,
-    getLabel: (form) => FORM_STATUS_LABEL[form.status],
-    options: FORM_STATUSES.map((status) => ({ value: status, label: FORM_STATUS_LABEL[status] })),
-  },
-];
-
-/** Thứ tự khi chưa chọn sắp xếp: đơn mới nộp lên trên, cùng lúc thì mã đơn lớn lên trên. */
-const DEFAULT_SORTING: SortRules = [
-  { id: 'submittedAt', desc: true },
-  { id: 'code', desc: true },
-];
-
-/** Số đơn mỗi trang, như PER của bản mẫu. */
-const PAGE_SIZE = 8;
+/** Số đơn mỗi trang (cũng là số đơn mỗi lần tải), như PER của bản mẫu. */
+export const FORM_PAGE_SIZE = 8;
 
 interface FormTableProps<Row extends FormSummary> {
-  /** Tên riêng của bảng, để nhớ cách xem khi đi qua trang khác, vd 'profile.submittedForms' */
-  tableId: string;
-  /** Các cột: BASE_FORM_FIELDS, có thể thêm cột phía sau (vd Người tiếp nhận). Khai báo ngoài component */
+  /** Trạng thái và dữ liệu của bảng, từ useServerTable */
+  table: ServerTable<Row>;
+  /** Các cột: FORM_LIST_FIELDS, hoặc bảng cột có thêm cột phía sau (vd Người tiếp nhận). Khai báo ngoài component */
   fields: readonly TableField<Row>[];
-  /** Các đơn; phải giữ nguyên tham chiếu giữa các lần vẽ (lấy thẳng từ useQuery) */
-  rows: readonly Row[];
-  /** Đang tải lần đầu */
-  isPending: boolean;
-  /** Câu báo khi chưa tải được đơn nào (lấy bằng loadErrorMessage()); null = không lỗi */
-  errorMessage: string | null;
+  /** Tùy chọn: các đơn cần vẽ thay cho table.rows (vd đã thay CCCD che bằng số đầy đủ) */
+  rows?: readonly Row[];
   /** Gợi ý trong ô tìm kiếm */
   searchPlaceholder: string;
   /** Tên ô tìm kiếm cho trình đọc màn hình */
@@ -72,52 +41,37 @@ interface FormTableProps<Row extends FormSummary> {
   pageLabel?: string;
   /** Tự vẽ ô của một số cột (vd nút Tiếp nhận); trả về thẻ <td> có key, hoặc undefined để dùng cách vẽ mặc định */
   renderCell?: (field: TableField<Row>, form: Row, query: string) => ReactElement | undefined;
-  /** Tùy chọn: điều kiện lọc do trang giữ (vd ô thống kê bấm để lọc); đi kèm onFilterRulesChange */
-  filterRules?: FilterRule[];
-  onFilterRulesChange?: (nextFilterRules: FilterRule[]) => void;
   /** Tùy chọn: các nút thêm trên thanh công cụ, ngay sau nút Lọc (vd Hiện CCCD) */
   extraButtons?: ReactNode;
 }
 
 /**
  * Thanh công cụ, bảng và phân trang của một bảng đơn (phần dưới tiêu đề của mục).
+ * Đang chờ trang mới thì trang cũ mờ đi, không bấm được, có vạch tải ở mép trên bảng.
  * @param props  xem FormTableProps
  * @returns      thanh công cụ, bảng, thanh phân trang
  */
 export function FormTable<Row extends FormSummary>({
-  tableId,
+  table,
   fields,
   rows,
-  isPending,
-  errorMessage,
   searchPlaceholder,
   searchLabel,
   emptyText,
   groupStartKey,
   pageLabel = PAGE_LABEL.profile,
   renderCell: renderCustomCell,
-  filterRules: controlledFilterRules,
-  onFilterRulesChange,
   extraButtons,
 }: FormTableProps<Row>) {
   const navigate = useNavigate();
-  const { table, query, setQuery, sorting, setSorting, filterRules, setFilterRules, matchedCount, hasCriteria } =
-    useTableTools({
-      tableId,
-      rows,
-      fields,
-      defaultSorting: DEFAULT_SORTING,
-      pageSize: PAGE_SIZE,
-      getRowId: (form) => form.code,
-      filterRules: controlledFilterRules,
-      onFilterRulesChange,
-    });
-  const pageRows = table.getRowModel().rows;
+  // Tô sáng theo chữ đã gửi lên máy chủ (ứng với các dòng đang hiện), không theo chữ đang gõ dở
+  const { searchText: query, sorting, filterRules, hasCriteria, isPageLoading } = table;
+  const pageRows = rows ?? table.rows;
   const columnCount = fields.length + 2;
 
   // Các đơn đang mở xem nhanh (theo mã đơn)
   const [openCodes, setOpenCodes] = useState<ReadonlySet<string>>(new Set());
-  const allOpen = pageRows.length > 0 && pageRows.every(({ original: form }) => openCodes.has(form.code));
+  const allOpen = pageRows.length > 0 && pageRows.every((form) => openCodes.has(form.code));
   /** Mở / đóng xem nhanh của một đơn. */
   const toggleOpen = (code: string) =>
     setOpenCodes((previous) => {
@@ -129,7 +83,7 @@ export function FormTable<Row extends FormSummary>({
   const toggleAll = () =>
     setOpenCodes((previous) => {
       const next = new Set(previous);
-      pageRows.forEach(({ original: form }) => (allOpen ? next.delete(form.code) : next.add(form.code)));
+      pageRows.forEach((form) => (allOpen ? next.delete(form.code) : next.add(form.code)));
       return next;
     });
   const groupClass = (key: string) => (key === groupStartKey ? tableStyles.groupStart : '');
@@ -191,22 +145,22 @@ export function FormTable<Row extends FormSummary>({
     <>
       <TableToolbar
         fields={fields}
-        rows={rows}
-        query={query}
-        onQueryChange={setQuery}
+        filterOptions={table.filterOptions}
+        query={table.query}
+        onQueryChange={table.setQuery}
         searchPlaceholder={searchPlaceholder}
         searchLabel={searchLabel}
         sorting={sorting}
-        onSortingChange={setSorting}
+        onSortingChange={table.setSorting}
         defaultSortNote="Bảng đang xếp đơn mới nộp lên trên."
         filterRules={filterRules}
-        onFilterRulesChange={setFilterRules}
+        onFilterRulesChange={table.setFilterRules}
         defaultFilterKey="status"
         extraButtons={extraButtons}
       />
 
-      <div className={tableStyles.tableWrap}>
-        <table className={tableStyles.table}>
+      <div className={`${tableStyles.tableWrap} ${isPageLoading ? tableStyles.pageLoading : ''}`}>
+        <table className={tableStyles.table} aria-busy={isPageLoading}>
           <thead>
             <tr>
               <th className={quickStyles.expandCell}>
@@ -237,12 +191,12 @@ export function FormTable<Row extends FormSummary>({
             </tr>
           </thead>
           <tbody>
-            {isPending ? (
+            {table.isFirstLoad ? (
               <MessageRow columnCount={columnCount} text="Đang tải danh sách đơn…" />
-            ) : errorMessage ? (
+            ) : table.errorMessage ? (
               <tr>
                 <td colSpan={columnCount} className={tableStyles.messageCell}>
-                  <LoadError message={errorMessage} />
+                  <LoadError message={table.errorMessage} />
                 </td>
               </tr>
             ) : pageRows.length === 0 ? (
@@ -251,7 +205,7 @@ export function FormTable<Row extends FormSummary>({
                 text={hasCriteria ? 'Không có đơn nào khớp điều kiện tìm kiếm và bộ lọc.' : emptyText}
               />
             ) : (
-              pageRows.map(({ original: form }) => {
+              pageRows.map((form) => {
                 const isOpen = openCodes.has(form.code);
                 return (
                   <Fragment key={form.code}>
@@ -297,12 +251,13 @@ export function FormTable<Row extends FormSummary>({
       </div>
 
       <Pager
-        pageIndex={table.getState().pagination.pageIndex}
-        pageCount={table.getPageCount()}
-        pageSize={PAGE_SIZE}
-        total={matchedCount}
+        pageIndex={table.pageIndex}
+        pageCount={table.pageCount}
+        pageSize={table.pageSize}
+        total={table.total}
         unit="đơn"
         onPageChange={table.setPageIndex}
+        loading={isPageLoading}
       />
     </>
   );

@@ -3,7 +3,7 @@
    tìm kiếm / Sắp xếp / Lọc / phân trang dùng chung với các bảng khác. Nút › đầu dòng xổ ra các phiên bản cũ hơn.
    Mặc định xếp theo trạng thái (Đang mở → Nháp → Đã đóng) rồi theo tên. Bấm một dòng để mở trình soạn ở phiên bản đó;
    "+ Tạo loại đơn" mở trình soạn trống. */
-import { Fragment, useState, type KeyboardEvent } from 'react';
+import { Fragment, useMemo, useState, type KeyboardEvent } from 'react';
 import { useNavigate } from 'react-router';
 import { FORM_TYPE_STATUSES, FORM_TYPE_STATUS_LABEL, type FormTypeStatus, type FormTypeSummary } from '@ulaw/shared';
 import { useFormTypes } from '../../api/form-types';
@@ -17,7 +17,7 @@ import { HeaderCell } from '../../components/table/HeaderCell';
 import { Highlight } from '../../components/table/Highlight';
 import { Pager } from '../../components/table/Pager';
 import { TableToolbar } from '../../components/table/TableToolbar';
-import { displayText, type SortRules, type TableField } from '../../components/table/tableTools';
+import { displayText, filterOptionsOf, type SortRules, type TableField } from '../../components/table/tableTools';
 import { useTableTools } from '../../components/table/useTableTools';
 import { EMPTY_TEXT } from '../../lib/format';
 import tableStyles from '../../components/table/table.module.css';
@@ -79,6 +79,8 @@ export function FormTypesPage() {
     });
   const pageRows = table.getRowModel().rows;
   const errorMessage = loadErrorMessage(formTypesQuery);
+  // Bảng này tải hết một lượt (ít loại đơn), nên tự lấy lựa chọn lọc từ dữ liệu
+  const filterOptions = useMemo(() => filterOptionsOf(FORM_TYPE_FIELDS, formTypesQuery.data ?? NO_FORM_TYPES), [formTypesQuery.data]);
   // Các loại đơn đang xổ ra phiên bản cũ
   const [expandedIds, setExpandedIds] = useState<ReadonlySet<string>>(new Set());
 
@@ -137,7 +139,7 @@ export function FormTypesPage() {
 
         <TableToolbar
           fields={FORM_TYPE_FIELDS}
-          rows={formTypesQuery.data ?? NO_FORM_TYPES}
+          filterOptions={filterOptions}
           query={query}
           onQueryChange={setQuery}
           searchPlaceholder="Tìm theo tên loại đơn, mã đơn, người cập nhật"

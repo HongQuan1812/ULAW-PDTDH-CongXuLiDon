@@ -2,10 +2,14 @@
    riêng sửa thì quyền editApplicant cũng được, nhưng không được đổi vai trò. */
 import { delay, http, HttpResponse } from 'msw';
 import {
+  ACCOUNT_LIST_DEFAULT_SORTING,
+  ACCOUNT_LIST_FIELDS,
   ACCOUNT_MESSAGES,
+  COMMON_MESSAGES,
   CreateAccountRequestSchema,
   ENDPOINTS,
   UpdateAccountRequestSchema,
+  applyListQuery,
   can,
   type Account,
   type AccountCccdsResponse,
@@ -14,7 +18,7 @@ import {
   type Session,
 } from '@ulaw/shared';
 import { createAccount, findPerson, getAccountCccds, getAccounts, readSession, updateAccount } from '../db';
-import { MOCK_DELAY_MS, api, apiError } from '../http';
+import { MOCK_DELAY_MS, api, apiError, pickCccds, readListQuery, readUserIds } from '../http';
 
 /**
  * Kiểm tra người đang đăng nhập có một trong các quyền cần có.
@@ -31,20 +35,27 @@ function managerSession(
 }
 
 export const accountHandlers = [
-  // Mọi tài khoản (CCCD che)
-  http.get(api(ENDPOINTS.accounts.list), async () => {
+  // Một trang trong mọi tài khoản (CCCD che, nhưng tìm được theo số CCCD đầy đủ)
+  http.get(api(ENDPOINTS.accounts.list), async ({ request }) => {
     await delay(MOCK_DELAY_MS);
     const { errorResponse } = managerSession();
     if (errorResponse) return errorResponse;
-    return HttpResponse.json<AccountsResponse>({ accounts: getAccounts() });
+    const listQuery = readListQuery(request, ACCOUNT_LIST_FIELDS);
+    if (!listQuery) return apiError(422, COMMON_MESSAGES.listQuery);
+    const cccdsByAccount = getAccountCccds();
+    const fullCccdOf = (account: Account) => [cccdsByAccount[account.id] ?? ''];
+    const { rows, ...pageMeta } = applyListQuery(getAccounts(), ACCOUNT_LIST_FIELDS, listQuery, ACCOUNT_LIST_DEFAULT_SORTING, fullCccdOf);
+    return HttpResponse.json<AccountsResponse>({ accounts: rows, ...pageMeta });
   }),
 
-  // CCCD đầy đủ của mọi tài khoản (bấm "Hiện CCCD"). Đặt trước /accounts/:userId
-  http.get(api(ENDPOINTS.accounts.cccds), async () => {
+  // CCCD đầy đủ của các tài khoản đang có trên trang bảng (bấm "Hiện CCCD"). Đặt trước /accounts/:userId
+  http.get(api(ENDPOINTS.accounts.cccds), async ({ request }) => {
     await delay(MOCK_DELAY_MS);
     const { errorResponse } = managerSession();
     if (errorResponse) return errorResponse;
-    return HttpResponse.json<AccountCccdsResponse>({ cccds: getAccountCccds() });
+    const userIds = readUserIds(request);
+    if (!userIds) return apiError(422, COMMON_MESSAGES.userIds);
+    return HttpResponse.json<AccountCccdsResponse>({ cccds: pickCccds(getAccountCccds(), userIds) });
   }),
 
   // Tạo tài khoản: kiểm tra body, email và CCCD chưa có tài khoản nào dùng

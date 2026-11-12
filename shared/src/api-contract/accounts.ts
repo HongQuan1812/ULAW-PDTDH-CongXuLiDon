@@ -2,15 +2,21 @@
    API giả (MSW), frontend và backend cùng theo file này. */
 import { z } from 'zod';
 import { ROLE_IDS } from '../aux-schema/accounts--roles';
+import type { ListSortRule } from '../aux-schema/lists';
+import { ROLES } from '../business-rules/accounts--permissions';
+import { formatPhone } from '../business-rules/lists--display-text';
+import type { TableField } from '../business-rules/lists--query';
 import { CCCD_PATTERN, PHONE_PATTERN, VALIDATION_MESSAGES, isFullName, isSchoolEmail } from '../validators';
+import { ListPageMetaSchema } from './common';
 
 /* ---------- Đường dẫn (phần sau /api) ---------- */
 
 export const ACCOUNT_ENDPOINTS = {
-  /** GET → AccountsResponse: mọi tài khoản (người nộp đơn và cán bộ), CCCD đã che.
+  /** GET ?<một trang> (xem listQueryParams() ở common.ts) → AccountsResponse: một trang trong mọi tài khoản
+      (người nộp đơn và cán bộ), cột theo ACCOUNT_LIST_FIELDS, CCCD đã che nhưng tìm được theo số CCCD đầy đủ.
       POST CreateAccountRequest → Account (201): tạo tài khoản mới */
   list: '/accounts',
-  /** GET → AccountCccdsResponse: CCCD đầy đủ của mọi tài khoản (chỉ gọi khi bấm "Hiện CCCD").
+  /** GET ?userIds=… → AccountCccdsResponse: CCCD đầy đủ của các tài khoản đang có trên trang bảng (chỉ gọi khi bấm "Hiện CCCD").
       Đặt trước /accounts/:userId để 'cccds' không bị hiểu là id */
   cccds: '/accounts/cccds',
   /** PUT UpdateAccountRequest → Account: sửa họ tên, CCCD, SĐT, vai trò của một tài khoản. Email không đổi được.
@@ -43,13 +49,33 @@ export const AccountSchema = z.object({
 });
 export type Account = z.infer<typeof AccountSchema>;
 
-/** Trả về từ GET /accounts. */
-export const AccountsResponseSchema = z.object({ accounts: z.array(AccountSchema) });
+/** Trả về từ GET /accounts: một trang tài khoản, kèm tổng số tài khoản khớp và lựa chọn lọc. */
+export const AccountsResponseSchema = ListPageMetaSchema.extend({ accounts: z.array(AccountSchema) });
 export type AccountsResponse = z.infer<typeof AccountsResponseSchema>;
 
-/** Trả về từ GET /accounts/cccds: CCCD đầy đủ theo id tài khoản (tài khoản chưa có CCCD thì không có mặt). */
+/** Trả về từ GET /accounts/cccds: CCCD đầy đủ theo id tài khoản đã hỏi (tài khoản chưa có CCCD thì không có mặt). */
 export const AccountCccdsResponseSchema = z.object({ cccds: z.record(z.string(), z.string()) });
 export type AccountCccdsResponse = z.infer<typeof AccountCccdsResponseSchema>;
+
+/** Các cột của bảng Quản lí tài khoản (như U_FIELDS của bản mẫu). */
+export const ACCOUNT_LIST_FIELDS: TableField<Account>[] = [
+  { key: 'name', label: 'Họ và tên', type: 'text', getValue: (account) => account.name },
+  { key: 'email', label: 'Email', type: 'text', getValue: (account) => account.email },
+  {
+    key: 'role',
+    label: 'Vai trò',
+    type: 'select',
+    getValue: (account) => account.role,
+    getLabel: (account) => ROLES[account.role].name,
+    options: ROLE_IDS.map((roleId) => ({ value: roleId, label: ROLES[roleId].name })),
+    getOrder: (account) => ROLE_IDS.indexOf(account.role),
+  },
+  { key: 'phone', label: 'Số điện thoại', type: 'text', getValue: (account) => (account.phone ? formatPhone(account.phone) : null) },
+  { key: 'cccd', label: 'Số CCCD', type: 'text', getValue: (account) => account.maskedCccd },
+];
+
+/** Thứ tự bảng tài khoản khi chưa chọn sắp xếp: họ tên A → Z. */
+export const ACCOUNT_LIST_DEFAULT_SORTING: ListSortRule[] = [{ id: 'name', desc: false }];
 
 /* Các ô dùng chung cho tạo và sửa: họ tên bắt buộc; CCCD và SĐT không bắt buộc (gửi "" nếu không có),
    có nhập thì phải đúng định dạng. Các ô được cắt khoảng trắng đầu và cuối. */

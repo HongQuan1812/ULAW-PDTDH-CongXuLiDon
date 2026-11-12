@@ -8,6 +8,8 @@ import {
   profileMainStudentPath,
   profilePath,
   profileStudentsPath,
+  type FormSummary,
+  type HandledFormSummary,
   type HandledFormsResponse,
   type MyFormsResponse,
   type FullCccdResponse,
@@ -19,6 +21,7 @@ import {
 } from '@ulaw/shared';
 import { SESSION_KEY } from './auth';
 import { apiFetch } from './client';
+import { listPath, toListPage, type ListSource } from './lists';
 
 /** Khóa lưu tạm hồ sơ của mình trong TanStack Query. */
 export const MY_PROFILE_KEY = ['profile', 'me'] as const;
@@ -117,31 +120,34 @@ export function usePersonFullCccd(userId: string, enabled: boolean) {
 }
 
 /**
- * Các đơn một người khác đã nộp.
+ * Nguồn bảng "Đơn đã nộp" của một người khác: từng trang trong các đơn người đó đã nộp.
  * @param userId  id người dùng cần xem
- * @returns       kết quả useQuery; data = mảng đơn (FormSummary[])
+ * @returns       nguồn của bảng (dùng với useServerTable; nhớ giữ nguyên tham chiếu bằng useMemo)
  */
-export function usePersonForms(userId: string) {
-  return useQuery({
-    queryKey: ['profile', 'person', userId, 'forms'] as const,
-    queryFn: () => apiFetch<MyFormsResponse>(profileFormsPath(userId)),
-    select: (response) => response.forms,
-  });
+export function personFormsSource(userId: string): ListSource<FormSummary> {
+  return {
+    queryKey: ['profile', 'person', userId, 'forms'],
+    fetchPage: async (listQuery) => {
+      const { forms, ...pageMeta } = await apiFetch<MyFormsResponse>(listPath(profileFormsPath(userId), listQuery));
+      return toListPage(forms, pageMeta);
+    },
+  };
 }
 
 /**
- * Các đơn một cán bộ khác tiếp nhận hoặc đang xử lí (mục "Đơn phụ trách" trên trang thông tin người khác).
- * @param userId   id cán bộ cần xem
- * @param enabled  true thì tải (chỉ khi người đó là cán bộ và người xem có quyền viewAll)
- * @returns        kết quả useQuery; data = mảng đơn kèm người tiếp nhận, người xử lí (HandledFormSummary[])
+ * Nguồn bảng "Đơn phụ trách" của một cán bộ khác: từng trang trong các đơn người đó tiếp nhận hoặc đang xử lí.
+ * Chỉ dùng khi người đó là cán bộ và người xem có quyền viewAll.
+ * @param userId  id cán bộ cần xem
+ * @returns       nguồn của bảng (dùng với useServerTable; nhớ giữ nguyên tham chiếu bằng useMemo)
  */
-export function usePersonHandledForms(userId: string, enabled: boolean) {
-  return useQuery({
-    queryKey: ['profile', 'person', userId, 'handled-forms'] as const,
-    queryFn: () => apiFetch<HandledFormsResponse>(profileHandledFormsPath(userId)),
-    select: (response) => response.forms,
-    enabled,
-  });
+export function personHandledFormsSource(userId: string): ListSource<HandledFormSummary> {
+  return {
+    queryKey: ['profile', 'person', userId, 'handled-forms'],
+    fetchPage: async (listQuery) => {
+      const { forms, ...pageMeta } = await apiFetch<HandledFormsResponse>(listPath(profileHandledFormsPath(userId), listQuery));
+      return toListPage(forms, pageMeta);
+    },
+  };
 }
 
 /**

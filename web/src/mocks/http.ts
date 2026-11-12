@@ -1,6 +1,6 @@
 /* Tiện ích chung cho các handler của API giả. */
 import { HttpResponse } from 'msw';
-import type { ApiErrorBody } from '@ulaw/shared';
+import { parseListQuery, parseUserIdsParam, type ApiErrorBody, type ListQuery, type TableField } from '@ulaw/shared';
 
 /** Thời gian mỗi handler chờ trước khi trả kết quả, để thấy giao diện lúc đang tải. */
 export const MOCK_DELAY_MS = 1000;
@@ -24,6 +24,44 @@ export const MOCK_FAILURE_RATE = readFailureRate();
  */
 export function api(path: string): string {
   return `/api${path}`;
+}
+
+/**
+ * Đọc các tham số trên đường dẫn của request.
+ * @param request  request MSW chặn được
+ * @returns        tham số theo tên, vd { page: '2', search: 'nguyen' }
+ */
+function searchParamsOf(request: Request): Record<string, string> {
+  return Object.fromEntries(new URL(request.url).searchParams);
+}
+
+/**
+ * Đọc lần hỏi một trang của bảng danh sách (trang, số dòng, tìm, sắp xếp, lọc) từ đường dẫn.
+ * @param request  request MSW chặn được
+ * @param fields   các cột của bảng, để kiểm tra cột được sắp xếp, lọc
+ * @returns        lần hỏi trang; sai thì null (handler trả 422 COMMON_MESSAGES.listQuery)
+ */
+export function readListQuery<Row>(request: Request, fields: readonly TableField<Row>[]): ListQuery | null {
+  return parseListQuery(searchParamsOf(request), fields);
+}
+
+/**
+ * Đọc danh sách người cần hiện CCCD (tham số userIds) từ đường dẫn.
+ * @param request  request MSW chặn được
+ * @returns        các id; sai thì null (handler trả 422 COMMON_MESSAGES.userIds)
+ */
+export function readUserIds(request: Request): string[] | null {
+  return parseUserIdsParam(searchParamsOf(request).userIds);
+}
+
+/**
+ * Chỉ giữ CCCD của những người được hỏi.
+ * @param cccdsByUserId  CCCD đầy đủ theo id người dùng
+ * @param userIds        id những người được hỏi
+ * @returns              CCCD theo id, chỉ của những người được hỏi (người chưa có CCCD thì không có mặt)
+ */
+export function pickCccds(cccdsByUserId: Record<string, string>, userIds: readonly string[]): Record<string, string> {
+  return Object.fromEntries(userIds.flatMap((userId) => (cccdsByUserId[userId] ? [[userId, cccdsByUserId[userId]]] : [])));
 }
 
 /**

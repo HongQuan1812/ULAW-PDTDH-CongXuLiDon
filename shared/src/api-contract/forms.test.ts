@@ -11,6 +11,8 @@ describe('danh sách mọi đơn (Quản lí đơn)', () => {
     receivedAt: null,
     applicant: { id: 'sv-2', name: 'Trần Thị Bảo Ngọc', email: 'baongoc.tran@hcmulaw.edu.vn', phone: null, maskedCccd: null },
   };
+  /** Phần chung của một trang: tổng số đơn khớp, trang trả về, lựa chọn lọc. */
+  const pageMeta = { total: 1, page: 1, filterOptions: { formType: [{ value: 'xmm', label: 'Xét miễn môn' }] } };
 
   test('đường dẫn: GET /forms lấy mọi đơn, GET /forms/cccds lấy CCCD đầy đủ', () => {
     expect(FORMS_ENDPOINTS.list).toBe('/forms');
@@ -18,12 +20,13 @@ describe('danh sách mọi đơn (Quản lí đơn)', () => {
   });
 
   test('chấp nhận đơn có người nộp chưa có SĐT, CCCD và đơn chưa tiếp nhận', () => {
-    expect(ManagedFormsResponseSchema.safeParse({ forms: [managedForm] }).success).toBe(true);
+    expect(ManagedFormsResponseSchema.safeParse({ ...pageMeta, forms: [managedForm] }).success).toBe(true);
   });
 
-  test('từ chối đơn thiếu thông tin người nộp', () => {
+  test('từ chối đơn thiếu thông tin người nộp, hoặc trang thiếu tổng số đơn', () => {
     const { applicant: _applicant, ...withoutApplicant } = managedForm;
-    expect(ManagedFormsResponseSchema.safeParse({ forms: [withoutApplicant] }).success).toBe(false);
+    expect(ManagedFormsResponseSchema.safeParse({ ...pageMeta, forms: [withoutApplicant] }).success).toBe(false);
+    expect(ManagedFormsResponseSchema.safeParse({ forms: [managedForm] }).success).toBe(false);
   });
 
   test('CCCD đầy đủ trả theo id người nộp', () => {

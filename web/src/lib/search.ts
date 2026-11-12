@@ -1,20 +1,8 @@
-/* So khớp chữ khi tìm kiếm: không phân biệt hoa thường, có dấu hay không dấu (gõ "da nop" vẫn ra "Đã nộp"). */
+/* So khớp chữ khi tìm kiếm: không phân biệt hoa thường, có dấu hay không dấu (gõ "da nop" vẫn ra "Đã nộp").
+   normalizeText dùng chung với máy chủ (máy chủ tìm, trình duyệt tô sáng) nên nằm ở @ulaw/shared. */
+import { normalizeText } from '@ulaw/shared';
 
-/**
- * Đưa chữ về dạng để so khớp: bỏ dấu tiếng Việt, đ → d, chữ thường.
- * Giữ nguyên số ký tự (với chữ đã dựng sẵn dạng NFC), nên vị trí tìm được dùng lại được trên chữ gốc.
- * @param text  chữ gốc, vd "Đã nộp"
- * @returns     chữ đã chuẩn hóa, vd "da nop"
- */
-export function normalizeText(text: string): string {
-  return text
-    .normalize('NFC')
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
-    .replace(/đ/g, 'd')
-    .replace(/Đ/g, 'D')
-    .toLowerCase();
-}
+export { normalizeText } from '@ulaw/shared';
 
 /** Một đoạn chữ khớp với từ khóa: phần trước, phần khớp, phần sau. */
 export interface TextMatch {
