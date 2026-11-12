@@ -85,7 +85,7 @@ describe('form (nộp, chi tiết, sửa)', () => {
     }
   });
 
-  it('nộp đơn: sinh mã tăng dần, lưu bản chụp, tệp (tên có dấu), lịch sử; chi tiết và bảng thấy đơn mới', async () => {
+  it('nộp đơn: sinh mã tăng dần, lưu bản chụp, tệp (tên có dấu); chi tiết và bảng thấy đơn mới', async () => {
     const cookie = await loginAs('nguoiNopDon');
     const before = await prisma.form.count({ where: { code: { startsWith: 'XMM-' } } });
     const highest = (await prisma.formCodeCounter.aggregate({ where: { prefix: 'XMM' }, _max: { last: true } }))._max.last ?? 0;
@@ -107,8 +107,7 @@ describe('form (nộp, chi tiết, sửa)', () => {
     const content = await request(server()).get(`/api${fileContentPath(savedFile.id)}`).set('Cookie', cookie).buffer(true).expect(200);
     expect(content.body.toString()).toBe('NOI DUNG 1');
 
-    // Lịch sử có một dòng nộp; đơn hiện trong bảng "Đơn đã nộp"
-    expect(await prisma.formEvent.findMany({ where: { formCode: summary.code } })).toMatchObject([{ action: 'submit', fromStatus: null, toStatus: 'nop' }]);
+    // Đơn hiện trong bảng "Đơn đã nộp"
     const mine = await request(server()).get('/api/forms/mine').query({ search: summary.code }).set('Cookie', cookie).expect(200);
     expect(mine.body.forms.map((form: { code: string }) => form.code)).toEqual([summary.code]);
   });
@@ -153,13 +152,11 @@ describe('form (nộp, chi tiết, sửa)', () => {
     const forbidden = await submitXmm(applicantCookie, { body: { ...body, applicantId: 'cb-1' } }).expect(403);
     expect(forbidden.body.message).toBe(FORM_MESSAGES.submitForApplicantForbidden);
 
-    // Admin nộp thay: đơn thuộc về người nộp, lịch sử ghi admin là người làm; không có người đó thì 404
+    // Admin nộp thay: đơn thuộc về người nộp; không có người đó thì 404
     const adminCookie = await loginAs('admin');
-    const adminId = (await request(server()).get('/api/auth/me').set('Cookie', adminCookie).expect(200)).body.user.id as string;
     const summary = FormSummarySchema.parse((await submitXmm(adminCookie, { body }).expect(201)).body);
     createdCodes.push(summary.code);
     expect(await prisma.form.findUniqueOrThrow({ where: { code: summary.code } })).toMatchObject({ ownerId: applicantId });
-    expect(await prisma.formEvent.findFirstOrThrow({ where: { formCode: summary.code } })).toMatchObject({ actorId: adminId });
     expect((await submitXmm(adminCookie, { body: { ...body, applicantId: 'khong-co' } }).expect(404)).body.message).toBe(FORM_MESSAGES.applicantNotFound);
   });
 
@@ -188,7 +185,7 @@ describe('form (nộp, chi tiết, sửa)', () => {
     const oldFile = ((await prisma.form.findUniqueOrThrow({ where: { code: summary.code } })).answers as { files: { id: string }[] }).files[0]!;
     const filesBefore = await filesLeftOnDisk();
 
-    // Thay tệp cũ bằng tệp mới: giữ nguyên trạng thái Đã nộp, ghi lịch sử sửa
+    // Thay tệp cũ bằng tệp mới: giữ nguyên trạng thái Đã nộp
     const edited = FormDetailSchema.parse((await put({ answers: answersOf(['local-9']), committed: true }, { 'local-9': 'NOI DUNG MOI' }).expect(200)).body);
     const newFile = (edited.answers['files'] as { id: string }[])[0]!;
     expect(newFile.id).not.toBe(oldFile.id);
@@ -197,7 +194,6 @@ describe('form (nộp, chi tiết, sửa)', () => {
     await request(server()).get(`/api${fileContentPath(oldFile.id)}`).set('Cookie', cookie).expect(404);
     const content = await request(server()).get(`/api${fileContentPath(newFile.id)}`).set('Cookie', cookie).buffer(true).expect(200);
     expect(content.body.toString()).toBe('NOI DUNG MOI');
-    expect(await prisma.formEvent.count({ where: { formCode: summary.code, action: 'edit' } })).toBe(1);
 
     // Giữ nguyên tệp (gửi lại id ở máy chủ, không kèm nội dung) và sửa câu trả lời khác; Cần bổ sung → Đã bổ sung
     await prisma.form.update({ where: { code: summary.code }, data: { status: 'bs' } });

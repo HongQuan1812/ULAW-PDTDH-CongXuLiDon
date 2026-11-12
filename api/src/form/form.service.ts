@@ -173,7 +173,7 @@ export class FormService {
   }
 
   /**
-   * Nộp đơn mới: kiểm tra hết, rồi sinh mã đơn, lưu đơn, bản chụp cấu trúc loại đơn, tệp và lịch sử trong một transaction.
+   * Nộp đơn mới: kiểm tra hết, rồi sinh mã đơn, lưu đơn, bản chụp cấu trúc loại đơn và tệp trong một transaction.
    * Sai một chỗ thì không lưu gì (kể cả tệp trên ổ đĩa).
    * @param submitter  người đang đăng nhập (cần quyền submit; nộp thay cần submitForApplicant)
    * @param readSubmission  đọc phần chữ và tệp của body (gọi sau khi kiểm tra quyền)
@@ -214,7 +214,6 @@ export class FormService {
             answers: mergeAnswers(formType.sections, request.answers, {}, refs) as unknown as Prisma.InputJsonValue,
             formTypeSnapshot: formType as unknown as Prisma.InputJsonValue,
             files: { create: rows.map((row) => ({ ...row, uploadedAt: submittedAt })) },
-            events: { create: { action: 'submit', fromStatus: null, toStatus: 'nop', actorId: submitter.id, at: submittedAt } },
           },
         });
         return { code, formTypeId: form.formTypeId, formTypeName: formType.name, submittedAt: toVietnamTime(submittedAt), status: form.status };
@@ -289,7 +288,6 @@ export class FormService {
             status: nextStatus,
             updatedAt,
             files: { create: rows.map((row) => ({ ...row, uploadedAt: updatedAt })) },
-            events: { create: { action: 'edit', fromStatus: form.status, toStatus: nextStatus, actorId: editor.id, at: updatedAt } },
           },
         });
       });
