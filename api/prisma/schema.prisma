@@ -32,17 +32,6 @@ enum FormTypeStatus {
   closed
 }
 
-// Hành động ghi vào lịch sử đơn
-enum FormEventAction {
-  submit
-  edit
-  receive
-  supplement
-  approve
-  reject
-  transfer
-}
-
 model User {
   id            String   @id
   email         String   @unique
@@ -61,7 +50,6 @@ model User {
   forms            Form[]            @relation("FormOwner")
   receivedForms    Form[]            @relation("FormReceiver")
   handledForms     Form[]            @relation("FormHandler")
-  events           FormEvent[]
   formTypeVersions FormTypeVersion[]
   exportTemplates  ExportTemplate[]
   emailSettings    EmailSettings[]
@@ -148,28 +136,11 @@ model Form {
   // Bản chụp cấu trúc loại đơn lúc nộp, để sửa loại đơn sau này không làm hỏng đơn cũ
   formTypeSnapshot Json
 
-  events FormEvent[]
   files  FileObject[]
 
   @@index([ownerId, submittedAt])
   @@index([status])
   @@index([handlerId])
-}
-
-// Lịch sử xử lí: ai làm gì, lúc nào, lí do
-model FormEvent {
-  id         Int             @id @default(autoincrement())
-  formCode   String
-  form       Form            @relation(fields: [formCode], references: [code], onDelete: Cascade)
-  action     FormEventAction
-  fromStatus FormStatus?
-  toStatus   FormStatus
-  actorId    String
-  actor      User            @relation(fields: [actorId], references: [id])
-  note       String          @default("")
-  at         DateTime        @default(now()) @db.Timestamptz(3)
-
-  @@index([formCode, at])
 }
 
 // Số thứ tự đơn đã cấp, tăng dần theo từng tiền tố, năm, phiên bản (cập nhật trong transaction)

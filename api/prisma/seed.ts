@@ -42,7 +42,6 @@ function parseFormCode(formCode: string): { prefix: string; year: number; versio
 async function clearAll(prisma: PrismaClient): Promise<void> {
   await prisma.$transaction([
     prisma.authSession.deleteMany(),
-    prisma.formEvent.deleteMany(),
     prisma.fileObject.deleteMany(),
     prisma.form.deleteMany(),
     prisma.formCodeCounter.deleteMany(),

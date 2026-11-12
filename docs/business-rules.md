@@ -77,7 +77,7 @@ nop Đã nộp ──Tiếp nhận──▶ xet Đang xét ──▶ duyet Đã 
 
 - Người tiếp nhận trở thành người xử lí của đơn. Chuyển giao đổi người xử lí.
 - **Lí do** khi Yêu cầu bổ sung hoặc Từ chối là không bắt buộc. Lí do bị xóa khi đơn được tiếp nhận lại và khi Duyệt.
-- Mọi bước chuyển trạng thái đi qua **một chỗ duy nhất** ở máy chủ (`forms/workflow.service.ts`) và được ghi vào lịch sử: ai làm, lúc nào, lí do.
+- Mọi bước chuyển trạng thái đi qua **một chỗ duy nhất** ở máy chủ (`forms/workflow.service.ts`).
 - **Mã đơn** `<TIỀN TỐ>-<NĂM>-<PHIÊN BẢN>-<STT>`, vd `XMM-2026-001-00001` (`shared/src/business-rules/forms--codes.ts`).
   Số thứ tự tăng theo từng tiền tố và từng năm, đếm tiếp qua các phiên bản. Máy chủ sinh mã trong transaction.
 - **Nộp đơn gửi câu trả lời và mọi tệp trong một lần.** Máy chủ kiểm tra hết; sai một chỗ thì không lưu gì.

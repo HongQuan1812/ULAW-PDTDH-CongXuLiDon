@@ -64,7 +64,7 @@ Như vậy luật nghiệp vụ chỉ viết một lần.
 ### Nguyên tắc thiết kế
 
 - **Máy chủ là nơi quyết định.** Giao diện ẩn hoặc hiện nút theo quyền, nhưng mọi quyền và mọi bước chuyển trạng thái đều phải được kiểm tra lại ở API.
-- **Chuyển trạng thái đơn đi qua một chỗ duy nhất** (`forms/workflow.service.ts`). Mỗi bước được ghi vào bảng lịch sử: ai làm, lúc nào, lí do.
+- **Chuyển trạng thái đơn đi qua một chỗ duy nhất** (`forms/workflow.service.ts`).
 - **Đơn lưu kèm bản chụp cấu trúc loại đơn lúc nộp.** Vì vậy sửa loại đơn sau này không làm hỏng các đơn cũ.
 - **Mã đơn sinh ở máy chủ**, đánh số tăng dần theo từng tiền tố và từng năm, trong transaction.
 - **CCCD là dữ liệu nhạy cảm**: mặc định trả về dạng che, chỉ trả số đầy đủ khi người dùng có quyền và yêu cầu.
@@ -99,7 +99,7 @@ Cổng xử lí đơn/
 │
 ├── api/                          # ===== BACKEND (NestJS) =====
 │   ├── prisma/                   # schema.prisma · migrations/ · seed.ts
-│   │                             #   bảng: User, StudentInfo, FormType, Form, FormEvent, FileObject, ExportTemplate
+│   │                             #   bảng: User, StudentInfo, FormType, Form, FileObject, ExportTemplate
 │   ├── src/
 │   │   ├── main.ts · app.module.ts
 │   │   ├── common/               # PrismaService, guard quyền (@RequirePerm), lọc lỗi, phân trang
