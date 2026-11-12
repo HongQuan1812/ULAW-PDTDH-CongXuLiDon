@@ -7,12 +7,14 @@ import {
   profileHandledFormsPath,
   profileMainStudentPath,
   profilePath,
+  profileStudentsPath,
   type HandledFormsResponse,
   type MyFormsResponse,
   type FullCccdResponse,
   type Profile,
   type Session,
   type SetMainStudentRequest,
+  type StudentsResponse,
   type UpdateProfileRequest,
 } from '@ulaw/shared';
 import { SESSION_KEY } from './auth';
@@ -22,9 +24,20 @@ import { apiFetch } from './client';
 export const MY_PROFILE_KEY = ['profile', 'me'] as const;
 /** Khóa lưu tạm số CCCD đầy đủ của mình. */
 const MY_FULL_CCCD_KEY = ['profile', 'me', 'cccd'] as const;
+/** Khóa lưu tạm thông tin sinh viên của mình. */
+const MY_STUDENTS_KEY = ['profile', 'me', 'students'] as const;
 
 /**
- * Hồ sơ của mình (họ tên, email, SĐT, CCCD đã che, thông tin sinh viên).
+ * Khóa lưu tạm thông tin sinh viên của người khác.
+ * @param userId  id người dùng
+ * @returns       khóa TanStack Query
+ */
+function personStudentsKey(userId: string) {
+  return ['profile', 'person', userId, 'students'] as const;
+}
+
+/**
+ * Hồ sơ của mình (họ tên, email, SĐT, CCCD đã che). Thông tin sinh viên lấy riêng bằng useMyStudents.
  * @returns  kết quả useQuery; data = hồ sơ
  */
 export function useMyProfile() {
@@ -46,6 +59,30 @@ export function useMyFullCccd(enabled: boolean) {
     enabled,
     // Dữ liệu nhạy cảm: không giữ lại lâu sau khi người dùng bấm "Ẩn"
     gcTime: 0,
+  });
+}
+
+/**
+ * Thông tin sinh viên của mình (các MSSV, MSSV chính), lấy từ database trường. Tải riêng với hồ sơ:
+ * database trường lỗi thì chỉ phần này lỗi.
+ * @returns  kết quả useQuery; data = { students, mainStudentId }; database trường lỗi thì lỗi 503
+ */
+export function useMyStudents() {
+  return useQuery({
+    queryKey: MY_STUDENTS_KEY,
+    queryFn: () => apiFetch<StudentsResponse>(ENDPOINTS.profile.myStudents),
+  });
+}
+
+/**
+ * Thông tin sinh viên của người khác (các MSSV, MSSV chính), lấy từ database trường.
+ * @param userId  id người dùng cần xem
+ * @returns       kết quả useQuery; data = { students, mainStudentId }; không có quyền / không có người đó / database trường lỗi thì lỗi 403 / 404 / 503
+ */
+export function usePersonStudents(userId: string) {
+  return useQuery({
+    queryKey: personStudentsKey(userId),
+    queryFn: () => apiFetch<StudentsResponse>(profileStudentsPath(userId)),
   });
 }
 
@@ -109,28 +146,28 @@ export function usePersonHandledForms(userId: string, enabled: boolean) {
 
 /**
  * Chọn MSSV chính (hiện trên trang thông tin, điền vào file Word khi xuất đơn).
- * @returns  kết quả useMutation; gọi mutateAsync({ studentId }). Thành công thì hồ sơ mới được lưu ngay.
+ * @returns  kết quả useMutation; gọi mutateAsync({ studentId }). Thành công thì thông tin sinh viên mới được lưu ngay.
  */
 export function useSetMainStudent() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (body: SetMainStudentRequest) =>
-      apiFetch<Profile>(ENDPOINTS.profile.myMainStudent, { method: 'PUT', body: JSON.stringify(body) }),
-    onSuccess: (profile) => queryClient.setQueryData(MY_PROFILE_KEY, profile),
+      apiFetch<StudentsResponse>(ENDPOINTS.profile.myMainStudent, { method: 'PUT', body: JSON.stringify(body) }),
+    onSuccess: (studentsResponse) => queryClient.setQueryData(MY_STUDENTS_KEY, studentsResponse),
   });
 }
 
 /**
  * Chọn MSSV chính cho người khác (Admin, quyền editApplicant).
  * @param userId  id người được chọn MSSV chính
- * @returns       kết quả useMutation; gọi mutateAsync({ studentId }). Thành công thì hồ sơ mới của người đó được lưu ngay.
+ * @returns       kết quả useMutation; gọi mutateAsync({ studentId }). Thành công thì thông tin sinh viên mới của người đó được lưu ngay.
  */
 export function useSetPersonMainStudent(userId: string) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (body: SetMainStudentRequest) =>
-      apiFetch<Profile>(profileMainStudentPath(userId), { method: 'PUT', body: JSON.stringify(body) }),
-    onSuccess: (profile) => queryClient.setQueryData(['profile', 'person', userId], profile),
+      apiFetch<StudentsResponse>(profileMainStudentPath(userId), { method: 'PUT', body: JSON.stringify(body) }),
+    onSuccess: (studentsResponse) => queryClient.setQueryData(personStudentsKey(userId), studentsResponse),
   });
 }
 

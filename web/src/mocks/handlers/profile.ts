@@ -1,10 +1,11 @@
-/* API giả: hồ sơ cá nhân (xem hồ sơ, xem số CCCD đầy đủ, chọn MSSV chính, lưu họ tên, CCCD, SĐT),
-   hồ sơ người khác (thông tin, CCCD, đơn đã nộp, đơn phụ trách). */
+/* API giả: hồ sơ cá nhân (xem hồ sơ, xem số CCCD đầy đủ, thông tin sinh viên, chọn MSSV chính, lưu họ tên, CCCD, SĐT),
+   hồ sơ người khác (thông tin, CCCD, thông tin sinh viên, đơn đã nộp, đơn phụ trách). */
 import { delay, http, HttpResponse } from 'msw';
 import {
   ENDPOINTS,
   MAIN_STUDENT_MESSAGES,
   PROFILE_MESSAGES,
+  STUDENTS_MESSAGES,
   SetMainStudentRequestSchema,
   UpdateProfileRequestSchema,
   can,
@@ -14,6 +15,8 @@ import {
   type MyFormsResponse,
   type Profile,
   type Session,
+  type StudentInfo,
+  type StudentsResponse,
 } from '@ulaw/shared';
 import {
   findPerson,
@@ -22,6 +25,7 @@ import {
   getProfile,
   getStudents,
   isCccdTaken,
+  isStudentDirectoryDown,
   readSession,
   saveMainStudent,
   saveProfile,
@@ -30,49 +34,43 @@ import {
 import { MOCK_DELAY_MS, api, apiError } from '../http';
 
 /**
- * Dựng hồ sơ trả về cho giao diện: CCCD đã che, các MSSV, MSSV chính.
+ * Dựng hồ sơ trả về cho giao diện: CCCD đã che.
  * @param session  phiên của người đang đăng nhập
  * @returns        hồ sơ theo ProfileSchema
  */
 function toProfile(session: Session): Profile {
   const profile = getProfile(session.user.id);
-  const students = getStudents(session.user.id);
-
-  // MSSV chính: MSSV đã chọn nếu còn trong danh sách, không thì MSSV đầu
-  const chosen = students.find((student) => student.studentId === profile.mainStudentId);
-  const mainStudentId = (chosen ?? students[0])?.studentId ?? null;
-
-  return {
-    name: profile.name,
-    email: session.user.email,
-    role: session.role,
-    phone: profile.phone,
-    maskedCccd: maskCccd(profile.cccd),
-    students,
-    mainStudentId,
-  };
+  return { name: profile.name, email: session.user.email, role: session.role, phone: profile.phone, maskedCccd: maskCccd(profile.cccd) };
 }
 
 /**
- * Dựng hồ sơ của người khác trả về cho giao diện: CCCD đã che, các MSSV, MSSV chính.
+ * Dựng hồ sơ của người khác trả về cho giao diện: CCCD đã che.
  * @param userId  id người dùng (đã biết là có)
  * @returns       hồ sơ theo ProfileSchema
  */
 function toPersonProfile(userId: string): Profile {
   const person = findPerson(userId)!;
+  return { name: person.name, email: person.email, role: person.role, phone: person.phone, maskedCccd: maskCccd(person.cccd) };
+}
 
-  // MSSV chính: MSSV đã chọn nếu còn trong danh sách, không thì MSSV đầu
-  const mainStudent = person.students.find((student) => student.studentId === person.mainStudentId) ?? person.students[0];
+/**
+ * Dựng thông tin sinh viên trả về cho giao diện: các MSSV và MSSV chính.
+ * @param students              các MSSV lấy từ database trường
+ * @param chosenMainStudentId   MSSV chính đã chọn; null = chưa chọn
+ * @returns                     theo StudentsResponseSchema; MSSV chính là MSSV đã chọn nếu còn trong danh sách, không thì MSSV đầu
+ */
+function toStudentsResponse(students: StudentInfo[], chosenMainStudentId: string | null): StudentsResponse {
+  const chosen = students.find((student) => student.studentId === chosenMainStudentId);
+  return { students, mainStudentId: (chosen ?? students[0])?.studentId ?? null };
+}
 
-  return {
-    name: person.name,
-    email: person.email,
-    role: person.role,
-    phone: person.phone,
-    maskedCccd: maskCccd(person.cccd),
-    students: person.students,
-    mainStudentId: mainStudent?.studentId ?? null,
-  };
+/**
+ * Câu trả lỗi 503 khi database sinh viên của trường "không kết nối được" (chỉ có ở API giả, để xem giao diện báo lỗi).
+ * @param userId  id người cần lấy thông tin sinh viên
+ * @returns       câu trả lỗi 503; database trường bình thường thì null
+ */
+function studentDirectoryError(userId: string): Response | null {
+  return isStudentDirectoryDown(userId) ? apiError(503, STUDENTS_MESSAGES[503]) : null;
 }
 
 /**
@@ -106,6 +104,16 @@ export const profileHandlers = [
     return HttpResponse.json<FullCccdResponse>({ cccd: getProfile(session.user.id).cccd });
   }),
 
+  // Thông tin sinh viên của mình (lấy từ database trường)
+  http.get(api(ENDPOINTS.profile.myStudents), async () => {
+    await delay(MOCK_DELAY_MS);
+    const session = readSession();
+    if (!session) return apiError(401, PROFILE_MESSAGES[401]);
+    const directoryError = studentDirectoryError(session.user.id);
+    if (directoryError) return directoryError;
+    return HttpResponse.json<StudentsResponse>(toStudentsResponse(getStudents(session.user.id), getProfile(session.user.id).mainStudentId));
+  }),
+
   // Chọn MSSV chính: MSSV phải thuộc email của mình
   http.put(api(ENDPOINTS.profile.myMainStudent), async ({ request }) => {
     await delay(MOCK_DELAY_MS);
@@ -120,9 +128,9 @@ export const profileHandlers = [
     const owned = getStudents(session.user.id).some((student) => student.studentId === studentId);
     if (!owned) return apiError(422, MAIN_STUDENT_MESSAGES[422]);
 
-    // Lưu rồi trả hồ sơ mới
+    // Lưu rồi trả thông tin sinh viên mới
     saveMainStudent(session.user.id, studentId);
-    return HttpResponse.json<Profile>(toProfile(session));
+    return HttpResponse.json<StudentsResponse>(toStudentsResponse(getStudents(session.user.id), studentId));
   }),
 
   // Lưu hồ sơ của mình: kiểm tra body, kiểm tra CCCD không trùng, rồi trả phiên mới (đã bổ sung thông tin)
@@ -162,6 +170,17 @@ export const profileHandlers = [
     return HttpResponse.json<FullCccdResponse>({ cccd: person.cccd });
   }),
 
+  // Thông tin sinh viên của người khác (lấy từ database trường)
+  http.get(api(ENDPOINTS.profile.personStudents), async ({ params }) => {
+    await delay(MOCK_DELAY_MS);
+    const userId = String(params.userId);
+    const { person, errorResponse } = personToView(userId);
+    if (!person) return errorResponse;
+    const directoryError = studentDirectoryError(userId);
+    if (directoryError) return directoryError;
+    return HttpResponse.json<StudentsResponse>(toStudentsResponse(person.students, person.mainStudentId));
+  }),
+
   // Các đơn người khác đã nộp
   http.get(api(ENDPOINTS.profile.personForms), async ({ params }) => {
     await delay(MOCK_DELAY_MS);
@@ -195,8 +214,8 @@ export const profileHandlers = [
     const owned = person.students.some((student) => student.studentId === studentId);
     if (!owned) return apiError(422, MAIN_STUDENT_MESSAGES.personNotOwned);
 
-    // Lưu rồi trả hồ sơ mới của người đó
+    // Lưu rồi trả thông tin sinh viên mới của người đó
     saveMainStudent(userId, studentId);
-    return HttpResponse.json<Profile>(toPersonProfile(userId));
+    return HttpResponse.json<StudentsResponse>(toStudentsResponse(person.students, studentId));
   }),
 ];

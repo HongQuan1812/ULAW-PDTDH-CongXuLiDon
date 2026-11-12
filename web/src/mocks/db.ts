@@ -410,6 +410,20 @@ export function getStudents(userId: string): StudentInfo[] {
   return STUDENT_DIRECTORY[userId] ?? [];
 }
 
+/* JUST FOR DEMO: START · Tài khoản mà database trường "không kết nối được" khi lấy thông tin sinh viên (API trả 503),
+   để xem giao diện báo lỗi riêng phần thông tin sinh viên. sv-11 (Đỗ Thành Nam). */
+const STUDENT_DIRECTORY_DOWN_USER_IDS: readonly string[] = ['sv-11'];
+/* JUST FOR DEMO: END */
+
+/**
+ * Database trường có "lỗi" khi lấy thông tin sinh viên của tài khoản này không (chỉ có ở API giả).
+ * @param userId  id tài khoản
+ * @returns       true nếu API thông tin sinh viên của người này trả lỗi 503
+ */
+export function isStudentDirectoryDown(userId: string): boolean {
+  return STUDENT_DIRECTORY_DOWN_USER_IDS.includes(userId);
+}
+
 /* ---------- Loại đơn ---------- */
 
 /* Loại đơn ban đầu.

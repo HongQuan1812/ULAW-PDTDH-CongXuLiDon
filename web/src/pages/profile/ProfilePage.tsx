@@ -2,7 +2,7 @@
    và mục "Đơn phụ trách" (chỉ vai trò được xử lí đơn). */
 import { useCallback, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router';
-import type { UseMutationResult } from '@tanstack/react-query';
+import type { UseMutationResult, UseQueryResult } from '@tanstack/react-query';
 import {
   MAIN_STUDENT_MESSAGES,
   STUDENT_INFO_LABELS,
@@ -10,8 +10,9 @@ import {
   type Profile,
   type SetMainStudentRequest,
   type StudentInfo,
+  type StudentsResponse,
 } from '@ulaw/shared';
-import { useMyFullCccd, useMyProfile, usePersonFullCccd, useSetMainStudent } from '../../api/profile';
+import { useMyFullCccd, useMyProfile, useMyStudents, usePersonFullCccd, useSetMainStudent } from '../../api/profile';
 import { Avatar } from '../../components/Avatar';
 import { Button } from '../../components/Button';
 import { Sheet } from '../../components/Sheet';
@@ -70,7 +71,8 @@ export function ProfilePage() {
 
 /**
  * Thẻ thông tin cá nhân: ảnh đại diện, họ tên, email, SĐT, CCCD (che, bấm Hiện để xem đủ)
- * và thông tin của MSSV chính. Có MSSV thì có nút "Thông tin sinh viên" mở khung chọn MSSV chính;
+ * và thông tin của MSSV chính (tải riêng: database trường lỗi thì chỉ phần này báo lỗi, kèm nút ↻).
+ * Có MSSV thì có nút "Thông tin sinh viên" mở khung chọn MSSV chính;
  * nút "Sửa thông tin" mở hộp sửa tài khoản dùng chung (họ tên, CCCD, SĐT; Admin thấy thêm Vai trò, bị khóa).
  * @param profile  hồ sơ của mình
  * @returns        thẻ thông tin
@@ -80,9 +82,10 @@ function IdentityCard({ profile }: { profile: Profile }) {
   const [editOpen, setEditOpen] = useState(false);
   const closeEdit = useCallback(() => setEditOpen(false), []);
   const profileQuery = useMyProfile();
+  const studentsQuery = useMyStudents();
   const setMainStudent = useSetMainStudent();
   const { user } = useAuth();
-  const mainStudent = profile.students.find((student) => student.studentId === profile.mainStudentId) ?? null;
+  const mainStudent = findMainStudent(studentsQuery.data);
 
   return (
     <section className={`${styles.card} ${styles.idCard}`}>
@@ -90,7 +93,8 @@ function IdentityCard({ profile }: { profile: Profile }) {
         <Avatar name={profile.name} size="xl" />
         <div className={styles.titleGroup}>
           <p className={styles.idName}>{profile.name}</p>
-          <RefreshButton query={profileQuery} label="thông tin cá nhân" size="small" />
+          {/* ↻ tải lại cả hồ sơ lẫn thông tin sinh viên */}
+          <RefreshButton query={profileQuery} label="thông tin cá nhân" size="small" onRefresh={() => studentsQuery.refetch()} />
         </div>
         {mainStudent && <StudentInfoButton onClick={() => setStudentSheetOpen(true)} />}
         <Button aria-haspopup="dialog" onClick={() => setEditOpen(true)}>
@@ -120,10 +124,11 @@ function IdentityCard({ profile }: { profile: Profile }) {
 
       {/* điện thoại: ẩn cho gọn, xem trong khung "Thông tin sinh viên" (nút ở đầu thẻ) */}
       {mainStudent && <StudentRow student={mainStudent} hideOnNarrowScreen />}
+      <StudentsLoadState studentsQuery={studentsQuery} />
 
-      {mainStudent && (
+      {mainStudent && studentsQuery.data && (
         <Sheet open={studentSheetOpen} onClose={() => setStudentSheetOpen(false)} title="Thông tin sinh viên">
-          <StudentPicker profile={profile} setMainStudent={setMainStudent} onPicked={() => setStudentSheetOpen(false)} />
+          <StudentPicker studentsResponse={studentsQuery.data} setMainStudent={setMainStudent} onPicked={() => setStudentSheetOpen(false)} />
         </Sheet>
       )}
 
@@ -172,6 +177,27 @@ export function CccdValue({ maskedCccd, userId }: { maskedCccd: string | null; u
       {revealed && fullCccdError && <LoadError message={fullCccdError} compact />}
     </>
   );
+}
+
+/**
+ * Tìm MSSV chính trong thông tin sinh viên đã tải.
+ * @param studentsResponse  thông tin sinh viên; undefined = chưa tải xong hoặc lỗi
+ * @returns                 MSSV chính; chưa có dữ liệu hoặc không có MSSV nào thì null
+ */
+export function findMainStudent(studentsResponse: StudentsResponse | undefined): StudentInfo | null {
+  return studentsResponse?.students.find((student) => student.studentId === studentsResponse.mainStudentId) ?? null;
+}
+
+/**
+ * Chỗ thông tin sinh viên khi chưa có dữ liệu: đang tải thì câu chờ; lỗi (vd database trường không kết nối được)
+ * thì câu báo lỗi (tải lại bằng nút ↻ cạnh họ tên). Đã có dữ liệu thì không hiện gì (hàng MSSV do trang tự vẽ).
+ * @param studentsQuery  kết quả useMyStudents / usePersonStudents
+ * @returns              câu chờ, câu báo lỗi, hoặc null
+ */
+export function StudentsLoadState({ studentsQuery }: { studentsQuery: UseQueryResult<StudentsResponse> }) {
+  if (studentsQuery.isFetching && !studentsQuery.data) return <p className={styles.muted}>Đang tải thông tin sinh viên…</p>;
+  const errorMessage = loadErrorMessage(studentsQuery);
+  return errorMessage ? <LoadError message={errorMessage} compact /> : null;
 }
 
 /**
@@ -225,18 +251,18 @@ export function StudentInfoButton({ onClick }: { onClick: () => void }) {
  * Danh sách mọi MSSV trong khung "Thông tin sinh viên". MSSV chính có nhãn "Đang dùng";
  * bấm MSSV khác thì lưu làm MSSV chính, báo thành công rồi đóng khung.
  * Không có lệnh lưu (người xem không được đổi MSSV chính của người khác) thì chỉ xem, các thẻ không bấm được.
- * @param profile         hồ sơ đang xem (các MSSV và MSSV chính): của mình hoặc của người khác
- * @param setMainStudent  lệnh lưu MSSV chính (useSetMainStudent / useSetPersonMainStudent); null = chỉ xem
+ * @param studentsResponse  thông tin sinh viên đang xem (các MSSV và MSSV chính): của mình hoặc của người khác
+ * @param setMainStudent    lệnh lưu MSSV chính (useSetMainStudent / useSetPersonMainStudent); null = chỉ xem
  * @param onPicked        gọi sau khi đã chọn xong (để đóng khung)
  * @returns               đoạn giới thiệu + danh sách MSSV
  */
 export function StudentPicker({
-  profile,
+  studentsResponse,
   setMainStudent,
   onPicked,
 }: {
-  profile: Profile;
-  setMainStudent: UseMutationResult<Profile, Error, SetMainStudentRequest> | null;
+  studentsResponse: StudentsResponse;
+  setMainStudent: UseMutationResult<StudentsResponse, Error, SetMainStudentRequest> | null;
   onPicked: () => void;
 }) {
   const toast = useToast();
@@ -245,7 +271,7 @@ export function StudentPicker({
   // Bấm MSSV đang dùng thì chỉ đóng khung; MSSV khác thì lưu lên máy chủ
   const pick = async (studentId: string) => {
     if (!setMainStudent) return;
-    if (studentId === profile.mainStudentId) {
+    if (studentId === studentsResponse.mainStudentId) {
       onPicked();
       return;
     }
@@ -266,8 +292,8 @@ export function StudentPicker({
           : 'MSSV “Đang dùng” là thông tin chính khi xuất file. Chỉ người nộp đơn hoặc Admin mới đổi được.'}
       </p>
       <div className={styles.studentList} role="radiogroup" aria-label={setMainStudent ? 'Chọn MSSV chính' : 'Các MSSV'}>
-        {profile.students.map((student) => {
-          const isMain = student.studentId === profile.mainStudentId;
+        {studentsResponse.students.map((student) => {
+          const isMain = student.studentId === studentsResponse.mainStudentId;
           const isSaving = student.studentId === savingStudentId;
           return (
             <button

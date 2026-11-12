@@ -12,18 +12,23 @@ export const PROFILE_ENDPOINTS = {
   me: '/profile/me',
   /** GET → FullCccdResponse: số CCCD đầy đủ của mình (chỉ gọi khi người dùng bấm "Hiện") */
   myCccd: '/profile/me/cccd',
-  /** PUT SetMainStudentRequest → Profile: chọn MSSV chính (hiện trên trang thông tin, điền vào file Word khi xuất đơn) */
+  /** GET → StudentsResponse: các MSSV của mình, lấy từ database trường. Tách khỏi /profile/me để database trường lỗi
+      thì chỉ phần thông tin sinh viên báo lỗi, hồ sơ vẫn hiện. Database trường lỗi thì 503 */
+  myStudents: '/profile/me/students',
+  /** PUT SetMainStudentRequest → StudentsResponse: chọn MSSV chính (hiện trên trang thông tin, điền vào file Word khi xuất đơn) */
   myMainStudent: '/profile/me/main-student',
   /** GET → Profile: hồ sơ của người khác (CCCD đã che), chỉ xem. Cần quyền viewApplicant; không có người dùng thì 404.
       Đặt sau /profile/me để 'me' không bị hiểu là id người dùng */
   person: '/profile/:userId',
   /** GET → FullCccdResponse: số CCCD đầy đủ của người khác (chỉ gọi khi người xem bấm "Hiện"). Cần quyền viewApplicant */
   personCccd: '/profile/:userId/cccd',
+  /** GET → StudentsResponse: các MSSV của người khác, lấy từ database trường. Cần quyền viewApplicant; database trường lỗi thì 503 */
+  personStudents: '/profile/:userId/students',
   /** GET → MyFormsResponse: các đơn người đó đã nộp. Cần quyền viewApplicant */
   personForms: '/profile/:userId/forms',
   /** GET → HandledFormsResponse: các đơn cán bộ đó tiếp nhận hoặc đang xử lí (mục "Đơn phụ trách"). Cần quyền viewAll */
   personHandledForms: '/profile/:userId/handled-forms',
-  /** PUT SetMainStudentRequest → Profile: chọn MSSV chính cho người khác. Cần quyền editApplicant */
+  /** PUT SetMainStudentRequest → StudentsResponse: chọn MSSV chính cho người khác. Cần quyền editApplicant */
   personMainStudent: '/profile/:userId/main-student',
 } as const;
 
@@ -43,6 +48,15 @@ export function profilePath(userId: string): string {
  */
 export function profileCccdPath(userId: string): string {
   return PROFILE_ENDPOINTS.personCccd.replace(':userId', encodeURIComponent(userId));
+}
+
+/**
+ * Đường dẫn API các MSSV của một người dùng khác.
+ * @param userId  id người dùng
+ * @returns       vd '/profile/sv-2/students'
+ */
+export function profileStudentsPath(userId: string): string {
+  return PROFILE_ENDPOINTS.personStudents.replace(':userId', encodeURIComponent(userId));
 }
 
 /**
@@ -109,7 +123,8 @@ export const STUDENT_INFO_LABELS: ReadonlyArray<{ key: keyof StudentInfo; label:
   { key: 'originalCohort', label: 'Khóa học gốc' },
 ];
 
-/** Hồ sơ của mình, trả về từ GET /profile/me. CCCD là dữ liệu nhạy cảm nên chỉ trả dạng che. */
+/** Hồ sơ của mình, trả về từ GET /profile/me. CCCD là dữ liệu nhạy cảm nên chỉ trả dạng che.
+    Thông tin sinh viên không nằm ở đây: lấy riêng bằng GET /profile/me/students (StudentsResponse). */
 export const ProfileSchema = z.object({
   name: z.string(),
   email: z.string(),
@@ -119,6 +134,11 @@ export const ProfileSchema = z.object({
   phone: z.string().nullable(),
   /** vd "079•••••1234"; null = chưa có CCCD */
   maskedCccd: z.string().nullable(),
+});
+export type Profile = z.infer<typeof ProfileSchema>;
+
+/** Thông tin sinh viên của một người, trả về từ GET /profile/me/students, /profile/:userId/students và các lệnh chọn MSSV chính. */
+export const StudentsResponseSchema = z.object({
   /**
    * Các MSSV gắn với email này (một email có thể gắn với nhiều MSSV). MSSV trùng phần trước @ của email đứng đầu.
    * [] = không phải sinh viên, hoặc database trường không có MSSV nào của email này.
@@ -127,7 +147,7 @@ export const ProfileSchema = z.object({
   /** MSSV chính, luôn là một MSSV trong `students` (chưa chọn thì máy chủ trả MSSV đầu); null khi `students` rỗng */
   mainStudentId: z.string().nullable(),
 });
-export type Profile = z.infer<typeof ProfileSchema>;
+export type StudentsResponse = z.infer<typeof StudentsResponseSchema>;
 
 /** Body của PUT /profile/me/main-student và /profile/:userId/main-student: MSSV muốn dùng làm MSSV chính,
     phải thuộc email của người được chọn. */
@@ -157,6 +177,12 @@ export const PROFILE_MESSAGES = {
   409: 'Số CCCD này đã thuộc tài khoản khác.',
   /** PUT /profile/me: body sai định dạng */
   422: 'Thông tin chưa hợp lệ.',
+} as const;
+
+/** Câu thông báo của GET /profile/me/students và /profile/:userId/students. */
+export const STUDENTS_MESSAGES = {
+  /** không kết nối được database sinh viên của trường (503) */
+  503: 'Chưa lấy được thông tin sinh viên từ hệ thống của trường.',
 } as const;
 
 /** Câu thông báo của PUT /profile/me/main-student và /profile/:userId/main-student. */

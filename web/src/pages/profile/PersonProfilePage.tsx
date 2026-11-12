@@ -1,5 +1,6 @@
 /* Trang thông tin một người khác (như viewedPerson() với state.viewing của artifact/js/profile.js).
    Mở từ "Xem hồ sơ ›" ở trang đơn, hoặc bấm dòng ở trang Quản lí tài khoản; có nút "‹ Quay lại …" ở đầu trang.
+   Thông tin sinh viên tải riêng (database trường lỗi thì chỉ phần này báo lỗi, kèm nút ↻).
    Có MSSV thì có nút "Thông tin sinh viên" mở khung các MSSV (mọi người xem được).
    Có quyền editApplicant (Admin) thì có nút "Sửa thông tin" (cùng hộp với nút Sửa ở Quản lí tài khoản)
    và chọn được MSSV chính trong khung "Thông tin sinh viên".
@@ -8,7 +9,7 @@
 import { useState } from 'react';
 import { useNavigate, useLocation, useParams } from 'react-router';
 import { can, type Account, type FormSummary, type Profile } from '@ulaw/shared';
-import { usePersonForms, usePersonProfile, useSetPersonMainStudent } from '../../api/profile';
+import { usePersonForms, usePersonProfile, usePersonStudents, useSetPersonMainStudent } from '../../api/profile';
 import { Avatar } from '../../components/Avatar';
 import { Button } from '../../components/Button';
 import { Sheet } from '../../components/Sheet';
@@ -21,7 +22,7 @@ import { AccountDialog } from '../../features/accounts/AccountDialog';
 import { BASE_FORM_FIELDS, FormTable } from './FormTable';
 import { PersonHandledForms } from './HandledForms';
 import { NewFormButton } from './NewFormButton';
-import { CccdValue, StudentInfoButton, StudentPicker, StudentRow } from './ProfilePage';
+import { CccdValue, StudentInfoButton, StudentPicker, StudentRow, StudentsLoadState, findMainStudent } from './ProfilePage';
 import styles from './ProfilePage.module.css';
 
 /** Câu báo khi không tải được hồ sơ mà máy chủ không gửi kèm câu báo lỗi (vd mất mạng). */
@@ -34,11 +35,12 @@ const LOAD_FAILED_TEXT = 'Không tải được thông tin người nộp đơn.
 export function PersonProfilePage() {
   const { userId = '' } = useParams();
   const profileQuery = usePersonProfile(userId);
+  const studentsQuery = usePersonStudents(userId);
   const formsQuery = usePersonForms(userId);
   const navigate = useNavigate();
   const previousPageLabel = readPreviousPageLabel(useLocation().state);
   const profile = profileQuery.data;
-  const mainStudent = profile?.students.find((student) => student.studentId === profile.mainStudentId) ?? null;
+  const mainStudent = findMainStudent(studentsQuery.data);
   const canEdit = useCan('editApplicant');
   const canSubmitForApplicant = useCan('submitForApplicant');
   const canViewAll = useCan('viewAll');
@@ -66,7 +68,8 @@ export function PersonProfilePage() {
               <Avatar name={profile.name} size="xl" />
               <div className={styles.titleGroup}>
                 <p className={styles.idName}>{profile.name}</p>
-                <RefreshButton query={profileQuery} label="thông tin người nộp đơn" size="small" />
+                {/* ↻ tải lại cả hồ sơ lẫn thông tin sinh viên */}
+                <RefreshButton query={profileQuery} label="thông tin người nộp đơn" size="small" onRefresh={() => studentsQuery.refetch()} />
               </div>
               {mainStudent && <StudentInfoButton onClick={() => setStudentSheetOpen(true)} />}
               {canEdit && (
@@ -96,11 +99,12 @@ export function PersonProfilePage() {
             </dl>
             {/* điện thoại: ẩn cho gọn, xem trong khung "Thông tin sinh viên" (nút ở đầu thẻ) */}
             {mainStudent && <StudentRow student={mainStudent} hideOnNarrowScreen />}
+            <StudentsLoadState studentsQuery={studentsQuery} />
             {/* Khung các MSSV: Admin (editApplicant) chọn được MSSV chính, người khác chỉ xem */}
-            {mainStudent && (
+            {mainStudent && studentsQuery.data && (
               <Sheet open={studentSheetOpen} onClose={() => setStudentSheetOpen(false)} title="Thông tin sinh viên">
                 <StudentPicker
-                  profile={profile}
+                  studentsResponse={studentsQuery.data}
                   setMainStudent={canEdit ? setMainStudent : null}
                   onPicked={() => setStudentSheetOpen(false)}
                 />
