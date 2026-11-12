@@ -1,6 +1,6 @@
 /* Trang nộp đơn mới của một loại đơn, mở sau khi chọn trong hộp "Chọn loại đơn":
    - đơn của mình: #/nop-don/<mã loại đơn>, mở từ trang Thông tin cá nhân;
-   - nộp thay (Admin, như #nop-don-<id> của bản mẫu): #/ho-so/<id người nộp đơn>/nop-don/<mã loại đơn>, mở từ trang thông tin người đó.
+   - nộp thay (Admin): #/ho-so/<id người nộp đơn>/nop-don/<mã loại đơn>, mở từ trang thông tin người đó.
    Gồm: nội dung đơn theo cấu trúc loại đơn, khung "Thông tin đơn" bên phải, hàng nút dính đáy có ô cam đoan.
    Gửi đơn: gửi câu trả lời và mọi tệp trong một lần; xong thì về trang thông tin của người nộp đơn, đơn mới nằm trong "Đơn đã nộp". */
 import { useEffect, useState, type FormEvent } from 'react';

@@ -1,4 +1,4 @@
-/* Mục "Đơn đã nộp" trên trang Thông tin cá nhân (như submittedTable trong artifact/js/profile.js):
+/* Mục "Đơn đã nộp" trên trang Thông tin cá nhân:
    bảng các đơn của mình, tải từng trang. Nút "Nộp đơn mới" mở hộp "Chọn loại đơn". */
 import { FORM_LIST_FIELDS } from '@ulaw/shared';
 import { MY_FORMS_SOURCE } from '../../api/forms';

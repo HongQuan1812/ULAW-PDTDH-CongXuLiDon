@@ -1,4 +1,4 @@
-/* Hàng nút Yêu cầu bổ sung / Từ chối / Duyệt ở đáy trang chi tiết đơn Đang xét (như #fDecide, #dModal của bản mẫu).
+/* Hàng nút Yêu cầu bổ sung / Từ chối / Duyệt ở đáy trang chi tiết đơn Đang xét.
    Duyệt thực hiện ngay; Yêu cầu bổ sung và Từ chối mở hộp thoại ghi lí do (không bắt buộc). */
 import { useState } from 'react';
 import { FORM_MESSAGES, type FormDecision, type FormDetail } from '@ulaw/shared';
@@ -16,7 +16,7 @@ const DECIDE_FAILED_TEXT = 'Chưa ra được quyết định. Kiểm tra kết 
 /** Quyết định cần ghi lí do, tức mọi quyết định trừ Duyệt. */
 type DecisionWithNote = Exclude<FormDecision, 'duyet'>;
 
-/* Chữ trong hộp thoại lí do của từng quyết định (như DECIDE_TEXT của bản mẫu). */
+/* Chữ trong hộp thoại lí do của từng quyết định. */
 const NOTE_DIALOGS: Record<DecisionWithNote, { title: string; subtitle: string; confirmLabel: string; confirmClassName: string | undefined }> = {
   bs: {
     title: 'Yêu cầu bổ sung đơn',

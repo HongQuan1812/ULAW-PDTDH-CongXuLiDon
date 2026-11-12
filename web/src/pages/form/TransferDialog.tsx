@@ -1,4 +1,4 @@
-/* Hộp thoại Chuyển giao đơn cho cán bộ khác (như #tModal của bản mẫu).
+/* Hộp thoại Chuyển giao đơn cho cán bộ khác.
    Ô "Chuyển cho" là combobox: bấm vào để mở danh sách cán bộ, gõ để lọc theo tên / email, ↑ ↓ Enter để chọn. */
 import { useEffect, useId, useState } from 'react';
 import { FORM_MESSAGES, type FormDetail, type StaffRef } from '@ulaw/shared';

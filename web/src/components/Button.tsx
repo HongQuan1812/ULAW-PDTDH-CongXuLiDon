@@ -1,4 +1,4 @@
-/* Nút bấm dùng chung (như .btn của artifact/styles.css). */
+/* Nút bấm dùng chung. */
 import type { ComponentProps } from 'react';
 import styles from './Button.module.css';
 

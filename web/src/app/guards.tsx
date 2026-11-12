@@ -1,4 +1,4 @@
-/* Chặn trang theo vai trò: trang không thuộc vai trò thì về trang chính, như renderRoute của bản mẫu. */
+/* Chặn trang theo vai trò: trang không thuộc vai trò thì về trang chính. */
 import type { ReactNode } from 'react';
 import { Navigate } from 'react-router';
 import { can, canSeePage, type Page, type Permission } from '@ulaw/shared';

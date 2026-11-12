@@ -1,4 +1,4 @@
-/* Khung "Thông tin đơn" ở trang đơn (như #fSide và cuối artifact/js/application-form.js).
+/* Khung "Thông tin đơn" ở trang đơn.
    Dùng chung cho trang nộp đơn mới (người nộp đơn) và trang chi tiết đơn (thêm trạng thái, người tiếp nhận, người xử lí).
    Trình soạn loại đơn dùng lại khung này với tiêu đề khác (khung "Phiên bản").
      - màn hình rộng: nằm bên phải nội dung đơn; bấm › để ẩn, nút "Thông tin đơn" ở đầu trang để hiện lại
@@ -146,7 +146,7 @@ export function FormInfoPanel({ panel, title = DEFAULT_PANEL_TITLE, children }: 
 /**
  * Một mục trong khung, vd "Người nộp đơn": tiêu đề nhỏ, nút / liên kết bên phải (nếu có), các dòng nhãn – giá trị.
  * @param title   tiêu đề mục; không có thì không có hàng tiêu đề (vd mục trạng thái, ngày nộp ở đầu khung)
- * @param shaded  true: nền khác màu để nổi bật (như #fMeta của bản mẫu, mục trạng thái ở đầu khung)
+ * @param shaded  true: nền khác màu để nổi bật
  * @param action  nút hoặc liên kết bên phải tiêu đề, vd "Xem hồ sơ ›"
  * @param rows    các dòng [nhãn, giá trị]
  * @returns       khối mục

@@ -16,7 +16,7 @@ export function StatusPill({ status, query = '' }: { status: FormStatus; query?:
   );
 }
 
-/* Màu nhãn trạng thái loại đơn mượn màu trạng thái lá đơn, như FORM_STATUS của bản mẫu:
+/* Màu nhãn trạng thái loại đơn mượn màu trạng thái lá đơn:
    Nháp như Đã nộp (xanh lơ), Đang mở như Đã duyệt (xanh lá), Đã đóng như Từ chối (đỏ). */
 const FORM_TYPE_STATUS_COLOR: Record<FormTypeStatus, FormStatus> = { draft: 'nop', open: 'duyet', closed: 'tc' };
 

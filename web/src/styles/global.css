@@ -1,4 +1,4 @@
-/* Kiểu chung cho thẻ HTML, chuyển từ phần "nền tảng" và "ô nhập" của artifact/styles.css.
+/* Kiểu chung cho thẻ HTML: nền tảng và ô nhập.
    Kiểu của từng thành phần (nút, bảng, thẻ…) viết riêng bằng CSS Modules cạnh thành phần đó. */
 *,*::before,*::after{box-sizing:border-box}
 html,body{margin:0;padding:0}

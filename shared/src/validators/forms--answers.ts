@@ -1,4 +1,4 @@
-/* Kiểm tra câu trả lời của lá đơn theo cấu trúc loại đơn (như check() của từng loại câu hỏi trong artifact/js/sections.js).
+/* Kiểm tra câu trả lời của lá đơn theo cấu trúc loại đơn.
    Trang nộp đơn, API giả và backend cùng dùng validateAnswers(), nên câu báo lỗi giống nhau ở mọi nơi. */
 import type { AnswerableQuestion, QuestionOf, TableColumn } from '../aux-schema/form-types--question-types';
 import type { FormSection } from '../aux-schema/form-types--sections';

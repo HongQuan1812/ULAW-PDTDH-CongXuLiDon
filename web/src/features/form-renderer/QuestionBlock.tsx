@@ -1,4 +1,4 @@
-/* Một câu hỏi: nhãn (dấu * nếu bắt buộc), mô tả, ô trả lời theo loại câu hỏi, câu báo lỗi (như renderQuestion của artifact/js/sections.js). */
+/* Một câu hỏi: nhãn (dấu * nếu bắt buộc), mô tả, ô trả lời theo loại câu hỏi, câu báo lỗi. */
 import { useId } from 'react';
 import type { AnswerValue, Question, QuestionOf } from '@ulaw/shared';
 import { RichTextView } from '../../components/rich-text/RichTextView';

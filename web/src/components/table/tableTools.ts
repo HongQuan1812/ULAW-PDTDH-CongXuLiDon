@@ -1,4 +1,4 @@
-/* Bộ công cụ bảng dùng chung (như artifact/js/table-tools.js): khai báo cột, tìm kiếm, lọc, so sánh để sắp xếp.
+/* Bộ công cụ bảng dùng chung: khai báo cột, tìm kiếm, lọc, so sánh để sắp xếp.
    Phần tìm, lọc, sắp xếp nằm ở @ulaw/shared (máy chủ dùng để trả từng trang); ở đây thêm phần chỉ giao diện cần:
    điều kiện lọc có số định danh, tên chiều sắp xếp, bấm ô thống kê để lọc. Chỉ có hàm thuần, không có giao diện. */
 import type { SortingState } from '@tanstack/react-table';

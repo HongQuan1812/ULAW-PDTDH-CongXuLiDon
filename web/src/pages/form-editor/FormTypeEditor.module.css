@@ -1,4 +1,4 @@
-/* Trình soạn loại đơn (như .page-editor, .fe-*, .qe-*, .seg, .switch, .tabs của artifact/styles.css). */
+/* Trình soạn loại đơn. */
 .page{display:grid;gap:24px;max-width:1320px;margin:0 auto;padding:40px 16px 64px}
 .back{display:inline-flex;align-items:center;gap:4px;border:0;background:none;color:var(--muted);font-weight:500;font-size:13.5px;cursor:pointer;padding:4px 0;margin-bottom:-12px;justify-self:start}
 .back:hover{color:var(--accent)}
@@ -97,7 +97,7 @@
 .questionLabel{font-weight:500}
 .questionFoot{display:flex;align-items:flex-start;justify-content:space-between;gap:12px 24px;flex-wrap:wrap;padding-top:14px;border-top:1px solid var(--line)}
 .questionFoot>.switch{margin-top:4px}
-/* ô "Mã dùng trong file Word" (như .qe-tag của bản mẫu) */
+/* ô "Mã dùng trong file Word" */
 .tagField{display:grid;gap:4px;flex:0 1 520px;min-width:0}
 .tagRow{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:13px;font-weight:500;color:var(--muted)}
 .tagInput{display:inline-flex;align-items:center;gap:2px;font-family:ui-monospace,Menlo,Consolas,monospace;color:var(--faint)}

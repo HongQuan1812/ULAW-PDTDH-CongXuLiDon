@@ -1,4 +1,4 @@
-/* Trang Cấu hình email (như .em-* của artifact/styles.css). Khung trang, thẻ dùng chung ProfilePage.module.css. */
+/* Trang Cấu hình email. Khung trang, thẻ dùng chung ProfilePage.module.css. */
 
 /* đầu trang: tiêu đề bên trái; nhãn "Chưa lưu" bên phải (như trình soạn loại đơn) */
 .head{display:flex;align-items:center;justify-content:space-between;gap:16px 24px;flex-wrap:wrap}

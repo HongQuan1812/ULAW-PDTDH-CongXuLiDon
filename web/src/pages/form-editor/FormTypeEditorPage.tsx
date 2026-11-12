@@ -1,4 +1,4 @@
-/* Trình soạn loại đơn (#/soan-don/<mã loại đơn>[?phien-ban=<số>], tạo mới: #/soan-don/moi), như phần "Trình soạn" của artifact/js/forms-page.js.
+/* Trình soạn loại đơn (#/soan-don/<mã loại đơn>[?phien-ban=<số>], tạo mới: #/soan-don/moi).
    Gồm: nút quay lại, tiêu đề, tab Soạn / Xem trước, khung Phiên bản bên phải (màn hình hẹp: trượt ra), nhãn "Chưa lưu", khung báo lỗi, câu nhắc về phiên bản,
    thẻ Thông tin loại đơn, các phần và câu hỏi, hàng nút cuối (+ Thêm phần · Xóa · Bỏ thay đổi · Lưu; hai nút cuối chỉ hiện khi có thay đổi).
 
@@ -95,7 +95,7 @@ export function FormTypeEditorPage() {
 }
 
 /**
- * Cách rời trình soạn (như #feBack của bản mẫu): mở từ trang khác thì quay về trang đó; mở thẳng đường dẫn thì về Quản lí loại đơn.
+ * Cách rời trình soạn: mở từ trang khác thì quay về trang đó; mở thẳng đường dẫn thì về Quản lí loại đơn.
  * @returns  backLabel: tên trang sẽ về · goBack: hàm quay lại
  */
 function useLeaveEditor() {

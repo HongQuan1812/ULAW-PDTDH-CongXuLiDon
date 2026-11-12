@@ -1,4 +1,4 @@
-/* Một phần trong trình soạn (như .fe-sec của artifact/js/forms-page.js): số thứ tự, tiêu đề, nút đưa lên / xuống / xóa phần,
+/* Một phần trong trình soạn: số thứ tự, tiêu đề, nút đưa lên / xuống / xóa phần,
    công tắc Nội dung chính, ô tiêu đề và mô tả phần, các câu hỏi, nút "+ Thêm câu hỏi". */
 import { FORM_TYPE_ISSUE_TARGET, type FormSection, type Question } from '@ulaw/shared';
 import { Button } from '../../components/Button';

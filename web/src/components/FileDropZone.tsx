@@ -1,4 +1,4 @@
-/* Khung chọn tệp dùng chung (như .drop của bản mẫu): bấm, Enter / phím cách, hoặc kéo thả tệp vào.
+/* Khung chọn tệp dùng chung: bấm, Enter / phím cách, hoặc kéo thả tệp vào.
    Chỉ đưa tệp vừa chọn cho nơi dùng; giữ tệp, kiểm tra định dạng, tải lên là việc của nơi dùng.
    Dùng ở câu hỏi tải tệp của lá đơn và khung Mẫu xuất file của trình soạn. */
 import { useRef, useState, type DragEvent, type KeyboardEvent } from 'react';

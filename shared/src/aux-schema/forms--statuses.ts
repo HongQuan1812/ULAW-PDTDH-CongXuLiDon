@@ -1,4 +1,4 @@
-/* Trạng thái của lá đơn và tên hiện (chuyển từ STATUS trong artifact/js/config.js).
+/* Trạng thái của lá đơn và tên hiện.
    Trạng thái nào làm được gì (sửa, tiếp nhận…): xem business-rules/forms--statuses.ts. */
 
 export const FORM_STATUSES = ['nop', 'xet', 'bs', 'bsg', 'duyet', 'tc'] as const;

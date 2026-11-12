@@ -1,5 +1,4 @@
-/* Luật theo trạng thái lá đơn: trạng thái nào thì sửa được, tiếp nhận được, chuyển giao được, ra quyết định được
-   (chuyển từ EDITABLE, RECEIVABLE, TRANSFERABLE, DECIDABLE trong artifact/js/config.js). */
+/* Luật theo trạng thái lá đơn: trạng thái nào thì sửa được, tiếp nhận được, chuyển giao được, ra quyết định được. */
 import type { FormStatus } from '../aux-schema/forms--statuses';
 
 /** Người nộp sửa được đơn. */

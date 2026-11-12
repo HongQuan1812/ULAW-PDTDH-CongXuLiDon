@@ -1,4 +1,4 @@
-/* Trình xem tệp (như .pv của artifact/styles.css): toàn màn hình, luôn tối để tài liệu nổi bật. */
+/* Trình xem tệp: toàn màn hình, luôn tối để tài liệu nổi bật. */
 .overlay{position:fixed;inset:0;z-index:70;background:rgba(12,16,14,.92);display:flex;flex-direction:column;color:#EEF3F1}
 .bar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding-block:calc(10px + env(safe-area-inset-top,0px)) 10px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(12px,env(safe-area-inset-right,0px));background:#151B18;border-bottom:1px solid rgba(255,255,255,.06)}
 .name{font-weight:500;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:0 1 auto}

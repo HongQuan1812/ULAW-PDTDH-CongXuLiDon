@@ -1,4 +1,4 @@
-/* Nội dung bảng nổi "Lọc" (như renderFilt() trong artifact/js/table-tools.js):
+/* Nội dung bảng nổi "Lọc":
    nhiều điều kiện, dòng phải thỏa tất cả. Mỗi điều kiện: cột · "=" hoặc "Trong khoảng" · giá trị. */
 import {
   createFilterRule,

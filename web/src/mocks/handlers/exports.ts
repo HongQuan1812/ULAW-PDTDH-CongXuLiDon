@@ -60,7 +60,7 @@ function docxResponse(bytes: ArrayBuffer, fileName: string): Response {
 }
 
 /**
- * Tên file xuất ra, không dấu (một số trình duyệt đổi tên file có dấu thành "download"), như fileSafe() của bản mẫu.
+ * Tên file xuất ra, không dấu (một số trình duyệt đổi tên file có dấu thành "download").
  * @param prefix        phần đầu, vd mã đơn
  * @param templateName  tên mẫu
  * @returns             vd 'XMM-2026-001-00001_don-gui-phong-dao-tao.docx'

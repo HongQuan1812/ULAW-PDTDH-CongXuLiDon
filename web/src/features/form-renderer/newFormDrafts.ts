@@ -1,4 +1,4 @@
-/* Bản nháp của lá đơn mới đang soạn, giữ trong bộ nhớ (như formFresh của artifact/js/application-form.js):
+/* Bản nháp của lá đơn mới đang soạn, giữ trong bộ nhớ:
    rời trang nộp đơn (vd bấm "Xem hồ sơ ›") rồi quay lại bằng nút Quay lại / Back thì vẫn còn câu đã điền.
    Mở trang nộp đơn bằng "Nộp đơn mới" thì bắt đầu đơn trống. Tải lại trang thì mất nháp. */
 import type { FormAnswers } from '@ulaw/shared';

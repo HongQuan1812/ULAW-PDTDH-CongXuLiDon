@@ -57,7 +57,7 @@ export type AccountsResponse = z.infer<typeof AccountsResponseSchema>;
 export const AccountCccdsResponseSchema = z.object({ cccds: z.record(z.string(), z.string()) });
 export type AccountCccdsResponse = z.infer<typeof AccountCccdsResponseSchema>;
 
-/** Các cột của bảng Quản lí tài khoản (như U_FIELDS của bản mẫu). */
+/** Các cột của bảng Quản lí tài khoản. */
 export const ACCOUNT_LIST_FIELDS: TableField<Account>[] = [
   { key: 'name', label: 'Họ và tên', type: 'text', getValue: (account) => account.name },
   { key: 'email', label: 'Email', type: 'text', getValue: (account) => account.email },

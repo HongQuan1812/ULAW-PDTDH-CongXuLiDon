@@ -1,4 +1,4 @@
-/* Khung "Thông tin đơn" (như .form-side, .side-card, .side-head, .info-sub, .sub-head, .meta của bản mẫu). */
+/* Khung "Thông tin đơn". */
 
 /* màn hình rộng: thẻ dính khi cuộn, nằm cột bên phải */
 .side{position:sticky;top:calc(var(--nav-h) + 24px + env(safe-area-inset-top,0px));min-width:0}
@@ -19,7 +19,7 @@
 .sections{display:grid}
 .section{padding:18px 20px;display:grid;gap:12px;border-bottom:1px solid var(--line)}
 .section:last-child{border-bottom:0}
-/* mục trạng thái, loại đơn, ngày nộp ở đầu khung: nền khác màu (như #fMeta của bản mẫu) */
+/* mục trạng thái, loại đơn, ngày nộp ở đầu khung: nền khác màu */
 .shaded{background:var(--surface-2)}
 .sectionHead{display:flex;align-items:center;justify-content:space-between;gap:8px}
 .sectionHead h3{font-size:12px;font-weight:500;color:var(--faint);text-transform:uppercase;letter-spacing:.05em}

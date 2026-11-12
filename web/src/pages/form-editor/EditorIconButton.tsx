@@ -1,4 +1,4 @@
-/* Nút biểu tượng tròn của trình soạn: đưa lên, đưa xuống, nhân bản, xóa, bỏ (như iconBtn và ICON của artifact/js/forms-page.js). */
+/* Nút biểu tượng tròn của trình soạn: đưa lên, đưa xuống, nhân bản, xóa, bỏ. */
 import styles from './FormTypeEditor.module.css';
 
 /** Hình vẽ của từng biểu tượng (đường SVG trên khung 24×24). */

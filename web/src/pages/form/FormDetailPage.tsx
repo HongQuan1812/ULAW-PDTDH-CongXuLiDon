@@ -1,4 +1,4 @@
-/* Trang chi tiết một lá đơn (#/don/<mã đơn>), như openDetail() trong artifact/js/application-form.js.
+/* Trang chi tiết một lá đơn (#/don/<mã đơn>).
    Gồm: tiêu đề, khung thông báo theo trạng thái, nội dung đơn, khung "Thông tin đơn" bên phải
    (trạng thái, ngày nộp, người nộp đơn, người tiếp nhận, người xử lí).
    Nội dung đơn sửa được khi canEditForm (đơn của mình hoặc Admin, đơn Đã nộp / Cần bổ sung / Đã bổ sung), còn lại chỉ xem.
@@ -39,7 +39,7 @@ const SAVE_FAILED_TEXT = 'Chưa lưu được thay đổi. Kiểm tra kết nố
 /** Câu báo khi tiếp nhận lỗi mà không có câu báo nào (vd mất mạng). */
 const RECEIVE_FAILED_TEXT = 'Chưa tiếp nhận được đơn. Kiểm tra kết nối mạng rồi bấm Tiếp nhận lại.';
 
-/* Câu thông báo theo trạng thái (như STATUS_MSG của bản mẫu, xem "Câu thông báo trên trang chi tiết đơn" trong artifact/README.md).
+/* Câu thông báo theo trạng thái.
    Giống nhau với mọi vai trò, không đổi theo người xem. */
 const STATUS_NOTICE: Record<FormStatus, (form: FormDetail) => string> = {
   nop: () =>
@@ -156,7 +156,7 @@ function FormDetailView({ form }: { form: FormDetail }) {
 }
 
 /**
- * Nội dung đơn sửa được (như openDetail với editable của bản mẫu): các phần câu hỏi, và khi đã sửa câu trả lời
+ * Nội dung đơn sửa được: các phần câu hỏi, và khi đã sửa câu trả lời
  * thì hiện hàng nút có ô cam đoan, "Bỏ thay đổi" và "Lưu thay đổi" (chưa sửa gì thì không hiện, để khỏi nhầm là phải bấm Lưu).
  * Bấm Lưu thay đổi: còn lỗi thì báo như lúc nộp đơn; hợp lệ thì gửi câu trả lời và tệp mới lên máy chủ trong một lần.
  * Lưu xong: đơn Cần bổ sung chuyển sang Đã bổ sung; toast ghi giờ lưu.
@@ -227,7 +227,7 @@ function FormEditor({ form, onReset }: { form: FormDetail; onReset: () => void }
 }
 
 /**
- * Nút "Tiếp nhận" ở đầu trang (như #fReceive của bản mẫu). Bấm thì đơn chuyển sang Đang xét,
+ * Nút "Tiếp nhận" ở đầu trang. Bấm thì đơn chuyển sang Đang xét,
  * mình thành người tiếp nhận và người xử lí; trang vẽ lại theo lá đơn mới, toast ghi giờ tiếp nhận.
  * @param form  lá đơn đang chờ tiếp nhận
  * @returns     nút bấm; đang gửi thì khóa nút

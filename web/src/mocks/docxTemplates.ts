@@ -1,5 +1,5 @@
-/* API giả: đọc, kiểm tra, điền mẫu xuất file Word bằng docxtemplater + PizZip (như checkTemplate() / renderDocx()
-   của artifact/js/print-templates.js). Backend thật làm đúng việc này ở máy chủ (api/src/exports). */
+/* API giả: đọc, kiểm tra, điền mẫu xuất file Word bằng docxtemplater + PizZip.
+   Backend thật làm đúng việc này ở máy chủ (api/src/exports). */
 import Docxtemplater from 'docxtemplater';
 import PizZip from 'pizzip';
 import { columnTagOwners, knownExportTags, type ExportData, type ExportTemplateCheck, type FormSection } from '@ulaw/shared';
@@ -26,7 +26,7 @@ function plainText(xml: string): string {
 }
 
 /**
- * Đổi lỗi của docxtemplater thành câu dễ hiểu (như explainDocxError() của bản mẫu).
+ * Đổi lỗi của docxtemplater thành câu dễ hiểu.
  * @param error  lỗi docxtemplater ném ra
  * @returns      câu báo, tối đa 5 lỗi đầu
  */

@@ -141,7 +141,7 @@ describe('loại đơn', () => {
     ]);
   });
 
-  test('loại đơn đủ cấu trúc: Xét miễn môn như bản mẫu, đơn thử nghiệm có đủ 10 loại câu hỏi', () => {
+  test('loại đơn đủ cấu trúc: Xét miễn môn đủ các phần, đơn thử nghiệm có đủ 10 loại câu hỏi', () => {
     const xmm = getFormType('xmm');
     expect(xmm?.sections.map((section) => section.id)).toEqual(['s-mon', 's-files']);
     expect(xmm?.sections[0]?.main).toBe(true);
@@ -252,7 +252,7 @@ describe('nộp đơn mới', () => {
 });
 
 describe('chi tiết đơn', () => {
-  test('người nộp xem được đơn của mình, đủ nội dung như bản mẫu', () => {
+  test('người nộp xem được đơn của mình, đủ nội dung', () => {
     const form = getFormDetail('XMM-2026-001-01520', { id: 'sv-1', role: 'nguoiNopDon' });
     expect(form).toMatchObject({
       status: 'nop',

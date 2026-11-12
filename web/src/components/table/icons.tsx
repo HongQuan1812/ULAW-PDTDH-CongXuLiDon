@@ -1,4 +1,4 @@
-/* Biểu tượng của bộ công cụ bảng (như TT_ICON và các svg trong index.html của bản mẫu). */
+/* Biểu tượng của bộ công cụ bảng. */
 
 /** Kính lúp trong ô tìm kiếm. */
 export function SearchIcon() {

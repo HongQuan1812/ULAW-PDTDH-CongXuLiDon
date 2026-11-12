@@ -1,4 +1,4 @@
-/* Tình trạng đơn: chấm màu + chữ trên nền nhạt (như .pill của bản mẫu). */
+/* Tình trạng đơn: chấm màu + chữ trên nền nhạt. */
 .pill{display:inline-flex;align-items:center;gap:7px;padding:3px 11px 3px 9px;border-radius:999px;font-size:12.5px;font-weight:500;white-space:nowrap}
 .pill::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
 .nop{background:var(--s-nop-bg);color:var(--s-nop-fg)}

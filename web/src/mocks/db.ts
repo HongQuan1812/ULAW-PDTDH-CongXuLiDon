@@ -73,10 +73,10 @@ const seedAccount = (name: string, email: string, role: RoleId): MockAccount => 
   mainStudentId: null,
 });
 
-/* Tài khoản ban đầu, khóa theo id (lấy từ artifact/js/auth.js và sample-data.js). Họ tên, email, số liệu tổng hợp, không phải người thật.
+/* Tài khoản ban đầu, khóa theo id. Họ tên, email, số liệu tổng hợp, không phải người thật.
    - sv-1, cb-1, cb-3: tài khoản đăng nhập thử của 3 vai trò (DEMO_USER_IDS). sv-1 chưa bổ sung thông tin (để thấy màn Bổ sung thông tin
      lần đầu); cb-1, cb-3 có sẵn CCCD (để thử báo trùng CCCD).
-   - cb-2: cán bộ thứ ba (như SAMPLE_STAFF). sv-2 … sv-11: 10 sinh viên khác (như seedOthers()). */
+   - cb-2: cán bộ thứ ba (SEED_STAFF_IDS). sv-2 … sv-11: 10 sinh viên khác (seedOtherStudentForms). */
 const SEED_ACCOUNTS: Record<string, MockAccount> = {
   'sv-1': { ...seedAccount('Nguyễn Minh Anh', 'minhanh.nguyen@hcmulaw.edu.vn', 'nguoiNopDon'), completed: false },
   'cb-1': { ...seedAccount('Phạm Thu Hà', 'thuha.pham.pdt@hcmulaw.edu.vn', 'nguoiXuLiDon'), phone: '0912345678', cccd: '079188001122' },
@@ -279,7 +279,7 @@ export function updateAccount(userId: string, input: UpdateAccountRequest, edito
   return { ok: true, account: toAccount(userId) };
 }
 
-/* Các MSSV "lấy từ database trường" theo email (lấy từ artifact/js/auth.js và ST của sample-data.js), chỉ đọc nên không lưu lại.
+/* Các MSSV "lấy từ database trường" theo email, chỉ đọc nên không lưu lại.
    sv-1 và sv-5 có 2 MSSV (học thêm văn bằng 2), MSSV trùng email đứng đầu; sv-7 không có MSSV nào; các sinh viên khác 1 MSSV,
    có người thiếu vài mục (database trường không có). Cán bộ không có MSSV. */
 const STUDENT_DIRECTORY: Record<string, StudentInfo[]> = {
@@ -441,7 +441,7 @@ const SAMPLE_SCHOOLS = [
 ] as const;
 
 /* Loại đơn ban đầu.
-   - Xét miễn môn: như TYPES.xmm trong artifact/js/config.js.
+   - Xét miễn môn: loại đơn đầu tiên, có bảng các môn xin miễn.
    - Đơn thử nghiệm: đủ 10 loại câu hỏi, để xem giao diện từng loại khi chưa có trình soạn loại đơn (bước 7).
    Cấu trúc khai báo dạng thô rồi cho qua FormTypeSchema, để điền sẵn giá trị mặc định (required, main…) như máy chủ. */
 const FORM_TYPE_SEED: readonly FormType[] = [
@@ -618,8 +618,8 @@ interface MockFormType {
 }
 
 /**
- * Lần lưu gần nhất của loại đơn mẫu thứ i (như updatedAt, updatedBy của TYPES trong config.js):
- * Xét miễn môn như bản mẫu; các loại khác lùi dần mỗi loại 6 ngày, giờ lưu trong giờ hành chính, lần lượt 3 cán bộ mẫu.
+ * Lần lưu gần nhất của loại đơn mẫu thứ i:
+ * Xét miễn môn lưu ngày 01/09/2026; các loại khác lùi dần mỗi loại 6 ngày, giờ lưu trong giờ hành chính, lần lượt 3 cán bộ mẫu.
  * @param i  vị trí trong FORM_TYPE_SEED
  * @returns  lúc lưu, id cán bộ lưu
  */
@@ -766,7 +766,7 @@ function versionFromInput(version: number, input: SaveFormTypeVersionRequest, st
 }
 
 /**
- * Tạo loại đơn với phiên bản 1. Mã loại đơn lấy theo mã đơn viết thường (trùng thì thêm số), như bản mẫu.
+ * Tạo loại đơn với phiên bản 1. Mã loại đơn lấy theo mã đơn viết thường (trùng thì thêm số).
  * Bản soạn đã được kiểm tra trước (validateFormTypeDraft).
  * @param input    bản soạn
  * @param staffId  cán bộ tạo
@@ -907,7 +907,7 @@ const twoDigits = (number: number) => String(number).padStart(2, '0');
 const dateText = (day: Date) => `${day.getFullYear()}-${twoDigits(day.getMonth() + 1)}-${twoDigits(day.getDate())}`;
 
 /**
- * Cộng thêm số giờ vào một thời điểm (như addHours của bản mẫu), không phụ thuộc múi giờ của máy.
+ * Cộng thêm số giờ vào một thời điểm, không phụ thuộc múi giờ của máy.
  * @param dateTime  thời điểm 'YYYY-MM-DDTHH:mm'
  * @param hours     số giờ cộng thêm
  * @returns         thời điểm mới cùng dạng, vd ('2026-10-30T07:00', 27) → '2026-10-31T10:00'
@@ -934,13 +934,13 @@ interface MockForm extends FormSummary {
 /** Lá đơn mẫu chưa gán cán bộ. */
 type UnassignedForm = Omit<MockForm, 'receiverId' | 'handlerId' | 'handlerSince'>;
 
-/* 3 cán bộ tiếp nhận / xử lí các đơn mẫu, như SAMPLE_STAFF trong artifact/js/sample-data.js. */
+/* 3 cán bộ tiếp nhận / xử lí các đơn mẫu. */
 const SEED_STAFF_IDS = ['cb-1', 'cb-2', 'cb-3'] as const;
 
 /* 10 sinh viên khác có đơn mẫu (tài khoản sv-2 … sv-11). */
 const OTHER_STUDENT_IDS = Array.from({ length: 10 }, (_, i) => `sv-${i + 2}`);
 
-/* Các môn mẫu cho bảng "Các môn xin miễn": [môn của trường, số tín chỉ, môn tương đương, cơ sở đào tạo] (như P trong sample-data.js). */
+/* Các môn mẫu cho bảng "Các môn xin miễn": [môn của trường, số tín chỉ, môn tương đương, cơ sở đào tạo]. */
 const SAMPLE_SUBJECTS: TableCell[][] = [
   ['Triết học Mác – Lênin', 3, 'Triết học Mác – Lênin', 'ĐH KHXH&NV – ĐHQG TP.HCM'],
   ['Kinh tế chính trị Mác – Lênin', 2, 'Kinh tế chính trị Mác – Lênin', 'ĐH Kinh tế TP.HCM'],
@@ -955,7 +955,7 @@ const SAMPLE_SUBJECTS: TableCell[][] = [
   ['Giáo dục thể chất 1', 1, 'Giáo dục thể chất 1', 'ĐH Nông Lâm TP.HCM'],
 ];
 
-/* Lí do mẫu Phòng Đào tạo ghi khi Yêu cầu bổ sung / Từ chối (như N trong sample-data.js); trạng thái khác không có lí do. */
+/* Lí do mẫu Phòng Đào tạo ghi khi Yêu cầu bổ sung / Từ chối; trạng thái khác không có lí do. */
 /** Tiền tố id của tệp mẫu có sẵn trong đơn mẫu; sau tiền tố là mã đơn chứa tệp. */
 const SEED_FILE_ID_PREFIX = 'seed-';
 
@@ -982,7 +982,7 @@ function sampleAnswers(code: string, subjects: TableCell[][], fileName: string):
 const xmmSnapshot = () => structuredClone(FORM_TYPE_SEED.find((formType) => formType.id === 'xmm')!);
 
 /**
- * Sinh 18 đơn Xét miễn môn mẫu cho sinh viên đăng nhập thử, như hàm seed() trong artifact/js/sample-data.js
+ * Sinh 18 đơn Xét miễn môn mẫu cho sinh viên đăng nhập thử
  * (cùng trạng thái, mã đơn, ngày nộp, các môn, tệp, lí do), để bảng có nhiều trang, đủ các trạng thái.
  * @returns  các đơn của sv-1, đơn mới nộp đứng đầu
  */
@@ -1022,7 +1022,7 @@ function seedStudentForms(): UnassignedForm[] {
 }
 
 /**
- * Sinh đơn của 10 sinh viên khác (sv-2 … sv-11), như hàm seedOthers() trong artifact/js/sample-data.js:
+ * Sinh đơn của 10 sinh viên khác (sv-2 … sv-11):
  * sinh viên thứ i có 1 + i % 3 đơn, tổng 19 đơn, mỗi đơn một môn. Dùng cho mục "Đơn phụ trách" của cán bộ.
  * @returns  các đơn
  */
@@ -1060,7 +1060,7 @@ function seedOtherStudentForms(): UnassignedForm[] {
 }
 
 /**
- * Gán người tiếp nhận, người xử lí cho các đơn, như đoạn cuối artifact/js/sample-data.js:
+ * Gán người tiếp nhận, người xử lí cho các đơn:
  * đơn Đã nộp chưa ai tiếp nhận; đơn khác do lần lượt 3 cán bộ tiếp nhận,
  * cứ 5 đơn có 1 đơn đã chuyển giao cho người kế tiếp (26 giờ sau khi tiếp nhận).
  * @param forms  các đơn chưa gán
@@ -1506,7 +1506,7 @@ interface MockExportTemplate {
 }
 
 /**
- * Mẫu ban đầu: loại đơn Xét miễn môn có sẵn một mẫu (như PRINT_TEMPLATES.xmm của artifact/js/sample-template.js).
+ * Mẫu ban đầu: loại đơn Xét miễn môn có sẵn một mẫu.
  * @returns  mẫu theo mã loại đơn
  */
 function seedExportTemplates(): Map<string, MockExportTemplate[]> {
@@ -1731,7 +1731,7 @@ function letterToRichText(letterText: string): RichTextDoc {
   };
 }
 
-/* Cấu hình ban đầu (lấy từ EMAIL_DEFAULT của artifact/js/email-page.js). Chỉ giữ trong bộ nhớ: tải lại trang là về ban đầu. */
+/* Cấu hình ban đầu. Chỉ giữ trong bộ nhớ: tải lại trang là về ban đầu. */
 const EMAIL_SETTINGS_SEED: EmailSettings = {
   sender: {
     name: 'Phòng Đào tạo Đại học - ULAW',

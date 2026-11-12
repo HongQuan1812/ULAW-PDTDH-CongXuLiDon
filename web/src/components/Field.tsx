@@ -1,4 +1,4 @@
-/* Ô nhập có nhãn, ghi chú và câu báo lỗi (như label.f + .ferr của artifact/styles.css). */
+/* Ô nhập có nhãn, ghi chú và câu báo lỗi. */
 import type { ReactNode } from 'react';
 import styles from './Field.module.css';
 

@@ -1,5 +1,4 @@
-/* Bản đang soạn của một loại đơn và các phép sửa trên đó (như formDrafts, newQuestion, newSection, withTypeDefaults
-   và các nút trong artifact/js/forms-page.js). Mọi hàm đều thuần: nhận bản cũ, trả bản mới, không sửa bản cũ. */
+/* Bản đang soạn của một loại đơn và các phép sửa trên đó. Mọi hàm đều thuần: nhận bản cũ, trả bản mới, không sửa bản cũ. */
 import { EMPTY_RICH_TEXT_DOC, type FormSection, FormTypeStatus, FormTypeVersion, Question, QuestionType } from '@ulaw/shared';
 
 /** Phần thông tin chung và nội dung của loại đơn mà trình soạn sửa được. */
@@ -15,7 +14,7 @@ export interface FormTypeDraft {
 /** Câu hỏi có danh sách lựa chọn. */
 export const CHOICE_QUESTION_TYPES: readonly QuestionType[] = ['radio', 'check', 'select'];
 
-/** Các nhóm định dạng tệp người soạn chọn được (như ACCEPTS của bản mẫu): [các đuôi tệp, tên hiện]. */
+/** Các nhóm định dạng tệp người soạn chọn được: [các đuôi tệp, tên hiện]. */
 export const FILE_FORMAT_GROUPS: readonly [readonly string[], string][] = [
   [['jpg', 'png'], 'Ảnh JPG, PNG'],
   [['doc', 'docx'], 'Word'],
@@ -100,7 +99,7 @@ export function draftFromVersion(prefix: string, version: FormTypeVersion): Form
 }
 
 /**
- * Đổi loại câu hỏi, giữ id, nội dung, mô tả; thêm thuộc tính mặc định của loại mới (như withTypeDefaults của bản mẫu).
+ * Đổi loại câu hỏi, giữ id, nội dung, mô tả; thêm thuộc tính mặc định của loại mới.
  * Lựa chọn, cột bảng, định dạng tệp đang có thì giữ lại khi loại mới cũng dùng.
  * @param question  câu hỏi đang soạn
  * @param type      loại mới
@@ -176,7 +175,7 @@ export function removeAt<Item>(items: readonly Item[], index: number): Item[] {
 }
 
 /**
- * Mã đơn người soạn gõ: bỏ dấu, chỉ giữ chữ in hoa A–Z, tối đa 5 chữ (như ô prefix của bản mẫu).
+ * Mã đơn người soạn gõ: bỏ dấu, chỉ giữ chữ in hoa A–Z, tối đa 5 chữ.
  * @param typed  chữ vừa gõ
  * @returns      mã đơn đã làm sạch, vd 'bl1' → 'BL', 'đơn' → 'DON'
  */

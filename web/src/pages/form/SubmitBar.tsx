@@ -1,4 +1,4 @@
-/* Hàng nút dính đáy của trang đơn: ô cam đoan bên trái, các nút bên phải (như .submit-row, #cam của bản mẫu).
+/* Hàng nút dính đáy của trang đơn: ô cam đoan bên trái, các nút bên phải.
    Dùng chung cho trang nộp đơn mới (Hủy / Gửi đơn) và trang chi tiết đơn khi sửa được (Bỏ thay đổi / Lưu thay đổi, chỉ hiện khi đã sửa). */
 import { useRef, useState, type ReactNode } from 'react';
 import { ANSWER_MESSAGES, type AnswersValidation } from '@ulaw/shared';
@@ -6,7 +6,7 @@ import type { ToastTone } from '../../components/Toast';
 import { focusFirstError } from '../../features/form-renderer/FormSections';
 import styles from './FormPage.module.css';
 
-/** Câu cam đoan ở cuối lá đơn (như #cam của bản mẫu). */
+/** Câu cam đoan ở cuối lá đơn. */
 const COMMITMENT_TEXT = 'Tôi cam đoan các thông tin và minh chứng trên là đúng sự thật.';
 
 /**

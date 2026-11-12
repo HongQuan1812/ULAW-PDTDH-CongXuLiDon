@@ -1,5 +1,5 @@
 /* Bảng đơn dùng chung cho mục "Đơn đã nộp", "Đơn phụ trách" và trang Quản lí đơn
-   (như createAppTable() trong artifact/js/profile.js): cùng các cột thông tin đơn, tìm kiếm / Sắp xếp / Lọc,
+   cùng các cột thông tin đơn, tìm kiếm / Sắp xếp / Lọc,
    phân trang ở máy chủ (trạng thái do useServerTable giữ); bấm một dòng để mở trang chi tiết đơn.
    Nút › đầu dòng (và nút mở / đóng tất cả ở tiêu đề) sổ xuống phần xem nhanh ngay trong bảng (QuickView). */
 import { Fragment, useState, type KeyboardEvent, type ReactElement, type ReactNode } from 'react';
@@ -19,7 +19,7 @@ import tableStyles from '../../components/table/table.module.css';
 import { QuickView } from './QuickView';
 import quickStyles from './QuickView.module.css';
 
-/** Số đơn mỗi trang (cũng là số đơn mỗi lần tải), như PER của bản mẫu. */
+/** Số đơn mỗi trang (cũng là số đơn mỗi lần tải). */
 export const FORM_PAGE_SIZE = 8;
 
 interface FormTableProps<Row extends FormSummary> {

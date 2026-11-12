@@ -1,4 +1,4 @@
-/* Thông báo ngắn hiện ở giữa phía trên màn hình rồi tự tắt (như toast() của artifact/js/utils.js).
+/* Thông báo ngắn hiện ở giữa phía trên màn hình rồi tự tắt.
    3 kiểu, mỗi kiểu một màu và một biểu tượng: thành công (xanh ngọc, ✓), lỗi (đỏ hồng, ×, hiện lâu hơn),
    thông tin (xanh lơ, i, mặc định).
    Rê chuột vào (hoặc đưa con trỏ bàn phím vào nút ×) thì giữ thông báo; rời ra thì đếm lại từ đầu. Nút × góc phải trên để tắt ngay.

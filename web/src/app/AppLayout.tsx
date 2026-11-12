@@ -243,7 +243,7 @@ function useMenuStage(role: string | undefined) {
   return { navRef, iconNavRef, appNameRef, stage };
 }
 
-/* ---------- biểu tượng (chuyển từ artifact/index.html) ---------- */
+/* ---------- biểu tượng ---------- */
 
 /**
  * Khung SVG chung cho các biểu tượng nét.

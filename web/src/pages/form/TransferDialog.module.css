@@ -1,4 +1,4 @@
-/* Hộp thoại Chuyển giao (như #tModal, .combo của bản mẫu). */
+/* Hộp thoại Chuyển giao. */
 .subtitle{color:var(--muted);font-size:14px}
 .comboField{display:grid;gap:6px}
 .comboField label{font-size:14px;font-weight:500;color:var(--accent)}

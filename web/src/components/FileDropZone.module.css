@@ -1,4 +1,4 @@
-/* Khung chọn tệp: bấm hoặc kéo thả (như .drop của artifact/styles.css). */
+/* Khung chọn tệp: bấm hoặc kéo thả. */
 .dropZone{display:grid;justify-items:center;gap:4px;padding:28px 16px;border:1.5px dashed var(--line-2);border-radius:var(--r-lg);background:var(--surface-2);text-align:center;color:var(--muted);cursor:pointer;transition:border-color .15s,background .15s}
 .dropZone svg{color:var(--accent);margin-bottom:4px}
 .dropZone strong{color:var(--fg);font-weight:500}

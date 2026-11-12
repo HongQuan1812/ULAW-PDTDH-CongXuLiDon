@@ -1,4 +1,4 @@
-/* Trang Quản lí loại đơn (#/quan-li-loai-don), như phần "Danh sách loại đơn" của artifact/js/forms-page.js.
+/* Trang Quản lí loại đơn (#/quan-li-loai-don).
    Bảng mọi loại đơn, mỗi mã đơn một dòng theo phiên bản mới nhất: tên, mã đơn, phiên bản, trạng thái, lần lưu gần nhất;
    tìm kiếm / Sắp xếp / Lọc / phân trang dùng chung với các bảng khác. Nút › đầu dòng xổ ra các phiên bản cũ hơn.
    Mặc định xếp theo trạng thái (Đang mở → Nháp → Đã đóng) rồi theo tên. Bấm một dòng để mở trình soạn ở phiên bản đó;
@@ -25,10 +25,10 @@ import profileStyles from '../profile/ProfilePage.module.css';
 import quickStyles from '../profile/QuickView.module.css';
 import styles from './FormTypesPage.module.css';
 
-/** Thứ tự trạng thái khi sắp xếp tăng dần, như FM_ORDER của bản mẫu: Đang mở → Nháp → Đã đóng. */
+/** Thứ tự trạng thái khi sắp xếp tăng dần: Đang mở → Nháp → Đã đóng. */
 const STATUS_ORDER: Record<FormTypeStatus, number> = { open: 0, draft: 1, closed: 2 };
 
-/** Các cột, như FM_FIELDS của bản mẫu, thêm cột Phiên bản. */
+/** Các cột của bảng Quản lí loại đơn. */
 const FORM_TYPE_FIELDS: TableField<FormTypeSummary>[] = [
   { key: 'name', label: 'Tên loại đơn', type: 'text', getValue: (formType) => formType.name },
   { key: 'prefix', label: 'Mã đơn', type: 'text', getValue: (formType) => formType.prefix },

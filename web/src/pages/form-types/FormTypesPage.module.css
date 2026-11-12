@@ -1,7 +1,7 @@
 /* Trang Quản lí loại đơn: dùng lại khung thẻ của trang Thông tin cá nhân (ProfilePage.module.css), tiêu đề nằm trong thẻ
    như trang Quản lí đơn; chỉ thêm phần riêng. */
 .title{font-size:17px;font-weight:600;min-width:0}
-/* ghi chú cạnh tên loại đơn có thay đổi chưa lưu trong trình soạn (như .you của bản mẫu) */
+/* ghi chú cạnh tên loại đơn có thay đổi chưa lưu trong trình soạn */
 .draftNote{display:inline-block;margin-left:6px;padding:0 8px;border-radius:999px;font-size:11.5px;font-weight:500;background:var(--s-bs-bg);color:var(--s-bs-fg);vertical-align:1px;white-space:nowrap}
 /* dòng phiên bản cũ (xổ ra khi bấm ›): nền nhạt */
 .olderRow td{background:var(--surface-2)}

@@ -1,4 +1,4 @@
-/* Hộp thoại giữa màn hình, có nền mờ phía sau (như .modal-bg, .modal của bản mẫu). */
+/* Hộp thoại giữa màn hình, có nền mờ phía sau. */
 import { useEffect, useId, useRef, type ReactNode } from 'react';
 import styles from './Modal.module.css';
 

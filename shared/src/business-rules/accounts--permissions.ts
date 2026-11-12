@@ -1,4 +1,4 @@
-/* Vai trò nào được làm gì (chuyển từ ROLES, can, canSee, canDecideOn trong artifact/js/config.js).
+/* Vai trò nào được làm gì.
    Muốn thay đổi vai trò nào làm được gì, chỉ cần sửa ROLES ở đây (frontend và backend cùng dùng).
    Quy ước tên: form = lá đơn sinh viên nộp · form type = loại đơn (mẫu do cán bộ soạn). */
 import type { Page, Permission, RoleId } from '../aux-schema/accounts--roles';

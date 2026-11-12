@@ -1,4 +1,4 @@
-/* Tìm kiếm, lọc, sắp xếp, chia trang một bảng danh sách (như artifact/js/table-tools.js).
+/* Tìm kiếm, lọc, sắp xếp, chia trang một bảng danh sách.
    Máy chủ (API giả và backend) dùng applyListQuery() để trả một trang; trình duyệt dùng các hàm nhỏ để hiện ô,
    lấy lựa chọn lọc (bảng còn tải hết một lượt, vd Quản lí loại đơn). Chỉ có hàm thuần, không có giao diện. */
 import type { FieldOption, FieldType, ListFilter, ListQuery, ListSortRule } from '../aux-schema/lists';

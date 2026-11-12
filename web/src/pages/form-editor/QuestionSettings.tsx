@@ -1,4 +1,4 @@
-/* Cài đặt riêng theo loại câu hỏi trong trình soạn (như typeEditor() của artifact/js/forms-page.js):
+/* Cài đặt riêng theo loại câu hỏi trong trình soạn:
    các lựa chọn (Chọn một / Chọn nhiều / Danh sách thả xuống), các cột của bảng, định dạng và dung lượng tệp.
    Loại câu hỏi khác không có cài đặt riêng. */
 import {
@@ -19,7 +19,7 @@ import { OptionsEditor } from './OptionsEditor';
 import { DEFAULT_MAX_MB, FILE_FORMAT_GROUPS, MAX_MB_LIMIT, removeAt, replaceAt } from './formTypeDraft';
 import styles from './FormTypeEditor.module.css';
 
-/** Tiêu đề khối cài đặt theo loại câu hỏi (như QSET_TITLE của bản mẫu). */
+/** Tiêu đề khối cài đặt theo loại câu hỏi. */
 const SETTINGS_TITLE: Partial<Record<Question['type'], string>> = {
   radio: 'Các lựa chọn',
   check: 'Các lựa chọn',

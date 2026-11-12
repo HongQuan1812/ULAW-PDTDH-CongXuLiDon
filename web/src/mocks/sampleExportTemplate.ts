@@ -1,4 +1,4 @@
-/* JUST FOR DEMO: START · mẫu xuất file có sẵn cho loại đơn Xét miễn môn (lấy từ artifact/js/sample-template.js),
+/* JUST FOR DEMO: START · mẫu xuất file có sẵn cho loại đơn Xét miễn môn,
    để thử nút "Xuất file" ngay. Bản thật: mẫu do cán bộ tải lên ở trình soạn loại đơn, lưu ở máy chủ. */
 
 /** Nội dung file mau-don-xet-mien-mon.docx, mã hóa base64. */

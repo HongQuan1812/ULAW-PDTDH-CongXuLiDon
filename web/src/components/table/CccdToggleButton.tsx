@@ -1,4 +1,4 @@
-/* Nút "Hiện CCCD / Ẩn CCCD" trên thanh công cụ của bảng, nằm sau nút Lọc (như #aReveal, #uReveal của bản mẫu).
+/* Nút "Hiện CCCD / Ẩn CCCD" trên thanh công cụ của bảng, nằm sau nút Lọc.
    Cùng kiểu với nút Sắp xếp, Lọc; đang hiện thì tô màu như nút đang bật. */
 import styles from './table.module.css';
 

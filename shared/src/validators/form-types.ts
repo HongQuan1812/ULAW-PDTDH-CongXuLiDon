@@ -1,4 +1,4 @@
-/* Kiểm tra bản soạn loại đơn trước khi lưu (như checkDraft() của artifact/js/forms-page.js).
+/* Kiểm tra bản soạn loại đơn trước khi lưu.
    Trình soạn dùng để báo lỗi và tô đỏ ô sai; API giả và backend dùng lại để kiểm tra lần cuối, nên câu báo giống nhau. */
 import type { FormSection } from '../aux-schema/form-types--sections';
 import type { FormTypeStatus } from '../aux-schema/form-types--statuses';

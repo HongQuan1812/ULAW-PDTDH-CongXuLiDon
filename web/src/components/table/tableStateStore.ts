@@ -1,5 +1,5 @@
 /* Nhớ cách xem của từng bảng (chữ tìm kiếm, sắp xếp, lọc, trang đang xem) khi đi qua trang khác rồi quay lại,
-   như state.pQuery / pSort / pFilters / page của bản mẫu. Chỉ giữ trong bộ nhớ: tải lại trang thì về ban đầu,
+   Chỉ giữ trong bộ nhớ: tải lại trang thì về ban đầu,
    đăng nhập hoặc đăng xuất thì xóa hết (gọi clearTableStates). */
 import type { FilterRule, SortRules } from './tableTools';
 

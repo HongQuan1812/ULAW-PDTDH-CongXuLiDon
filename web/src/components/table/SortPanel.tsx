@@ -1,4 +1,4 @@
-/* Nội dung bảng nổi "Sắp xếp" (như renderSort() trong artifact/js/table-tools.js):
+/* Nội dung bảng nổi "Sắp xếp":
    sắp xếp nhiều cột, dòng trên ưu tiên trước; đổi thứ tự ưu tiên bằng cách kéo ⋮⋮ hoặc bấm ↑ ↓. */
 import { useState, type DragEvent } from 'react';
 import { SORT_DIRECTION_LABELS, type SortRules, type TableField } from './tableTools';

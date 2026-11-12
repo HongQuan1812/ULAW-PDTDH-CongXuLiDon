@@ -40,7 +40,7 @@ export function formatDate(isoDateTime: string): string {
 }
 
 /**
- * Đổi thời điểm sang dạng giờ · ngày, như bản mẫu, vd "2026-10-30T07:05" → "07:05 · 30/10/2026".
+ * Đổi thời điểm sang dạng giờ · ngày, vd "2026-10-30T07:05" → "07:05 · 30/10/2026".
  * @param isoDateTime  thời điểm dạng 'YYYY-MM-DDTHH:mm'
  * @returns            chuỗi 'HH:mm · DD/MM/YYYY'
  */

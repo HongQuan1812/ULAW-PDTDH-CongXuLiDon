@@ -1,4 +1,4 @@
-/* Thanh phân trang dưới bảng, như renderPager() của bản mẫu. */
+/* Thanh phân trang dưới bảng. */
 import { useLayoutEffect, useRef } from 'react';
 import styles from './table.module.css';
 

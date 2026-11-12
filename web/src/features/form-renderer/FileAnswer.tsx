@@ -1,4 +1,4 @@
-/* Ô trả lời tải tệp (như QUESTION_UI.file của artifact/js/sections.js). */
+/* Ô trả lời tải tệp. */
 import { useCallback, useId, useState } from 'react';
 import { acceptedExtensions, acceptedExtensionsText, formatFileSize, validateFile, type FileRef } from '@ulaw/shared';
 import { FileDropZone } from '../../components/FileDropZone';

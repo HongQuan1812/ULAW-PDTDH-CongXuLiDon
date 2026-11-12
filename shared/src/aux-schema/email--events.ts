@@ -1,4 +1,4 @@
-/* Các lúc cổng gửi email báo cho người nộp đơn (như events trong artifact/js/email-page.js).
+/* Các lúc cổng gửi email báo cho người nộp đơn.
    Mỗi lúc ứng với một trạng thái đơn vừa chuyển tới; mã trạng thái như FORM_STATUSES. */
 import type { FormStatus } from './forms--statuses';
 

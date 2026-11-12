@@ -1,7 +1,7 @@
 import { findMatch } from '../../lib/search';
 
 /**
- * Chữ có tô sáng phần khớp với ô tìm kiếm (không phân biệt dấu), như hàm hl() của bản mẫu.
+ * Chữ có tô sáng phần khớp với ô tìm kiếm (không phân biệt dấu).
  * @param text   chữ cần hiện
  * @param query  chữ trong ô tìm kiếm; trống thì hiện chữ thường
  * @returns      chữ, phần khớp bọc trong <mark>

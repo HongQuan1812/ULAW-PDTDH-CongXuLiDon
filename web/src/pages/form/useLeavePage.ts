@@ -1,4 +1,4 @@
-/* Nút "‹ Quay lại …" của các trang đơn (như goBack và nhãn #formBack của artifact/js/nav.js). */
+/* Nút "‹ Quay lại …" của các trang đơn. */
 import { useLocation, useNavigate } from 'react-router';
 import { ROLES } from '@ulaw/shared';
 import { homePath, PAGE_LABEL, readPreviousPageLabel } from '../../app/paths';

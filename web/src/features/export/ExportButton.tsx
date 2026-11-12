@@ -1,4 +1,4 @@
-/* Nút "Xuất file" ở trang chi tiết đơn (như #fPrint và printWith() của artifact/js/print-templates.js):
+/* Nút "Xuất file" ở trang chi tiết đơn:
    hiện khi loại đơn có mẫu xuất file. Một mẫu thì bấm là xuất; nhiều mẫu thì mở danh sách "Chọn mẫu".
    Máy chủ điền dữ liệu của đơn vào mẫu; file Word nhận về mở trong trình xem, có nút "Tải file Word" trên thanh xem. */
 import { useEffect, useRef, useState } from 'react';

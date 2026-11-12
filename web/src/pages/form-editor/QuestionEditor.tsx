@@ -1,4 +1,4 @@
-/* Một câu hỏi trong trình soạn (như questionEditor() của artifact/js/forms-page.js): khung riêng có thanh tiêu đề
+/* Một câu hỏi trong trình soạn: khung riêng có thanh tiêu đề
    (số thứ tự · loại câu hỏi · Bắt buộc · nút đưa lên / xuống / nhân bản / xóa), các ô có nhãn,
    khối cài đặt riêng theo loại câu hỏi, công tắc Bắt buộc trả lời và ô "Mã dùng trong file Word".
    Khối thông báo chỉ có nội dung (soạn như Notion) và màu nền. */
@@ -159,7 +159,7 @@ function InfoColorPicker({ color, onChange }: { color: InfoBlockColor; onChange:
 }
 
 /**
- * Câu giải thích ô mã theo loại câu hỏi (như TAG_HELP của artifact/js/forms-page.js).
+ * Câu giải thích ô mã theo loại câu hỏi.
  * @param type  loại câu hỏi
  * @param tag   mã đang dùng (mã riêng, hoặc mã tự lấy theo nội dung câu hỏi)
  * @returns     câu giải thích
@@ -174,7 +174,7 @@ function tagHelp(type: AnswerableQuestion['type'], tag: string): string {
 }
 
 /**
- * Ô "Mã dùng trong file Word" (như tagField() của bản mẫu): gõ chỉ nhận chữ thường không dấu, số, dấu _;
+ * Ô "Mã dùng trong file Word": gõ chỉ nhận chữ thường không dấu, số, dấu _;
  * bỏ trống thì dùng mã tự lấy theo nội dung câu hỏi (hiện mờ trong ô).
  * @param question  câu hỏi cần trả lời
  * @param onChange  gọi với câu hỏi đã sửa mã

@@ -1,8 +1,8 @@
-/* Trang Quản lí tài khoản (#/quan-li-tai-khoan, chỉ Admin), như artifact/js/accounts-page.js.
+/* Trang Quản lí tài khoản (#/quan-li-tai-khoan, chỉ Admin).
    Bảng mọi tài khoản (người nộp đơn và cán bộ): họ tên (tài khoản của mình có nhãn "Bạn"), email, vai trò, SĐT, CCCD;
    tìm kiếm / Sắp xếp / Lọc / phân trang dùng chung với các bảng khác, mặc định xếp theo họ tên A → Z.
    Bấm một dòng: mở trang thông tin của tài khoản đó (dòng của mình → Thông tin cá nhân). Nút Sửa cuối dòng, nút "+ Tạo tài khoản" ở đầu thẻ,
-   nút Hiện CCCD trên thanh công cụ (sau nút Lọc, như bản mẫu). */
+   nút Hiện CCCD trên thanh công cụ (sau nút Lọc). */
 import { useEffect, useMemo, useState, type KeyboardEvent } from 'react';
 import { useNavigate } from 'react-router';
 import { ACCOUNT_LIST_FIELDS, ROLES, type Account, type RoleId } from '@ulaw/shared';
@@ -26,13 +26,13 @@ import tableStyles from '../../components/table/table.module.css';
 import profileStyles from '../profile/ProfilePage.module.css';
 import styles from './AccountsPage.module.css';
 
-/** Số tài khoản mỗi trang (cũng là số tài khoản mỗi lần tải), như U_PER của bản mẫu. */
+/** Số tài khoản mỗi trang (cũng là số tài khoản mỗi lần tải). */
 const PAGE_SIZE = 10;
 
 /** Tên bảng, để nhớ cách xem khi đi qua trang khác rồi quay lại. */
 const TABLE_ID = 'accounts.all';
 
-/** Số cột của bảng: các cột dữ liệu (ACCOUNT_LIST_FIELDS, như U_FIELDS của bản mẫu) và cột nút Sửa. */
+/** Số cột của bảng: các cột dữ liệu (ACCOUNT_LIST_FIELDS) và cột nút Sửa. */
 const COLUMN_COUNT = ACCOUNT_LIST_FIELDS.length + 1;
 
 /** Câu báo khi không tải được số CCCD mà máy chủ không gửi kèm câu báo lỗi (vd mất mạng). */

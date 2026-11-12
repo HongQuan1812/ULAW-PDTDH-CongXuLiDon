@@ -1,4 +1,4 @@
-/* Ba nút quyết định và hộp thoại lí do (như .decide, .d-bs / .d-tc / .d-duyet, #dModal của bản mẫu).
+/* Ba nút quyết định và hộp thoại lí do.
    Ba nút dùng màu trạng thái đơn chuyển sang. */
 .needSupplement,.reject,.approve{font-weight:600}
 button.needSupplement{background:var(--s-bs-bg);color:var(--s-bs-fg);border-color:color-mix(in srgb,var(--s-bs-fg) 40%,transparent)}

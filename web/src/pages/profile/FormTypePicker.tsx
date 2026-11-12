@@ -1,4 +1,4 @@
-/* Hộp "Chọn loại đơn", mở khi bấm "Nộp đơn mới" (như #nModal và renderNewPicker() trong artifact/js/application-form.js):
+/* Hộp "Chọn loại đơn", mở khi bấm "Nộp đơn mới":
    các loại đơn đang nhận đơn, có ô tìm kiếm; chọn một loại thì sang trang nộp đơn của loại đó
    (của mình, hoặc thay cho người đang xem khi mở từ trang thông tin người khác). */
 import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from 'react';

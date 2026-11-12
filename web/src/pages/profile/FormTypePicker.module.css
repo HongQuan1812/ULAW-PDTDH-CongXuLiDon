@@ -1,4 +1,4 @@
-/* Hộp "Chọn loại đơn" (như .n-modal, .n-list, .n-opt, .ftype của bản mẫu). */
+/* Hộp "Chọn loại đơn". */
 .modal{width:min(620px,100%)}
 .list{display:grid;gap:8px;max-height:min(52vh,460px);overflow-y:auto;padding:2px}
 .option{display:grid;gap:4px;width:100%;text-align:left;font:inherit;color:var(--fg);padding:16px 18px;border:1px solid var(--line);border-radius:var(--r-lg);background:var(--surface);cursor:pointer;transition:border-color .12s,background .12s}

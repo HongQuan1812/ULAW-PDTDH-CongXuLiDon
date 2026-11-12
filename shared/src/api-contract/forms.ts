@@ -97,7 +97,7 @@ export type FormStats = z.infer<typeof FormStatsSchema>;
 
 /* ---------- Các cột của bảng đơn (tên cột để sắp xếp, lọc; cách hiện, cách tìm) ---------- */
 
-/** Các cột thông tin đơn của mọi bảng đơn (như P_FIELDS của bản mẫu): Mã đơn, Loại đơn, Ngày nộp, Trạng thái. */
+/** Các cột thông tin đơn của mọi bảng đơn: Mã đơn, Loại đơn, Ngày nộp, Trạng thái. */
 export const FORM_LIST_FIELDS: TableField<FormSummary>[] = [
   { key: 'code', label: 'Mã đơn', type: 'text', getValue: (form) => form.code },
   {

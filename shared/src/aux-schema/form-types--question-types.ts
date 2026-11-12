@@ -1,4 +1,4 @@
-/* Các loại câu hỏi của loại đơn (như QTYPES trong artifact/js/sections.js) và thuộc tính của từng loại.
+/* Các loại câu hỏi của loại đơn và thuộc tính của từng loại.
    Trình soạn loại đơn tạo câu hỏi theo các schema này; trang nộp đơn vẽ ô trả lời theo đó.
    Thêm loại câu hỏi mới: thêm vào QUESTION_TYPES, QUESTION_TYPE_LABEL, một schema bên dưới và QuestionSchema,
    rồi thêm cách kiểm tra câu trả lời trong validators/forms--answers.ts và giao diện trong web/src/features/form-renderer/. */

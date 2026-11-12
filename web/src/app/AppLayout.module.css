@@ -1,4 +1,4 @@
-/* Khung ứng dụng (như .shell, .topbar, .drawer của bản mẫu). */
+/* Khung ứng dụng. */
 .shell{min-height:100vh}
 .main{min-width:0}
 .error{padding:80px 16px;display:grid;justify-items:center;gap:14px}

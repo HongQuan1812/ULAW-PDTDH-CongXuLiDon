@@ -1,4 +1,4 @@
-/* Trang Thông tin cá nhân (như .page, .card, .id-card, .info, .stu, .stu-opt của bản mẫu). */
+/* Trang Thông tin cá nhân. */
 .page{display:grid;gap:24px;max-width:1320px;margin:0 auto;padding:40px 16px 64px}
 .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);padding:28px;min-width:0}
 .muted{color:var(--muted)}
@@ -26,7 +26,7 @@
 .reveal:hover{text-decoration:underline;text-underline-offset:3px}
 .reveal:disabled{color:var(--muted);cursor:progress;text-decoration:none}
 
-/* ---------- mục Đơn đã nộp (như .card.tcard của bản mẫu): khung không đệm, bảng sát mép ---------- */
+/* ---------- mục Đơn đã nộp: khung không đệm, bảng sát mép ---------- */
 .tableCard{padding:0}
 .sectionHead{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:24px 24px 0}
 .sectionHead h2{font-size:17px;font-weight:600;min-width:0}

@@ -1,4 +1,4 @@
-/* Trang Quản lí đơn (như applications-page.js của bản mẫu): bảng mọi đơn của mọi người nộp, gộp thông tin đơn
+/* Trang Quản lí đơn: bảng mọi đơn của mọi người nộp, gộp thông tin đơn
    và thông tin người nộp (cột theo MANAGED_FORM_LIST_FIELDS, Họ và tên mở đầu nhóm bên phải);
    tìm kiếm / Sắp xếp / Lọc / phân trang ở máy chủ, dùng chung với các bảng đơn khác.
    Cột "Thời gian tiếp nhận" có nút Tiếp nhận cho đơn đang chờ; nút Hiện CCCD (thanh công cụ, sau nút Lọc) bỏ che số CCCD

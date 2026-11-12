@@ -3,7 +3,7 @@ import { SORT_DIRECTION_LABELS, isFilterActive, type FilterRule, type SortRules,
 import styles from './table.module.css';
 
 /**
- * Ô tiêu đề cột, như th() của bản mẫu: tên cột, kèm mũi tên khi cột đang được sắp xếp
+ * Ô tiêu đề cột: tên cột, kèm mũi tên khi cột đang được sắp xếp
  * (có số thứ tự ưu tiên khi sắp xếp nhiều cột) và cái phễu khi cột đang được lọc. Cột có biểu tượng thì tô màu.
  * @param field        cột
  * @param sorting      các dòng sắp xếp người dùng đã chọn (không tính thứ tự mặc định)

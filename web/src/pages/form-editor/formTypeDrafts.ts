@@ -1,4 +1,4 @@
-/* Bản soạn loại đơn chưa lưu, giữ trong bộ nhớ (như formDrafts của artifact/js/forms-page.js):
+/* Bản soạn loại đơn chưa lưu, giữ trong bộ nhớ:
    đi trang khác rồi quay lại trình soạn thì vẫn còn các thay đổi, cho đến khi Lưu hoặc Bỏ thay đổi. Tải lại trang thì mất.
    Bấm "+ Tạo loại đơn" thì bắt đầu bản trống (bỏ bản tạo mới đang dở).
    Thay đổi về mẫu xuất file (thuộc loại đơn, không theo phiên bản) giữ riêng, cùng cách. */

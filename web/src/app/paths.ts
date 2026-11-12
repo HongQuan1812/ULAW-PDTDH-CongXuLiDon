@@ -1,4 +1,4 @@
-/* Đường dẫn và tên hiển thị của các trang. Giữ như bản mẫu, vd #/quan-li-don. */
+/* Đường dẫn và tên hiển thị của các trang. Vd #/quan-li-don. */
 import { ROLES, type Page, type RoleId } from '@ulaw/shared';
 
 export const LOGIN_PATH = '/dang-nhap';
@@ -33,7 +33,7 @@ export function formPath(code: string): string {
   return `/don/${encodeURIComponent(code)}`;
 }
 
-/** Trình soạn loại đơn, khai báo trong router: /soan-don/<mã loại đơn> (như #soan-don-<mã> của bản mẫu). */
+/** Trình soạn loại đơn, khai báo trong router: /soan-don/<mã loại đơn>. */
 export const FORM_TYPE_EDITOR_ROUTE = '/soan-don/:formTypeId';
 
 /** Mã loại đơn trên đường dẫn khi tạo loại đơn mới: /soan-don/moi. */
@@ -65,7 +65,7 @@ export function personProfilePath(userId: string): string {
   return `/ho-so/${encodeURIComponent(userId)}`;
 }
 
-/** Trang nộp đơn mới thay cho người khác (như #nop-don-<id> của bản mẫu), khai báo trong router: /ho-so/<id>/nop-don/<mã loại đơn>. */
+/** Trang nộp đơn mới thay cho người khác, khai báo trong router: /ho-so/<id>/nop-don/<mã loại đơn>. */
 export const NEW_FORM_FOR_APPLICANT_ROUTE = '/ho-so/:userId/nop-don/:formTypeId';
 
 /**
@@ -81,7 +81,7 @@ export function newFormForApplicantPath(userId: string, formTypeId: string): str
 /** Tên trang thông tin người khác, hiện trên nút "‹ Quay lại …" của trang mở từ đó. */
 export const PERSON_PROFILE_LABEL = 'Thông tin người nộp đơn';
 
-/** state gửi kèm khi chuyển trang, để trang mới có nút "‹ Quay lại <trang trước>" (như routeLabel của artifact/js/nav.js). */
+/** state gửi kèm khi chuyển trang, để trang mới có nút "‹ Quay lại <trang trước>". */
 export interface ReturnState {
   /** tên trang trước, vd 'Thông tin cá nhân', 'đơn đang soạn' */
   previousPageLabel: string;

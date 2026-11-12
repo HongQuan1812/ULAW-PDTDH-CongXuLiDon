@@ -1,4 +1,4 @@
-/* Mục "Đơn phụ trách" (như handledTable trong artifact/js/profile.js): mọi đơn một cán bộ là người tiếp nhận hoặc người xử lí,
+/* Mục "Đơn phụ trách": mọi đơn một cán bộ là người tiếp nhận hoặc người xử lí,
    tải từng trang. Bên phải bảng có 2 cột Người tiếp nhận / Người xử lí, ngăn bằng đường kẻ dọc.
    Có ở trang Thông tin cá nhân của cán bộ (vai trò có quyền decide), và ở trang thông tin của một cán bộ khác
    khi người xem có quyền viewAll. */

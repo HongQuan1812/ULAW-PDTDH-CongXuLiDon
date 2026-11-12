@@ -23,7 +23,7 @@ import {
   PERSON_PROFILE_ROUTE,
 } from './paths';
 
-/* Đường dẫn dạng #/... như bản mẫu.
+/* Đường dẫn dạng #/...
    Trang Đăng nhập và Bổ sung thông tin lần đầu nằm ngoài khung; các trang còn lại nằm trong AppLayout (phải đăng nhập). */
 export const router = createHashRouter([
   { path: LOGIN_PATH, element: <LoginPage /> },

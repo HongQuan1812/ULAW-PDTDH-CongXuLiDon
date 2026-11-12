@@ -5,7 +5,7 @@ import { emptyAnswer } from '../aux-schema/forms--answers';
 import { EMPTY_RICH_TEXT_DOC, plainTextToRichText } from '../aux-schema/rich-text';
 import { ANSWER_MESSAGES, formatFileSize, validateAnswer, validateAnswers, validateFile, validateSentFiles } from './forms--answers';
 
-/* Cấu trúc Xét miễn môn như TYPES.xmm trong artifact/js/config.js. */
+/* Cấu trúc của loại đơn Xét miễn môn. */
 const XMM_SECTIONS = [
   FormSectionSchema.parse({
     id: 's-mon',

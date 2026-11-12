@@ -1,4 +1,4 @@
-/* Trang thông tin một người khác (như viewedPerson() với state.viewing của artifact/js/profile.js).
+/* Trang thông tin một người khác.
    Mở từ "Xem hồ sơ ›" ở trang đơn, hoặc bấm dòng ở trang Quản lí tài khoản; có nút "‹ Quay lại …" ở đầu trang.
    Thông tin sinh viên tải riêng (database trường lỗi thì chỉ phần này báo lỗi, kèm nút ↻).
    Có MSSV thì có nút "Thông tin sinh viên" mở khung các MSSV (mọi người xem được).

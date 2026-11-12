@@ -1,4 +1,4 @@
-/* Trang Đăng nhập (màn hình 1 của bản mẫu). */
+/* Trang Đăng nhập. */
 import { useState } from 'react';
 import { Navigate, useLocation } from 'react-router';
 import { ROLES, ROLE_IDS, SCHOOL_EMAIL_DOMAINS, type RoleId } from '@ulaw/shared';

@@ -1,4 +1,4 @@
-/* Trạng thái của loại đơn và tên hiện (chuyển từ FORM_STATUS trong artifact/js/config.js). */
+/* Trạng thái của loại đơn và tên hiện. */
 
 export const FORM_TYPE_STATUSES = ['draft', 'open', 'closed'] as const;
 export type FormTypeStatus = (typeof FORM_TYPE_STATUSES)[number];

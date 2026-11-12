@@ -1,4 +1,4 @@
-/* Trình xem tệp toàn màn hình (như preview() của artifact/js/file-preview.js): ảnh, PDF, Word.
+/* Trình xem tệp toàn màn hình: ảnh, PDF, Word.
    Có sẵn nội dung (content) thì xem thẳng, vd file Word vừa xuất từ mẫu; tệp người nộp vừa chọn (id 'local-…') xem từ trình duyệt;
    còn lại là tệp đã lưu, tải nội dung từ máy chủ.
    Loại tệp chưa xem trước được (vd .doc cũ) thì có nút tải về. Esc, nút × hoặc bấm nền để đóng. */

@@ -1,4 +1,4 @@
-/* Trang Cấu hình email (#/cau-hinh-email, vai trò có quyền manageEmail: Người xử lí đơn, Admin), như artifact/js/email-page.js.
+/* Trang Cấu hình email (#/cau-hinh-email, vai trò có quyền manageEmail: Người xử lí đơn, Admin).
    Cấu hình phía GỬI: người gửi, và bốn lúc gửi email báo cho người nộp đơn (Đã nộp · Cần bổ sung · Từ chối · Đã duyệt),
    mỗi lúc bật / tắt riêng, soạn tiêu đề + nội dung có mã {...}, xem trước bằng dữ liệu mẫu, gửi thư thử.
    Người nhận không cấu hình: thư luôn gửi tới email trên trang Thông tin cá nhân của người nộp đơn.

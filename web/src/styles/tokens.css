@@ -1,4 +1,4 @@
-/* Biến màu, cỡ chữ, bo góc… chuyển nguyên từ artifact/styles.css (bản mẫu).
+/* Biến màu, cỡ chữ, bo góc….
    Có chế độ tối theo hệ điều hành, hoặc ép bằng <html data-theme="light|dark">. */
 :root{
   --bg:#F6F7FA; --surface:#FFFFFF; --surface-2:#F0F3F8; --hover:#E9EEF5;

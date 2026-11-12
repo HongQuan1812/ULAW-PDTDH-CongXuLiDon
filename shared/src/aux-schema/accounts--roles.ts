@@ -1,4 +1,4 @@
-/* Mã vai trò, quyền và trang của tài khoản (chuyển từ ROLES trong artifact/js/config.js).
+/* Mã vai trò, quyền và trang của tài khoản.
    Vai trò nào có quyền gì, thấy trang nào: xem ROLES trong business-rules/accounts--permissions.ts. */
 
 export const PERMISSIONS = [

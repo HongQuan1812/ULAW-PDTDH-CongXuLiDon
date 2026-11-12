@@ -1,4 +1,4 @@
-/* MÃ TRƯỜNG của mẫu xuất file Word (như print-templates.js của bản mẫu).
+/* MÃ TRƯỜNG của mẫu xuất file Word.
    Cán bộ gõ mã trong ngoặc nhọn vào file Word, vd {ho_ten}, {mssv}; khi xuất file, máy chủ thay mã bằng dữ liệu của đơn.
    - Mã chung (mọi loại đơn): thông tin người nộp đơn và thông tin đơn (COMMON_EXPORT_TAG_GROUPS).
    - Mã câu hỏi: ô "Mã dùng trong file Word" của câu hỏi; bỏ trống thì lấy theo nội dung câu hỏi bỏ dấu.
@@ -62,7 +62,7 @@ export interface ExportTagInfo {
   label: string;
 }
 
-/** Mã có sẵn cho mọi loại đơn, theo nhóm (như COMMON_TAGS của bản mẫu). */
+/** Mã có sẵn cho mọi loại đơn, theo nhóm. */
 export const COMMON_EXPORT_TAG_GROUPS: ReadonlyArray<{ title: string; tags: readonly ExportTagInfo[] }> = [
   {
     title: 'Người nộp đơn',
@@ -261,7 +261,7 @@ function addLegacyTags(exportData: ExportData): void {
 }
 
 /**
- * Dựng dữ liệu điền vào mẫu từ một lá đơn (như buildPrintData() của bản mẫu).
+ * Dựng dữ liệu điền vào mẫu từ một lá đơn.
  * @param source      thông tin lá đơn
  * @param exportedOn  ngày xuất file, 'YYYY-MM-DD'
  * @returns           giá trị theo mã

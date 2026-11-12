@@ -1,4 +1,4 @@
-/* Xem nhanh trong bảng đơn (như .exp, tr.detail, .qv, .upd, .note của artifact/styles.css) */
+/* Xem nhanh trong bảng đơn */
 .expandCell{width:28px;padding-right:0}
 .table .expandCell{padding-left:12px;padding-right:0}
 .expand{display:inline-grid;place-items:center;width:28px;height:28px;border-radius:50%;border:0;background:transparent;color:var(--faint);font-size:16px;line-height:1;cursor:pointer;transition:transform .18s,background .12s}

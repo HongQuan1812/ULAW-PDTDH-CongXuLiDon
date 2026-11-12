@@ -1,4 +1,4 @@
-/* Trang đơn: nộp đơn mới và chi tiết đơn (như .page-form, .back, .page-head, .form-grid, .notice, .submit-row, .commit của artifact/styles.css). */
+/* Trang đơn: nộp đơn mới và chi tiết đơn. */
 .page{display:grid;gap:24px;max-width:1320px;margin:0 auto;padding:40px 16px 24px}
 .muted{color:var(--muted)}
 .back{display:inline-flex;align-items:center;gap:4px;border:0;background:none;color:var(--muted);font-weight:500;font-size:13.5px;cursor:pointer;padding:4px 0;margin-bottom:-12px;justify-self:start}

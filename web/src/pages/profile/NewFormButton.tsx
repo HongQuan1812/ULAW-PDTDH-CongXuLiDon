@@ -1,4 +1,4 @@
-/* Nút "Nộp đơn mới" ở đầu mục "Đơn đã nộp" và hộp "Chọn loại đơn" đi kèm (như #newBtn của artifact/js/profile.js):
+/* Nút "Nộp đơn mới" ở đầu mục "Đơn đã nộp" và hộp "Chọn loại đơn" đi kèm:
    trên trang Thông tin cá nhân thì nộp đơn của mình, trên trang thông tin người khác thì nộp thay cho người đó (Admin). */
 import { useCallback, useState } from 'react';
 import { FORM_TYPE_MESSAGES } from '@ulaw/shared';

@@ -1,4 +1,4 @@
-/* Thanh công cụ phía trên bảng (như .tools của bản mẫu): ô tìm kiếm, nút Sắp xếp, nút Lọc, và các nút thêm của từng trang
+/* Thanh công cụ phía trên bảng: ô tìm kiếm, nút Sắp xếp, nút Lọc, và các nút thêm của từng trang
    (vd Hiện CCCD) nằm ngay sau nút Lọc. Mỗi lúc chỉ mở một bảng nổi. */
 import { useCallback, useState, type ReactNode } from 'react';
 import { FilterPanel } from './FilterPanel';

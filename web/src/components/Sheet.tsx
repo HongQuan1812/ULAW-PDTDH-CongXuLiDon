@@ -1,4 +1,4 @@
-/* Khung trượt từ phải ra (như khung "Thông tin đơn" ở màn hình hẹp và khung "Thông tin sinh viên" của bản mẫu). */
+/* Khung trượt từ phải ra. */
 import { useEffect, useId, useRef, type ReactNode } from 'react';
 import styles from './Sheet.module.css';
 

@@ -115,7 +115,7 @@ export const StudentInfoSchema = z.object({
 });
 export type StudentInfo = z.infer<typeof StudentInfoSchema>;
 
-/** Tên hiện trên giao diện của từng mục thông tin sinh viên, theo đúng thứ tự hiện (như STUDENT_FIELDS của bản mẫu). */
+/** Tên hiện trên giao diện của từng mục thông tin sinh viên, theo đúng thứ tự hiện. */
 export const STUDENT_INFO_LABELS: ReadonlyArray<{ key: keyof StudentInfo; label: string }> = [
   { key: 'studentId', label: 'MSSV' },
   { key: 'className', label: 'Lớp' },

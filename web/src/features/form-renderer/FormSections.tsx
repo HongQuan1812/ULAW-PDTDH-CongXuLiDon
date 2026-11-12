@@ -1,5 +1,4 @@
-/* Vẽ nội dung đơn từ cấu trúc loại đơn: mỗi PHẦN là một khung, trong khung là các CÂU HỎI
-   (như renderSections của artifact/js/sections.js). Cùng một giao diện dùng cho:
+/* Vẽ nội dung đơn từ cấu trúc loại đơn: mỗi PHẦN là một khung, trong khung là các CÂU HỎI. Cùng một giao diện dùng cho:
      - trang nộp đơn mới (sửa được)
      - trang chi tiết đơn (sửa được hoặc chỉ xem, tùy trạng thái và quyền)
      - xem nhanh (nút ›) trong các bảng đơn (chỉ xem, chỉ các phần nội dung chính)

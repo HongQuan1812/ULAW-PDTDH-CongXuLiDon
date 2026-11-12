@@ -63,7 +63,7 @@ export function tableTotalText(question: QuestionOf<'table'>, rows: readonly Tab
 }
 
 /**
- * Câu trả lời trên trang có khác câu trả lời đã lưu không (như describeChange của bản mẫu), chỉ xét câu hỏi cần trả lời.
+ * Câu trả lời trên trang có khác câu trả lời đã lưu không, chỉ xét câu hỏi cần trả lời.
  * @param sections      các phần của loại đơn
  * @param savedAnswers  câu trả lời đã lưu
  * @param answers       câu trả lời trên trang

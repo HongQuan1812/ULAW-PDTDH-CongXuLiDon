@@ -1,4 +1,4 @@
-/* Hai khung thống kê đầu trang Quản lí đơn (như renderStats() / typeChart() của bản mẫu):
+/* Hai khung thống kê đầu trang Quản lí đơn:
    "Theo trạng thái" (tổng, thanh tỉ lệ nhiều màu, 6 ô) và "Theo loại đơn" (biểu đồ cột 0–100%).
    Số liệu đếm trên TẤT CẢ đơn, không đổi theo ô tìm kiếm / bộ lọc của bảng.
    Bấm một ô trạng thái hoặc một cột loại đơn thì lọc bảng bên dưới; bấm lại để bỏ lọc. */

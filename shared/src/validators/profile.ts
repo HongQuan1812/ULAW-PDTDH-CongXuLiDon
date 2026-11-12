@@ -1,7 +1,7 @@
 /* Kiểm tra dữ liệu hồ sơ cá nhân: họ tên, CCCD, số điện thoại, email (khi tạo tài khoản). */
 import { SCHOOL_EMAIL_DOMAINS } from './auth';
 
-/* ---------- Họ tên, CCCD, số điện thoại (chuyển từ `rx` trong artifact/js/auth.js) ---------- */
+/* ---------- Họ tên, CCCD, số điện thoại ---------- */
 
 /** Câu báo lỗi khi họ tên, CCCD, số điện thoại, email không hợp lệ (hiện dưới ô nhập). */
 export const VALIDATION_MESSAGES = {

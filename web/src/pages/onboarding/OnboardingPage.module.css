@@ -1,4 +1,4 @@
-/* Màn Bổ sung thông tin lần đầu (như .onb-screen, .onb, .steps của bản mẫu). */
+/* Màn Bổ sung thông tin lần đầu. */
 .screen{min-height:100vh;padding-block:32px 56px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
   background:radial-gradient(1200px 500px at 50% -10%,var(--accent-soft),transparent 70%),var(--bg)}
 .top{display:flex;align-items:center;gap:12px;max-width:600px;margin:0 auto 32px}

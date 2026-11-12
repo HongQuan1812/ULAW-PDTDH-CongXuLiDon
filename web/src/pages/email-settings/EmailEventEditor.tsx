@@ -1,4 +1,4 @@
-/* Thư của một lúc gửi trên trang Cấu hình email (như emRenderEditor, emRenderPreview của artifact/js/email-page.js):
+/* Thư của một lúc gửi trên trang Cấu hình email:
    công tắc "Gửi email", tiêu đề, nút chèn mã, nội dung (soạn có định dạng như trình soạn văn bản); xem trước bằng dữ liệu mẫu; gửi thư thử.
    Lúc gửi đang tắt: phần soạn và xem trước mờ đi và không bấm được, công tắc vẫn bấm được. */
 import { useState, type ReactNode } from 'react';

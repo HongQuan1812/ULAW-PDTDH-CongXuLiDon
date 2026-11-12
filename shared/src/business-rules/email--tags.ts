@@ -1,4 +1,4 @@
-/* MÃ CHÈN VÀO EMAIL báo cho người nộp đơn (như EMAIL_SAMPLE, EMAIL_TAG_LABEL, emFill trong artifact/js/email-page.js).
+/* MÃ CHÈN VÀO EMAIL báo cho người nộp đơn.
    Admin gõ mã trong ngoặc nhọn vào tiêu đề và nội dung thư, vd {ho_ten}; lúc gửi, máy chủ thay mã bằng dữ liệu của đơn.
    Trang Cấu hình email (xem trước), API giả và backend (gửi thư thật, gửi thư thử) cùng dùng file này. */
 

@@ -1,4 +1,4 @@
-/* Tab "Xem trước" của trình soạn loại đơn (như renderPreview() của artifact/js/forms-page.js):
+/* Tab "Xem trước" của trình soạn loại đơn:
    vẽ lá đơn đúng như người nộp đơn sẽ thấy, thử điền và kiểm tra được, không lưu gì. */
 import { ANSWER_MESSAGES } from '@ulaw/shared';
 import { Button } from '../../components/Button';

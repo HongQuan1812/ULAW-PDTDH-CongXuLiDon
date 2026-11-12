@@ -1,4 +1,4 @@
-/* Ô trả lời bảng nhiều dòng (như QUESTION_UI.table của artifact/js/sections.js). */
+/* Ô trả lời bảng nhiều dòng. */
 import { useEffect, useRef, type CSSProperties } from 'react';
 import { isEmptyCell, isValidTableCell, type TableCell, type TableColumn } from '@ulaw/shared';
 import { Button } from '../../components/Button';

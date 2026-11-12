@@ -1,4 +1,4 @@
-/* Nút bấm (như .btn của bản mẫu). */
+/* Nút bấm. */
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:40px;padding:0 16px;border-radius:999px;border:1px solid var(--line-2);background:var(--surface);color:var(--fg);font-weight:500;font-size:14px;cursor:pointer;white-space:nowrap;text-decoration:none;transition:background .15s,border-color .15s,color .15s}
 .btn:hover{background:var(--hover)}
 .btn:disabled{opacity:.5;cursor:not-allowed}

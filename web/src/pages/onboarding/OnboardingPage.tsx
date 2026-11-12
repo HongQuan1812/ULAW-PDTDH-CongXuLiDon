@@ -1,4 +1,4 @@
-/* Màn Bổ sung thông tin lần đầu (màn hình 2 của bản mẫu): xác nhận họ tên, CCCD và SĐT không bắt buộc. */
+/* Màn Bổ sung thông tin lần đầu: xác nhận họ tên, CCCD và SĐT không bắt buộc. */
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { Navigate } from 'react-router';

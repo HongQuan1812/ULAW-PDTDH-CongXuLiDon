@@ -1,4 +1,4 @@
-/* Hộp thoại "Tạo tài khoản mới" / "Sửa thông tin tài khoản", dùng chung một hộp ở mọi nơi (như openAccount() của artifact/js/accounts-page.js):
+/* Hộp thoại "Tạo tài khoản mới" / "Sửa thông tin tài khoản", dùng chung một hộp ở mọi nơi:
    - nút "Sửa thông tin" ở trang Thông tin cá nhân (tài khoản của mình)
    - nút "+ Tạo tài khoản" và nút Sửa ở trang Quản lí tài khoản
    - nút "Sửa thông tin" ở trang thông tin người khác (quyền editApplicant)
@@ -33,7 +33,7 @@ import { useToast } from '../../components/Toast';
 import { useAuth } from '../auth/useAuth';
 import styles from './AccountDialog.module.css';
 
-/** Câu báo khi sửa xong tài khoản của mình, như bản mẫu ("Đã cập nhật thông tin" khi sửa từ trang thông tin). */
+/** Câu báo khi sửa xong tài khoản của mình ("Đã cập nhật thông tin" khi sửa từ trang thông tin). */
 const MY_PROFILE_UPDATED_TEXT = 'Đã cập nhật thông tin';
 
 /* Sửa tài khoản: kiểm tra như máy chủ (UpdateAccountRequestSchema); ô email chỉ để xem nên nhận mọi chuỗi. */

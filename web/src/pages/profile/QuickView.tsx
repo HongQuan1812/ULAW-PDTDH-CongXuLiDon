@@ -1,4 +1,4 @@
-/* Phần xem nhanh của một dòng trong bảng đơn (như quickHtml / fillQuick của artifact/js/sections.js):
+/* Phần xem nhanh của một dòng trong bảng đơn:
    chỉ các phần được bật "Nội dung chính" trong trình soạn, dùng đúng khung của trang chi tiết đơn ở chế độ chỉ xem,
    kèm dòng "Cập nhật lúc …" và "Phòng Đào tạo: <lí do>" (nếu có). Chỉ tải nội dung đơn khi dòng được mở. */
 import { useFormDetail } from '../../api/form';

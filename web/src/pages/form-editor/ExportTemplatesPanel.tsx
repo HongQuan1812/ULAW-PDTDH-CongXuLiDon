@@ -1,4 +1,4 @@
-/* Khung "Mẫu xuất file" trong trình soạn loại đơn (như tplCardHtml() và các nút data-act="tpl…" của artifact/js/print-templates.js).
+/* Khung "Mẫu xuất file" trong trình soạn loại đơn.
    Mẫu thuộc loại đơn (dùng chung mọi phiên bản). Chọn file (bấm hoặc kéo thả, như câu hỏi tải tệp của lá đơn), đổi tên, xóa
    chỉ ghi nhận trong trình duyệt và trình soạn hiện "Chưa lưu"; bấm Lưu mới gửi lên máy chủ (exportTemplateChanges.ts).
    Mã trong mỗi mẫu tự được kiểm tra (không cần bấm nút), theo bản soạn đang hiện
@@ -71,7 +71,7 @@ function useSettledValue<Value>(value: Value, delayMs: number): Value {
 }
 
 /**
- * Câu kết quả của Kiểm tra mã (như nhánh tplCheck của bản mẫu).
+ * Câu kết quả của Kiểm tra mã.
  * @param check      kết quả từ máy chủ
  * @param tableTags  mã các câu hỏi dạng bảng, để chỉ chỗ đặt mã cột
  * @returns          câu báo và sắc thái (tốt / có vấn đề)

@@ -1,4 +1,4 @@
-/* Nút công cụ của bảng (Sắp xếp, Lọc) kèm bảng nổi bên dưới, như .pop-wrap của bản mẫu.
+/* Nút công cụ của bảng (Sắp xếp, Lọc) kèm bảng nổi bên dưới.
    Bấm ra ngoài hoặc Esc thì đóng. */
 import { useEffect, useRef, type ReactNode } from 'react';
 import styles from './table.module.css';

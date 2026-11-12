@@ -1,4 +1,4 @@
-/* Khung trượt từ phải ra (như .sheet, .side-head của bản mẫu). */
+/* Khung trượt từ phải ra. */
 .sheet{position:fixed;top:0;right:0;bottom:0;width:min(420px,92vw);z-index:60;overflow-y:auto;background:var(--surface);box-shadow:var(--shadow-lg);
   transform:translateX(100%);visibility:hidden;transition:transform .22s ease,visibility 0s linear .22s;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
 .open{transform:none;visibility:visible;transition:transform .22s ease}

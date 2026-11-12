@@ -1,4 +1,4 @@
-/* Hai mục dưới danh sách mẫu trong khung "Mẫu xuất file" (như tplCardHtml() của artifact/js/print-templates.js):
+/* Hai mục dưới danh sách mẫu trong khung "Mẫu xuất file":
    - "Cách tạo một mẫu": 3 bước và ví dụ trước / sau;
    - "Bảng mã": mã câu trả lời của từng câu hỏi và mã chung, mỗi mã một dòng (Gõ vào file Word · Sẽ được điền bằng).
    Bấm vào mã để sao chép; câu hỏi dạng bảng có bảng mẫu một dòng (vòng lặp) và nút sao chép để dán vào Word thành bảng thật. */
@@ -8,7 +8,7 @@ import { Button } from '../../components/Button';
 import { useToast } from '../../components/Toast';
 import styles from './ExportTemplatesPanel.module.css';
 
-/** Giá trị điền theo loại câu hỏi, ghi thêm sau "Câu trả lời" (như QKIND của bản mẫu). */
+/** Giá trị điền theo loại câu hỏi, ghi thêm sau "Câu trả lời". */
 const ANSWER_KIND: Partial<Record<QuestionExportTag['type'], string>> = {
   check: 'các lựa chọn nối bằng dấu phẩy',
   file: 'tên các tệp đã tải lên',
