@@ -80,7 +80,7 @@ function validateSettings(settings: EmailSettings): FieldErrors {
 }
 
 /**
- * Phần sửa cấu hình: đầu trang (Chưa lưu, Bỏ thay đổi, Lưu), thẻ Người gửi, thẻ Nội dung email.
+ * Phần sửa cấu hình: đầu trang (tiêu đề, Chưa lưu), thẻ Người gửi, thẻ Nội dung email, cuối trang (Bỏ thay đổi, Lưu).
  * @param saved                cấu hình đã lưu ở máy chủ
  * @param mailServerConnected  máy chủ thư đã kết nối được chưa
  * @returns                    giao diện trang
@@ -146,29 +146,11 @@ function EmailSettingsEditor({ saved, mailServerConnected }: { saved: EmailSetti
 
   return (
     <div className={profileStyles.page}>
+      {/* Đầu trang: tiêu đề bên trái; nhãn "Chưa lưu" bên phải khi có thay đổi */}
       <div className={styles.head}>
-        <div className={styles.headText}>
-          <h1>Cấu hình email</h1>
-        </div>
-        {/* Chưa lưu · Bỏ thay đổi · Lưu: chỉ hiện khi có thay đổi */}
-        {dirty && (
-          <div className={styles.headActions}>
-            <span className={styles.dirty}>Chưa lưu</span>
-            <Button variant="ghost" onClick={discardChanges} disabled={saveSettings.isPending}>
-              Bỏ thay đổi
-            </Button>
-            <Button variant="primary" onClick={save} disabled={saveSettings.isPending}>
-              {saveSettings.isPending ? 'Đang lưu…' : 'Lưu'}
-            </Button>
-          </div>
-        )}
+        <h1 className={styles.title}>Cấu hình email</h1>
+        {dirty && <span className={styles.dirty}>Chưa lưu</span>}
       </div>
-
-      {saveError && (
-        <p className={styles.saveError} role="alert">
-          {saveError}
-        </p>
-      )}
 
       <section className={`${profileStyles.card} ${styles.senderCard}`} aria-labelledby="email-sender-title">
         <div className={styles.cardHead}>
@@ -237,6 +219,24 @@ function EmailSettingsEditor({ saved, mailServerConnected }: { saved: EmailSetti
           />
         </div>
       </section>
+
+      {saveError && (
+        <p className={styles.saveError} role="alert">
+          {saveError}
+        </p>
+      )}
+
+      {/* Cuối trang: Bỏ thay đổi · Lưu, chỉ hiện khi có thay đổi */}
+      {dirty && (
+        <div className={styles.bottomActions}>
+          <Button variant="ghost" onClick={discardChanges} disabled={saveSettings.isPending}>
+            Bỏ thay đổi
+          </Button>
+          <Button variant="primary" onClick={save} disabled={saveSettings.isPending}>
+            {saveSettings.isPending ? 'Đang lưu…' : 'Lưu'}
+          </Button>
+        </div>
+      )}
     </div>
   );
 }
