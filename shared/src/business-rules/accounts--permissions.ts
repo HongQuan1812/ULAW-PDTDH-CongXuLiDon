@@ -23,9 +23,9 @@ export const ROLES: Record<RoleId, Role> = {
   },
   nguoiXuLiDon: {
     name: 'Người xử lí đơn',
-    pages: ['profile', 'forms', 'formTypes'],
+    pages: ['profile', 'forms', 'formTypes', 'emailSettings'],
     home: 'forms',
-    permissions: ['submit', 'editOwn', 'viewAll', 'receive', 'viewApplicant', 'decide', 'transfer', 'manageFormTypes'],
+    permissions: ['submit', 'editOwn', 'viewAll', 'receive', 'viewApplicant', 'decide', 'transfer', 'manageFormTypes', 'manageEmail'],
   },
   admin: {
     name: 'Admin',

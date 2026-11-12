@@ -6,6 +6,7 @@
 import { z } from 'zod';
 import { EMAIL_EVENT_STATUSES } from '../aux-schema/email--events';
 import { RichTextDocSchema, isRichTextEmpty } from '../aux-schema/rich-text';
+import { StaffRefSchema } from './form';
 
 /* ---------- Đường dẫn (phần sau /api) ---------- */
 
@@ -52,9 +53,13 @@ export const EmailSettingsSchema = z.object({
 });
 export type EmailSettings = z.infer<typeof EmailSettingsSchema>;
 
-/** Trả về từ GET, PUT /email-settings: cấu hình, kèm địa chỉ gửi và máy chủ thư đã kết nối được chưa (chưa thì không gửi được thư nào). */
+/** Trả về từ GET, PUT /email-settings: cấu hình, lần lưu gần nhất, địa chỉ gửi và máy chủ thư đã kết nối được chưa (chưa thì không gửi được thư nào). */
 export const EmailSettingsResponseSchema = z.object({
   settings: EmailSettingsSchema,
+  /** lần lưu gần nhất, giờ Việt Nam 'YYYY-MM-DDTHH:mm' */
+  updatedAt: z.string(),
+  /** cán bộ lưu lần gần nhất */
+  updatedBy: StaffRefSchema,
   /** địa chỉ gửi, máy chủ đọc từ cấu hình SMTP (biến môi trường); chỉ để hiện, không sửa được */
   senderAddress: z.email(),
   mailServerConnected: z.boolean(),

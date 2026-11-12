@@ -1,4 +1,4 @@
-/* Trang Cấu hình email (#/cau-hinh-email, chỉ Admin), như artifact/js/email-page.js.
+/* Trang Cấu hình email (#/cau-hinh-email, vai trò có quyền manageEmail: Người xử lí đơn, Admin), như artifact/js/email-page.js.
    Cấu hình phía GỬI: người gửi, và bốn lúc gửi email báo cho người nộp đơn (Đã nộp · Cần bổ sung · Từ chối · Đã duyệt),
    mỗi lúc bật / tắt riêng, soạn tiêu đề + nội dung có mã {...}, xem trước bằng dữ liệu mẫu, gửi thư thử.
    Người nhận không cấu hình: thư luôn gửi tới email trên trang Thông tin cá nhân của người nộp đơn.
@@ -13,6 +13,7 @@ import {
   type EmailEventStatus,
   type EmailSender,
   type EmailSettings,
+  type StaffRef,
 } from '@ulaw/shared';
 import { useEmailSettings, useSaveEmailSettings } from '../../api/email';
 import { Button } from '../../components/Button';
@@ -20,6 +21,7 @@ import { Field } from '../../components/Field';
 import { LoadError, loadErrorMessage } from '../../components/LoadError';
 import { RefreshButton } from '../../components/RefreshButton';
 import { useToast } from '../../components/Toast';
+import { formatDateTime } from '../../lib/format';
 import { EmailEventEditor } from './EmailEventEditor';
 import profileStyles from '../profile/ProfilePage.module.css';
 import styles from './EmailSettingsPage.module.css';
@@ -58,6 +60,8 @@ export function EmailSettingsPage() {
   return (
     <EmailSettingsEditor
       saved={settingsQuery.data.settings}
+      updatedAt={settingsQuery.data.updatedAt}
+      updatedBy={settingsQuery.data.updatedBy}
       senderAddress={settingsQuery.data.senderAddress}
       mailServerConnected={settingsQuery.data.mailServerConnected}
     />
@@ -82,16 +86,22 @@ function validateSettings(settings: EmailSettings): FieldErrors {
 /**
  * Phần sửa cấu hình: đầu trang (tiêu đề, Chưa lưu), thẻ Người gửi, thẻ Nội dung email, cuối trang (Bỏ thay đổi, Lưu).
  * @param saved                cấu hình đã lưu ở máy chủ
+ * @param updatedAt            lần lưu gần nhất, giờ Việt Nam 'YYYY-MM-DDTHH:mm'
+ * @param updatedBy            cán bộ lưu lần gần nhất (họ tên, email)
  * @param senderAddress        địa chỉ gửi, máy chủ đọc từ cấu hình SMTP; chỉ hiện, không sửa được
  * @param mailServerConnected  máy chủ thư đã kết nối được chưa
  * @returns                    giao diện trang
  */
 function EmailSettingsEditor({
   saved,
+  updatedAt,
+  updatedBy,
   senderAddress,
   mailServerConnected,
 }: {
   saved: EmailSettings;
+  updatedAt: string;
+  updatedBy: StaffRef;
   senderAddress: string;
   mailServerConnected: boolean;
 }) {
@@ -155,9 +165,14 @@ function EmailSettingsEditor({
 
   return (
     <div className={profileStyles.page}>
-      {/* Đầu trang: tiêu đề bên trái; nhãn "Chưa lưu" bên phải khi có thay đổi */}
+      {/* Đầu trang: tiêu đề và lần lưu gần nhất bên trái; nhãn "Chưa lưu" bên phải khi có thay đổi */}
       <div className={styles.head}>
-        <h1 className={styles.title}>Cấu hình email</h1>
+        <div className={styles.titleBlock}>
+          <h1 className={styles.title}>Cấu hình email</h1>
+          <p className={styles.lastUpdate}>
+            Cập nhật lúc {formatDateTime(updatedAt)} bởi {updatedBy.name} ({updatedBy.email})
+          </p>
+        </div>
         {dirty && <span className={styles.dirty}>Chưa lưu</span>}
       </div>
 

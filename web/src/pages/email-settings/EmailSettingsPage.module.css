@@ -2,7 +2,9 @@
 
 /* đầu trang: tiêu đề bên trái; nhãn "Chưa lưu" bên phải (như trình soạn loại đơn) */
 .head{display:flex;align-items:center;justify-content:space-between;gap:16px 24px;flex-wrap:wrap}
+.titleBlock{display:grid;gap:4px;min-width:0}
 .title{font-size:clamp(24px,2.6vw,30px);line-height:1.2;font-weight:600;letter-spacing:-.03em;min-width:0}
+.lastUpdate{font-size:13px;color:var(--muted);overflow-wrap:anywhere}
 
 /* cuối trang: Bỏ thay đổi · Lưu canh phải (chỉ hiện khi có thay đổi) */
 .bottomActions{display:flex;gap:10px;align-items:center;justify-content:flex-end;flex-wrap:wrap}

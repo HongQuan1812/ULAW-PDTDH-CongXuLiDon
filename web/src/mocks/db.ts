@@ -1777,6 +1777,8 @@ Trân trọng,
 
 /** Cấu hình email đang dùng. */
 let emailSettings: EmailSettings = structuredClone(EMAIL_SETTINGS_SEED);
+/** Lần lưu cấu hình email gần nhất: lúc nào (giờ Việt Nam), cán bộ nào. */
+let emailSettingsUpdate = { updatedAt: '2026-11-03T14:20', updatedById: 'cb-1' };
 
 /**
  * Cấu hình email đang dùng.
@@ -1787,11 +1789,21 @@ export function getEmailSettings(): EmailSettings {
 }
 
 /**
- * Lưu cả cấu hình email.
+ * Lần lưu cấu hình email gần nhất.
+ * @returns  { updatedAt: giờ Việt Nam 'YYYY-MM-DDTHH:mm', updatedBy: cán bộ lưu }
+ */
+export function getEmailSettingsUpdate(): { updatedAt: string; updatedBy: StaffRef } {
+  return { updatedAt: emailSettingsUpdate.updatedAt, updatedBy: staffOf(emailSettingsUpdate.updatedById)! };
+}
+
+/**
+ * Lưu cả cấu hình email, ghi lại lúc lưu và người lưu.
  * @param settings  cấu hình mới (đã kiểm tra bằng EmailSettingsSchema)
+ * @param staffId   cán bộ lưu
  * @returns         cấu hình sau khi lưu
  */
-export function saveEmailSettings(settings: EmailSettings): EmailSettings {
+export function saveEmailSettings(settings: EmailSettings, staffId: string): EmailSettings {
   emailSettings = structuredClone(settings);
+  emailSettingsUpdate = { updatedAt: vietnamNow(), updatedById: staffId };
   return getEmailSettings();
 }

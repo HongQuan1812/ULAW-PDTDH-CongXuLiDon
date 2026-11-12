@@ -10,7 +10,7 @@ import {
   type EmailSettingsResponse,
   type SendTestEmailResponse,
 } from '@ulaw/shared';
-import { getEmailSettings, readSession, saveEmailSettings } from '../db';
+import { getEmailSettings, getEmailSettingsUpdate, readSession, saveEmailSettings } from '../db';
 import { MOCK_DELAY_MS, api, apiError } from '../http';
 
 /* JUST FOR DEMO: START · API giả coi như máy chủ thư luôn kết nối được và không gửi thư thật.
@@ -31,12 +31,17 @@ function permissionError(): Response | null {
 }
 
 /**
- * Câu trả cấu hình kèm địa chỉ gửi và tình trạng máy chủ thư.
+ * Câu trả cấu hình kèm lần lưu gần nhất, địa chỉ gửi và tình trạng máy chủ thư.
  * @param settings  cấu hình
  * @returns         response JSON EmailSettingsResponse
  */
 function settingsResponse(settings: EmailSettings): Response {
-  return HttpResponse.json<EmailSettingsResponse>({ settings, senderAddress: SENDER_ADDRESS, mailServerConnected: MAIL_SERVER_CONNECTED });
+  return HttpResponse.json<EmailSettingsResponse>({
+    settings,
+    ...getEmailSettingsUpdate(),
+    senderAddress: SENDER_ADDRESS,
+    mailServerConnected: MAIL_SERVER_CONNECTED,
+  });
 }
 
 export const emailHandlers = [
@@ -56,7 +61,7 @@ export const emailHandlers = [
 
     const parsed = EmailSettingsSchema.safeParse(await request.json().catch(() => null));
     if (!parsed.success) return apiError(422, parsed.error.issues[0]?.message ?? EMAIL_MESSAGES[422]);
-    return settingsResponse(saveEmailSettings(parsed.data));
+    return settingsResponse(saveEmailSettings(parsed.data, readSession()!.user.id));
   }),
 
   // Gửi thư thử: kiểm tra body, máy chủ thư phải đang kết nối; API giả không gửi thư thật
