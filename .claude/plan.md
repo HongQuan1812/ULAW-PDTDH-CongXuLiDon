@@ -40,7 +40,7 @@ Làm từng nhóm API. Xong nhóm nào thì chuyển nhóm đó sang API thật,
 | # | Bước | Nhánh | Gồm | |
 |---|---|---|---|---|
 | 0 | Nền móng | `backend-nen-mong` | PostgreSQL bằng Docker ✓ · dựng NestJS, Prisma · đọc `api/.env` · lọc lỗi trả `ApiErrorBody` · kiểm tra request bằng schema Zod của `shared/` · Swagger · nhóm `health` | ✓ |
-| 1 | Chạy giả và thật cùng lúc | `backend-nen-mong` | Vite chuyển `/api` sang backend · chọn nhóm nào dùng API thật · chuyển nhóm `health` sang API thật để thử đường đi | |
+| 1 | Chạy giả và thật cùng lúc | `backend-nen-mong` | Vite chuyển `/api` sang backend · chọn nhóm nào dùng API thật · chuyển nhóm `health` sang API thật để thử đường đi | ✓ |
 | 2 | Bảng, dữ liệu mẫu | `backend-bang` | `schema.prisma` đủ các bảng · migration đầu tiên · tách dữ liệu mẫu ra chỗ dùng chung để API giả và seed cùng dùng · seed | |
 | 3 | Đăng nhập, quyền | `backend-dang-nhap` | `dev-login` (chỉ bật khi `APP_ENV=dev`) · phiên bằng cookie httpOnly · `/auth/me`, đăng xuất · guard quyền `@RequirePermission` · nhóm `auth` | |
 | 4 | Hồ sơ | `backend-ho-so` | `student-directory` bản giả (đọc dữ liệu mẫu) · nhóm `profile` · CCCD che / đầy đủ | |
@@ -69,7 +69,7 @@ Chưa làm, chờ thông tin từ bên ngoài:
 
 ### Chạy giả và thật cùng lúc
 
-- `web/.env.development` có danh sách các nhóm dùng API thật, vd `VITE_REAL_API_GROUPS=health,auth,profile`. MSW bỏ qua các nhóm này, Vite chuyển request sang backend.
+- `REAL_API_GROUPS` trong `web/src/mocks/realApiGroups.ts` là danh sách các nhóm dùng API thật, vd `['health', 'auth', 'profile']`. MSW bỏ qua các nhóm này, Vite chuyển request sang backend.
 - Backend seed từ cùng dữ liệu mẫu với API giả (cùng id người dùng, cùng mã đơn), nên nhóm giả và nhóm thật nói về cùng một người, cùng một lá đơn.
 - Khi nhóm `auth` đã thật: API giả lấy người đang đăng nhập từ API thật, không tự giữ phiên riêng.
 - Lỗi ngẫu nhiên (`VITE_MOCK_FAILURE_RATE`) chỉ áp dụng cho các nhóm còn giả.
