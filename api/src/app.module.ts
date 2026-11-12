@@ -4,6 +4,7 @@ import { AuthModule } from './auth/auth.module';
 import { PrismaModule } from './common/prisma.module';
 import { ConfigModule } from './config/config.module';
 import { HealthModule } from './health/health.module';
+import { ProfileModule } from './profile/profile.module';
 
-@Module({ imports: [ConfigModule, PrismaModule, AuthModule, HealthModule] })
+@Module({ imports: [ConfigModule, PrismaModule, AuthModule, HealthModule, ProfileModule] })
 export class AppModule {}
