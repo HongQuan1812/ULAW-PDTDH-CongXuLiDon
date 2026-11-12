@@ -16,11 +16,9 @@ import {
   type UpdateAccountRequest,
 } from '@ulaw/shared';
 import { ApiException } from '../common/api-exception';
+import { isUniqueViolation } from '../common/prisma-errors';
 import { PrismaService } from '../common/prisma.service';
 import type { User } from '../generated/prisma/client';
-
-/** Mã lỗi của Prisma khi vi phạm ràng buộc duy nhất (email hoặc CCCD đã có người dùng). */
-const PRISMA_UNIQUE_VIOLATION = 'P2002';
 
 @Injectable()
 export class AccountsService {
@@ -141,13 +139,4 @@ export class AccountsService {
   findUser(userId: string): Promise<User | null> {
     return this.prisma.user.findUnique({ where: { id: userId } });
   }
-}
-
-/**
- * Lỗi này có phải vi phạm ràng buộc duy nhất của Prisma không.
- * @param error  lỗi bắt được
- * @returns      true nếu là P2002
- */
-function isUniqueViolation(error: unknown): boolean {
-  return typeof error === 'object' && error !== null && 'code' in error && error.code === PRISMA_UNIQUE_VIOLATION;
 }
