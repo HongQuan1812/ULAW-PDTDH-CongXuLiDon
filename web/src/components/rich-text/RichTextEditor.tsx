@@ -1,11 +1,11 @@
 /* Ô soạn văn bản có định dạng, gõ như Notion (xem richTextExtensions.ts). Có thanh nút nhỏ phía trên cho ai chưa quen phím tắt.
-   Nội dung lưu dạng JSON của Tiptap; ô này chưa gắn vào chỗ nào, chờ gắn vào câu hỏi "Đoạn văn", mô tả phần… */
+   Nội dung lưu dạng JSON của Tiptap; ô này chưa gắn vào chỗ nào, chờ gắn vào câu hỏi "Đoạn văn", mô tả phần…
+   Có thể dùng với mã {…} (vd thư của trang Cấu hình email): truyền danh sách mã để tô màu, gọi controlRef để chèn mã. */
 import { useEffect, useMemo, useRef, type RefObject } from 'react';
-import { EditorContent, Extension, useEditor, type Editor } from '@tiptap/react';
+import { EditorContent, useEditor, type Editor } from '@tiptap/react';
 import { Placeholder } from '@tiptap/extensions';
-import { Plugin } from '@tiptap/pm/state';
-import { Decoration, DecorationSet } from '@tiptap/pm/view';
 import { createRichTextExtensions, HEADING_LEVELS, type RichTextDoc } from './richTextExtensions';
+import { createTagHighlightExtension, type TagInsertControl } from './tagHighlight';
 import styles from './RichText.module.css';
 
 interface RichTextEditorProps {
@@ -21,53 +21,10 @@ interface RichTextEditorProps {
   disabled?: boolean;
   /** Ô lỗi: viền đỏ */
   invalid?: boolean;
-  /** Giữ trình soạn để bên ngoài chèn chữ vào chỗ con trỏ (vd nút chèn mã của trang Cấu hình email) */
-  editorRef?: RefObject<Editor | null>;
-  /** Tô màu một số đoạn chữ ngay trong ô soạn (vd mã {ho_ten}); chỉ là hiển thị, không đổi nội dung */
-  highlightText?: (text: string) => TextHighlight[];
-}
-
-/** Một đoạn chữ cần tô màu trong ô soạn. */
-export interface TextHighlight {
-  /** vị trí bắt đầu trong đoạn chữ */
-  start: number;
-  /** vị trí ngay sau đoạn cần tô */
-  end: number;
-  /** class CSS gắn vào đoạn đó */
-  className: string;
-}
-
-/**
- * Tiện ích của Tiptap tô màu chữ theo hàm highlightText (tính lại mỗi lần nội dung đổi).
- * @param highlightTextRef  ref giữ hàm highlightText mới nhất, để không phải tạo lại trình soạn khi hàm đổi
- * @returns                 tiện ích Tiptap
- */
-function createTextHighlightExtension(highlightTextRef: RefObject<RichTextEditorProps['highlightText']>) {
-  return Extension.create({
-    name: 'textHighlight',
-    addProseMirrorPlugins() {
-      return [
-        new Plugin({
-          props: {
-            decorations(state) {
-              const highlightText = highlightTextRef.current;
-              if (!highlightText) return null;
-
-              // Mỗi nút chữ: tìm các đoạn cần tô, đổi vị trí trong chữ sang vị trí trong văn bản
-              const decorations: Decoration[] = [];
-              state.doc.descendants((node, position) => {
-                if (!node.isText || !node.text) return;
-                for (const highlight of highlightText(node.text)) {
-                  decorations.push(Decoration.inline(position + highlight.start, position + highlight.end, { class: highlight.className }));
-                }
-              });
-              return DecorationSet.create(state.doc, decorations);
-            },
-          },
-        }),
-      ];
-    },
-  });
+  /** Các mã dùng được, vd ['ho_ten', 'ma_don']. Có thì mã {…} trong ô được tô màu: mã trong danh sách tô xanh, mã lạ tô đỏ */
+  tags?: readonly string[];
+  /** Nhận lệnh điều khiển ô soạn từ bên ngoài, vd nút chèn mã nằm ngoài ô */
+  controlRef?: RefObject<TagInsertControl | null>;
 }
 
 /** Một nút của thanh định dạng. */
@@ -101,11 +58,11 @@ const TOOLBAR_ACTIONS: ToolbarAction[] = [
  * @param props  xem RichTextEditorProps
  * @returns      khung gồm thanh nút và vùng soạn
  */
-export function RichTextEditor({ value, onChange, label, placeholder, disabled = false, invalid = false, editorRef, highlightText }: RichTextEditorProps) {
-  const highlightTextRef = useRef(highlightText);
-  highlightTextRef.current = highlightText;
+export function RichTextEditor({ value, onChange, label, placeholder, disabled = false, invalid = false, tags, controlRef }: RichTextEditorProps) {
+  const tagsRef = useRef(tags);
+  tagsRef.current = tags;
   const extensions = useMemo(
-    () => [...createRichTextExtensions(), Placeholder.configure({ placeholder: placeholder ?? '' }), createTextHighlightExtension(highlightTextRef)],
+    () => [...createRichTextExtensions(), Placeholder.configure({ placeholder: placeholder ?? '' }), createTagHighlightExtension(tagsRef)],
     [placeholder],
   );
 
@@ -123,10 +80,11 @@ export function RichTextEditor({ value, onChange, label, placeholder, disabled =
     onUpdate: ({ editor: updatedEditor }) => onChange(updatedEditor.getJSON() as RichTextDoc),
   });
 
-  // Đưa trình soạn ra ngoài khi đã tạo xong
+  // Đưa lệnh chèn mã ra ngoài khi trình soạn đã tạo xong
   useEffect(() => {
-    if (editorRef) editorRef.current = editor;
-  }, [editor, editorRef]);
+    if (!controlRef) return;
+    controlRef.current = editor && { insertTag: (tag) => editor.chain().focus().insertContent({ type: 'text', text: `{${tag}}` }).run() };
+  }, [editor, controlRef]);
 
   // Nội dung hoặc chế độ sửa đổi từ bên ngoài (vd đặt lại form) thì cập nhật ô soạn, không báo ngược lên
   useEffect(() => {

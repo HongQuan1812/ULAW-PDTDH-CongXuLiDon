@@ -1,45 +1,26 @@
 /* Thư của một lúc gửi trên trang Cấu hình email (như emRenderEditor, emRenderPreview của artifact/js/email-page.js):
    công tắc "Gửi email", tiêu đề, nút chèn mã, nội dung (soạn có định dạng như trình soạn văn bản); xem trước bằng dữ liệu mẫu; gửi thư thử.
    Lúc gửi đang tắt: phần soạn và xem trước mờ đi và không bấm được, công tắc vẫn bấm được. */
-import { useRef, useState, type ReactNode } from 'react';
-import { flushSync } from 'react-dom';
-import type { Editor } from '@tiptap/react';
+import { useState, type ReactNode } from 'react';
 import {
   EMAIL_SAMPLE_RECIPIENT,
   EMAIL_SAMPLE_VALUES,
-  EMAIL_TAGS,
-  EMAIL_TAG_LABEL,
   SendTestEmailRequestSchema,
-  findEmailTags,
   splitEmailTemplate,
   type EmailEventSetting,
   type EmailSender,
-  type EmailTag,
   type EmailTagValues,
   type RichTextNode,
 } from '@ulaw/shared';
 import { useSendTestEmail } from '../../api/email';
 import { Button } from '../../components/Button';
-import { Field, RequiredMark } from '../../components/Field';
-import { RichTextEditor, type TextHighlight } from '../../components/rich-text/RichTextEditor';
+import { Field } from '../../components/Field';
 import { useToast } from '../../components/Toast';
 import { useAuth } from '../../features/auth/useAuth';
+import { EmailComposer } from './EmailComposer';
 import type { FieldErrors } from './EmailSettingsPage';
-import fieldStyles from '../../components/Field.module.css';
 import richTextStyles from '../../components/rich-text/RichText.module.css';
 import styles from './EmailSettingsPage.module.css';
-
-/**
- * Tô màu các mã trong ô Nội dung thư, giống khung xem trước: mã đúng tô nền xanh, mã lạ tô đỏ.
- * @param text  chữ của một đoạn trong ô soạn
- * @returns     các đoạn cần tô kèm class
- */
-function highlightEmailTags(text: string): TextHighlight[] {
-  return findEmailTags(text).map(({ start, end, known }) => ({ start, end, className: (known ? styles.filledTag : styles.unknownTag) ?? '' }));
-}
-
-/** Ô đang gõ khi bấm nút chèn mã. */
-type TextTarget = 'subject' | 'body';
 
 interface EmailEventEditorProps {
   /** thư của lúc gửi đang chọn (bản nháp) */
@@ -64,10 +45,6 @@ export function EmailEventEditor({ event, eventIndex, sender, senderAddress, fie
   const toast = useToast();
   const { user } = useAuth();
   const sendTestEmail = useSendTestEmail();
-  const subjectRef = useRef<HTMLInputElement>(null);
-  const bodyEditorRef = useRef<Editor | null>(null);
-  // Ô gõ gần nhất: nút chèn mã chèn vào ô này (mặc định Nội dung thư)
-  const lastTextTarget = useRef<TextTarget>('body');
   const [testRecipient, setTestRecipient] = useState(user.email);
   const [testError, setTestError] = useState<string | null>(null);
 
@@ -76,32 +53,6 @@ export function EmailEventEditor({ event, eventIndex, sender, senderAddress, fie
   const sampleValues: EmailTagValues = { ...EMAIL_SAMPLE_VALUES, chu_ki: sender.signature };
   // Lúc gửi đang tắt: làm mờ phần soạn, xem trước (kèm inert để không bấm, không gõ được)
   const dimmedClass = event.enabled ? '' : styles.dimmed;
-
-  /**
-   * Chèn một mã vào chỗ con trỏ của ô gõ gần nhất (thay phần đang bôi đen), rồi đặt con trỏ ngay sau mã.
-   * @param tag  mã cần chèn, vd 'ho_ten'
-   */
-  const insertTag = (tag: EmailTag) => {
-    const tagText = `{${tag}}`;
-
-    // Nội dung thư: trình soạn tự chèn vào chỗ con trỏ và báo nội dung mới qua onChange
-    if (lastTextTarget.current === 'body') {
-      bodyEditorRef.current?.chain().focus().insertContent({ type: 'text', text: tagText }).run();
-      return;
-    }
-
-    // Tiêu đề: ghép mã vào giữa chữ đang có
-    const element = subjectRef.current;
-    if (!element) return;
-    const selectionStart = element.selectionStart ?? element.value.length;
-    const selectionEnd = element.selectionEnd ?? selectionStart;
-    const nextText = element.value.slice(0, selectionStart) + tagText + element.value.slice(selectionEnd);
-
-    // Vẽ lại ngay để đặt được con trỏ sau mã vừa chèn
-    flushSync(() => onChange({ subject: nextText }));
-    element.focus();
-    element.setSelectionRange(selectionStart + tagText.length, selectionStart + tagText.length);
-  };
 
   /** Gửi thư thử theo bản đang soạn; địa chỉ sai hoặc máy chủ báo lỗi thì báo ngay dưới ô địa chỉ. */
   const sendTest = async () => {
@@ -134,60 +85,7 @@ export function EmailEventEditor({ event, eventIndex, sender, senderAddress, fie
         </div>
 
         <div className={`${styles.fields} ${dimmedClass}`} inert={!event.enabled}>
-          <Field label="Tiêu đề thư" required error={subjectError}>
-            <input
-              ref={subjectRef}
-              autoComplete="off"
-              value={event.subject}
-              aria-invalid={!!subjectError}
-              onFocus={() => (lastTextTarget.current = 'subject')}
-              onChange={(changeEvent) => onChange({ subject: changeEvent.target.value })}
-            />
-          </Field>
-
-          <div className={styles.tagPicker}>
-            <span className={styles.tagPickerLabel}>
-              Mã chèn vào thư <small>Bấm để chèn vào chỗ đang gõ</small>
-            </span>
-            <div className={styles.chips}>
-              {EMAIL_TAGS.map((tag) => (
-                <button
-                  key={tag}
-                  type="button"
-                  className={styles.chip}
-                  title={EMAIL_TAG_LABEL[tag]}
-                  aria-label={`Chèn mã ${tag}: ${EMAIL_TAG_LABEL[tag]}`}
-                  // Giữ con trỏ ở ô đang gõ khi bấm
-                  onMouseDown={(mouseEvent) => mouseEvent.preventDefault()}
-                  onClick={() => insertTag(tag)}
-                >
-                  {`{${tag}}`}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Không dùng Field (thẻ <label>): bấm vào nhãn sẽ bấm luôn nút đầu tiên của thanh định dạng */}
-          <div className={`${fieldStyles.field} ${styles.bodyField}`} onFocus={() => (lastTextTarget.current = 'body')}>
-            <span>
-              Nội dung thư
-              <RequiredMark />
-            </span>
-            <RichTextEditor
-              value={event.body}
-              onChange={(body) => onChange({ body })}
-              label="Nội dung thư"
-              placeholder="Nội dung thư. Gõ # để làm tiêu đề, - để gạch đầu dòng, Ctrl+B in đậm."
-              invalid={!!bodyError}
-              editorRef={bodyEditorRef}
-              highlightText={highlightEmailTags}
-            />
-            {bodyError && (
-              <span className={fieldStyles.error} role="alert">
-                {bodyError}
-              </span>
-            )}
-          </div>
+          <EmailComposer subject={event.subject} body={event.body} subjectError={subjectError} bodyError={bodyError} onChange={onChange} />
         </div>
       </div>
 

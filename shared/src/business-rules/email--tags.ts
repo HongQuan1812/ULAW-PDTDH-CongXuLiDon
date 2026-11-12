@@ -59,29 +59,6 @@ export function isEmailTag(tag: string): tag is EmailTag {
   return (EMAIL_TAGS as readonly string[]).includes(tag);
 }
 
-/** Vị trí một mã trong chữ (để tô màu mã ngay trong ô soạn). */
-export interface EmailTagMatch {
-  /** vị trí kí tự '{' */
-  start: number;
-  /** vị trí ngay sau kí tự '}' */
-  end: number;
-  /** true nếu mã có trong EMAIL_TAGS; false = mã lạ, thư sẽ giữ nguyên chữ này */
-  known: boolean;
-}
-
-/**
- * Tìm mọi mã {...} trong một đoạn chữ.
- * @param text  chữ cần tìm, vd 'Chào {ho_ten},'
- * @returns     vị trí các mã theo thứ tự; không có mã thì []
- */
-export function findEmailTags(text: string): EmailTagMatch[] {
-  return [...text.matchAll(EMAIL_TAG_IN_TEXT)].map((match) => ({
-    start: match.index,
-    end: match.index + match[0].length,
-    known: isEmailTag(match[1]!),
-  }));
-}
-
 /**
  * Tách tiêu đề / nội dung thư thành các đoạn, thay mã bằng giá trị (để xem trước: tô nền phần đã thay, tô đỏ mã lạ).
  * @param template  tiêu đề hoặc nội dung có mã, vd 'Chào {ho_ten},'
