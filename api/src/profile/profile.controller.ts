@@ -34,6 +34,7 @@ import { ApiException } from '../common/api-exception';
 import { openApiSchemaOf } from '../common/swagger';
 import { ZodValidationPipe } from '../common/zod-validation.pipe';
 import type { User } from '../generated/prisma/client';
+import { FormsService } from '../forms/forms.service';
 import { ProfileService } from './profile.service';
 
 @ApiTags('profile')
@@ -41,8 +42,12 @@ import { ProfileService } from './profile.service';
 export class ProfileController {
   /**
    * @param profileService  đọc, lưu hồ sơ trong database
+   * @param formsService    danh sách đơn của một người
    */
-  constructor(private readonly profileService: ProfileService) {}
+  constructor(
+    private readonly profileService: ProfileService,
+    private readonly formsService: FormsService,
+  ) {}
 
   /**
    * Tìm người dùng được xem hồ sơ.
@@ -169,7 +174,7 @@ export class ProfileController {
   @ApiOkResponse({ schema: openApiSchemaOf(MyFormsResponseSchema) })
   async personForms(@Param('userId') userId: string, @Query() queryParams: Record<string, string | undefined>): Promise<MyFormsResponse> {
     const person = await this.findPersonOrFail(userId);
-    return this.profileService.findFormsOf(person.id, this.readListQueryOrFail(queryParams, FORM_LIST_FIELDS));
+    return this.formsService.findFormsOf(person.id, this.readListQueryOrFail(queryParams, FORM_LIST_FIELDS));
   }
 
   /**
@@ -186,7 +191,7 @@ export class ProfileController {
   ): Promise<HandledFormsResponse> {
     const person = await this.findPersonOrFail(userId);
     if (!can(viewer.role, 'viewAll')) throw new ApiException(403, PROFILE_MESSAGES.handledFormsForbidden);
-    return this.profileService.findFormsHandledBy(person.id, this.readListQueryOrFail(queryParams, HANDLED_FORM_LIST_FIELDS));
+    return this.formsService.findFormsHandledBy(person.id, this.readListQueryOrFail(queryParams, HANDLED_FORM_LIST_FIELDS));
   }
 
   /**

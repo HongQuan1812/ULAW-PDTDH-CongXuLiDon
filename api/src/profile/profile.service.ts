@@ -1,33 +1,20 @@
-/* Hồ sơ cá nhân: đọc, lưu họ tên / CCCD / SĐT, chọn MSSV chính, danh sách đơn của một người. Chỉ làm việc với database,
+/* Hồ sơ cá nhân: đọc, lưu họ tên / CCCD / SĐT, chọn MSSV chính. Chỉ làm việc với database,
    việc kiểm tra quyền nằm ở controller. */
 import { Injectable } from '@nestjs/common';
 import {
-  FORM_LIST_DEFAULT_SORTING,
-  FORM_LIST_FIELDS,
-  HANDLED_FORM_LIST_FIELDS,
-  applyListQuery,
   maskCccd,
-  type FormSummary,
   type FullCccdResponse,
-  type HandledFormSummary,
-  type HandledFormsResponse,
-  type ListQuery,
-  type MyFormsResponse,
   type Profile,
   type Session,
   type StudentsResponse,
   type UpdateProfileRequest,
 } from '@ulaw/shared';
 import { PrismaService } from '../common/prisma.service';
-import { toVietnamTime } from '../common/vietnam-time';
-import type { Form, User } from '../generated/prisma/client';
+import type { User } from '../generated/prisma/client';
 import { StudentDirectoryService } from '../student-directory/student-directory.service';
 
 /** Mã lỗi của Prisma khi vi phạm ràng buộc duy nhất (vd CCCD đã thuộc tài khoản khác). */
 const PRISMA_UNIQUE_VIOLATION = 'P2002';
-
-/** Đơn kèm hai cán bộ liên quan, đủ để dựng dòng của bảng. */
-type FormWithStaff = Form & { receiver: User | null; handler: User | null };
 
 @Injectable()
 export class ProfileService {
@@ -126,63 +113,5 @@ export class ProfileService {
       if (typeof error === 'object' && error !== null && 'code' in error && error.code === PRISMA_UNIQUE_VIOLATION) return null;
       throw error;
     }
-  }
-
-  /**
-   * Dựng một dòng tóm tắt của đơn.
-   * @param form  đơn trong database
-   * @returns     dòng theo FormSummarySchema
-   */
-  private toSummary(form: Form): FormSummary {
-    const snapshot = form.formTypeSnapshot as { name: string };
-    return {
-      code: form.code,
-      formTypeId: form.formTypeId,
-      formTypeName: snapshot.name,
-      submittedAt: toVietnamTime(form.submittedAt),
-      status: form.status,
-    };
-  }
-
-  /**
-   * Dựng dòng "Đơn phụ trách": tóm tắt kèm người tiếp nhận, người xử lí.
-   * @param form  đơn kèm hai cán bộ
-   * @returns     dòng theo HandledFormSummarySchema
-   */
-  private toHandledSummary(form: FormWithStaff): HandledFormSummary {
-    const toStaff = (staff: User | null) => (staff ? { id: staff.id, name: staff.name, email: staff.email } : null);
-    return { ...this.toSummary(form), receiver: toStaff(form.receiver), handler: toStaff(form.handler) };
-  }
-
-  /**
-   * Lấy một trang trong các đơn một người đã nộp.
-   * @param ownerId    id người nộp
-   * @param listQuery  trang, số dòng, tìm, sắp xếp, lọc
-   * @returns          theo MyFormsResponseSchema
-   */
-  async findFormsOf(ownerId: string, listQuery: ListQuery): Promise<MyFormsResponse> {
-    const forms = await this.prisma.form.findMany({ where: { ownerId } });
-    const { rows, ...pageMeta } = applyListQuery(forms.map((form) => this.toSummary(form)), FORM_LIST_FIELDS, listQuery, FORM_LIST_DEFAULT_SORTING);
-    return { forms: rows, ...pageMeta };
-  }
-
-  /**
-   * Lấy một trang trong các đơn một cán bộ đã tiếp nhận hoặc đang xử lí.
-   * @param staffId    id cán bộ
-   * @param listQuery  trang, số dòng, tìm, sắp xếp, lọc
-   * @returns          theo HandledFormsResponseSchema
-   */
-  async findFormsHandledBy(staffId: string, listQuery: ListQuery): Promise<HandledFormsResponse> {
-    const forms = await this.prisma.form.findMany({
-      where: { OR: [{ receiverId: staffId }, { handlerId: staffId }] },
-      include: { receiver: true, handler: true },
-    });
-    const { rows, ...pageMeta } = applyListQuery(
-      forms.map((form) => this.toHandledSummary(form)),
-      HANDLED_FORM_LIST_FIELDS,
-      listQuery,
-      FORM_LIST_DEFAULT_SORTING,
-    );
-    return { forms: rows, ...pageMeta };
   }
 }
