@@ -15,6 +15,7 @@ export const PERMISSIONS = [
   'editAnyForm', //        sửa nội dung đơn của người khác (cùng điều kiện EDITABLE)
   'manageAccounts', //     trang Quản lí tài khoản
   'manageFormTypes', //    trang Quản lí loại đơn
+  'manageEmail', //        trang Cấu hình email: người gửi, bật / tắt và nội dung email báo khi đơn đổi trạng thái
 ] as const;
 export type Permission = (typeof PERMISSIONS)[number];
 
@@ -24,6 +25,7 @@ export const PAGES = [
   'forms', //      Quản lí đơn (tất cả đơn)
   'formTypes', // Quản lí loại đơn
   'accounts', //   Quản lí tài khoản
+  'emailSettings', // Cấu hình email
 ] as const;
 export type Page = (typeof PAGES)[number];
 

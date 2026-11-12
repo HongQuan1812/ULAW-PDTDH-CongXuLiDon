@@ -287,6 +287,13 @@ const PAGE_ICON: Record<Page, ReactNode> = {
       <path d="M16 4.5a3.5 3.5 0 0 1 0 7M18 14.8c2.2.6 3.5 2.4 3.5 5.2" />
     </Icon>
   ),
+  // Cấu hình email: phong bì
+  emailSettings: (
+    <Icon>
+      <rect x="3" y="5" width="18" height="14" rx="2" />
+      <path d="m3 7 9 6 9-6" />
+    </Icon>
+  ),
 };
 
 function MenuIcon() {

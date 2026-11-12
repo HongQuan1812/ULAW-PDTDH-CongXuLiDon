@@ -29,11 +29,11 @@ export const ROLES: Record<RoleId, Role> = {
   },
   admin: {
     name: 'Admin',
-    pages: ['profile', 'forms', 'formTypes', 'accounts'],
+    pages: ['profile', 'forms', 'formTypes', 'accounts', 'emailSettings'],
     home: 'forms',
     permissions: [
       'manageFormTypes', 'submit', 'editOwn', 'viewAll', 'receive', 'viewApplicant', 'editApplicant',
-      'submitForApplicant', 'decide', 'decideAny', 'transfer', 'editAnyForm', 'manageAccounts',
+      'submitForApplicant', 'decide', 'decideAny', 'transfer', 'editAnyForm', 'manageAccounts', 'manageEmail',
     ],
   },
 };

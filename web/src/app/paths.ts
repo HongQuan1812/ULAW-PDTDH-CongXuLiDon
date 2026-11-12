@@ -9,6 +9,7 @@ export const PAGE_PATH: Record<Page, string> = {
   forms: '/quan-li-don',
   formTypes: '/quan-li-loai-don',
   accounts: '/quan-li-tai-khoan',
+  emailSettings: '/cau-hinh-email',
 };
 
 /** Trang nộp đơn mới, khai báo trong router: /nop-don/<mã loại đơn>. */
@@ -101,6 +102,7 @@ export const PAGE_LABEL: Record<Page, string> = {
   forms: 'Quản lí đơn',
   formTypes: 'Quản lí loại đơn',
   accounts: 'Quản lí tài khoản',
+  emailSettings: 'Cấu hình email',
 };
 
 /**

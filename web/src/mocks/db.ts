@@ -1,5 +1,6 @@
 /* Dữ liệu giả của API giả, giữ trong bộ nhớ trình duyệt. */
 import type {
+  EmailSettings,
   Account,
   ApplicantRef,
   CreateAccountRequest,
@@ -1678,4 +1679,101 @@ export function writeSession(userId: string | null): void {
   } catch {
     // Trình duyệt chặn bộ nhớ: phiên chỉ không giữ được khi tải lại trang
   }
+}
+
+/* ---------- Cấu hình email ---------- */
+
+/* Cấu hình ban đầu (lấy từ EMAIL_DEFAULT của artifact/js/email-page.js). Chỉ giữ trong bộ nhớ: tải lại trang là về ban đầu. */
+const EMAIL_SETTINGS_SEED: EmailSettings = {
+  sender: {
+    name: 'Phòng Đào tạo Đại học - ULAW',
+    address: 'daotao@hcmulaw.edu.vn',
+    signature: 'Phòng Đào tạo Đại học, Trường Đại học Luật TP.HCM',
+  },
+  events: [
+    {
+      status: 'nop',
+      enabled: true,
+      subject: '[{ma_don}] Đã nhận đơn {loai_don} của bạn',
+      body: `Chào {ho_ten},
+
+Phòng Đào tạo đã nhận đơn {loai_don} bạn nộp ngày {ngay_nop}. Mã đơn của bạn là {ma_don}.
+
+Chúng tôi sẽ tiếp nhận và xử lí trong thời gian sớm nhất. Bạn xem tiến độ xử lí tại:
+{link_don}
+
+Trân trọng,
+{chu_ki}`,
+    },
+    {
+      status: 'bs',
+      enabled: true,
+      subject: '[{ma_don}] Đơn của bạn cần bổ sung',
+      body: `Chào {ho_ten},
+
+Đơn {loai_don} mã {ma_don} cần bổ sung thông tin:
+
+{ly_do}
+
+Bạn vào đơn để sửa và nộp lại:
+{link_don}
+
+Trân trọng,
+{nguoi_xu_li}
+{chu_ki}`,
+    },
+    {
+      status: 'tc',
+      enabled: true,
+      subject: '[{ma_don}] Đơn của bạn không được duyệt',
+      body: `Chào {ho_ten},
+
+Rất tiếc, đơn {loai_don} mã {ma_don} không được duyệt.
+
+Lí do: {ly_do}
+
+Bạn xem chi tiết tại:
+{link_don}
+
+Trân trọng,
+{nguoi_xu_li}
+{chu_ki}`,
+    },
+    {
+      status: 'duyet',
+      enabled: true,
+      subject: '[{ma_don}] Đơn của bạn đã được duyệt',
+      body: `Chào {ho_ten},
+
+Đơn {loai_don} mã {ma_don} đã được duyệt.
+
+Bạn xem kết quả và tải file tại:
+{link_don}
+
+Trân trọng,
+{nguoi_xu_li}
+{chu_ki}`,
+    },
+  ],
+};
+
+/** Cấu hình email đang dùng. */
+let emailSettings: EmailSettings = structuredClone(EMAIL_SETTINGS_SEED);
+
+/**
+ * Cấu hình email đang dùng.
+ * @returns  bản sao (sửa bản sao không đổi dữ liệu giả)
+ */
+export function getEmailSettings(): EmailSettings {
+  return structuredClone(emailSettings);
+}
+
+/**
+ * Lưu cả cấu hình email.
+ * @param settings  cấu hình mới (đã kiểm tra bằng EmailSettingsSchema)
+ * @returns         cấu hình sau khi lưu
+ */
+export function saveEmailSettings(settings: EmailSettings): EmailSettings {
+  emailSettings = structuredClone(settings);
+  return getEmailSettings();
 }

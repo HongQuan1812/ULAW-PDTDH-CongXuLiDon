@@ -1,0 +1,87 @@
+/* Trang Cấu hình email (như .em-* của artifact/styles.css). Khung trang, thẻ dùng chung ProfilePage.module.css. */
+
+/* đầu trang: tiêu đề bên trái; Chưa lưu · Bỏ thay đổi · Lưu bên phải (chỉ hiện khi có thay đổi) */
+.head{display:flex;align-items:center;justify-content:space-between;gap:16px 24px;flex-wrap:wrap}
+.headText{display:grid;gap:6px;flex:1 1 360px;min-width:0}
+.headText h1{font-size:clamp(22px,2.4vw,26px);font-weight:600;line-height:1.2;letter-spacing:-.03em}
+.headActions{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.dirty{font-size:12.5px;font-weight:500;color:var(--s-bs-fg);background:var(--s-bs-bg);padding:3px 11px;border-radius:999px}
+.saveError{border-radius:var(--r);padding:12px 16px;font-size:13.5px;background:var(--danger-soft);color:var(--danger);font-weight:500}
+
+/* thẻ Người gửi */
+.senderCard{display:grid;gap:16px}
+.cardHead{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.cardHead h2,.contentTitle{font-size:17px;font-weight:600}
+.connected,.disconnected{display:inline-flex;align-items:center;gap:8px;font-size:12.5px;font-weight:500;padding:3px 11px;border-radius:999px}
+.connected{color:var(--s-duyet-fg);background:var(--s-duyet-bg)}
+.disconnected{color:var(--s-tc-fg);background:var(--s-tc-bg)}
+.connected i,.disconnected i{width:7px;height:7px;border-radius:50%;background:currentColor}
+/* Tên + Địa chỉ chia đều một hàng (hẹp thì xuống dòng); Chữ kí luôn một hàng riêng */
+.senderGrid{display:flex;flex-wrap:wrap;gap:16px}
+.senderGrid>*{flex:1 1 280px;min-width:0}
+.senderGrid>.wide{flex-basis:100%}
+
+/* thẻ Nội dung email: không đệm, tab sát mép */
+.contentCard{padding:0;overflow:hidden}
+.contentTitle{padding:clamp(20px,3vw,24px) clamp(20px,3vw,24px) 6px}
+.tabs{display:flex;gap:4px;padding:0 14px;border-bottom:1px solid var(--line);overflow-x:auto;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tab{display:inline-flex;align-items:center;gap:8px;padding:14px 12px 12px;border:0;border-bottom:2px solid transparent;margin-bottom:-1px;background:none;font-size:14px;font-weight:500;color:var(--muted);cursor:pointer;white-space:nowrap}
+.tab:hover{color:var(--fg)}
+.tab[aria-selected="true"]{color:var(--fg);border-bottom-color:var(--accent)}
+.tab:focus-visible{outline:2px solid var(--focus);outline-offset:-2px;border-radius:var(--r)}
+/* chấm màu theo trạng thái; lúc đang tắt thì xám, có ô lỗi thì đỏ */
+.dot{width:8px;height:8px;border-radius:50%;flex:none}
+.dot[data-status="nop"]{background:var(--s-nop-fg)}
+.dot[data-status="bs"]{background:var(--s-bs-fg)}
+.dot[data-status="tc"]{background:var(--s-tc-fg)}
+.dot[data-status="duyet"]{background:var(--s-duyet-fg)}
+.tabOff .dot{background:var(--faint)}
+.dot.dotError{background:var(--danger);box-shadow:0 0 0 3px var(--danger-soft)}
+.offTag{font-size:11.5px;font-weight:500;padding:1px 7px;border-radius:999px;background:var(--surface-2);color:var(--muted)}
+.visuallyHidden{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+/* hai mục trong thẻ: Soạn thư, Xem trước */
+.section{display:flex;flex-direction:column;gap:14px;padding:clamp(20px,3vw,24px);min-width:0}
+.section+.section{border-top:1px solid var(--line)}
+.caption{font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.caption span{text-transform:none;letter-spacing:0;font-weight:400}
+/* hàng "Soạn thư": nhãn bên trái; mô tả + công tắc "Gửi email" bên phải */
+.captionRow{display:flex;align-items:center;justify-content:space-between;gap:8px 16px;flex-wrap:wrap}
+.sendToggle{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.sendNote{font-size:12.5px;color:var(--muted)}
+.switch{display:inline-flex;align-items:center;gap:10px;font-size:13.5px;font-weight:500;cursor:pointer}
+.switch input[type=checkbox]{appearance:none;width:36px;height:21px;margin:0;border-radius:11px;background:var(--line-2);position:relative;cursor:pointer;transition:background .15s;flex:none}
+.switch input[type=checkbox]::after{content:"";position:absolute;top:2.5px;left:2.5px;width:16px;height:16px;border-radius:50%;background:var(--surface);box-shadow:0 1px 2px rgba(0,0,0,.2);transition:transform .15s}
+.switch input[type=checkbox]:checked{background:var(--accent)}
+.switch input[type=checkbox]:checked::after{transform:translateX(15px)}
+.switch input[type=checkbox]:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+.fields{display:flex;flex-direction:column;gap:14px}
+.fields textarea[aria-invalid="true"]{border-color:var(--danger);box-shadow:0 0 0 4px color-mix(in srgb,var(--danger) 12%,transparent)}
+/* lúc gửi đang tắt */
+.dimmed{opacity:.5}
+
+/* nút chèn mã */
+.tagPicker{display:grid;gap:7px}
+.tagPickerLabel{font-weight:500;font-size:13.5px}
+.tagPickerLabel small{font-weight:400;color:var(--muted);font-size:12.5px;margin-left:6px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font:12.5px ui-monospace,Menlo,Consolas,monospace;background:var(--surface-2);color:var(--fg);border:1px solid var(--line-2);border-radius:6px;padding:3px 8px;cursor:pointer}
+.chip:hover{background:var(--accent-soft);border-color:var(--accent);color:var(--accent-ink)}
+.chip:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+
+/* khung xem trước: như một bức thư trong hộp thư */
+.mail{border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.mailHead{margin:0;padding:12px 16px;background:var(--surface-2);border-bottom:1px solid var(--line);display:grid;grid-template-columns:auto minmax(0,1fr);gap:2px 12px;font-size:13px}
+.mailHead dt{color:var(--muted)}
+.mailHead dd{margin:0;overflow-wrap:anywhere}
+.mailSubject{font-weight:600}
+.toNote{color:var(--muted)}
+.mailBody{padding:16px;white-space:pre-wrap;overflow-wrap:anywhere;background:var(--surface);line-height:1.65;font-size:14px}
+.filledTag{background:var(--accent-soft);color:var(--accent-ink);border-radius:3px;padding:0 2px}
+.unknownTag{background:var(--s-tc-bg);color:var(--s-tc-fg);border-radius:3px;padding:0 2px}
+
+/* gửi thử */
+.testRow{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end}
+.testRow>label{flex:1 1 220px}
+.hint{font-size:12.5px;color:var(--muted)}
