@@ -44,7 +44,7 @@ Làm từng nhóm API. Xong nhóm nào thì chuyển nhóm đó sang API thật,
 | 2 | Bảng, dữ liệu mẫu | `backend-bang` | `schema.prisma` đủ các bảng · migration đầu tiên · tách dữ liệu mẫu ra chỗ dùng chung để API giả và seed cùng dùng · seed | ✓ |
 | 3 | Đăng nhập, quyền | `backend-dang-nhap` | `dev-login` (chỉ bật khi `APP_ENV=dev`) · phiên bằng cookie httpOnly · `/auth/me`, đăng xuất · guard quyền `@RequirePermission` · nhóm `auth` | ✓ |
 | 4 | Hồ sơ | `backend-ho-so` | `student-directory` bản giả (đọc dữ liệu mẫu) · nhóm `profile` · CCCD che / đầy đủ | ✓ |
-| 5 | Tài khoản | `backend-tai-khoan` | nhóm `accounts`: danh sách phân trang, tạo, sửa, phân vai trò | |
+| 5 | Tài khoản | `backend-tai-khoan` | nhóm `accounts`: danh sách phân trang, tạo, sửa, phân vai trò | ✓ |
 | 6 | Loại đơn | `backend-loai-don` | nhóm `form-types`: danh sách, phiên bản, nháp / mở / đóng, kiểm tra cấu trúc | |
 | 7 | Tệp | `backend-tep` | lưu tệp ở ổ đĩa máy chủ · nhóm `files`: xem / tải về, kiểm tra quyền xem tệp (tải lên đi cùng nộp, sửa đơn ở bước 9) | |
 | 8 | Danh sách đơn, thống kê | `backend-danh-sach-don` | nhóm `forms`: đơn của tôi, đơn tôi xử lí, Quản lí đơn, thống kê, CCCD theo trang | |
