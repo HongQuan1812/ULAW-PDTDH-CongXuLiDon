@@ -64,6 +64,7 @@ export function EmailSettingsPage() {
       updatedBy={settingsQuery.data.updatedBy}
       senderAddress={settingsQuery.data.senderAddress}
       mailServerConnected={settingsQuery.data.mailServerConnected}
+      settingsQuery={settingsQuery}
     />
   );
 }
@@ -89,7 +90,8 @@ function validateSettings(settings: EmailSettings): FieldErrors {
  * @param updatedAt            lần lưu gần nhất, giờ Việt Nam 'YYYY-MM-DDTHH:mm'
  * @param updatedBy            cán bộ lưu lần gần nhất (họ tên, email)
  * @param senderAddress        địa chỉ gửi, máy chủ đọc từ cấu hình SMTP; chỉ hiện, không sửa được
- * @param mailServerConnected  máy chủ thư đã kết nối được chưa
+ * @param mailServerConnected  máy chủ thư đã kết nối được chưa (máy chủ kiểm tra lúc tải cấu hình)
+ * @param settingsQuery        kết quả useEmailSettings, cho nút ↻ kiểm tra lại máy chủ thư (bản nháp đang sửa vẫn giữ)
  * @returns                    giao diện trang
  */
 function EmailSettingsEditor({
@@ -98,12 +100,14 @@ function EmailSettingsEditor({
   updatedBy,
   senderAddress,
   mailServerConnected,
+  settingsQuery,
 }: {
   saved: EmailSettings;
   updatedAt: string;
   updatedBy: StaffRef;
   senderAddress: string;
   mailServerConnected: boolean;
+  settingsQuery: ReturnType<typeof useEmailSettings>;
 }) {
   const toast = useToast();
   const saveSettings = useSaveEmailSettings();
@@ -179,10 +183,21 @@ function EmailSettingsEditor({
       <section className={`${profileStyles.card} ${styles.senderCard}`} aria-labelledby="email-sender-title">
         <div className={styles.cardHead}>
           <h2 id="email-sender-title">Người gửi</h2>
-          <span className={mailServerConnected ? styles.connected : styles.disconnected}>
-            <i aria-hidden="true" />
-            {mailServerConnected ? 'Đã kết nối máy chủ thư' : 'Chưa kết nối máy chủ thư'}
-          </span>
+          {/* nhãn kết nối (kết quả kiểm tra lúc tải trang) và nút ↻ kiểm tra lại */}
+          <div className={styles.connection} aria-live="polite">
+            {settingsQuery.isFetching ? (
+              <span className={styles.checking}>
+                <i aria-hidden="true" />
+                Đang kiểm tra máy chủ thư…
+              </span>
+            ) : (
+              <span className={mailServerConnected ? styles.connected : styles.disconnected}>
+                <i aria-hidden="true" />
+                {mailServerConnected ? 'Đã kết nối máy chủ thư' : 'Chưa kết nối máy chủ thư'}
+              </span>
+            )}
+            <RefreshButton query={settingsQuery} label="trạng thái máy chủ thư" size="small" />
+          </div>
         </div>
         {/* Tên + Địa chỉ gửi một hàng; Chữ kí một hàng riêng. Địa chỉ gửi đi cùng mật khẩu ứng dụng SMTP ở máy chủ nên chỉ đọc */}
         <div className={styles.senderGrid}>
