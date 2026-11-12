@@ -5,10 +5,11 @@ import { PrismaModule } from './common/prisma.module';
 import { ConfigModule } from './config/config.module';
 import { FilesModule } from './files/files.module';
 import { FormTypesModule } from './form-types/form-types.module';
+import { FormModule } from './form/form.module';
 import { FormsModule } from './forms/forms.module';
 import { HealthModule } from './health/health.module';
 import { ProfileModule } from './profile/profile.module';
 import { AccountsModule } from './accounts/accounts.module';
 
-@Module({ imports: [ConfigModule, PrismaModule, AuthModule, HealthModule, ProfileModule, AccountsModule, FormTypesModule, FilesModule, FormsModule] })
+@Module({ imports: [ConfigModule, PrismaModule, AuthModule, HealthModule, ProfileModule, AccountsModule, FormTypesModule, FilesModule, FormsModule, FormModule] })
 export class AppModule {}

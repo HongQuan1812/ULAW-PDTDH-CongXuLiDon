@@ -1,11 +1,9 @@
 /* Đọc tệp đính kèm: kiểm tra quyền xem rồi lấy nội dung từ ổ đĩa máy chủ. */
-import { readFile } from 'node:fs/promises';
-import { isAbsolute, relative, resolve } from 'node:path';
 import { Injectable } from '@nestjs/common';
 import { buildSamplePdfText, can } from '@ulaw/shared';
-import { AppConfig } from '../config/app-config';
 import { PrismaService } from '../common/prisma.service';
 import type { User } from '../generated/prisma/client';
+import { FileStorageService } from './file-storage.service';
 
 /** Một tệp sẵn sàng trả về: tên và nội dung. */
 export interface StoredFileContent {
@@ -17,11 +15,11 @@ export interface StoredFileContent {
 export class FilesService {
   /**
    * @param prisma  đọc bảng tệp và đơn
-   * @param config  cho biết thư mục lưu tệp
+   * @param storage  đọc nội dung tệp trên ổ đĩa
    */
   constructor(
     private readonly prisma: PrismaService,
-    private readonly config: AppConfig,
+    private readonly storage: FileStorageService,
   ) {}
 
   /**
@@ -39,25 +37,8 @@ export class FilesService {
     // Tệp mẫu: chưa có nội dung thật
     if (file.storagePath === null) return { name: file.name, content: Buffer.from(buildSamplePdfText(file.name), 'latin1') };
 
-    const absolutePath = this.resolveInUploadDir(file.storagePath);
-    if (!absolutePath) return null;
-    try {
-      return { name: file.name, content: await readFile(absolutePath) };
-    } catch {
-      // Tệp có trong database nhưng mất trên ổ đĩa: coi như không có
-      return null;
-    }
-  }
-
-  /**
-   * Ghép đường dẫn lưu trong database với thư mục tệp, từ chối đường dẫn chui ra ngoài thư mục.
-   * @param storagePath  đường dẫn tương đối trong thư mục tệp
-   * @returns            đường dẫn tuyệt đối; nằm ngoài thư mục thì null
-   */
-  private resolveInUploadDir(storagePath: string): string | null {
-    const uploadRoot = resolve(this.config.uploadDir);
-    const absolutePath = resolve(uploadRoot, storagePath);
-    const fromRoot = relative(uploadRoot, absolutePath);
-    return fromRoot && !fromRoot.startsWith('..') && !isAbsolute(fromRoot) ? absolutePath : null;
+    // Tệp có trong database nhưng mất trên ổ đĩa: coi như không có
+    const content = await this.storage.read(file.storagePath);
+    return content ? { name: file.name, content } : null;
   }
 }
