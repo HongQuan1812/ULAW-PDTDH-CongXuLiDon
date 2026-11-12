@@ -46,7 +46,7 @@ import { FormTypeInfoCard } from './FormTypeInfoCard';
 import { FormInfoPanelToggle, useFormInfoPanel } from '../form/FormInfoPanel';
 import { FormTypePreview } from './FormTypePreview';
 import { FormTypeVersionPanel, VERSION_PANEL_STORAGE_KEY, VERSION_PANEL_TITLE, type VersionChoice } from './FormTypeVersionPanel';
-import { draftFromVersion, moveItem, newFormTypeDraft, newSection, removeAt, replaceAt, type FormTypeDraft } from './formTypeDraft';
+import { draftFromVersion, moveItem, sameDraft, newFormTypeDraft, newSection, removeAt, replaceAt, type FormTypeDraft } from './formTypeDraft';
 import {
   discardTemplateChanges,
   discardUnsavedEdit,
@@ -229,9 +229,17 @@ function FormTypeEditor({ managed, requestedVersion }: FormTypeEditorProps) {
     if (requestedVersion && versions.some((version) => version.version === requestedVersion)) setSelectedVersion(requestedVersion);
   }, [requestedVersion, versions]);
 
-  // Giữ thay đổi chưa lưu để đi trang khác rồi quay lại vẫn còn
+  // Giữ thay đổi chưa lưu để đi trang khác rồi quay lại vẫn còn. Sửa tay về đúng như lúc bắt đầu thì coi như không còn thay đổi:
+  // bỏ bản đang sửa (phiên bản mới chép ra thì bỏ luôn, quay về phiên bản đã chép)
   useEffect(() => {
-    if (edit) keepUnsavedEdit(formTypeId, edit);
+    if (!edit) return;
+    if (!sameDraft(edit.draft, edit.baseDraft)) {
+      keepUnsavedEdit(formTypeId, edit);
+      return;
+    }
+    if (edit.isNewVersion && edit.baseVersion !== null) setSelectedVersion(edit.baseVersion);
+    discardUnsavedEdit(formTypeId);
+    setEdit(null);
   }, [formTypeId, edit]);
   useEffect(() => keepTemplateChanges(formTypeId, templateChanges), [formTypeId, templateChanges]);
 
@@ -289,16 +297,19 @@ function FormTypeEditor({ managed, requestedVersion }: FormTypeEditorProps) {
         version: selectedVersion,
         isNewVersion: isNew,
         baseVersion: null,
+        baseDraft: shownDraft,
         draft: changeDraft(shownDraft),
       });
       return;
     }
     const newVersion = latestVersionNumber + 1;
+    const copiedDraft: FormTypeDraft = { ...shownDraft, status: 'draft' };
     setEdit({
       version: newVersion,
       isNewVersion: true,
       baseVersion: selectedVersion,
-      draft: changeDraft({ ...shownDraft, status: 'draft' }),
+      baseDraft: copiedDraft,
+      draft: changeDraft(copiedDraft),
     });
     setSelectedVersion(newVersion);
     setStatusChange(null);

@@ -61,6 +61,29 @@ export function newFormTypeDraft(): FormTypeDraft {
 }
 
 /**
+ * Hai bản soạn có cùng nội dung không (không tính thứ tự khóa trong đối tượng, bỏ qua khóa mang giá trị undefined).
+ * @param firstDraft   bản thứ nhất
+ * @param secondDraft  bản thứ hai
+ * @returns            true nếu giống hệt nhau
+ */
+export function sameDraft(firstDraft: FormTypeDraft, secondDraft: FormTypeDraft): boolean {
+  return stableJson(firstDraft) === stableJson(secondDraft);
+}
+
+/**
+ * Chuỗi JSON với khóa của mọi đối tượng xếp theo thứ tự chữ cái, để so nội dung.
+ * @param input  giá trị cần đổi
+ * @returns      chuỗi JSON
+ */
+function stableJson(input: unknown): string {
+  return JSON.stringify(input, (_key, nested: unknown) =>
+    nested && typeof nested === 'object' && !Array.isArray(nested)
+      ? Object.fromEntries(Object.entries(nested).sort(([firstKey], [secondKey]) => firstKey.localeCompare(secondKey)))
+      : nested,
+  );
+}
+
+/**
  * Bản soạn từ một phiên bản đã lưu (bản sao, sửa không ảnh hưởng dữ liệu đã tải).
  * @param prefix   mã đơn của loại đơn
  * @param version  phiên bản tải từ máy chủ

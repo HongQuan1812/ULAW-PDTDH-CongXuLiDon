@@ -13,6 +13,8 @@ export interface UnsavedEdit {
   isNewVersion: boolean;
   /** Phiên bản đã khóa được chép ra khi tạo phiên bản mới; còn lại null */
   baseVersion: number | null;
+  /** Bản soạn lúc bắt đầu sửa (bản đã lưu / bản chép ra / bản trống); sửa về đúng như bản này thì coi như không còn thay đổi */
+  baseDraft: FormTypeDraft;
   draft: FormTypeDraft;
 }
 
