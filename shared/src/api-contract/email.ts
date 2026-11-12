@@ -5,6 +5,7 @@
    API giả (MSW), frontend và backend cùng theo file này. */
 import { z } from 'zod';
 import { EMAIL_EVENT_STATUSES } from '../aux-schema/email--events';
+import { RichTextDocSchema, isRichTextEmpty } from '../aux-schema/rich-text';
 import { VALIDATION_MESSAGES } from '../validators';
 
 /* ---------- Đường dẫn (phần sau /api) ---------- */
@@ -29,12 +30,13 @@ export const EmailSenderSchema = z.object({
 });
 export type EmailSender = z.infer<typeof EmailSenderSchema>;
 
-/** Thư của một lúc gửi. Đang tắt thì không gửi, nhưng tiêu đề và nội dung vẫn giữ để bật lại. */
+/** Thư của một lúc gửi. Đang tắt thì không gửi, nhưng tiêu đề và nội dung vẫn giữ để bật lại.
+    Nội dung là văn bản có định dạng (in đậm, tiêu đề, danh sách…), lưu dạng JSON của Tiptap; máy chủ đổi sang HTML lúc gửi. */
 export const EmailEventSettingSchema = z.object({
   status: z.enum(EMAIL_EVENT_STATUSES),
   enabled: z.boolean(),
   subject: z.string().trim().min(1, 'Nhập tiêu đề thư.'),
-  body: z.string().refine((body) => body.trim() !== '', 'Nhập nội dung thư.'),
+  body: RichTextDocSchema.refine((body) => !isRichTextEmpty(body), 'Nhập nội dung thư.'),
 });
 export type EmailEventSetting = z.infer<typeof EmailEventSettingSchema>;
 

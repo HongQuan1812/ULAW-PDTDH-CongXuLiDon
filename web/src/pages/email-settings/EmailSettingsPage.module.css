@@ -59,6 +59,8 @@
 .switch input[type=checkbox]:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
 .fields{display:flex;flex-direction:column;gap:14px}
 .fields textarea[aria-invalid="true"]{border-color:var(--danger);box-shadow:0 0 0 4px color-mix(in srgb,var(--danger) 12%,transparent)}
+/* ô Nội dung thư (trình soạn có định dạng): cao bằng cỡ một bức thư ngắn */
+.bodyField :global(.ProseMirror){min-height:220px}
 /* lúc gửi đang tắt */
 .dimmed{opacity:.5}
 

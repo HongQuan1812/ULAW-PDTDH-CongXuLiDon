@@ -1,6 +1,6 @@
 /* Ô soạn văn bản có định dạng, gõ như Notion (xem richTextExtensions.ts). Có thanh nút nhỏ phía trên cho ai chưa quen phím tắt.
    Nội dung lưu dạng JSON của Tiptap; ô này chưa gắn vào chỗ nào, chờ gắn vào câu hỏi "Đoạn văn", mô tả phần… */
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, type RefObject } from 'react';
 import { EditorContent, useEditor, type Editor } from '@tiptap/react';
 import { Placeholder } from '@tiptap/extensions';
 import { createRichTextExtensions, HEADING_LEVELS, type RichTextDoc } from './richTextExtensions';
@@ -19,6 +19,8 @@ interface RichTextEditorProps {
   disabled?: boolean;
   /** Ô lỗi: viền đỏ */
   invalid?: boolean;
+  /** Giữ trình soạn để bên ngoài chèn chữ vào chỗ con trỏ (vd nút chèn mã của trang Cấu hình email) */
+  editorRef?: RefObject<Editor | null>;
 }
 
 /** Một nút của thanh định dạng. */
@@ -52,7 +54,7 @@ const TOOLBAR_ACTIONS: ToolbarAction[] = [
  * @param props  xem RichTextEditorProps
  * @returns      khung gồm thanh nút và vùng soạn
  */
-export function RichTextEditor({ value, onChange, label, placeholder, disabled = false, invalid = false }: RichTextEditorProps) {
+export function RichTextEditor({ value, onChange, label, placeholder, disabled = false, invalid = false, editorRef }: RichTextEditorProps) {
   const extensions = useMemo(() => [...createRichTextExtensions(), Placeholder.configure({ placeholder: placeholder ?? '' })], [placeholder]);
 
   const editorProps = useMemo(
@@ -68,6 +70,11 @@ export function RichTextEditor({ value, onChange, label, placeholder, disabled =
     // bộ định dạng đã giới hạn ở richTextExtensions.ts nên JSON luôn đúng RichTextDoc
     onUpdate: ({ editor: updatedEditor }) => onChange(updatedEditor.getJSON() as RichTextDoc),
   });
+
+  // Đưa trình soạn ra ngoài khi đã tạo xong
+  useEffect(() => {
+    if (editorRef) editorRef.current = editor;
+  }, [editor, editorRef]);
 
   // Nội dung hoặc chế độ sửa đổi từ bên ngoài (vd đặt lại form) thì cập nhật ô soạn, không báo ngược lên
   useEffect(() => {

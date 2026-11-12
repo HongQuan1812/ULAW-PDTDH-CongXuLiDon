@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
+import { EMPTY_RICH_TEXT_DOC, plainTextToRichText } from '../aux-schema/rich-text';
 import { EmailSettingsSchema, type EmailSettings } from './email';
 
 const settings: EmailSettings = {
   sender: { name: 'Phòng Đào tạo', address: 'daotao@hcmulaw.edu.vn', signature: '' },
-  events: (['nop', 'bs', 'tc', 'duyet'] as const).map((status) => ({ status, enabled: true, subject: 'Tiêu đề', body: 'Nội dung' })),
+  events: (['nop', 'bs', 'tc', 'duyet'] as const).map((status) => ({ status, enabled: true, subject: 'Tiêu đề', body: plainTextToRichText('Nội dung') })),
 };
 
 describe('EmailSettingsSchema', () => {
@@ -19,7 +20,7 @@ describe('EmailSettingsSchema', () => {
   it('báo lỗi đúng ô: tên người gửi trống, địa chỉ gửi sai, tiêu đề và nội dung trống', () => {
     const parsed = EmailSettingsSchema.safeParse({
       sender: { name: ' ', address: 'daotao', signature: '' },
-      events: settings.events.map((event, index) => (index === 1 ? { ...event, subject: '', body: '  ' } : event)),
+      events: settings.events.map((event, index) => (index === 1 ? { ...event, subject: '', body: EMPTY_RICH_TEXT_DOC } : event)),
     });
     expect(parsed.success).toBe(false);
     expect(parsed.error?.issues.map((issue) => issue.path.join('.'))).toEqual([

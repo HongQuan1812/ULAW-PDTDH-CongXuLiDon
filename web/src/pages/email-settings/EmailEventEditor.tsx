@@ -1,8 +1,9 @@
 /* Thư của một lúc gửi trên trang Cấu hình email (như emRenderEditor, emRenderPreview của artifact/js/email-page.js):
-   công tắc "Gửi email", tiêu đề, nút chèn mã, nội dung; xem trước bằng dữ liệu mẫu; gửi thư thử.
+   công tắc "Gửi email", tiêu đề, nút chèn mã, nội dung (soạn có định dạng như trình soạn văn bản); xem trước bằng dữ liệu mẫu; gửi thư thử.
    Lúc gửi đang tắt: phần soạn và xem trước mờ đi và không bấm được, công tắc vẫn bấm được. */
-import { useRef, useState } from 'react';
+import { useRef, useState, type ReactNode } from 'react';
 import { flushSync } from 'react-dom';
+import type { Editor } from '@tiptap/react';
 import {
   EMAIL_SAMPLE_RECIPIENT,
   EMAIL_SAMPLE_VALUES,
@@ -14,13 +15,17 @@ import {
   type EmailSender,
   type EmailTag,
   type EmailTagValues,
+  type RichTextNode,
 } from '@ulaw/shared';
 import { useSendTestEmail } from '../../api/email';
 import { Button } from '../../components/Button';
-import { Field } from '../../components/Field';
+import { Field, RequiredMark } from '../../components/Field';
+import { RichTextEditor } from '../../components/rich-text/RichTextEditor';
 import { useToast } from '../../components/Toast';
 import { useAuth } from '../../features/auth/useAuth';
 import type { FieldErrors } from './EmailSettingsPage';
+import fieldStyles from '../../components/Field.module.css';
+import richTextStyles from '../../components/rich-text/RichText.module.css';
 import styles from './EmailSettingsPage.module.css';
 
 /** Ô đang gõ khi bấm nút chèn mã. */
@@ -48,7 +53,7 @@ export function EmailEventEditor({ event, eventIndex, sender, fieldErrors, onCha
   const { user } = useAuth();
   const sendTestEmail = useSendTestEmail();
   const subjectRef = useRef<HTMLInputElement>(null);
-  const bodyRef = useRef<HTMLTextAreaElement>(null);
+  const bodyEditorRef = useRef<Editor | null>(null);
   // Ô gõ gần nhất: nút chèn mã chèn vào ô này (mặc định Nội dung thư)
   const lastTextTarget = useRef<TextTarget>('body');
   const [testRecipient, setTestRecipient] = useState(user.email);
@@ -65,18 +70,23 @@ export function EmailEventEditor({ event, eventIndex, sender, fieldErrors, onCha
    * @param tag  mã cần chèn, vd 'ho_ten'
    */
   const insertTag = (tag: EmailTag) => {
-    const target = lastTextTarget.current;
-    const element = target === 'subject' ? subjectRef.current : bodyRef.current;
-    if (!element) return;
-
-    // Ghép mã vào giữa chữ đang có
     const tagText = `{${tag}}`;
+
+    // Nội dung thư: trình soạn tự chèn vào chỗ con trỏ và báo nội dung mới qua onChange
+    if (lastTextTarget.current === 'body') {
+      bodyEditorRef.current?.chain().focus().insertContent({ type: 'text', text: tagText }).run();
+      return;
+    }
+
+    // Tiêu đề: ghép mã vào giữa chữ đang có
+    const element = subjectRef.current;
+    if (!element) return;
     const selectionStart = element.selectionStart ?? element.value.length;
     const selectionEnd = element.selectionEnd ?? selectionStart;
     const nextText = element.value.slice(0, selectionStart) + tagText + element.value.slice(selectionEnd);
 
     // Vẽ lại ngay để đặt được con trỏ sau mã vừa chèn
-    flushSync(() => onChange({ [target]: nextText }));
+    flushSync(() => onChange({ subject: nextText }));
     element.focus();
     element.setSelectionRange(selectionStart + tagText.length, selectionStart + tagText.length);
   };
@@ -145,16 +155,26 @@ export function EmailEventEditor({ event, eventIndex, sender, fieldErrors, onCha
             </div>
           </div>
 
-          <Field label="Nội dung thư" required error={bodyError}>
-            <textarea
-              ref={bodyRef}
-              rows={11}
+          {/* Không dùng Field (thẻ <label>): bấm vào nhãn sẽ bấm luôn nút đầu tiên của thanh định dạng */}
+          <div className={`${fieldStyles.field} ${styles.bodyField}`} onFocus={() => (lastTextTarget.current = 'body')}>
+            <span>
+              Nội dung thư
+              <RequiredMark />
+            </span>
+            <RichTextEditor
               value={event.body}
-              aria-invalid={!!bodyError}
-              onFocus={() => (lastTextTarget.current = 'body')}
-              onChange={(changeEvent) => onChange({ body: changeEvent.target.value })}
+              onChange={(body) => onChange({ body })}
+              label="Nội dung thư"
+              placeholder="Nội dung thư. Gõ # để làm tiêu đề, - để gạch đầu dòng, Ctrl+B in đậm."
+              invalid={!!bodyError}
+              editorRef={bodyEditorRef}
             />
-          </Field>
+            {bodyError && (
+              <span className={fieldStyles.error} role="alert">
+                {bodyError}
+              </span>
+            )}
+          </div>
         </div>
       </div>
 
@@ -177,8 +197,10 @@ export function EmailEventEditor({ event, eventIndex, sender, fieldErrors, onCha
               <FilledText template={event.subject} values={sampleValues} highlight={false} />
             </dd>
           </dl>
-          <div className={styles.mailBody}>
-            <FilledText template={event.body} values={sampleValues} highlight />
+          <div className={`${styles.mailBody} ${richTextStyles.content} ${richTextStyles.view}`}>
+            {(event.body.content ?? []).map((node, index) => (
+              <FilledRichNode key={index} node={node} values={sampleValues} />
+            ))}
           </div>
         </div>
 
@@ -230,4 +252,41 @@ function FilledText({ template, values, highlight }: { template: string; values:
     }
     return <span key={index}>{part.text}</span>;
   });
+}
+
+/**
+ * Một nút của nội dung thư (đoạn, tiêu đề, danh sách, chữ…) sau khi thay mã bằng dữ liệu mẫu, giữ nguyên định dạng.
+ * @param node    nút của văn bản có định dạng
+ * @param values  giá trị của từng mã
+ * @returns       thẻ HTML tương ứng (p, h1–h3, ul, ol, li, br; chữ bọc strong / em / u theo định dạng)
+ */
+function FilledRichNode({ node, values }: { node: RichTextNode; values: EmailTagValues }): ReactNode {
+  const children = (node.content ?? []).map((child, index) => <FilledRichNode key={index} node={child} values={values} />);
+
+  // Chữ: thay mã, rồi bọc các định dạng từ trong ra ngoài
+  if (node.type === 'text') {
+    return (node.marks ?? []).reduce<ReactNode>(
+      (inner, mark) => (mark.type === 'bold' ? <strong>{inner}</strong> : mark.type === 'italic' ? <em>{inner}</em> : <u>{inner}</u>),
+      <FilledText template={node.text ?? ''} values={values} highlight />,
+    );
+  }
+
+  // Các khối
+  switch (node.type) {
+    case 'paragraph':
+      // đoạn trống vẫn giữ một dòng, như trong ô soạn
+      return <p>{children.length > 0 ? children : <br />}</p>;
+    case 'heading':
+      return node.attrs?.level === 1 ? <h1>{children}</h1> : node.attrs?.level === 2 ? <h2>{children}</h2> : <h3>{children}</h3>;
+    case 'bulletList':
+      return <ul>{children}</ul>;
+    case 'orderedList':
+      return <ol>{children}</ol>;
+    case 'listItem':
+      return <li>{children}</li>;
+    case 'hardBreak':
+      return <br />;
+    default:
+      return <>{children}</>;
+  }
 }
