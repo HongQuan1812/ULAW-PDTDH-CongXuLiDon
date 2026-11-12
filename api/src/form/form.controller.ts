@@ -1,6 +1,6 @@
-/* Nhóm API form: nộp đơn, chi tiết, sửa. Tiếp nhận, quyết định, chuyển giao ở bước xử lí đơn.
+/* Nhóm API form: nộp đơn, chi tiết, sửa, tiếp nhận, ra quyết định, chuyển giao.
    Module này phải đứng SAU FormsModule trong app.module để /forms/mine… không bị hiểu nhầm là mã đơn của /forms/:code. */
-import { Controller, Get, Param, Post, Put, Req, UploadedFiles, UseInterceptors } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, Param, Post, Put, Req, UploadedFiles, UseInterceptors } from '@nestjs/common';
 import { AnyFilesInterceptor } from '@nestjs/platform-express';
 import { ApiCreatedResponse, ApiOkResponse, ApiTags } from '@nestjs/swagger';
 import {
@@ -8,11 +8,15 @@ import {
   FORM_MESSAGES,
   FormDetailSchema,
   FormSummarySchema,
+  DecideFormRequestSchema,
+  TransferFormRequestSchema,
+  TransferTargetsResponseSchema,
   SUBMIT_FORM_FIELDS,
   SubmitFormRequestSchema,
   UpdateFormRequestSchema,
   type FormDetail,
   type FormSummary,
+  type TransferTargetsResponse,
 } from '@ulaw/shared';
 import type { Request } from 'express';
 import type { ZodType } from 'zod';
@@ -21,6 +25,7 @@ import { ApiException } from '../common/api-exception';
 import { openApiSchemaOf } from '../common/swagger';
 import type { User } from '../generated/prisma/client';
 import { FormService, type UploadedPart } from './form.service';
+import { WorkflowService } from './workflow.service';
 
 /** Tệp multer đưa vào bộ nhớ (chỉ các trường dùng tới; tránh phụ thuộc @types/multer). */
 interface MulterFile {
@@ -55,11 +60,30 @@ function readSubmission<Body>(request: Request, files: MulterFile[], schema: Zod
   return { body: parsed.data, uploads };
 }
 
+/**
+ * Kiểm tra body JSON.
+ * @param requestBody  body chưa kiểm tra
+ * @param schema       schema của body
+ * @returns            body đã kiểm tra
+ * @throws             422 body sai dạng
+ */
+function readJsonBody<Body>(requestBody: unknown, schema: ZodType<Body>): Body {
+  const parsed = schema.safeParse(requestBody);
+  if (!parsed.success) throw new ApiException(422, FORM_MESSAGES.invalidBody);
+  return parsed.data;
+}
+
 @ApiTags('form')
 @Controller()
 export class FormController {
-  /** @param formService  nộp, đọc, sửa lá đơn */
-  constructor(private readonly formService: FormService) {}
+  /**
+   * @param formService      nộp, đọc, sửa lá đơn
+   * @param workflowService  tiếp nhận, ra quyết định, chuyển giao
+   */
+  constructor(
+    private readonly formService: FormService,
+    private readonly workflowService: WorkflowService,
+  ) {}
 
   /**
    * Nộp đơn mới (multipart/form-data: trường request chứa JSON, mỗi tệp một trường tên bằng id tạm).
@@ -102,5 +126,52 @@ export class FormController {
     @UploadedFiles() files: MulterFile[] = [],
   ): Promise<FormDetail> {
     return this.formService.update(editor, code, () => readSubmission(request, files, UpdateFormRequestSchema));
+  }
+
+  /**
+   * Tiếp nhận đơn.
+   * @throws  404 không xem được đơn · 403 thiếu quyền receive · 409 đơn không còn chờ tiếp nhận
+   */
+  @Post(FORM_ENDPOINTS.receive)
+  @HttpCode(200)
+  @RequireLogin()
+  @ApiOkResponse({ schema: openApiSchemaOf(FormDetailSchema) })
+  receive(@CurrentUser() actor: User, @Param('code') code: string): Promise<FormDetail> {
+    return this.workflowService.receive(actor, code);
+  }
+
+  /**
+   * Yêu cầu bổ sung / Duyệt / Từ chối đơn Đang xét. Body đọc trong service để 404, 403 không bị 422 che.
+   * @throws  404 · 422 body sai · 403 không có quyền xử lí đơn này · 409 đơn không còn Đang xét
+   */
+  @Post(FORM_ENDPOINTS.decide)
+  @HttpCode(200)
+  @RequireLogin()
+  @ApiOkResponse({ schema: openApiSchemaOf(FormDetailSchema) })
+  decide(@CurrentUser() actor: User, @Param('code') code: string, @Body() requestBody: unknown): Promise<FormDetail> {
+    return this.workflowService.decide(actor, code, () => readJsonBody(requestBody, DecideFormRequestSchema));
+  }
+
+  /**
+   * Cán bộ có thể nhận đơn khi chuyển giao.
+   * @throws  404 · 403 thiếu quyền transfer · 409 đơn không còn chuyển giao được
+   */
+  @Get(FORM_ENDPOINTS.transferTargets)
+  @RequireLogin()
+  @ApiOkResponse({ schema: openApiSchemaOf(TransferTargetsResponseSchema) })
+  transferTargets(@CurrentUser() actor: User, @Param('code') code: string): Promise<TransferTargetsResponse> {
+    return this.workflowService.findTransferTargets(actor, code);
+  }
+
+  /**
+   * Chuyển giao đơn cho cán bộ khác.
+   * @throws  404 · 422 body sai hoặc người nhận không hợp lệ · 403 thiếu quyền transfer · 409 đơn không còn chuyển giao được
+   */
+  @Post(FORM_ENDPOINTS.transfer)
+  @HttpCode(200)
+  @RequireLogin()
+  @ApiOkResponse({ schema: openApiSchemaOf(FormDetailSchema) })
+  transfer(@CurrentUser() actor: User, @Param('code') code: string, @Body() requestBody: unknown): Promise<FormDetail> {
+    return this.workflowService.transfer(actor, code, () => readJsonBody(requestBody, TransferFormRequestSchema));
   }
 }

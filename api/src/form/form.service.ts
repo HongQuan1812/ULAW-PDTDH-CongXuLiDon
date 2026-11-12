@@ -70,7 +70,7 @@ export class FormService {
    * @param form  đơn kèm người nộp, người tiếp nhận, người xử lí
    * @returns     theo FormDetailSchema
    */
-  private toDetail(form: FormWithPeople): FormDetail {
+  toDetail(form: FormWithPeople): FormDetail {
     const snapshot = form.formTypeSnapshot as unknown as FormType;
     const toStaff = (staff: User | null) => (staff ? { id: staff.id, name: staff.name, email: staff.email } : null);
     return {
@@ -98,7 +98,7 @@ export class FormService {
    * @returns       đơn kèm người liên quan
    * @throws        404 không có đơn, hoặc không được xem (cùng một câu để không lộ mã đơn của người khác)
    */
-  private async loadViewable(code: string, viewer: User): Promise<FormWithPeople> {
+  async loadViewable(code: string, viewer: User): Promise<FormWithPeople> {
     const form = await this.prisma.form.findUnique({ where: { code }, include: WITH_PEOPLE });
     if (!form || (form.ownerId !== viewer.id && !can(viewer.role, 'viewAll'))) throw new ApiException(404, FORM_MESSAGES.notFound);
     return form;
