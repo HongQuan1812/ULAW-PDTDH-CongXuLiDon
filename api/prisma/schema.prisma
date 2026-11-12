@@ -1,4 +1,4 @@
-// Cấu trúc database. Các bảng thêm dần theo từng nhóm API (xem .claude/plan.md, Giai đoạn 2).
+// Cấu trúc database. Thời điểm lưu dạng timestamptz (UTC); API đổi sang giờ Việt Nam 'YYYY-MM-DDTHH:mm' khi trả về.
 
 generator client {
   provider     = "prisma-client"
@@ -8,4 +8,203 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+}
+
+enum Role {
+  nguoiNopDon
+  nguoiXuLiDon
+  admin
+}
+
+// Vòng đời đơn: nop Đã nộp · xet Đang xét · bs Cần bổ sung · bsg Đã bổ sung · duyet Đã duyệt · tc Từ chối
+enum FormStatus {
+  nop
+  xet
+  bs
+  bsg
+  duyet
+  tc
+}
+
+enum FormTypeStatus {
+  draft
+  open
+  closed
+}
+
+// Hành động ghi vào lịch sử đơn
+enum FormEventAction {
+  submit
+  edit
+  receive
+  supplement
+  approve
+  reject
+  transfer
+}
+
+model User {
+  id            String   @id
+  email         String   @unique
+  role          Role
+  name          String
+  phone         String?
+  // CCCD là dữ liệu nhạy cảm: mỗi số chỉ thuộc một tài khoản
+  cccd          String?  @unique
+  // Đã bổ sung thông tin lần đầu đăng nhập chưa
+  completed     Boolean  @default(true)
+  // MSSV chính người dùng chọn; null = dùng MSSV đầu tiên
+  mainStudentId String?
+  createdAt     DateTime @default(now()) @db.Timestamptz(3)
+
+  students         StudentInfo[]
+  forms            Form[]            @relation("FormOwner")
+  receivedForms    Form[]            @relation("FormReceiver")
+  handledForms     Form[]            @relation("FormHandler")
+  events           FormEvent[]
+  formTypeVersions FormTypeVersion[]
+  exportTemplates  ExportTemplate[]
+  emailSettings    EmailSettings[]
+}
+
+// Thông tin sinh viên đọc từ database trường (bản giả: bảng này do seed điền)
+model StudentInfo {
+  id             Int     @id @default(autoincrement())
+  userId         String
+  user           User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  studentId      String  @unique
+  className      String?
+  trainingMode   String?
+  major          String
+  currentCohort  String?
+  originalCohort String?
+  // Thứ tự trong danh sách của người dùng (MSSV trùng email đứng đầu)
+  position       Int     @default(0)
+
+  @@index([userId])
+}
+
+model FormType {
+  id     String @id
+  // Tiền tố mã đơn, vd XMM
+  prefix String @unique
+
+  versions        FormTypeVersion[]
+  forms           Form[]
+  exportTemplates ExportTemplate[]
+}
+
+model FormTypeVersion {
+  formTypeId  String
+  formType    FormType       @relation(fields: [formTypeId], references: [id], onDelete: Cascade)
+  version     Int
+  status      FormTypeStatus
+  name        String
+  description String?
+  // Các phần và câu hỏi (FormSection[])
+  sections    Json
+  updatedAt   DateTime       @db.Timestamptz(3)
+  updatedById String
+  updatedBy   User           @relation(fields: [updatedById], references: [id])
+
+  @@id([formTypeId, version])
+}
+
+model Form {
+  // Mã đơn <TIỀN TỐ>-<NĂM>-<PHIÊN BẢN>-<STT>, sinh ở máy chủ
+  code             String     @id
+  ownerId          String
+  owner            User       @relation("FormOwner", fields: [ownerId], references: [id])
+  formTypeId       String
+  formType         FormType   @relation(fields: [formTypeId], references: [id])
+  formTypeVersion  Int
+  status           FormStatus
+  submittedAt      DateTime   @db.Timestamptz(3)
+  updatedAt        DateTime   @db.Timestamptz(3)
+  // Lúc Duyệt / Từ chối gần nhất
+  decidedAt        DateTime?  @db.Timestamptz(3)
+  // Lí do khi Yêu cầu bổ sung / Từ chối
+  note             String     @default("")
+  receiverId       String?
+  receiver         User?      @relation("FormReceiver", fields: [receiverId], references: [id])
+  receivedAt       DateTime?  @db.Timestamptz(3)
+  handlerId        String?
+  handler          User?      @relation("FormHandler", fields: [handlerId], references: [id])
+  handlerSince     DateTime?  @db.Timestamptz(3)
+  // Câu trả lời theo id câu hỏi (FormAnswers)
+  answers          Json
+  // Bản chụp cấu trúc loại đơn lúc nộp, để sửa loại đơn sau này không làm hỏng đơn cũ
+  formTypeSnapshot Json
+
+  events FormEvent[]
+  files  FileObject[]
+
+  @@index([ownerId, submittedAt])
+  @@index([status])
+  @@index([handlerId])
+}
+
+// Lịch sử xử lí: ai làm gì, lúc nào, lí do
+model FormEvent {
+  id         Int             @id @default(autoincrement())
+  formCode   String
+  form       Form            @relation(fields: [formCode], references: [code], onDelete: Cascade)
+  action     FormEventAction
+  fromStatus FormStatus?
+  toStatus   FormStatus
+  actorId    String
+  actor      User            @relation(fields: [actorId], references: [id])
+  note       String          @default("")
+  at         DateTime        @default(now()) @db.Timestamptz(3)
+
+  @@index([formCode, at])
+}
+
+// Số thứ tự đơn đã cấp, tăng dần theo từng tiền tố, năm, phiên bản (cập nhật trong transaction)
+model FormCodeCounter {
+  prefix  String
+  year    Int
+  version Int
+  last    Int    @default(0)
+
+  @@id([prefix, year, version])
+}
+
+// Tệp minh chứng đính kèm đơn
+model FileObject {
+  id          String   @id
+  formCode    String?
+  form        Form?    @relation(fields: [formCode], references: [code], onDelete: SetNull)
+  name        String
+  sizeBytes   Int
+  // Đường dẫn trên ổ đĩa máy chủ; null với tệp mẫu của seed (không có nội dung thật)
+  storagePath String?
+  uploadedAt  DateTime @default(now()) @db.Timestamptz(3)
+
+  @@index([formCode])
+}
+
+// Mẫu Word xuất file theo loại đơn
+model ExportTemplate {
+  id           String   @id
+  formTypeId   String
+  formType     FormType @relation(fields: [formTypeId], references: [id], onDelete: Cascade)
+  name         String
+  fileName     String
+  sizeBytes    Int
+  content      Bytes
+  uploadedAt   DateTime @db.Timestamptz(3)
+  uploadedById String
+  uploadedBy   User     @relation(fields: [uploadedById], references: [id])
+
+  @@index([formTypeId])
+}
+
+// Cấu hình email (một dòng duy nhất, id = 1)
+model EmailSettings {
+  id          Int      @id @default(1)
+  settings    Json
+  updatedAt   DateTime @db.Timestamptz(3)
+  updatedById String
+  updatedBy   User     @relation(fields: [updatedById], references: [id])
 }

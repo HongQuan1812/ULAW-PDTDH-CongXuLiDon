@@ -41,7 +41,7 @@ Làm từng nhóm API. Xong nhóm nào thì chuyển nhóm đó sang API thật,
 |---|---|---|---|---|
 | 0 | Nền móng | `backend-nen-mong` | PostgreSQL bằng Docker ✓ · dựng NestJS, Prisma · đọc `api/.env` · lọc lỗi trả `ApiErrorBody` · kiểm tra request bằng schema Zod của `shared/` · Swagger · nhóm `health` | ✓ |
 | 1 | Chạy giả và thật cùng lúc | `backend-nen-mong` | Vite chuyển `/api` sang backend · chọn nhóm nào dùng API thật · chuyển nhóm `health` sang API thật để thử đường đi | ✓ |
-| 2 | Bảng, dữ liệu mẫu | `backend-bang` | `schema.prisma` đủ các bảng · migration đầu tiên · tách dữ liệu mẫu ra chỗ dùng chung để API giả và seed cùng dùng · seed | |
+| 2 | Bảng, dữ liệu mẫu | `backend-bang` | `schema.prisma` đủ các bảng · migration đầu tiên · tách dữ liệu mẫu ra chỗ dùng chung để API giả và seed cùng dùng · seed | ✓ |
 | 3 | Đăng nhập, quyền | `backend-dang-nhap` | `dev-login` (chỉ bật khi `APP_ENV=dev`) · phiên bằng cookie httpOnly · `/auth/me`, đăng xuất · guard quyền `@RequirePermission` · nhóm `auth` | |
 | 4 | Hồ sơ | `backend-ho-so` | `student-directory` bản giả (đọc dữ liệu mẫu) · nhóm `profile` · CCCD che / đầy đủ | |
 | 5 | Tài khoản | `backend-tai-khoan` | nhóm `accounts`: danh sách phân trang, tạo, sửa, phân vai trò | |

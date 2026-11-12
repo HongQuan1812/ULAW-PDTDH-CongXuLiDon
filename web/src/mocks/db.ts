@@ -1,8 +1,6 @@
 /* Dữ liệu giả của API giả, giữ trong bộ nhớ trình duyệt. */
 import type {
   EmailSettings,
-  RichTextDoc,
-  RichTextNode,
   Account,
   ApplicantRef,
   CreateAccountRequest,
@@ -14,7 +12,6 @@ import type {
   FormDetail,
   FormSection,
   FormStats,
-  FormStatus,
   FormSummary,
   FormType,
   FormTypeStatus,
@@ -30,7 +27,6 @@ import type {
   SessionUser,
   StaffRef,
   StudentInfo,
-  TableCell,
   UpdateAccountRequest,
   UpdateProfileRequest,
 } from '@ulaw/shared';
@@ -38,68 +34,36 @@ import {
   ACCOUNT_MESSAGES,
   FORM_STATUSES,
   FORM_TYPE_MESSAGES,
-  FormTypeSchema,
   can,
-  formatFormCode,
   isAnswerable,
   maskCccd,
   nextFormCode,
 } from '@ulaw/shared';
 import { buildSamplePdf } from './samplePdf';
-import { SAMPLE_EXPORT_TEMPLATE_BASE64 } from './sampleExportTemplate';
+import type { SeedAccount, SeedForm, SeedFormType, SeedFormTypeVersion } from '@ulaw/shared';
+import {
+  EMAIL_SETTINGS_SEED,
+  EMAIL_SETTINGS_SEED_UPDATE,
+  SAMPLE_EXPORT_TEMPLATE_BASE64,
+  DEMO_USER_IDS,
+  SEED_ACCOUNTS,
+  SEED_EXPORT_TEMPLATE,
+  STUDENT_DIRECTORY_DOWN_USER_IDS,
+  SEED_FILE_ID_PREFIX,
+  STUDENT_DIRECTORY,
+  seedFormTypes,
+  seedForms,
+} from '@ulaw/shared';
+
+/* Dữ liệu mẫu nằm ở shared/src/seed/ (API giả và seed database của backend dùng chung). Tên "Mock…" giữ cho phần còn lại của tệp. */
+type MockAccount = SeedAccount;
+type MockForm = SeedForm;
+type MockFormType = SeedFormType;
+type MockFormTypeVersion = SeedFormTypeVersion;
 
 /* ---------- Tài khoản (hồ sơ, vai trò) ---------- */
 
-/** Một tài khoản trong API giả: email (không đổi được), vai trò, họ tên, SĐT, CCCD (null = chưa có),
-    đã bổ sung thông tin lần đầu hay chưa, và MSSV chính người dùng đã chọn (null = chưa chọn, dùng MSSV đầu). */
-export interface MockAccount {
-  email: string;
-  role: RoleId;
-  name: string;
-  phone: string | null;
-  cccd: string | null;
-  completed: boolean;
-  mainStudentId: string | null;
-}
 
-/** Ghi tắt một tài khoản mẫu: người dùng sẵn có, đã bổ sung thông tin, chưa có SĐT, CCCD. */
-const seedAccount = (name: string, email: string, role: RoleId): MockAccount => ({
-  email,
-  role,
-  name,
-  phone: null,
-  cccd: null,
-  completed: true,
-  mainStudentId: null,
-});
-
-/* Tài khoản ban đầu, khóa theo id. Họ tên, email, số liệu tổng hợp, không phải người thật.
-   - sv-1, cb-1, cb-3: tài khoản đăng nhập thử của 3 vai trò (DEMO_USER_IDS). sv-1 chưa bổ sung thông tin (để thấy màn Bổ sung thông tin
-     lần đầu); cb-1, cb-3 có sẵn CCCD (để thử báo trùng CCCD).
-   - cb-2: cán bộ thứ ba (SEED_STAFF_IDS). sv-2 … sv-11: 10 sinh viên khác (seedOtherStudentForms). */
-const SEED_ACCOUNTS: Record<string, MockAccount> = {
-  'sv-1': { ...seedAccount('Nguyễn Minh Anh', 'minhanh.nguyen@hcmulaw.edu.vn', 'nguoiNopDon'), completed: false },
-  'cb-1': { ...seedAccount('Phạm Thu Hà', 'thuha.pham.pdt@hcmulaw.edu.vn', 'nguoiXuLiDon'), phone: '0912345678', cccd: '079188001122' },
-  'cb-2': seedAccount('Trần Quốc Việt', 'quocviet.tran.pdt@hcmulaw.edu.vn', 'nguoiXuLiDon'),
-  'cb-3': { ...seedAccount('Lê Ngọc Diệp', 'ngocdiep.le.pdt@hcmulaw.edu.vn', 'admin'), phone: '0987654321', cccd: '079190003344' },
-  ...Object.fromEntries(
-    [
-      ['Trần Thị Bảo Ngọc', 'baongoc.tran@hcmulaw.edu.vn'],
-      ['Lê Hoàng Phúc', 'phuc.lehoang@hcmulaw.edu.vn'],
-      ['Phạm Gia Hân', 'giahan.pham06@hcmulaw.edu.vn'],
-      ['Võ Minh Khang', 'khangvo.law@hcmulaw.edu.vn'],
-      ['Đặng Thùy Linh', 'thuylinh.dang@hcmulaw.edu.vn'],
-      ['Huỳnh Quốc Bảo', 'quocbao.huynh@hcmulaw.edu.vn'],
-      ['Ngô Phương Thảo', 'thao.ngophuong@hcmulaw.edu.vn'],
-      ['Bùi Đức Anh', 'ducanh.bui.k51@hcmulaw.edu.vn'],
-      ['Trương Ngọc Mai', 'ngocmai.truong@hcmulaw.edu.vn'],
-      ['Đỗ Thành Nam', 'thanhnam.do@hcmulaw.edu.vn'],
-    ].map(([name, email], i) => [`sv-${i + 2}`, seedAccount(name!, email!, 'nguoiNopDon')]),
-  ),
-};
-
-/* Tài khoản đăng nhập thử của mỗi vai trò (JUST FOR DEMO: ô đổi vai trò). */
-export const DEMO_USER_IDS: Record<RoleId, string> = { nguoiNopDon: 'sv-1', nguoiXuLiDon: 'cb-1', admin: 'cb-3' };
 
 /* Tài khoản đã tạo / sửa, lưu trong sessionStorage để tải lại trang không phải bổ sung thông tin lại
    (giống phiên đăng nhập bên dưới). Đóng tab là mất. */
@@ -279,127 +243,6 @@ export function updateAccount(userId: string, input: UpdateAccountRequest, edito
   return { ok: true, account: toAccount(userId) };
 }
 
-/* Các MSSV "lấy từ database trường" theo email, chỉ đọc nên không lưu lại.
-   sv-1 và sv-5 có 2 MSSV (học thêm văn bằng 2), MSSV trùng email đứng đầu; sv-7 không có MSSV nào; các sinh viên khác 1 MSSV,
-   có người thiếu vài mục (database trường không có). Cán bộ không có MSSV. */
-const STUDENT_DIRECTORY: Record<string, StudentInfo[]> = {
-  'sv-1': [
-    {
-      studentId: '2253801010001',
-      className: '47-LTM-A',
-      trainingMode: 'Chính quy',
-      major: 'Luật Thương mại quốc tế',
-      currentCohort: 'K47 (2022–2026)',
-      originalCohort: 'K47 (2022–2026)',
-    },
-    {
-      studentId: '2523801040017',
-      className: 'VB2-25B',
-      trainingMode: 'Văn bằng 2',
-      major: 'Luật',
-      currentCohort: 'VB2 K25',
-      originalCohort: 'VB2 K25',
-    },
-  ],
-  'sv-2': [
-    {
-      studentId: '2253801010012',
-      className: '47-LTM-A',
-      trainingMode: 'Chính quy',
-      major: 'Luật Thương mại quốc tế',
-      currentCohort: 'K47 (2022–2026)',
-      originalCohort: 'K47 (2022–2026)',
-    },
-  ],
-  'sv-3': [
-    {
-      studentId: '2353801020145',
-      className: '48-QTL-B',
-      trainingMode: 'Chính quy',
-      major: 'Quản trị – Luật',
-      currentCohort: 'K48 (2023–2027)',
-      originalCohort: 'K48 (2023–2027)',
-    },
-  ],
-  'sv-4': [
-    {
-      studentId: '2253801010388',
-      className: '48-L-C',
-      trainingMode: 'Chính quy',
-      major: 'Luật',
-      currentCohort: 'K48 (2023–2027)',
-      originalCohort: 'K47 (2022–2026)',
-    },
-  ],
-  'sv-5': [
-    {
-      studentId: '2053801010214',
-      className: '45-L-B',
-      trainingMode: 'Chính quy',
-      major: 'Luật',
-      currentCohort: 'K45 (2020–2024)',
-      originalCohort: 'K45 (2020–2024)',
-    },
-    {
-      studentId: '2323801040021',
-      className: 'VB2-23A',
-      trainingMode: 'Văn bằng 2',
-      major: 'Luật',
-      currentCohort: 'VB2 K23',
-      originalCohort: 'VB2 K23',
-    },
-  ],
-  'sv-6': [
-    {
-      studentId: '2453801010507',
-      className: null,
-      trainingMode: 'Chính quy',
-      major: 'Luật',
-      currentCohort: 'K49 (2024–2028)',
-      originalCohort: 'K49 (2024–2028)',
-    },
-  ],
-  'sv-8': [
-    {
-      studentId: '2153801030219',
-      className: '47-LDS-A',
-      trainingMode: 'Chính quy',
-      major: 'Luật Dân sự',
-      currentCohort: 'K47 (2022–2026)',
-      originalCohort: 'K46 (2021–2025)',
-    },
-  ],
-  'sv-9': [
-    {
-      studentId: '2453801010733',
-      className: null,
-      trainingMode: null,
-      major: 'Luật',
-      currentCohort: null,
-      originalCohort: null,
-    },
-  ],
-  'sv-10': [
-    {
-      studentId: '2353801020611',
-      className: '48-LTM-B',
-      trainingMode: 'Chính quy',
-      major: 'Luật Thương mại quốc tế',
-      currentCohort: 'K48 (2023–2027)',
-      originalCohort: 'K48 (2023–2027)',
-    },
-  ],
-  'sv-11': [
-    {
-      studentId: '2423801050042',
-      className: 'LT-24A',
-      trainingMode: 'Liên thông',
-      major: 'Luật',
-      currentCohort: 'Liên thông K24',
-      originalCohort: 'Liên thông K24',
-    },
-  ],
-};
 
 /**
  * Lấy các MSSV của một tài khoản.
@@ -410,10 +253,6 @@ export function getStudents(userId: string): StudentInfo[] {
   return STUDENT_DIRECTORY[userId] ?? [];
 }
 
-/* JUST FOR DEMO: START · Tài khoản mà database trường "không kết nối được" khi lấy thông tin sinh viên (API trả 503),
-   để xem giao diện báo lỗi riêng phần thông tin sinh viên. sv-11 (Đỗ Thành Nam). */
-const STUDENT_DIRECTORY_DOWN_USER_IDS: readonly string[] = ['sv-11'];
-/* JUST FOR DEMO: END */
 
 /**
  * Database trường có "lỗi" khi lấy thông tin sinh viên của tài khoản này không (chỉ có ở API giả).
@@ -426,231 +265,7 @@ export function isStudentDirectoryDown(userId: string): boolean {
 
 /* ---------- Loại đơn ---------- */
 
-/* Các lựa chọn của cột "Cơ sở đào tạo" (Xét miễn môn); các môn mẫu SAMPLE_SUBJECTS chỉ dùng trường trong danh sách này. */
-const SAMPLE_SCHOOLS = [
-  'ĐH KHXH&NV – ĐHQG TP.HCM',
-  'ĐH Bách khoa – ĐHQG TP.HCM',
-  'ĐH Kinh tế – Luật',
-  'ĐH Kinh tế TP.HCM',
-  'ĐH Sư phạm TP.HCM',
-  'ĐH Công nghiệp TP.HCM',
-  'ĐH Mở TP.HCM',
-  'ĐH Nông Lâm TP.HCM',
-  'ĐH Tôn Đức Thắng',
-  'ĐH Ngân hàng TP.HCM',
-] as const;
 
-/* Loại đơn ban đầu.
-   - Xét miễn môn: loại đơn đầu tiên, có bảng các môn xin miễn.
-   - Đơn thử nghiệm: đủ 10 loại câu hỏi, để xem giao diện từng loại khi chưa có trình soạn loại đơn (bước 7).
-   Cấu trúc khai báo dạng thô rồi cho qua FormTypeSchema, để điền sẵn giá trị mặc định (required, main…) như máy chủ. */
-const FORM_TYPE_SEED: readonly FormType[] = [
-  {
-    id: 'xmm',
-    name: 'Xét miễn môn',
-    prefix: 'XMM',
-    description: 'Miễn môn đã học tương đương ở cơ sở đào tạo khác',
-    status: 'open',
-    sections: [
-      {
-        id: 's-mon',
-        title: 'Đăng ký miễn môn',
-        main: true,
-        hint: 'Mỗi dòng là một môn của trường bạn muốn xét miễn, kèm môn đã học tương đương ở cơ sở khác.',
-        questions: [
-          {
-            id: 'mon',
-            tag: 'mon',
-            type: 'table',
-            label: 'Các môn xin miễn',
-            required: true,
-            rowName: 'môn',
-            columns: [
-              { label: 'Môn học của trường', sub: 'Môn muốn xét miễn', type: 'text', placeholder: 'VD: Luật Hiến pháp' },
-              { label: 'Số tín chỉ', type: 'number', placeholder: 'TC', sum: true, sumLabel: 'tín chỉ' },
-              { label: 'Môn học tương đương', sub: 'Môn dùng để xét miễn', type: 'text', placeholder: 'Tên môn đã học' },
-              // Cột Chọn: người nộp đơn chọn trường trong danh sách Phòng Đào tạo đặt sẵn
-              { label: 'Cơ sở đào tạo', sub: 'Nơi dạy môn tương đương', type: 'select', placeholder: 'Chọn trường / cơ sở', options: [...SAMPLE_SCHOOLS] },
-            ],
-          },
-        ],
-      },
-      {
-        id: 's-files',
-        title: 'Bảng điểm minh chứng',
-        hint: 'Tải lên bảng điểm có xác nhận của cơ sở đào tạo cũ.',
-        questions: [
-          {
-            id: 'files',
-            tag: 'tep_bang_diem',
-            type: 'file',
-            label: 'Tệp bảng điểm',
-            required: true,
-            accept: ['pdf', 'jpg', 'png'],
-            maxMB: 10,
-          },
-        ],
-      },
-    ],
-  },
-  {
-    id: 'thu',
-    name: 'Đơn thử nghiệm (đủ loại câu hỏi)',
-    prefix: 'THU',
-    description: 'Có đủ 10 loại câu hỏi, để xem giao diện của từng loại',
-    status: 'open',
-    sections: [
-      {
-        id: 's-chu',
-        title: 'Chữ, số và ngày',
-        main: true,
-        hint: 'Câu có dấu * là bắt buộc. Bấm Gửi đơn khi còn trống để xem câu báo lỗi.',
-        questions: [
-          {
-            id: 'info-dau',
-            type: 'info',
-            content: {
-              type: 'doc',
-              content: [
-                { type: 'heading', attrs: { level: 3 }, content: [{ type: 'text', text: 'Lưu ý' }] },
-                { type: 'paragraph', content: [{ type: 'text', text: 'Đây là khối thông báo: không cần trả lời.' }] },
-                {
-                  type: 'bulletList',
-                  content: [
-                    { type: 'listItem', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Nội dung có thể ' }, { type: 'text', text: 'in đậm', marks: [{ type: 'bold' }] }, { type: 'text', text: ' hoặc gạch đầu dòng.' }] }] },
-                  ],
-                },
-              ],
-            },
-          },
-          { id: 'tieu-de', type: 'text', label: 'Tiêu đề đơn', required: true, help: 'Trả lời ngắn: không xuống dòng bằng Enter.' },
-          { id: 'li-do', type: 'para', label: 'Lí do', help: 'Đoạn văn, viết được nhiều dòng.' },
-          { id: 'so-tin-chi', type: 'number', label: 'Số tín chỉ đã tích lũy', required: true },
-          { id: 'ngay-nghi', type: 'date', label: 'Ngày bắt đầu nghỉ học' },
-        ],
-      },
-      {
-        id: 's-chon',
-        title: 'Lựa chọn',
-        questions: [
-          { id: 'hoc-ky', type: 'radio', label: 'Học kỳ đăng ký', required: true, options: ['Học kỳ 1', 'Học kỳ 2', 'Học kỳ hè'] },
-          {
-            id: 'giay-to',
-            type: 'check',
-            label: 'Giấy tờ đã có',
-            required: true,
-            help: 'Chọn một hoặc nhiều mục.',
-            options: ['Bảng điểm', 'Giấy xác nhận sinh viên', 'Đơn có chữ ký phụ huynh'],
-          },
-          {
-            id: 'co-so',
-            type: 'select',
-            label: 'Cơ sở học',
-            options: ['Cơ sở Nguyễn Tất Thành', 'Cơ sở Bình Thạnh', 'Cơ sở Thủ Đức'],
-          },
-        ],
-      },
-      {
-        id: 's-bang',
-        title: 'Bảng và tệp',
-        questions: [
-          {
-            id: 'mon-hoc',
-            type: 'table',
-            label: 'Các môn đã đăng ký',
-            help: 'Không bắt buộc: để trống bảng cũng được.',
-            rowName: 'môn',
-            columns: [
-              { label: 'Tên môn', type: 'text', placeholder: 'VD: Luật Dân sự' },
-              { label: 'Số tín chỉ', type: 'number', placeholder: 'TC', sum: true, sumLabel: 'tín chỉ' },
-              { label: 'Ghi chú', sub: 'Lớp, giảng viên…', type: 'text' },
-            ],
-          },
-          { id: 'tep-dinh-kem', type: 'file', label: 'Tệp đính kèm', accept: ['pdf', 'docx'], maxMB: 5 },
-        ],
-      },
-    ],
-  },
-  ...[
-    ['nhs', 'Xin nghỉ học tạm thời', 'closed'],
-    ['blk', 'Xin bảo lưu kết quả học tập', 'closed'],
-    ['pkd', 'Phúc khảo điểm thi', 'closed'],
-    ['cnh', 'Xin chuyển ngành', 'closed'],
-    ['cbd', 'Xin cấp bảng điểm', 'closed'],
-    ['xnsv', 'Xin giấy xác nhận sinh viên', 'closed'],
-    ['hth', 'Xin hoãn thi', 'draft'],
-    ['hv', 'Xin học vượt', 'draft'],
-    ['hl', 'Đăng ký học lại', 'draft'],
-    ['cltsv', 'Xin cấp lại thẻ sinh viên', 'draft'],
-  ].map(([id, name, status]) => ({
-    id,
-    name,
-    prefix: id!.toUpperCase(),
-    description: `${name} (loại đơn mẫu để thử giao diện)`,
-    status,
-    sections: [
-      {
-        id: 's-chung',
-        title: 'Thông tin đơn',
-        main: true,
-        questions: [{ id: 'li-do', type: 'para', label: 'Lí do', required: true }],
-      },
-    ],
-  })),
-].map((rawFormType) => FormTypeSchema.parse(rawFormType));
-
-/** Một phiên bản loại đơn trong API giả: nội dung, trạng thái, lần lưu gần nhất (id cán bộ). */
-interface MockFormTypeVersion {
-  version: number;
-  status: FormTypeStatus;
-  name: string;
-  description: string | null;
-  sections: FormSection[];
-  updatedAt: string;
-  updatedById: string;
-}
-
-/** Một loại đơn trong API giả: mã loại đơn, mã đơn, các phiên bản (cũ trước, mới sau). */
-interface MockFormType {
-  id: string;
-  prefix: string;
-  versions: MockFormTypeVersion[];
-}
-
-/**
- * Lần lưu gần nhất của loại đơn mẫu thứ i:
- * Xét miễn môn lưu ngày 01/09/2026; các loại khác lùi dần mỗi loại 6 ngày, giờ lưu trong giờ hành chính, lần lượt 3 cán bộ mẫu.
- * @param i  vị trí trong FORM_TYPE_SEED
- * @returns  lúc lưu, id cán bộ lưu
- */
-function seedUpdate(i: number): { updatedAt: string; updatedById: string } {
-  if (i === 0) return { updatedAt: '2026-09-01T08:00', updatedById: 'cb-1' };
-  return {
-    updatedAt: `${addHours('2026-11-05T00:00', -(i - 1) * 144).slice(0, 10)}T${String(8 + ((i * 3) % 9)).padStart(2, '0')}:${String((i * 17) % 60).padStart(2, '0')}`,
-    updatedById: `cb-${((i - 1) % 3) + 1}`,
-  };
-}
-
-/**
- * Dựng các loại đơn ban đầu, mỗi loại một phiên bản (phiên bản 1) theo FORM_TYPE_SEED.
- * Riêng đơn thử nghiệm có thêm phiên bản 1 cũ (Đã đóng, chỉ có phần đầu), để thấy cách hiện nhiều phiên bản.
- * @returns  các loại đơn
- */
-function seedFormTypes(): MockFormType[] {
-  return FORM_TYPE_SEED.map((formType, i) => {
-    const { id, prefix, name, description, status, sections } = structuredClone(formType);
-    const latest: MockFormTypeVersion = { version: 1, status, name, description, sections, ...seedUpdate(i) };
-    if (id !== 'thu') return { id, prefix, versions: [latest] };
-    const firstVersion: MockFormTypeVersion = {
-      ...structuredClone(latest),
-      status: 'closed',
-      sections: structuredClone(sections.slice(0, 1)),
-      updatedAt: '2026-08-14T09:30',
-      updatedById: 'cb-2',
-    };
-    return { id, prefix, versions: [firstVersion, { ...latest, version: 2 }] };
-  });
-}
 
 /** Các loại đơn hiện có (trình soạn tạo, sửa, xóa được); tải lại trang thì về ban đầu. */
 let FORM_TYPES: MockFormType[] = seedFormTypes();
@@ -900,196 +515,11 @@ export function getFormType(formTypeId: string): FormType | null {
 
 /* ---------- Lá đơn ---------- */
 
-/** Thêm số 0 phía trước cho đủ 2 chữ số, vd 7 → "07". */
-const twoDigits = (number: number) => String(number).padStart(2, '0');
 
-/** Ngày dạng 'YYYY-MM-DD' theo giờ máy. */
-const dateText = (day: Date) => `${day.getFullYear()}-${twoDigits(day.getMonth() + 1)}-${twoDigits(day.getDate())}`;
-
-/**
- * Cộng thêm số giờ vào một thời điểm, không phụ thuộc múi giờ của máy.
- * @param dateTime  thời điểm 'YYYY-MM-DDTHH:mm'
- * @param hours     số giờ cộng thêm
- * @returns         thời điểm mới cùng dạng, vd ('2026-10-30T07:00', 27) → '2026-10-31T10:00'
- */
-function addHours(dateTime: string, hours: number): string {
-  return new Date(Date.parse(`${dateTime}:00Z`) + hours * 3_600_000).toISOString().slice(0, 16);
-}
-
-/** Lá đơn trong API giả: dòng tóm tắt, kèm id người nộp, cán bộ, các mốc thời gian, nội dung và bản chụp loại đơn lúc nộp. */
-interface MockForm extends FormSummary {
-  ownerId: string;
-  /** Lúc Duyệt / Từ chối gần nhất (mã {ngay_xu_li} khi xuất file); đơn mẫu không có thì lấy lần lưu gần nhất */
-  decidedAt?: string | null;
-  updatedAt: string;
-  note: string;
-  receiverId: string | null;
-  receivedAt: string | null;
-  handlerId: string | null;
-  handlerSince: string | null;
-  answers: FormAnswers;
-  formTypeSnapshot: FormType;
-}
-
-/** Lá đơn mẫu chưa gán cán bộ. */
-type UnassignedForm = Omit<MockForm, 'receiverId' | 'handlerId' | 'handlerSince'>;
-
-/* 3 cán bộ tiếp nhận / xử lí các đơn mẫu. */
-const SEED_STAFF_IDS = ['cb-1', 'cb-2', 'cb-3'] as const;
-
-/* 10 sinh viên khác có đơn mẫu (tài khoản sv-2 … sv-11). */
-const OTHER_STUDENT_IDS = Array.from({ length: 10 }, (_, i) => `sv-${i + 2}`);
-
-/* Các môn mẫu cho bảng "Các môn xin miễn": [môn của trường, số tín chỉ, môn tương đương, cơ sở đào tạo]. */
-const SAMPLE_SUBJECTS: TableCell[][] = [
-  ['Triết học Mác – Lênin', 3, 'Triết học Mác – Lênin', 'ĐH KHXH&NV – ĐHQG TP.HCM'],
-  ['Kinh tế chính trị Mác – Lênin', 2, 'Kinh tế chính trị Mác – Lênin', 'ĐH Kinh tế TP.HCM'],
-  ['Chủ nghĩa xã hội khoa học', 2, 'Chủ nghĩa xã hội khoa học', 'ĐH Sư phạm TP.HCM'],
-  ['Lịch sử Đảng Cộng sản Việt Nam', 2, 'Lịch sử Đảng Cộng sản Việt Nam', 'ĐH Công nghiệp TP.HCM'],
-  ['Tư tưởng Hồ Chí Minh', 2, 'Tư tưởng Hồ Chí Minh', 'ĐH Mở TP.HCM'],
-  ['Tiếng Anh pháp lý 1', 3, 'English for Specific Purposes 1', 'ĐH Sư phạm TP.HCM'],
-  ['Tin học đại cương', 2, 'Tin học căn bản', 'ĐH Bách khoa – ĐHQG TP.HCM'],
-  ['Logic học', 2, 'Logic học đại cương', 'ĐH KHXH&NV – ĐHQG TP.HCM'],
-  ['Xã hội học pháp luật', 2, 'Xã hội học đại cương', 'ĐH Mở TP.HCM'],
-  ['Kinh tế vi mô', 3, 'Microeconomics', 'ĐH Kinh tế – Luật'],
-  ['Giáo dục thể chất 1', 1, 'Giáo dục thể chất 1', 'ĐH Nông Lâm TP.HCM'],
-];
-
-/* Lí do mẫu Phòng Đào tạo ghi khi Yêu cầu bổ sung / Từ chối; trạng thái khác không có lí do. */
-/** Tiền tố id của tệp mẫu có sẵn trong đơn mẫu; sau tiền tố là mã đơn chứa tệp. */
-const SEED_FILE_ID_PREFIX = 'seed-';
-
-const SUPPLEMENT_NOTE = 'Bảng điểm chưa có dấu xác nhận của cơ sở đào tạo. Vui lòng nộp lại bản có xác nhận.';
-const SAMPLE_NOTES: Partial<Record<FormStatus, string>> = {
-  bs: SUPPLEMENT_NOTE,
-  bsg: SUPPLEMENT_NOTE,
-  tc: 'Nội dung môn tương đương trùng dưới 70% đề cương môn của trường.',
-};
-
-/**
- * Câu trả lời mẫu của một đơn Xét miễn môn: bảng môn và một tệp bảng điểm (tệp mẫu không có nội dung thật).
- * @param code      mã đơn, để đặt id tệp
- * @param subjects  các dòng bảng môn
- * @param fileName  tên tệp bảng điểm
- * @returns         câu trả lời theo id câu hỏi của loại đơn xmm
- */
-function sampleAnswers(code: string, subjects: TableCell[][], fileName: string): FormAnswers {
-  const sizeBytes = 150_000 + (Number(code.slice(-5)) * 7_919) % 900_000;
-  return { mon: subjects.map((row) => [...row]), files: [{ id: `${SEED_FILE_ID_PREFIX}${code}`, name: fileName, sizeBytes }] };
-}
-
-/** Bản chụp loại đơn Xét miễn môn cho đơn mẫu. */
-const xmmSnapshot = () => structuredClone(FORM_TYPE_SEED.find((formType) => formType.id === 'xmm')!);
-
-/**
- * Sinh 18 đơn Xét miễn môn mẫu cho sinh viên đăng nhập thử
- * (cùng trạng thái, mã đơn, ngày nộp, các môn, tệp, lí do), để bảng có nhiều trang, đủ các trạng thái.
- * @returns  các đơn của sv-1, đơn mới nộp đứng đầu
- */
-function seedStudentForms(): UnassignedForm[] {
-  const statuses: FormStatus[] = [
-    'nop', 'xet', 'xet', 'bs', 'duyet', 'xet', 'duyet', 'tc', 'duyet',
-    'bsg', 'duyet', 'duyet', 'tc', 'duyet', 'duyet', 'tc', 'duyet', 'duyet',
-  ];
-  let day = new Date(2026, 9, 30);
-
-  return statuses.map((status, i) => {
-    // Ngày nộp lùi dần, giờ nộp trong buổi sáng; cứ 4 đơn có 1 đơn sửa lại buổi chiều cùng ngày
-    const date = dateText(day);
-    const code = formatFormCode('XMM', day.getFullYear(), 1, 1520 - i * 83);
-    const submittedAt = `${date}T${twoDigits(7 + (i % 4))}:${twoDigits((i * 17) % 60)}`;
-    const updatedAt = i % 4 === 1 ? `${date}T${twoDigits(13 + (i % 5))}:${twoDigits((i * 29) % 60)}` : submittedAt;
-
-    // 1–3 môn, một tệp bảng điểm
-    const subjects = Array.from({ length: 1 + ((i * 7) % 3) }, (_, k) => SAMPLE_SUBJECTS[(i * 3 + k * 5) % SAMPLE_SUBJECTS.length]!);
-    const fileName = `Bang_diem_${i % 2 ? 'hoc_ky' : 'toan_khoa'}_${i + 1}.pdf`;
-
-    day = new Date(day.getTime() - (9 + ((i * 13) % 17)) * 86_400_000);
-    return {
-      ownerId: 'sv-1',
-      code,
-      formTypeId: 'xmm',
-      formTypeName: 'Xét miễn môn',
-      submittedAt,
-      updatedAt,
-      status,
-      note: SAMPLE_NOTES[status] ?? '',
-      receivedAt: status === 'nop' ? null : addHours(submittedAt, 3 + (i % 3) * 18),
-      answers: sampleAnswers(code, subjects, fileName),
-      formTypeSnapshot: xmmSnapshot(),
-    };
-  });
-}
-
-/**
- * Sinh đơn của 10 sinh viên khác (sv-2 … sv-11):
- * sinh viên thứ i có 1 + i % 3 đơn, tổng 19 đơn, mỗi đơn một môn. Dùng cho mục "Đơn phụ trách" của cán bộ.
- * @returns  các đơn
- */
-function seedOtherStudentForms(): UnassignedForm[] {
-  const statuses: FormStatus[] = ['nop', 'xet', 'bs', 'duyet', 'tc', 'bsg', 'xet', 'duyet'];
-  const subjects = [0, 5, 6, 9, 7].map((index) => SAMPLE_SUBJECTS[index]!);
-  const forms: UnassignedForm[] = [];
-  let formIndex = 0;
-
-  for (let student = 0; student < OTHER_STUDENT_IDS.length; student++) {
-    for (let j = 0; j < 1 + (student % 3); j++, formIndex++) {
-      // Ngày nộp rải trong khoảng 200 ngày; đơn Đã bổ sung sửa sau 30 giờ, vài đơn khác sửa sau 5 giờ
-      const day = new Date(2026, 9, 31 - ((formIndex * 11) % 200));
-      const code = formatFormCode('XMM', day.getFullYear(), 1, 1500 - formIndex * 37);
-      const submittedAt = `${dateText(day)}T${twoDigits(8 + (formIndex % 9))}:${twoDigits((formIndex * 13) % 60)}`;
-      const status = statuses[formIndex % statuses.length]!;
-      const updatedAt = status === 'bsg' ? addHours(submittedAt, 30) : formIndex % 5 === 2 ? addHours(submittedAt, 5) : submittedAt;
-
-      forms.push({
-        ownerId: OTHER_STUDENT_IDS[student]!,
-        code,
-        formTypeId: 'xmm',
-        formTypeName: 'Xét miễn môn',
-        submittedAt,
-        updatedAt,
-        status,
-        note: SAMPLE_NOTES[status] ?? '',
-        receivedAt: status === 'nop' ? null : addHours(submittedAt, 3 + (formIndex % 3) * 18),
-        answers: sampleAnswers(code, [subjects[formIndex % subjects.length]!], `Bang_diem_${formIndex + 1}.pdf`),
-        formTypeSnapshot: xmmSnapshot(),
-      });
-    }
-  }
-  return forms;
-}
-
-/**
- * Gán người tiếp nhận, người xử lí cho các đơn:
- * đơn Đã nộp chưa ai tiếp nhận; đơn khác do lần lượt 3 cán bộ tiếp nhận,
- * cứ 5 đơn có 1 đơn đã chuyển giao cho người kế tiếp (26 giờ sau khi tiếp nhận).
- * @param forms  các đơn chưa gán
- * @returns      các đơn đã gán cán bộ
- */
-function assignStaff(forms: UnassignedForm[]): MockForm[] {
-  return forms.map((form, i) => {
-    if (!form.receivedAt) return { ...form, receiverId: null, handlerId: null, handlerSince: null };
-    const receiverId = SEED_STAFF_IDS[i % SEED_STAFF_IDS.length]!;
-    const transferred = i % 5 === 2;
-    return {
-      ...form,
-      receiverId,
-      handlerId: transferred ? SEED_STAFF_IDS[(i + 1) % SEED_STAFF_IDS.length]! : receiverId,
-      handlerSince: transferred ? addHours(form.receivedAt, 26) : form.receivedAt,
-    };
-  });
-}
 
 /* Mọi lá đơn, đơn mới nộp đứng đầu. */
 let FORMS: MockForm[] = seedForms();
 
-/**
- * Dựng lại toàn bộ đơn mẫu.
- * @returns  đơn của sinh viên đăng nhập thử rồi đơn của sinh viên khác, đã gán cán bộ
- */
-function seedForms(): MockForm[] {
-  return assignStaff([...seedStudentForms(), ...seedOtherStudentForms()]);
-}
 
 /**
  * Chỉ giữ phần trả về cho bảng đơn (bỏ id nội bộ, câu trả lời, bản chụp loại đơn).
@@ -1513,14 +943,14 @@ function seedExportTemplates(): Map<string, MockExportTemplate[]> {
   const binary = atob(SAMPLE_EXPORT_TEMPLATE_BASE64);
   const bytes = Uint8Array.from(binary, (character) => character.charCodeAt(0)).buffer;
   const template: ExportTemplate = {
-    id: 'tpl-demo',
-    name: 'Đơn gửi phòng Đào tạo',
-    fileName: 'mau-don-xet-mien-mon.docx',
+    id: SEED_EXPORT_TEMPLATE.id,
+    name: SEED_EXPORT_TEMPLATE.name,
+    fileName: SEED_EXPORT_TEMPLATE.fileName,
     sizeBytes: bytes.byteLength,
-    uploadedAt: '2026-10-01T09:00',
-    uploadedBy: 'Phạm Thu Hà',
+    uploadedAt: SEED_EXPORT_TEMPLATE.uploadedAt,
+    uploadedBy: SEED_ACCOUNTS[SEED_EXPORT_TEMPLATE.uploadedById]!.name,
   };
-  return new Map([['xmm', [{ template, bytes }]]]);
+  return new Map([[SEED_EXPORT_TEMPLATE.formTypeId, [{ template, bytes }]]]);
 }
 
 /** Mẫu xuất file theo mã loại đơn. Giữ trong bộ nhớ, tải lại trang là về ban đầu. */
@@ -1714,100 +1144,11 @@ export function writeSession(userId: string | null): void {
 
 /* ---------- Cấu hình email ---------- */
 
-/**
- * Thư viết dạng chữ thường thành văn bản có định dạng: dòng trống ngăn đoạn, xuống dòng trong đoạn thành xuống dòng cứng.
- * @param letterText  nội dung thư dạng chữ thường
- * @returns           văn bản có định dạng (mỗi đoạn một nút "paragraph")
- */
-function letterToRichText(letterText: string): RichTextDoc {
-  return {
-    type: 'doc',
-    content: letterText.split('\n\n').map((paragraphText) => ({
-      type: 'paragraph',
-      content: paragraphText
-        .split('\n')
-        .flatMap((line, index): RichTextNode[] => [...(index > 0 ? [{ type: 'hardBreak' as const }] : []), { type: 'text', text: line }]),
-    })),
-  };
-}
-
-/* Cấu hình ban đầu. Chỉ giữ trong bộ nhớ: tải lại trang là về ban đầu. */
-const EMAIL_SETTINGS_SEED: EmailSettings = {
-  sender: {
-    name: 'Phòng Đào tạo Đại học - ULAW',
-    signature: 'Phòng Đào tạo Đại học, Trường Đại học Luật TP.HCM',
-  },
-  events: [
-    {
-      status: 'nop',
-      enabled: true,
-      subject: '[{ma_don}] Đã nhận đơn {loai_don} của bạn',
-      body: letterToRichText(`Chào {ho_ten},
-
-Phòng Đào tạo đã nhận đơn {loai_don} bạn nộp ngày {ngay_nop}. Mã đơn của bạn là {ma_don}.
-
-Chúng tôi sẽ tiếp nhận và xử lí trong thời gian sớm nhất. Bạn xem tiến độ xử lí tại:
-{link_don}
-
-Trân trọng,
-{chu_ki}`),
-    },
-    {
-      status: 'bs',
-      enabled: true,
-      subject: '[{ma_don}] Đơn của bạn cần bổ sung',
-      body: letterToRichText(`Chào {ho_ten},
-
-Đơn {loai_don} mã {ma_don} cần bổ sung thông tin:
-
-{ly_do}
-
-Bạn vào đơn để sửa và nộp lại:
-{link_don}
-
-Trân trọng,
-{nguoi_xu_li}
-{chu_ki}`),
-    },
-    {
-      status: 'tc',
-      enabled: true,
-      subject: '[{ma_don}] Đơn của bạn không được duyệt',
-      body: letterToRichText(`Chào {ho_ten},
-
-Rất tiếc, đơn {loai_don} mã {ma_don} không được duyệt.
-
-Lí do: {ly_do}
-
-Bạn xem chi tiết tại:
-{link_don}
-
-Trân trọng,
-{nguoi_xu_li}
-{chu_ki}`),
-    },
-    {
-      status: 'duyet',
-      enabled: true,
-      subject: '[{ma_don}] Đơn của bạn đã được duyệt',
-      body: letterToRichText(`Chào {ho_ten},
-
-Đơn {loai_don} mã {ma_don} đã được duyệt.
-
-Bạn xem kết quả và tải file tại:
-{link_don}
-
-Trân trọng,
-{nguoi_xu_li}
-{chu_ki}`),
-    },
-  ],
-};
 
 /** Cấu hình email đang dùng. */
 let emailSettings: EmailSettings = structuredClone(EMAIL_SETTINGS_SEED);
 /** Lần lưu cấu hình email gần nhất: lúc nào (giờ Việt Nam), cán bộ nào. */
-let emailSettingsUpdate = { updatedAt: '2026-11-03T14:20', updatedById: 'cb-1' };
+let emailSettingsUpdate = { ...EMAIL_SETTINGS_SEED_UPDATE };
 
 /**
  * Cấu hình email đang dùng.

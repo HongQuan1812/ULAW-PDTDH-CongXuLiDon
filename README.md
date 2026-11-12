@@ -20,6 +20,8 @@ cp api/.env.example api/.env    # cho backend
 
 ```bash
 docker compose up -d            # bật PostgreSQL (chạy ngầm, bật một lần)
+pnpm --filter api exec prisma migrate dev   # tạo bảng (lần đầu, và mỗi khi có migration mới)
+pnpm --filter api exec prisma db seed       # nạp dữ liệu mẫu (xóa sạch dữ liệu cũ)
 pnpm --filter api dev           # backend, cổng 3000 · tài liệu API: http://localhost:3000/api/docs
 pnpm --filter web dev           # frontend, cổng 5173 · http://localhost:5173
 ```
