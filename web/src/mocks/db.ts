@@ -426,6 +426,20 @@ export function isStudentDirectoryDown(userId: string): boolean {
 
 /* ---------- Loại đơn ---------- */
 
+/* Các lựa chọn của cột "Cơ sở đào tạo" (Xét miễn môn); các môn mẫu SAMPLE_SUBJECTS chỉ dùng trường trong danh sách này. */
+const SAMPLE_SCHOOLS = [
+  'ĐH KHXH&NV – ĐHQG TP.HCM',
+  'ĐH Bách khoa – ĐHQG TP.HCM',
+  'ĐH Kinh tế – Luật',
+  'ĐH Kinh tế TP.HCM',
+  'ĐH Sư phạm TP.HCM',
+  'ĐH Công nghiệp TP.HCM',
+  'ĐH Mở TP.HCM',
+  'ĐH Nông Lâm TP.HCM',
+  'ĐH Tôn Đức Thắng',
+  'ĐH Ngân hàng TP.HCM',
+] as const;
+
 /* Loại đơn ban đầu.
    - Xét miễn môn: như TYPES.xmm trong artifact/js/config.js.
    - Đơn thử nghiệm: đủ 10 loại câu hỏi, để xem giao diện từng loại khi chưa có trình soạn loại đơn (bước 7).
@@ -455,7 +469,8 @@ const FORM_TYPE_SEED: readonly FormType[] = [
               { label: 'Môn học của trường', sub: 'Môn muốn xét miễn', type: 'text', placeholder: 'VD: Luật Hiến pháp' },
               { label: 'Số tín chỉ', type: 'number', placeholder: 'TC', sum: true, sumLabel: 'tín chỉ' },
               { label: 'Môn học tương đương', sub: 'Môn dùng để xét miễn', type: 'text', placeholder: 'Tên môn đã học' },
-              { label: 'Cơ sở đào tạo', sub: 'Nơi dạy môn tương đương', type: 'text', placeholder: 'Tên trường / cơ sở' },
+              // Cột Chọn: người nộp đơn chọn trường trong danh sách Phòng Đào tạo đặt sẵn
+              { label: 'Cơ sở đào tạo', sub: 'Nơi dạy môn tương đương', type: 'select', placeholder: 'Chọn trường / cơ sở', options: [...SAMPLE_SCHOOLS] },
             ],
           },
         ],

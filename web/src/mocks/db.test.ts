@@ -183,7 +183,7 @@ describe('phiên bản loại đơn', () => {
     expect(getFormType('xmm')).toMatchObject({ version: 2, name: 'Xét miễn môn mới' });
 
     const year = new Date().getFullYear();
-    const newForm = addForm('sv-1', getFormType('xmm')!, { mon: [['Triết học', 3, 'Triết học', 'ĐH KHXH&NV']], files: [] }, new Map());
+    const newForm = addForm('sv-1', getFormType('xmm')!, { mon: [['Triết học', 3, 'Triết học', 'ĐH KHXH&NV – ĐHQG TP.HCM']], files: [] }, new Map());
     expect(newForm.code).toMatch(new RegExp(`^XMM-${year}-002-[0-9]{5}$`));
 
     // Mở lại phiên bản 1: phiên bản 2 tự đóng
@@ -226,7 +226,7 @@ describe('nộp đơn mới', () => {
   test('sinh mã kế tiếp của tiền tố và năm, trạng thái Đã nộp, đứng đầu bảng Đơn đã nộp; tệp lưu cùng đơn với id mới', () => {
     const xmm = getFormType('xmm')!;
     const bangDiem = new File(['%PDF'], 'bang-diem.pdf');
-    const answers = { mon: [['Triết học', 3, 'Triết học', 'ĐH KHXH&NV']], files: [{ id: 'local-1', name: 'bang-diem.pdf', sizeBytes: 4 }] };
+    const answers = { mon: [['Triết học', 3, 'Triết học', 'ĐH KHXH&NV – ĐHQG TP.HCM']], files: [{ id: 'local-1', name: 'bang-diem.pdf', sizeBytes: 4 }] };
 
     // Mã lớn nhất hiện có của XMM cùng năm
     const year = new Date().getFullYear();
@@ -290,10 +290,10 @@ describe('sửa đơn', () => {
     const oldFile = (before.answers.files as FileRef[])[0]!;
     const newFile = { id: 'local-9', name: 'ban-co-xac-nhan.pdf', sizeBytes: 4 };
 
-    const saved = updateForm(supplementCode, { mon: [['Logic học', 2, 'Logic', 'ĐH Mở']], files: [oldFile, newFile] }, new Map([['local-9', new File(['%PDF'], 'ban-co-xac-nhan.pdf')]]))!;
+    const saved = updateForm(supplementCode, { mon: [['Logic học', 2, 'Logic', 'ĐH Mở TP.HCM']], files: [oldFile, newFile] }, new Map([['local-9', new File(['%PDF'], 'ban-co-xac-nhan.pdf')]]))!;
     expect(saved.status).toBe('bsg');
     expect(saved.updatedAt).not.toBe(before.updatedAt);
-    expect(saved.answers.mon).toEqual([['Logic học', 2, 'Logic', 'ĐH Mở']]);
+    expect(saved.answers.mon).toEqual([['Logic học', 2, 'Logic', 'ĐH Mở TP.HCM']]);
     const files = saved.answers.files as FileRef[];
     expect(files[0]).toEqual(oldFile);
     expect(files[1]).toMatchObject({ name: 'ban-co-xac-nhan.pdf' });
@@ -304,7 +304,7 @@ describe('sửa đơn', () => {
   test('gỡ tệp rồi lưu: tệp bị xóa hẳn, không còn trong kho tệp', () => {
     const xmm = getFormType('xmm')!;
     const files = [new File(['%PDF'], 'a.pdf'), new File(['%PDF'], 'b.pdf')];
-    const answers = { mon: [['Logic học', 2, 'Logic', 'ĐH Mở']], files: files.map((file, i) => ({ id: `local-${i}`, name: file.name, sizeBytes: 4 })) };
+    const answers = { mon: [['Logic học', 2, 'Logic', 'ĐH Mở TP.HCM']], files: files.map((file, i) => ({ id: `local-${i}`, name: file.name, sizeBytes: 4 })) };
     const { code } = addForm('sv-1', xmm, answers, new Map(files.map((file, i) => [`local-${i}`, file])));
     const [keptFile, removedFile] = getFilesOfForm(code);
 
