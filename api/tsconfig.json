@@ -1,0 +1,11 @@
+{
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ES2023"],
+    "types": ["node"],
+    // NestJS đọc kiểu của tham số constructor để tự tiêm phụ thuộc
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true
+  },
+  "include": ["src", "test", "prisma.config.ts", "tsdown.config.ts", "vitest.config.ts"]
+}

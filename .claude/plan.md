@@ -39,7 +39,7 @@ Làm từng nhóm API. Xong nhóm nào thì chuyển nhóm đó sang API thật,
 
 | # | Bước | Nhánh | Gồm | |
 |---|---|---|---|---|
-| 0 | Nền móng | `backend-nen-mong` | PostgreSQL bằng Docker ✓ · dựng NestJS, Prisma · đọc `.env` · lọc lỗi trả `ApiErrorBody` · kiểm tra request bằng schema Zod của `shared/` · Swagger · nhóm `health` | |
+| 0 | Nền móng | `backend-nen-mong` | PostgreSQL bằng Docker ✓ · dựng NestJS, Prisma · đọc `api/.env` · lọc lỗi trả `ApiErrorBody` · kiểm tra request bằng schema Zod của `shared/` · Swagger · nhóm `health` | ✓ |
 | 1 | Chạy giả và thật cùng lúc | `backend-nen-mong` | Vite chuyển `/api` sang backend · chọn nhóm nào dùng API thật · chuyển nhóm `health` sang API thật để thử đường đi | |
 | 2 | Bảng, dữ liệu mẫu | `backend-bang` | `schema.prisma` đủ các bảng · migration đầu tiên · tách dữ liệu mẫu ra chỗ dùng chung để API giả và seed cùng dùng · seed | |
 | 3 | Đăng nhập, quyền | `backend-dang-nhap` | `dev-login` (chỉ bật khi `APP_ENV=dev`) · phiên bằng cookie httpOnly · `/auth/me`, đăng xuất · guard quyền `@RequirePermission` · nhóm `auth` | |
@@ -63,7 +63,7 @@ Chưa làm, chờ thông tin từ bên ngoài:
 1. Đọc hợp đồng của nhóm trong `shared/src/api-contract/<nhóm>.ts` và API giả trong `web/src/mocks/handlers/<nhóm>.ts`. API giả cho biết hành vi cần có: luật, mã lỗi, câu thông báo. Đối chiếu thêm `docs/business-rules.md`.
 2. Thêm bảng, cột cần thiết vào `schema.prisma`, tạo migration, cập nhật seed.
 3. Viết module NestJS: controller mỏng, service gọi Prisma. Luật nghiệp vụ gọi hàm trong `shared/`, không viết lại.
-4. Viết test (Jest + Supertest): response khớp schema Zod của `shared/`, kiểm tra quyền, các mã lỗi.
+4. Viết test (Vitest + Supertest): response khớp schema Zod của `shared/`, kiểm tra quyền, các mã lỗi.
 5. Chuyển nhóm đó sang API thật, mở giao diện bấm thử như người dùng.
 6. Tạo Pull Request vào `main`.
 

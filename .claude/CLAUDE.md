@@ -54,12 +54,12 @@ Như vậy luật nghiệp vụ chỉ viết một lần.
 | Xuất Word | **docxtemplater** | Điền mã `{...}` vào mẫu .docx |
 | Dữ liệu sinh viên | Module `student-directory` | Đọc từ database trường (cách kết nối chờ xác nhận) |
 | Tài liệu API | Swagger (OpenAPI) tự sinh | |
-| Kiểm thử | Jest + Supertest | |
+| Kiểm thử | Vitest + Supertest | Cùng công cụ test với `web/`, `shared/` |
 
 ### Hạ tầng
 
 - **Docker Compose** cho môi trường phát triển: `postgres`.
-- Biến môi trường trong `.env` (có `.env.example`). Không commit `.env`.
+- Biến môi trường: `.env` ở thư mục gốc cho Docker, `api/.env` cho backend (mỗi tệp có `.env.example`). Không commit `.env`.
 
 ### Nguyên tắc thiết kế
 

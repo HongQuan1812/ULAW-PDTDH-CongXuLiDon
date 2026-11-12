@@ -31,3 +31,6 @@ Thumbs.db
 
 # Claude Code local settings
 .claude/settings.local.json
+
+# Prisma Client sinh từ api/prisma/schema.prisma (chạy prisma generate)
+api/src/generated/

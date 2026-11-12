@@ -1,0 +1,11 @@
+// Cấu trúc database. Các bảng thêm dần theo từng nhóm API (xem .claude/plan.md, Giai đoạn 2).
+
+generator client {
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
+  moduleFormat = "esm"
+}
+
+datasource db {
+  provider = "postgresql"
+}

@@ -2,3 +2,8 @@ packages:
   - web
   - api
   - shared
+allowBuilds:
+  '@parcel/watcher': false
+  '@prisma/engines': true
+  '@scarf/scarf': false
+  prisma: true
