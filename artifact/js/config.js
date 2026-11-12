@@ -61,12 +61,13 @@ const DECIDABLE=["xet"];             /* đơn ở các trạng thái này cán b
    decideAny (làm việc đó trên đơn người khác phụ trách), transfer (chuyển giao đơn cho người xử lí khác),
    editAnyApp (sửa nội dung đơn của người khác, cùng điều kiện trạng thái EDITABLE),
    manageAccounts (trang Quản lí tài khoản: tạo tài khoản mới, sửa thông tin và vai trò tài khoản khác),
-   manageForms (trang Quản lí loại đơn: tạo, sửa, mở / đóng các loại đơn — Người xử lí đơn và Admin).
+   manageForms (trang Quản lí loại đơn: tạo, sửa, mở / đóng các loại đơn — Người xử lí đơn và Admin),
+   manageEmail (trang Cấu hình email: bật / tắt, người nhận và nội dung email báo khi đơn đổi trạng thái — chỉ Admin).
    Muốn thay đổi vai trò nào làm được gì, chỉ cần sửa danh sách perms / pages ở đây. */
 const ROLES={
   nop:  {name:"Người nộp đơn",  pages:["profile"],        home:"profile", perms:["submit","editOwn"]},
   xuly: {name:"Người xử lí đơn",pages:["profile","apps","forms"], home:"apps", perms:["submit","editOwn","viewAll","receive","viewApplicant","decide","transfer","manageForms"]},
-  admin:{name:"Admin",          pages:["profile","apps","forms","accounts"], home:"apps", perms:["manageForms","submit","editOwn","viewAll","receive","viewApplicant","editApplicant","submitForApplicant","decide","decideAny","transfer","editAnyApp","manageAccounts"]}
+  admin:{name:"Admin",          pages:["profile","apps","forms","accounts","email"], home:"apps", perms:["manageForms","submit","editOwn","viewAll","receive","viewApplicant","editApplicant","submitForApplicant","decide","decideAny","transfer","editAnyApp","manageAccounts","manageEmail"]}
 };
 const can=perm=>!!state.role&&ROLES[state.role].perms.includes(perm);
 const canSee=page=>!!state.role&&ROLES[state.role].pages.includes(page);

@@ -5,7 +5,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap">
 <!-- ?v=… là số phiên bản: tăng mỗi lần cập nhật để trình duyệt tải lại CSS/JS mới thay vì dùng bản cũ trong cache -->
-<link rel="stylesheet" href="styles.css?v=247">
+<link rel="stylesheet" href="styles.css?v=250">
 
 <!-- ============ MÀN HÌNH 1: ĐĂNG NHẬP ============ -->
 <main id="vLogin" class="login">
@@ -87,6 +87,7 @@
       <button type="button" data-go="apps"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h6"/></svg><span>Quản lí đơn</span></button>
       <button type="button" data-go="forms"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg><span>Quản lí loại đơn</span></button>
       <button type="button" data-go="accounts"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c0-3.6 3-5.5 6.5-5.5s6.5 1.9 6.5 5.5"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18 14.8c2.2.6 3.5 2.4 3.5 5.2"/></svg><span>Quản lí tài khoản</span></button>
+      <button type="button" data-go="email"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg><span>Cấu hình email</span></button>
     </nav>
     <div class="drawer-spacer"></div>
     <!-- JUST FOR DEMO: START · đổi vai trò để thử -->
@@ -312,6 +313,31 @@
       <div id="fePreview" class="fe-preview" hidden></div>
     </div>
 
+    <!-- ===== Cấu hình email (Admin): email báo khi đơn đổi trạng thái; vẽ bằng js/email-page.js ===== -->
+    <div id="vEmail" class="page page-wide" hidden>
+      <div class="page-head">
+        <div class="ph-text"><h1>Cấu hình email</h1><p>Chọn lúc nào cổng gửi email, gửi cho ai và nội dung ra sao. Chỉ Admin được sửa.</p></div>
+        <div class="ph-acts">
+          <span class="fe-dirty" id="emDirty" hidden>Chưa lưu</span>
+          <button type="button" class="btn ghost" id="emReset" disabled>Hoàn tác</button>
+          <button type="button" class="btn primary" id="emSave" disabled>Lưu</button>
+        </div>
+      </div>
+      <section class="card em-sender" aria-labelledby="emSenderH">
+        <div class="em-head"><h2 id="emSenderH">Người gửi</h2><span class="em-conn"><i></i>Đã kết nối máy chủ thư</span></div>
+        <div class="grid2">
+          <label class="f">Tên người gửi<small>Hiện ở dòng “Từ” trong hộp thư người nhận</small><input id="emSenderName" autocomplete="off"></label>
+          <label class="f">Địa chỉ gửi<small>Phải là địa chỉ máy chủ thư cho phép gửi</small><input id="emSenderMail" type="email" autocomplete="off"></label>
+          <label class="f">Địa chỉ nhận trả lời<small>Người nhận bấm “Trả lời” thì thư về đây</small><input id="emReplyTo" type="email" autocomplete="off"></label>
+          <label class="f">Chữ kí cuối thư<small>Dùng trong thư bằng mã {chu_ki}</small><input id="emSignature" autocomplete="off"></label>
+        </div>
+      </section>
+      <div class="em-main">
+        <nav class="card em-events" role="tablist" aria-label="Lúc gửi email" id="emEvents"></nav>
+        <section class="card em-editor" id="emEditor"></section>
+      </div>
+    </div>
+
   </div>
 </div>
 
@@ -380,8 +406,8 @@
 </aside>
 <div class="toast" id="toast" hidden role="status"></div>
 
-<script src="js/utils.js?v=245"></script>
-<script src="js/config.js?v=248"></script>
+<script src="js/utils.js?v=246"></script>
+<script src="js/config.js?v=249"></script>
 <script src="js/state.js?v=248"></script>
 <!-- JUST FOR DEMO: START · dữ liệu mẫu; bản thật: lấy đơn và hồ sơ từ API -->
 <script src="js/sample-data.js?v=248"></script>
@@ -395,11 +421,12 @@
 <script src="js/applications-page.js?v=245"></script>
 <script src="js/accounts-page.js?v=245"></script>
 <script src="js/forms-page.js?v=245"></script>
+<script src="js/email-page.js?v=1"></script>
 <script src="js/print-templates.js?v=248"></script>
 <!-- JUST FOR DEMO: START · mẫu xuất file mẫu cho loại đơn Xét miễn môn; bản thật lấy mẫu xuất file từ máy chủ -->
 <script src="js/sample-template.js?v=200"></script>
 <!-- JUST FOR DEMO: END -->
-<script src="js/nav.js?v=245"></script>
+<script src="js/nav.js?v=246"></script>
 <script src="js/collapse.js?v=245"></script>
 
 </body></html>

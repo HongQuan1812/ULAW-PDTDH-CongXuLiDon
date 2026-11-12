@@ -821,3 +821,47 @@ td.loop-box>.btn{display:inline-flex}
 .decide .btn.d-bs:hover{background:color-mix(in srgb,var(--s-bs-fg) 18%,var(--s-bs-bg))}
 .decide .btn.d-tc:hover{background:color-mix(in srgb,var(--s-tc-fg) 18%,var(--s-tc-bg))}
 .decide .btn.d-duyet:hover{background:color-mix(in srgb,var(--s-duyet-fg) 18%,var(--s-duyet-bg))}
+
+/* ===== Cấu hình email (Admin) ===== */
+.em-sender{padding:20px;margin-bottom:20px}
+.em-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+.em-head h2{margin:0;font-size:16px}
+.em-title{display:flex;align-items:center;gap:10px}
+.em-conn{display:inline-flex;align-items:center;gap:8px;font-size:12.5px;font-weight:500;color:var(--s-duyet-fg);background:var(--s-duyet-bg);padding:3px 11px;border-radius:999px}
+.em-conn i{width:7px;height:7px;border-radius:50%;background:currentColor}
+.em-main{display:grid;grid-template-columns:300px minmax(0,1fr);gap:20px;align-items:start}
+.em-events{display:flex;flex-direction:column;padding:8px}
+.em-ev{display:grid;grid-template-columns:1fr auto;gap:3px 10px;align-items:center;padding:11px 12px;border-radius:var(--r);cursor:pointer}
+.em-ev:hover{background:var(--hover)}
+.em-ev[aria-selected=true]{background:var(--accent-soft)}
+.em-ev .pill{width:fit-content}
+.em-meta{grid-column:1;font-size:12.5px;color:var(--muted)}
+.em-meta.off{color:var(--faint)}
+.em-editor{padding:0}
+.em-editor>.em-head{padding:16px 20px;margin:0;border-bottom:1px solid var(--line)}
+.em-sec{display:flex;flex-direction:column;gap:14px;padding:20px}
+.em-sec+.em-sec{border-top:1px solid var(--line)}
+.em-cap{margin:0;font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.em-cap span{text-transform:none;letter-spacing:0;font-weight:400}
+.em-checks{display:flex;flex-wrap:wrap;gap:8px 20px}
+.em-checks label{display:inline-flex;align-items:center;gap:8px;cursor:pointer}
+.em-checks input{accent-color:var(--accent);width:16px;height:16px;margin:0}
+.em-chips{display:flex;flex-wrap:wrap;gap:6px}
+.em-chip{font:12.5px ui-monospace,SFMono-Regular,Menlo,monospace;background:var(--surface-2);color:var(--fg);border:1px solid var(--line-2);border-radius:6px;padding:3px 8px;cursor:pointer}
+.em-chip:hover{background:var(--accent-soft);border-color:var(--accent);color:var(--accent-ink)}
+.em-mail{border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.em-mail-head{margin:0;padding:12px 16px;background:var(--surface-2);border-bottom:1px solid var(--line);display:grid;grid-template-columns:auto 1fr;gap:2px 12px;font-size:13px}
+.em-mail-head dt{color:var(--muted)}
+.em-mail-head dd{margin:0;overflow-wrap:anywhere}
+.em-subj{font-weight:600}
+.em-mail-body{padding:16px;white-space:pre-wrap;overflow-wrap:anywhere;background:var(--surface);line-height:1.65}
+.em-mail-body mark{background:var(--accent-soft);color:var(--accent-ink);border-radius:3px;padding:0 2px}
+mark.em-bad{background:var(--s-tc-bg)!important;color:var(--s-tc-fg)!important}
+.em-test{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end}
+.em-test .f{flex:1;min-width:200px}
+@media (max-width:860px){.em-main{grid-template-columns:1fr}}
+
+/* Thanh menu ngang có 5 mục (thêm Cấu hình email): màn hình vừa thì ẩn chữ "Vai trò", thu hẹp khoảng cách các nút cho khỏi đè nhau */
+@media (min-width:961px) and (max-width:1400px){.drawer-role label{display:none}}
+@media (min-width:961px) and (max-width:1400px){.drawer-nav button{padding:0 10px;font-size:13.5px}}
+@media (min-width:961px) and (max-width:1200px){.drawer-foot .acc{display:none}}

@@ -3,7 +3,7 @@
    Mở/đóng bằng class "open" (không dùng thuộc tính hidden) để màn hình rộng luôn thấy menu. */
 let lastMenuBtn=null;
 const narrowMQ=window.matchMedia('(max-width: 960px)');
-function currentPageName(){return !$('vAccounts').hidden?"accounts":(!$('vForms').hidden||!$('vFormEdit').hidden)?"forms":!$('vApps').hidden?"apps":"profile"}
+function currentPageName(){return !$('vEmail').hidden?"email":!$('vAccounts').hidden?"accounts":(!$('vForms').hidden||!$('vFormEdit').hidden)?"forms":!$('vApps').hidden?"apps":"profile"}
 function drawerOpen(){return $('drawer').classList.contains('open')}
 /* màn hình hẹp và menu đang đóng: không cho Tab vào menu */
 function syncDrawerInert(){const d=$('drawer');d.inert=narrowMQ.matches&&!drawerOpen()}
@@ -29,7 +29,7 @@ function closeDrawer(){
 narrowMQ.addEventListener('change',()=>{if(!narrowMQ.matches)closeDrawer();syncDrawerInert()});
 /* ---- Điều hướng theo #hash: nút Back / Forward của trình duyệt dùng được, và có thể gửi link tới từng trang ----
    #thong-tin-ca-nhan · #quan-li-don · #quan-li-tai-khoan · #nop-don · #don-<mã đơn> · #ho-so-<id người nộp> */
-const ROUTE={profile:"thong-tin-ca-nhan",apps:"quan-li-don",accounts:"quan-li-tai-khoan",forms:"quan-li-loai-don",newForm:"nop-don"};
+const ROUTE={profile:"thong-tin-ca-nhan",apps:"quan-li-don",accounts:"quan-li-tai-khoan",forms:"quan-li-loai-don",email:"cau-hinh-email",newForm:"nop-don"};
 /* #soan-don-<mã loại đơn> · #soan-don-moi : trình soạn loại đơn */
 const homeRoute=()=>ROUTE[ROLES[state.role].home];
 const currentRoute=()=>decodeURIComponent(location.hash.replace(/^#/,''));
@@ -47,6 +47,7 @@ function routeLabel(r){
   if(r===ROUTE.apps)return "Quản lí đơn";
   if(r===ROUTE.accounts)return "Quản lí tài khoản";
   if(r===ROUTE.forms)return "Quản lí loại đơn";
+  if(r===ROUTE.email)return "Cấu hình email";
   if(r&&r.startsWith("soan-don-"))return "trình soạn loại đơn";
   if(r&&r.startsWith(ROUTE.newForm))return "đơn đang soạn";
   if(r&&r.startsWith("don-"))return "đơn "+r.slice(4);
@@ -61,6 +62,7 @@ function renderRoute(r){
   let m;
   if(r===ROUTE.apps&&canSee("apps")){renderAppsPage();show('vApps')}
   else if(r===ROUTE.accounts&&canSee("accounts")&&can("manageAccounts")){renderAccountsPage();show('vAccounts')}
+  else if(r===ROUTE.email&&canSee("email")&&can("manageEmail")){renderEmailPage();show('vEmail')}
   else if(r===ROUTE.forms&&canSee("forms")&&can("manageForms")){renderFormsPage();show('vForms')}
   else if((m=r.match(/^soan-don-(.+)$/))&&canSee("forms")&&can("manageForms")&&(m[1]==="moi"||TYPES[m[1]])){openFormEditor(m[1])}
   else if(r===ROUTE.newForm&&can("submit")&&chosenType()){openForm(chosenType())}

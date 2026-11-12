@@ -3,7 +3,7 @@ const $=id=>document.getElementById(id);
 let toastT;
 function toast(m){const t=$('toast');t.textContent=m;t.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>t.hidden=true,2600)}
 function show(v){
-  ['vLogin','vOnb','vProfile','vForm','vApps','vAccounts','vForms','vFormEdit'].forEach(x=>$(x).hidden=x!==v);
+  ['vLogin','vOnb','vProfile','vForm','vApps','vAccounts','vForms','vFormEdit','vEmail'].forEach(x=>$(x).hidden=x!==v);
   $('shell').hidden=v==='vLogin'||v==='vOnb'; /* khung ứng dụng (thanh bên + nội dung) chỉ hiện sau khi đăng nhập */
   document.body.dataset.view=v;
   if(typeof syncNav==='function')syncNav();

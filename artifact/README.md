@@ -271,3 +271,14 @@ Ghi chú:
   (`RECEIVABLE`, `DECIDABLE`, `TRANSFERABLE` trong `js/config.js`).
 - Yêu cầu bổ sung / Duyệt / Từ chối: Người xử lí đơn chỉ làm được trên đơn mình là người xử lí; Admin làm được trên mọi đơn.
 - Chuyển giao: hiện ai có quyền `transfer` cũng chuyển giao được mọi đơn, không chỉ đơn mình phụ trách.
+
+## Cấu hình email (Admin) — bản xem thử
+
+Trang `#cau-hinh-email` (menu "Cấu hình email", chỉ Admin, quyền `manageEmail`). Mã nguồn: `js/email-page.js`.
+
+- **Người gửi**: tên, địa chỉ gửi, địa chỉ nhận trả lời, chữ kí cuối thư.
+- **Bốn lúc gửi email**: đơn `nop` Đã nộp · `bs` Cần bổ sung · `tc` Từ chối · `duyet` Đã duyệt. Mỗi lúc có công tắc bật / tắt riêng.
+- **Mỗi lúc gửi**: chọn người nhận (người nộp đơn; CC người tiếp nhận; CC người xử lí), soạn tiêu đề và nội dung, chèn mã `{ho_ten}`, `{ma_don}`, `{loai_don}`, `{ngay_nop}`, `{nguoi_xu_li}`, `{ly_do}`, `{link_don}`, `{chu_ki}`.
+- **Xem trước** thư bằng dữ liệu mẫu (phần đã thay mã được tô nền, mã không có thì tô đỏ) và "Gửi email thử" (chỉ giả lập).
+- Sửa xong bấm **Lưu**; có thay đổi chưa lưu thì hiện nhãn "Chưa lưu", nút **Hoàn tác** trả về bản đã lưu.
+- Cấu hình chỉ nằm trong bộ nhớ (tải lại trang là về mặc định). Bản thật lưu qua API và máy chủ gửi thư.
