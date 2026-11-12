@@ -83,8 +83,8 @@ function studentDirectoryError(userId: string): Response | null {
  * @param userId  id người dùng cần xem (từ đường dẫn)
  * @returns       person: người cần xem · errorResponse: câu trả lỗi nếu chưa đăng nhập (401), không có quyền (403) hoặc không có người đó (404)
  */
-function personToView(userId: string) {
-  const session = readSession();
+async function personToView(userId: string) {
+  const session = await readSession();
   if (!session) return { errorResponse: apiError(401, PROFILE_MESSAGES[401]) };
   if (!can(session.role, 'viewApplicant')) return { errorResponse: apiError(403, PROFILE_MESSAGES[403]) };
   const person = findPerson(userId);
@@ -96,7 +96,7 @@ export const profileHandlers = [
   // Hồ sơ của mình
   http.get(api(ENDPOINTS.profile.me), async () => {
     await delay(MOCK_DELAY_MS);
-    const session = readSession();
+    const session = await readSession();
     if (!session) return apiError(401, PROFILE_MESSAGES[401]);
     return HttpResponse.json<Profile>(toProfile(session));
   }),
@@ -104,7 +104,7 @@ export const profileHandlers = [
   // Số CCCD đầy đủ của mình (người dùng bấm "Hiện")
   http.get(api(ENDPOINTS.profile.myCccd), async () => {
     await delay(MOCK_DELAY_MS);
-    const session = readSession();
+    const session = await readSession();
     if (!session) return apiError(401, PROFILE_MESSAGES[401]);
     return HttpResponse.json<FullCccdResponse>({ cccd: getProfile(session.user.id).cccd });
   }),
@@ -112,7 +112,7 @@ export const profileHandlers = [
   // Thông tin sinh viên của mình (lấy từ database trường)
   http.get(api(ENDPOINTS.profile.myStudents), async () => {
     await delay(MOCK_DELAY_MS);
-    const session = readSession();
+    const session = await readSession();
     if (!session) return apiError(401, PROFILE_MESSAGES[401]);
     const directoryError = studentDirectoryError(session.user.id);
     if (directoryError) return directoryError;
@@ -124,7 +124,7 @@ export const profileHandlers = [
     await delay(MOCK_DELAY_MS);
 
     // Chưa đăng nhập thì 401
-    const session = readSession();
+    const session = await readSession();
     if (!session) return apiError(401, PROFILE_MESSAGES[401]);
 
     // Body sai, hoặc MSSV không thuộc mình thì 422
@@ -143,7 +143,7 @@ export const profileHandlers = [
     await delay(MOCK_DELAY_MS);
 
     // Chưa đăng nhập thì 401
-    const session = readSession();
+    const session = await readSession();
     if (!session) return apiError(401, PROFILE_MESSAGES[401]);
 
     // Body sai định dạng thì 422, kèm câu báo lỗi của ô đầu tiên bị sai
@@ -162,7 +162,7 @@ export const profileHandlers = [
   // Hồ sơ của người khác (chỉ xem, CCCD che). Đặt sau các đường dẫn /profile/me để 'me' không bị hiểu là id
   http.get(api(ENDPOINTS.profile.person), async ({ params }) => {
     await delay(MOCK_DELAY_MS);
-    const { person, errorResponse } = personToView(String(params.userId));
+    const { person, errorResponse } = await personToView(String(params.userId));
     if (!person) return errorResponse;
     return HttpResponse.json<Profile>(toPersonProfile(String(params.userId)));
   }),
@@ -170,7 +170,7 @@ export const profileHandlers = [
   // Số CCCD đầy đủ của người khác (người xem bấm "Hiện")
   http.get(api(ENDPOINTS.profile.personCccd), async ({ params }) => {
     await delay(MOCK_DELAY_MS);
-    const { person, errorResponse } = personToView(String(params.userId));
+    const { person, errorResponse } = await personToView(String(params.userId));
     if (!person) return errorResponse;
     return HttpResponse.json<FullCccdResponse>({ cccd: person.cccd });
   }),
@@ -179,7 +179,7 @@ export const profileHandlers = [
   http.get(api(ENDPOINTS.profile.personStudents), async ({ params }) => {
     await delay(MOCK_DELAY_MS);
     const userId = String(params.userId);
-    const { person, errorResponse } = personToView(userId);
+    const { person, errorResponse } = await personToView(userId);
     if (!person) return errorResponse;
     const directoryError = studentDirectoryError(userId);
     if (directoryError) return directoryError;
@@ -189,7 +189,7 @@ export const profileHandlers = [
   // Một trang trong các đơn người khác đã nộp
   http.get(api(ENDPOINTS.profile.personForms), async ({ params, request }) => {
     await delay(MOCK_DELAY_MS);
-    const { person, errorResponse } = personToView(String(params.userId));
+    const { person, errorResponse } = await personToView(String(params.userId));
     if (!person) return errorResponse;
     const listQuery = readListQuery(request, FORM_LIST_FIELDS);
     if (!listQuery) return apiError(422, COMMON_MESSAGES.listQuery);
@@ -201,9 +201,9 @@ export const profileHandlers = [
   // Một trang trong các đơn một cán bộ khác tiếp nhận hoặc đang xử lí (mục "Đơn phụ trách"): cần thêm quyền viewAll
   http.get(api(ENDPOINTS.profile.personHandledForms), async ({ params, request }) => {
     await delay(MOCK_DELAY_MS);
-    const { person, errorResponse } = personToView(String(params.userId));
+    const { person, errorResponse } = await personToView(String(params.userId));
     if (!person) return errorResponse;
-    if (!can(readSession()?.role, 'viewAll')) return apiError(403, PROFILE_MESSAGES.handledFormsForbidden);
+    if (!can((await readSession())?.role, 'viewAll')) return apiError(403, PROFILE_MESSAGES.handledFormsForbidden);
     const listQuery = readListQuery(request, HANDLED_FORM_LIST_FIELDS);
     if (!listQuery) return apiError(422, COMMON_MESSAGES.listQuery);
     const handledForms = getFormsHandledBy(String(params.userId));
@@ -217,9 +217,9 @@ export const profileHandlers = [
 
     // Chưa đăng nhập / không xem được / không có người đó thì 401 / 403 / 404; không có quyền sửa thì 403
     const userId = String(params.userId);
-    const { person, errorResponse } = personToView(userId);
+    const { person, errorResponse } = await personToView(userId);
     if (!person) return errorResponse;
-    if (!can(readSession()?.role, 'editApplicant')) return apiError(403, MAIN_STUDENT_MESSAGES[403]);
+    if (!can((await readSession())?.role, 'editApplicant')) return apiError(403, MAIN_STUDENT_MESSAGES[403]);
 
     // Body sai, hoặc MSSV không thuộc người đó thì 422
     const parsed = SetMainStudentRequestSchema.safeParse(await request.json().catch(() => null));

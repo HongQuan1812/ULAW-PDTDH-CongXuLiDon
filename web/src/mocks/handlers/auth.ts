@@ -14,7 +14,7 @@ export const authHandlers = [
   // Phiên hiện tại: chưa đăng nhập thì 401
   http.get(api(ENDPOINTS.auth.me), async () => {
     await delay(MOCK_DELAY_MS);
-    const session = readSession();
+    const session = await readSession();
     if (!session) return apiError(401, AUTH_MESSAGES[401]);
     return HttpResponse.json<Session>(session);
   }),

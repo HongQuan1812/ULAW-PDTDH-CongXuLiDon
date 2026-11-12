@@ -25,10 +25,10 @@ import { MOCK_DELAY_MS, api, apiError, pickCccds, readListQuery, readUserIds } f
  * @param permissions  các quyền chấp nhận, mặc định chỉ manageAccounts
  * @returns            session: phiên của người đó · errorResponse: câu trả lỗi nếu chưa đăng nhập (401) hoặc không có quyền (403)
  */
-function managerSession(
+async function managerSession(
   permissions: readonly Permission[] = ['manageAccounts'],
-): { session: Session; errorResponse?: undefined } | { session?: undefined; errorResponse: Response } {
-  const session = readSession();
+): Promise<{ session: Session; errorResponse?: undefined } | { session?: undefined; errorResponse: Response }> {
+  const session = await readSession();
   if (!session) return { errorResponse: apiError(401, ACCOUNT_MESSAGES[401]) };
   if (!permissions.some((permission) => can(session.role, permission))) return { errorResponse: apiError(403, ACCOUNT_MESSAGES[403]) };
   return { session };
@@ -38,7 +38,7 @@ export const accountHandlers = [
   // Một trang trong mọi tài khoản (CCCD che, nhưng tìm được theo số CCCD đầy đủ)
   http.get(api(ENDPOINTS.accounts.list), async ({ request }) => {
     await delay(MOCK_DELAY_MS);
-    const { errorResponse } = managerSession();
+    const { errorResponse } = await managerSession();
     if (errorResponse) return errorResponse;
     const listQuery = readListQuery(request, ACCOUNT_LIST_FIELDS);
     if (!listQuery) return apiError(422, COMMON_MESSAGES.listQuery);
@@ -51,7 +51,7 @@ export const accountHandlers = [
   // CCCD đầy đủ của các tài khoản đang có trên trang bảng (bấm "Hiện CCCD"). Đặt trước /accounts/:userId
   http.get(api(ENDPOINTS.accounts.cccds), async ({ request }) => {
     await delay(MOCK_DELAY_MS);
-    const { errorResponse } = managerSession();
+    const { errorResponse } = await managerSession();
     if (errorResponse) return errorResponse;
     const userIds = readUserIds(request);
     if (!userIds) return apiError(422, COMMON_MESSAGES.userIds);
@@ -61,7 +61,7 @@ export const accountHandlers = [
   // Tạo tài khoản: kiểm tra body, email và CCCD chưa có tài khoản nào dùng
   http.post(api(ENDPOINTS.accounts.list), async ({ request }) => {
     await delay(MOCK_DELAY_MS);
-    const { errorResponse } = managerSession();
+    const { errorResponse } = await managerSession();
     if (errorResponse) return errorResponse;
 
     // Body sai thì 422, kèm câu báo lỗi của ô đầu tiên bị sai
@@ -77,7 +77,7 @@ export const accountHandlers = [
   // Sửa tài khoản (Quản lí tài khoản, hoặc "Sửa thông tin" ở trang thông tin người khác): không tự đổi vai trò, CCCD không trùng
   http.put(api(ENDPOINTS.accounts.account), async ({ request, params }) => {
     await delay(MOCK_DELAY_MS);
-    const { session, errorResponse } = managerSession(['manageAccounts', 'editApplicant']);
+    const { session, errorResponse } = await managerSession(['manageAccounts', 'editApplicant']);
     if (errorResponse) return errorResponse;
 
     // Body sai thì 422

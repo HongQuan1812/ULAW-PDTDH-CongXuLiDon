@@ -65,6 +65,18 @@ model User {
   formTypeVersions FormTypeVersion[]
   exportTemplates  ExportTemplate[]
   emailSettings    EmailSettings[]
+  authSessions     AuthSession[]
+}
+
+// Phiên đăng nhập: trình duyệt giữ cookie chứa mã ngẫu nhiên, ở đây chỉ lưu bản băm SHA-256 của mã đó
+model AuthSession {
+  tokenHash String   @id
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  expiresAt DateTime @db.Timestamptz(3)
+
+  @@index([userId])
 }
 
 // Thông tin sinh viên đọc từ database trường (bản giả: bảng này do seed điền)

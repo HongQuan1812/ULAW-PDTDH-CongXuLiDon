@@ -17,4 +17,4 @@ export const API_GROUPS = [
 export type ApiGroup = (typeof API_GROUPS)[number];
 
 /** Các nhóm đã có ở backend: MSW cho request đi tiếp, Vite chuyển sang backend. Các nhóm còn lại dùng API giả. */
-export const REAL_API_GROUPS: ReadonlySet<ApiGroup> = new Set<ApiGroup>(['health']);
+export const REAL_API_GROUPS: ReadonlySet<ApiGroup> = new Set<ApiGroup>(['health', 'auth']);

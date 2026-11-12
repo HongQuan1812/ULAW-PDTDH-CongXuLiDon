@@ -36,8 +36,8 @@ import { MOCK_DELAY_MS, api, apiError } from '../http';
  * @param formTypeId  mã loại đơn (từ đường dẫn)
  * @returns           session: phiên đăng nhập · errorResponse: chưa đăng nhập (401), không có quyền (403), không có loại đơn (404)
  */
-function templateManager(formTypeId: string): { session: Session; errorResponse?: undefined } | { session?: undefined; errorResponse: Response } {
-  const session = readSession();
+async function templateManager(formTypeId: string): Promise<{ session: Session; errorResponse?: undefined } | { session?: undefined; errorResponse: Response }> {
+  const session = await readSession();
   if (!session) return { errorResponse: apiError(401, EXPORT_MESSAGES[401]) };
   if (!can(session.role, 'manageFormTypes')) return { errorResponse: apiError(403, EXPORT_MESSAGES[403]) };
   if (!formTypeExists(formTypeId)) return { errorResponse: apiError(404, EXPORT_MESSAGES.formTypeNotFound) };
@@ -103,7 +103,7 @@ async function readDraftFile(
   request: Request,
 ): Promise<{ upload: { bytes: ArrayBuffer; draft: ExportDraftRequest }; errorResponse?: undefined } | { upload?: undefined; errorResponse: Response }> {
   // Quyền quản lí mẫu
-  const session = readSession();
+  const session = await readSession();
   if (!session) return { errorResponse: apiError(401, EXPORT_MESSAGES[401]) };
   if (!can(session.role, 'manageFormTypes')) return { errorResponse: apiError(403, EXPORT_MESSAGES[403]) };
 
@@ -122,7 +122,7 @@ export const exportHandlers = [
   // Các mẫu của loại đơn: ai đăng nhập cũng xem được (nút Xuất file ở trang chi tiết đơn)
   http.get(api(ENDPOINTS.exports.templates), async ({ params }) => {
     await delay(MOCK_DELAY_MS);
-    if (!readSession()) return apiError(401, EXPORT_MESSAGES[401]);
+    if (!(await readSession())) return apiError(401, EXPORT_MESSAGES[401]);
     return HttpResponse.json<ExportTemplatesResponse>({ templates: getExportTemplates(String(params.formTypeId)) });
   }),
 
@@ -130,7 +130,7 @@ export const exportHandlers = [
   http.put(api(ENDPOINTS.exports.templates), async ({ params, request }) => {
     await delay(MOCK_DELAY_MS);
     const formTypeId = String(params.formTypeId);
-    const { session, errorResponse } = templateManager(formTypeId);
+    const { session, errorResponse } = await templateManager(formTypeId);
     if (!session) return errorResponse;
 
     // Phần chữ sai định dạng thì 422
@@ -167,7 +167,7 @@ export const exportHandlers = [
   http.get(api(ENDPOINTS.exports.templateFile), async ({ params }) => {
     await delay(MOCK_DELAY_MS);
     const formTypeId = String(params.formTypeId);
-    const { session, errorResponse } = templateManager(formTypeId);
+    const { session, errorResponse } = await templateManager(formTypeId);
     if (!session) return errorResponse;
     const stored = findExportTemplate(formTypeId, String(params.templateId));
     if (!stored) return apiError(404, EXPORT_MESSAGES.templateNotFound);
@@ -178,7 +178,7 @@ export const exportHandlers = [
   http.post(api(ENDPOINTS.exports.templateCheck), async ({ params, request }) => {
     await delay(MOCK_DELAY_MS);
     const formTypeId = String(params.formTypeId);
-    const { session, errorResponse } = templateManager(formTypeId);
+    const { session, errorResponse } = await templateManager(formTypeId);
     if (!session) return errorResponse;
     const draft = await readBody(request, ExportDraftRequestSchema);
     if (!draft) return apiError(422, EXPORT_MESSAGES.invalidRequest);
@@ -198,7 +198,7 @@ export const exportHandlers = [
   // Xuất file một lá đơn: xem được đơn thì xuất được
   http.post(api(ENDPOINTS.exports.formExport), async ({ params, request }) => {
     await delay(MOCK_DELAY_MS);
-    const session = readSession();
+    const session = await readSession();
     if (!session) return apiError(401, EXPORT_MESSAGES[401]);
     const body = await readBody(request, ExportFormRequestSchema);
     if (!body) return apiError(422, EXPORT_MESSAGES.invalidRequest);

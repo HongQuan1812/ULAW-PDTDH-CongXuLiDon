@@ -32,14 +32,18 @@ import type {
 } from '@ulaw/shared';
 import {
   ACCOUNT_MESSAGES,
+  ENDPOINTS,
   FORM_STATUSES,
   FORM_TYPE_MESSAGES,
   can,
   isAnswerable,
   maskCccd,
   nextFormCode,
+  SessionSchema,
 } from '@ulaw/shared';
+import { bypass } from 'msw';
 import { buildSamplePdf } from './samplePdf';
+import { REAL_API_GROUPS } from './realApiGroups';
 import type { SeedAccount, SeedForm, SeedFormType, SeedFormTypeVersion } from '@ulaw/shared';
 import {
   EMAIL_SETTINGS_SEED,
@@ -1112,10 +1116,13 @@ export function demoAccountFor(role: RoleId): string | null {
 const SESSION_KEY = 'mock-session-user';
 
 /**
- * Đọc phiên đăng nhập giả hiện tại. Vai trò lấy theo tài khoản, nên Admin đổi vai trò thì phiên đổi theo.
- * @returns  phiên (người dùng + vai trò); chưa đăng nhập thì null
+ * Đọc phiên đăng nhập hiện tại. Nhóm auth dùng API giả thì đọc phiên giả (vai trò lấy theo tài khoản, nên Admin đổi vai trò
+ * thì phiên đổi theo); nhóm auth đã dùng API thật thì hỏi backend, không tự giữ phiên riêng.
+ * @returns  Promise phiên (người dùng + vai trò); chưa đăng nhập thì null
  */
-export function readSession(): Session | null {
+export async function readSession(): Promise<Session | null> {
+  if (REAL_API_GROUPS.has('auth')) return readRealSession();
+
   // Đọc id đã lưu (trình duyệt chặn bộ nhớ thì coi như chưa đăng nhập)
   let userId: string | null = null;
   try {
@@ -1127,6 +1134,19 @@ export function readSession(): Session | null {
   // Không còn tài khoản này thì coi như chưa đăng nhập
   if (!userId || !accounts[userId]) return null;
   return toSession(userId);
+}
+
+/**
+ * Hỏi backend thật ai đang đăng nhập (GET /api/auth/me kèm cookie). Dùng bypass để MSW không chặn lại.
+ * @returns  Promise phiên; chưa đăng nhập hoặc backend không trả lời thì null
+ */
+async function readRealSession(): Promise<Session | null> {
+  try {
+    const response = await fetch(bypass(`/api${ENDPOINTS.auth.me}`), { credentials: 'include' });
+    return response.ok ? SessionSchema.parse(await response.json()) : null;
+  } catch {
+    return null;
+  }
 }
 
 /**

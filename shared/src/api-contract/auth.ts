@@ -39,7 +39,11 @@ export type Session = z.infer<typeof SessionSchema>;
 /* JUST FOR DEMO: START · body của POST /auth/dev-login: chọn vai trò để đăng nhập thử.
    email (không bắt buộc) giả làm email Google trả về, để thử trường hợp đăng nhập bằng email ngoài trường;
    bỏ trống thì dùng email của tài khoản mẫu theo vai trò. */
-export const DevLoginRequestSchema = z.object({ role: z.enum(ROLE_IDS), email: z.email().optional() });
+const DEV_LOGIN_INVALID_MESSAGE = 'Vai trò không hợp lệ.';
+export const DevLoginRequestSchema = z.object({
+  role: z.enum(ROLE_IDS, DEV_LOGIN_INVALID_MESSAGE),
+  email: z.email(DEV_LOGIN_INVALID_MESSAGE).optional(),
+});
 export type DevLoginRequest = z.infer<typeof DevLoginRequestSchema>;
 /* JUST FOR DEMO: END */
 
@@ -52,7 +56,7 @@ export const AUTH_MESSAGES = {
   403: (email: string) =>
     `Hãy đăng nhập bằng email trường (@${SCHOOL_EMAIL_DOMAINS[0]}). Email ${email} không được dùng cho cổng này.`,
   /** POST /auth/dev-login với body sai (vai trò không có trong danh sách) */
-  422: 'Vai trò không hợp lệ.',
+  422: DEV_LOGIN_INVALID_MESSAGE,
   /** POST /auth/dev-login (JUST FOR DEMO) khi Admin đã đổi hết tài khoản của vai trò này sang vai trò khác (404) */
   noDemoAccount: 'Không còn tài khoản nào có vai trò này để đăng nhập thử.',
   /** Bấm Đăng xuất mà không gửi được yêu cầu (mất mạng) */

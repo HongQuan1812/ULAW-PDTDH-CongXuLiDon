@@ -81,7 +81,7 @@ export const formHandlers = [
     await delay(MOCK_DELAY_MS);
 
     // Chưa đăng nhập thì 401, không được nộp đơn thì 403
-    const session = readSession();
+    const session = await readSession();
     if (!session) return apiError(401, FORM_MESSAGES[401]);
     if (!can(session.role, 'submit')) return apiError(403, FORM_MESSAGES.submitForbidden);
 
@@ -117,7 +117,7 @@ export const formHandlers = [
   // Một lá đơn đủ nội dung. Đăng ký SAU các handler của forms.ts (/forms/mine, /forms/handled, /forms/cccds) để các đường dẫn đó không bị hiểu là mã đơn
   http.get(api(ENDPOINTS.form.detail), async ({ params }) => {
     await delay(MOCK_DELAY_MS);
-    const session = readSession();
+    const session = await readSession();
     if (!session) return apiError(401, FORM_MESSAGES[401]);
 
     // Không có đơn, hoặc không phải đơn của mình mà không được xem mọi đơn: cùng trả 404
@@ -129,7 +129,7 @@ export const formHandlers = [
   // Sửa đơn: câu trả lời mới và tệp mới đến trong một lần. Kiểm tra hết rồi mới lưu; sai một chỗ thì không lưu gì
   http.put(api(ENDPOINTS.form.update), async ({ params, request }) => {
     await delay(MOCK_DELAY_MS);
-    const session = readSession();
+    const session = await readSession();
     if (!session) return apiError(401, FORM_MESSAGES[401]);
 
     // Không xem được đơn thì 404; xem được mà không sửa được: đơn đã khóa thì 409, không có quyền thì 403
@@ -160,7 +160,7 @@ export const formHandlers = [
   // Tiếp nhận đơn: Đã nộp / Đã bổ sung → Đang xét, người bấm thành người tiếp nhận và người xử lí
   http.post(api(ENDPOINTS.form.receive), async ({ params }) => {
     await delay(MOCK_DELAY_MS);
-    const session = readSession();
+    const session = await readSession();
     if (!session) return apiError(401, FORM_MESSAGES[401]);
 
     // Không xem được đơn thì 404; không có quyền receive thì 403; đơn không còn chờ tiếp nhận thì 409
@@ -176,7 +176,7 @@ export const formHandlers = [
   // Ra quyết định: đơn Đang xét → Cần bổ sung / Đã duyệt / Từ chối (kèm lí do, không bắt buộc)
   http.post(api(ENDPOINTS.form.decide), async ({ params, request }) => {
     await delay(MOCK_DELAY_MS);
-    const session = readSession();
+    const session = await readSession();
     if (!session) return apiError(401, FORM_MESSAGES[401]);
 
     // Không xem được đơn thì 404; body sai thì 422
@@ -198,7 +198,7 @@ export const formHandlers = [
   // Cán bộ có thể nhận đơn khi Chuyển giao (trừ người đang xử lí)
   http.get(api(ENDPOINTS.form.transferTargets), async ({ params }) => {
     await delay(MOCK_DELAY_MS);
-    const session = readSession();
+    const session = await readSession();
     if (!session) return apiError(401, FORM_MESSAGES[401]);
 
     // Không xem được đơn thì 404; không được chuyển giao thì 403 (không có quyền transfer) hoặc 409 (đơn không còn chuyển giao được)
@@ -214,7 +214,7 @@ export const formHandlers = [
   // Chuyển giao: đổi người xử lí của đơn (không đổi trạng thái)
   http.post(api(ENDPOINTS.form.transfer), async ({ params, request }) => {
     await delay(MOCK_DELAY_MS);
-    const session = readSession();
+    const session = await readSession();
     if (!session) return apiError(401, FORM_MESSAGES[401]);
 
     // Không xem được đơn thì 404; body sai thì 422
