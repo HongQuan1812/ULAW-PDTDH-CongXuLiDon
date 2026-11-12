@@ -5,7 +5,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap">
 <!-- ?v=… là số phiên bản: tăng mỗi lần cập nhật để trình duyệt tải lại CSS/JS mới thay vì dùng bản cũ trong cache -->
-<link rel="stylesheet" href="styles.css?v=250">
+<link rel="stylesheet" href="styles.css?v=256">
 
 <!-- ============ MÀN HÌNH 1: ĐĂNG NHẬP ============ -->
 <main id="vLogin" class="login">
@@ -316,7 +316,7 @@
     <!-- ===== Cấu hình email (Admin): email báo khi đơn đổi trạng thái; vẽ bằng js/email-page.js ===== -->
     <div id="vEmail" class="page page-wide" hidden>
       <div class="page-head">
-        <div class="ph-text"><h1>Cấu hình email</h1><p>Chọn lúc nào cổng gửi email, gửi cho ai và nội dung ra sao. Chỉ Admin được sửa.</p></div>
+        <div class="ph-text"><h1>Cấu hình email</h1><p>Cấu hình thư cổng gửi đi: người gửi, lúc nào gửi và nội dung. Thư luôn gửi tới email trên trang Thông tin cá nhân của người nộp đơn. Chỉ Admin được sửa.</p></div>
         <div class="ph-acts">
           <span class="fe-dirty" id="emDirty" hidden>Chưa lưu</span>
           <button type="button" class="btn ghost" id="emReset" disabled>Hoàn tác</button>
@@ -328,14 +328,15 @@
         <div class="grid2">
           <label class="f">Tên người gửi<small>Hiện ở dòng “Từ” trong hộp thư người nhận</small><input id="emSenderName" autocomplete="off"></label>
           <label class="f">Địa chỉ gửi<small>Phải là địa chỉ máy chủ thư cho phép gửi</small><input id="emSenderMail" type="email" autocomplete="off"></label>
-          <label class="f">Địa chỉ nhận trả lời<small>Người nhận bấm “Trả lời” thì thư về đây</small><input id="emReplyTo" type="email" autocomplete="off"></label>
-          <label class="f">Chữ kí cuối thư<small>Dùng trong thư bằng mã {chu_ki}</small><input id="emSignature" autocomplete="off"></label>
+          <label class="f em-wide">Chữ kí cuối thư<small>Dùng trong thư bằng mã {chu_ki}</small><input id="emSignature" autocomplete="off"></label>
         </div>
       </section>
-      <div class="em-main">
-        <nav class="card em-events" role="tablist" aria-label="Lúc gửi email" id="emEvents"></nav>
-        <section class="card em-editor" id="emEditor"></section>
-      </div>
+      <!-- bốn lúc gửi email: tab ngang trên đầu thẻ; bật / tắt bằng công tắc "Gửi email" trong thẻ -->
+      <section class="card em-card" aria-labelledby="emContentH">
+        <div class="em-head em-card-head"><h2 id="emContentH">Nội dung email</h2></div>
+        <nav class="em-tabs" role="tablist" aria-label="Lúc gửi email" id="emEvents"></nav>
+        <div class="em-editor" id="emEditor"></div>
+      </section>
     </div>
 
   </div>
@@ -421,7 +422,7 @@
 <script src="js/applications-page.js?v=245"></script>
 <script src="js/accounts-page.js?v=245"></script>
 <script src="js/forms-page.js?v=245"></script>
-<script src="js/email-page.js?v=1"></script>
+<script src="js/email-page.js?v=7"></script>
 <script src="js/print-templates.js?v=248"></script>
 <!-- JUST FOR DEMO: START · mẫu xuất file mẫu cho loại đơn Xét miễn môn; bản thật lấy mẫu xuất file từ máy chủ -->
 <script src="js/sample-template.js?v=200"></script>

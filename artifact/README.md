@@ -276,9 +276,10 @@ Ghi chú:
 
 Trang `#cau-hinh-email` (menu "Cấu hình email", chỉ Admin, quyền `manageEmail`). Mã nguồn: `js/email-page.js`.
 
-- **Người gửi**: tên, địa chỉ gửi, địa chỉ nhận trả lời, chữ kí cuối thư.
+- **Người gửi**: tên, địa chỉ gửi, chữ kí cuối thư. Không cấu hình địa chỉ nhận: người nộp đơn bấm "Trả lời" thì thư về chính địa chỉ gửi.
 - **Bốn lúc gửi email**: đơn `nop` Đã nộp · `bs` Cần bổ sung · `tc` Từ chối · `duyet` Đã duyệt. Mỗi lúc có công tắc bật / tắt riêng.
-- **Mỗi lúc gửi**: chọn người nhận (người nộp đơn; CC người tiếp nhận; CC người xử lí), soạn tiêu đề và nội dung, chèn mã `{ho_ten}`, `{ma_don}`, `{loai_don}`, `{ngay_nop}`, `{nguoi_xu_li}`, `{ly_do}`, `{link_don}`, `{chu_ki}`.
+- **Người nhận không cấu hình**: thư luôn gửi thẳng tới email của người nộp đơn (email trên trang Thông tin cá nhân). Trang này chỉ cấu hình phía gửi.
+- **Mỗi lúc gửi**: soạn tiêu đề và nội dung, chèn mã `{ho_ten}`, `{ma_don}`, `{loai_don}`, `{ngay_nop}`, `{nguoi_xu_li}`, `{ly_do}`, `{link_don}`, `{chu_ki}`.
 - **Xem trước** thư bằng dữ liệu mẫu (phần đã thay mã được tô nền, mã không có thì tô đỏ) và "Gửi email thử" (chỉ giả lập).
 - Sửa xong bấm **Lưu**; có thay đổi chưa lưu thì hiện nhãn "Chưa lưu", nút **Hoàn tác** trả về bản đã lưu.
 - Cấu hình chỉ nằm trong bộ nhớ (tải lại trang là về mặc định). Bản thật lưu qua API và máy chủ gửi thư.

@@ -829,23 +829,24 @@ td.loop-box>.btn{display:inline-flex}
 .em-title{display:flex;align-items:center;gap:10px}
 .em-conn{display:inline-flex;align-items:center;gap:8px;font-size:12.5px;font-weight:500;color:var(--s-duyet-fg);background:var(--s-duyet-bg);padding:3px 11px;border-radius:999px}
 .em-conn i{width:7px;height:7px;border-radius:50%;background:currentColor}
-.em-main{display:grid;grid-template-columns:300px minmax(0,1fr);gap:20px;align-items:start}
-.em-events{display:flex;flex-direction:column;padding:8px}
-.em-ev{display:grid;grid-template-columns:1fr auto;gap:3px 10px;align-items:center;padding:11px 12px;border-radius:var(--r);cursor:pointer}
-.em-ev:hover{background:var(--hover)}
-.em-ev[aria-selected=true]{background:var(--accent-soft)}
-.em-ev .pill{width:fit-content}
-.em-meta{grid-column:1;font-size:12.5px;color:var(--muted)}
-.em-meta.off{color:var(--faint)}
+/* tab ngang: bốn lúc gửi email */
+.em-card{padding:0;overflow:hidden}
+.em-tabs{display:flex;gap:4px;padding:0 12px;border-bottom:1px solid var(--line);overflow-x:auto;scrollbar-width:none}
+.em-tabs::-webkit-scrollbar{display:none}
+.em-tab{display:inline-flex;align-items:center;gap:8px;padding:14px 12px 12px;border:0;border-bottom:2px solid transparent;margin-bottom:-1px;background:none;font:inherit;font-size:14px;font-weight:500;color:var(--muted);cursor:pointer;white-space:nowrap}
+.em-tab:hover{color:var(--fg)}
+.em-tab[aria-selected=true]{color:var(--fg);border-bottom-color:var(--accent)}
+.em-dot{width:8px;height:8px;border-radius:50%;flex:none;background:currentColor!important}
+.em-tab.off .em-dot{color:var(--faint)!important}
+.em-off{font-size:11.5px;font-weight:500;padding:1px 7px;border-radius:999px;background:var(--surface-2);color:var(--muted)}
+.em-title{display:grid;gap:2px}
+.em-sub{margin:0;font-size:12.5px;color:var(--muted)}
 .em-editor{padding:0}
 .em-editor>.em-head{padding:16px 20px;margin:0;border-bottom:1px solid var(--line)}
 .em-sec{display:flex;flex-direction:column;gap:14px;padding:20px}
 .em-sec+.em-sec{border-top:1px solid var(--line)}
 .em-cap{margin:0;font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
 .em-cap span{text-transform:none;letter-spacing:0;font-weight:400}
-.em-checks{display:flex;flex-wrap:wrap;gap:8px 20px}
-.em-checks label{display:inline-flex;align-items:center;gap:8px;cursor:pointer}
-.em-checks input{accent-color:var(--accent);width:16px;height:16px;margin:0}
 .em-chips{display:flex;flex-wrap:wrap;gap:6px}
 .em-chip{font:12.5px ui-monospace,SFMono-Regular,Menlo,monospace;background:var(--surface-2);color:var(--fg);border:1px solid var(--line-2);border-radius:6px;padding:3px 8px;cursor:pointer}
 .em-chip:hover{background:var(--accent-soft);border-color:var(--accent);color:var(--accent-ink)}
@@ -859,9 +860,17 @@ td.loop-box>.btn{display:inline-flex}
 mark.em-bad{background:var(--s-tc-bg)!important;color:var(--s-tc-fg)!important}
 .em-test{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end}
 .em-test .f{flex:1;min-width:200px}
-@media (max-width:860px){.em-main{grid-template-columns:1fr}}
 
 /* Thanh menu ngang có 5 mục (thêm Cấu hình email): màn hình vừa thì ẩn chữ "Vai trò", thu hẹp khoảng cách các nút cho khỏi đè nhau */
 @media (min-width:961px) and (max-width:1400px){.drawer-role label{display:none}}
 @media (min-width:961px) and (max-width:1400px){.drawer-nav button{padding:0 10px;font-size:13.5px}}
 @media (min-width:961px) and (max-width:1200px){.drawer-foot .acc{display:none}}
+.em-to-note{color:var(--muted)}
+.em-sender .em-wide{grid-column:1/-1}
+/* thẻ "Nội dung email": tiêu đề như thẻ "Người gửi"; dòng mô tả nằm dưới công tắc "Gửi email" */
+.em-card>.em-card-head{padding:20px 20px 6px;margin:0}
+/* hàng "Soạn thư": nhãn bên trái, mô tả + công tắc "Gửi email" bên phải */
+.em-cap-row{display:flex;align-items:center;justify-content:space-between;gap:8px 16px;flex-wrap:wrap}
+.em-send{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.em-send .switch{font-weight:500}
+.em-fields{display:flex;flex-direction:column;gap:14px}
