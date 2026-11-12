@@ -1706,7 +1706,6 @@ function letterToRichText(letterText: string): RichTextDoc {
 const EMAIL_SETTINGS_SEED: EmailSettings = {
   sender: {
     name: 'Phòng Đào tạo Đại học - ULAW',
-    address: 'daotao@hcmulaw.edu.vn',
     signature: 'Phòng Đào tạo Đại học, Trường Đại học Luật TP.HCM',
   },
   events: [

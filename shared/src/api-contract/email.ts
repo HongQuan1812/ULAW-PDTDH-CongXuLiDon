@@ -1,12 +1,11 @@
 /* HỢP ĐỒNG nhóm API Cấu hình email (chỉ vai trò có quyền manageEmail): đường dẫn, dữ liệu gửi / nhận, câu thông báo.
    Trang này chỉ cấu hình phía GỬI: người gửi, bật / tắt và nội dung thư của bốn lúc gửi.
    Người nhận không cấu hình: thư luôn gửi tới email của người nộp đơn (email trên trang Thông tin cá nhân).
-   Người nộp đơn bấm "Trả lời" thì thư về chính địa chỉ gửi. Mã chèn vào thư: xem business-rules/email--tags.ts.
+   Địa chỉ gửi lấy từ cấu hình SMTP của máy chủ, chỉ hiện ra, không sửa được. Người nộp đơn bấm "Trả lời" thì thư về chính địa chỉ gửi. Mã chèn vào thư: xem business-rules/email--tags.ts.
    API giả (MSW), frontend và backend cùng theo file này. */
 import { z } from 'zod';
 import { EMAIL_EVENT_STATUSES } from '../aux-schema/email--events';
 import { RichTextDocSchema, isRichTextEmpty } from '../aux-schema/rich-text';
-import { VALIDATION_MESSAGES } from '../validators';
 
 /* ---------- Đường dẫn (phần sau /api) ---------- */
 
@@ -20,11 +19,11 @@ export const EMAIL_ENDPOINTS = {
 
 /* ---------- Dữ liệu gửi / nhận ---------- */
 
-/** Người gửi: tên hiện ở dòng "Từ", địa chỉ gửi, chữ kí cuối thư (mã {chu_ki}). */
+/** Người gửi (sửa được): tên hiện ở dòng "Từ", chữ kí cuối thư (mã {chu_ki}).
+    Địa chỉ gửi không nằm ở đây: nó đi cùng mật khẩu ứng dụng SMTP trong cấu hình máy chủ (biến môi trường),
+    nên không ai sửa được qua API, kể cả Admin. Xem senderAddress trong EmailSettingsResponseSchema. */
 export const EmailSenderSchema = z.object({
   name: z.string().trim().min(1, 'Nhập tên người gửi.'),
-  /** phải là địa chỉ máy chủ thư cho phép gửi */
-  address: z.string().trim().toLowerCase().pipe(z.email(VALIDATION_MESSAGES.email)),
   /** để trống thì {chu_ki} thành chữ trống */
   signature: z.string().trim(),
 });
@@ -53,14 +52,16 @@ export const EmailSettingsSchema = z.object({
 });
 export type EmailSettings = z.infer<typeof EmailSettingsSchema>;
 
-/** Trả về từ GET, PUT /email-settings: cấu hình, kèm máy chủ thư đã kết nối được chưa (chưa thì không gửi được thư nào). */
+/** Trả về từ GET, PUT /email-settings: cấu hình, kèm địa chỉ gửi và máy chủ thư đã kết nối được chưa (chưa thì không gửi được thư nào). */
 export const EmailSettingsResponseSchema = z.object({
   settings: EmailSettingsSchema,
+  /** địa chỉ gửi, máy chủ đọc từ cấu hình SMTP (biến môi trường); chỉ để hiện, không sửa được */
+  senderAddress: z.email(),
   mailServerConnected: z.boolean(),
 });
 export type EmailSettingsResponse = z.infer<typeof EmailSettingsResponseSchema>;
 
-/** Body của POST /email-settings/test: thư đang soạn (chưa cần lưu) và địa chỉ nhận thử. */
+/** Body của POST /email-settings/test: thư đang soạn (chưa cần lưu) và địa chỉ nhận thử. Thư gửi từ địa chỉ gửi của máy chủ. */
 export const SendTestEmailRequestSchema = z.object({
   to: z.string().trim().toLowerCase().pipe(z.email('Địa chỉ nhận thử chưa đúng.')),
   sender: EmailSenderSchema,

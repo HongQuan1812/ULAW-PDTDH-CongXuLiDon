@@ -38,6 +38,8 @@ interface EmailEventEditorProps {
   eventIndex: number;
   /** người gửi (bản nháp), cho khung xem trước và thư thử */
   sender: EmailSender;
+  /** địa chỉ gửi (từ cấu hình SMTP của máy chủ), cho khung xem trước */
+  senderAddress: string;
   /** câu báo lỗi theo ô của cả cấu hình */
   fieldErrors: FieldErrors;
   /** sửa thư của lúc gửi này */
@@ -48,7 +50,7 @@ interface EmailEventEditorProps {
  * Phần soạn, xem trước và gửi thử thư của một lúc gửi.
  * @returns  hai mục: Soạn thư, Xem trước
  */
-export function EmailEventEditor({ event, eventIndex, sender, fieldErrors, onChange }: EmailEventEditorProps) {
+export function EmailEventEditor({ event, eventIndex, sender, senderAddress, fieldErrors, onChange }: EmailEventEditorProps) {
   const toast = useToast();
   const { user } = useAuth();
   const sendTestEmail = useSendTestEmail();
@@ -186,7 +188,7 @@ export function EmailEventEditor({ event, eventIndex, sender, fieldErrors, onCha
           <dl className={styles.mailHead}>
             <dt>Từ</dt>
             <dd>
-              {sender.name} &lt;{sender.address}&gt;
+              {sender.name} &lt;{senderAddress}&gt;
             </dd>
             <dt>Tới</dt>
             <dd>

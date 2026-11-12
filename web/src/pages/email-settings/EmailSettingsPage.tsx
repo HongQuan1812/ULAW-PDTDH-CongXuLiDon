@@ -27,12 +27,6 @@ import styles from './EmailSettingsPage.module.css';
 /** Câu báo lỗi theo ô, khóa là đường dẫn của ô trong cấu hình, vd 'sender.name', 'events.1.subject'. */
 export type FieldErrors = Record<string, string>;
 
-/** Các ô của phần Người gửi: khóa trong EmailSender, tên ô, ghi chú, kiểu ô. */
-const SENDER_FIELDS: { key: keyof EmailSender; label: string; hint: string; type: 'text' | 'email'; wide?: boolean }[] = [
-  { key: 'name', label: 'Tên người gửi', hint: 'Hiện ở dòng “Từ” trong hộp thư người nhận', type: 'text' },
-  { key: 'address', label: 'Địa chỉ gửi', hint: 'Phải là địa chỉ máy chủ thư cho phép gửi', type: 'email' },
-  { key: 'signature', label: 'Chữ kí cuối thư', hint: 'Dùng trong thư bằng mã {chu_ki}', type: 'text', wide: true },
-];
 
 /**
  * Trang Cấu hình email: tải cấu hình đang dùng rồi mở phần sửa.
@@ -61,7 +55,13 @@ export function EmailSettingsPage() {
     );
   }
 
-  return <EmailSettingsEditor saved={settingsQuery.data.settings} mailServerConnected={settingsQuery.data.mailServerConnected} />;
+  return (
+    <EmailSettingsEditor
+      saved={settingsQuery.data.settings}
+      senderAddress={settingsQuery.data.senderAddress}
+      mailServerConnected={settingsQuery.data.mailServerConnected}
+    />
+  );
 }
 
 /**
@@ -82,10 +82,19 @@ function validateSettings(settings: EmailSettings): FieldErrors {
 /**
  * Phần sửa cấu hình: đầu trang (tiêu đề, Chưa lưu), thẻ Người gửi, thẻ Nội dung email, cuối trang (Bỏ thay đổi, Lưu).
  * @param saved                cấu hình đã lưu ở máy chủ
+ * @param senderAddress        địa chỉ gửi, máy chủ đọc từ cấu hình SMTP; chỉ hiện, không sửa được
  * @param mailServerConnected  máy chủ thư đã kết nối được chưa
  * @returns                    giao diện trang
  */
-function EmailSettingsEditor({ saved, mailServerConnected }: { saved: EmailSettings; mailServerConnected: boolean }) {
+function EmailSettingsEditor({
+  saved,
+  senderAddress,
+  mailServerConnected,
+}: {
+  saved: EmailSettings;
+  senderAddress: string;
+  mailServerConnected: boolean;
+}) {
   const toast = useToast();
   const saveSettings = useSaveEmailSettings();
   const [draft, setDraft] = useState<EmailSettings>(saved);
@@ -160,23 +169,35 @@ function EmailSettingsEditor({ saved, mailServerConnected }: { saved: EmailSetti
             {mailServerConnected ? 'Đã kết nối máy chủ thư' : 'Chưa kết nối máy chủ thư'}
           </span>
         </div>
+        {/* Tên + Địa chỉ gửi một hàng; Chữ kí một hàng riêng. Địa chỉ gửi đi cùng mật khẩu ứng dụng SMTP ở máy chủ nên chỉ đọc */}
         <div className={styles.senderGrid}>
-          {SENDER_FIELDS.map((field) => {
-            const error = fieldErrors[`sender.${field.key}`];
-            return (
-              <div key={field.key} className={field.wide ? styles.wide : undefined}>
-                <Field label={field.label} required={field.key !== 'signature'} hint={field.hint} error={error}>
-                  <input
-                    type={field.type}
-                    autoComplete="off"
-                    value={draft.sender[field.key]}
-                    aria-invalid={!!error}
-                    onChange={(event) => changeSender(field.key, event.target.value)}
-                  />
-                </Field>
-              </div>
-            );
-          })}
+          <div>
+            <Field label="Tên người gửi" required hint="Hiện ở dòng “Từ” trong hộp thư người nhận" error={fieldErrors['sender.name']}>
+              <input
+                type="text"
+                autoComplete="off"
+                value={draft.sender.name}
+                aria-invalid={!!fieldErrors['sender.name']}
+                onChange={(event) => changeSender('name', event.target.value)}
+              />
+            </Field>
+          </div>
+          <div>
+            <Field label="Địa chỉ gửi" hint="Lấy từ cấu hình máy chủ thư (SMTP), không sửa ở đây">
+              <input type="email" value={senderAddress} readOnly />
+            </Field>
+          </div>
+          <div className={styles.wide}>
+            <Field label="Chữ kí cuối thư" hint="Dùng trong thư bằng mã {chu_ki}" error={fieldErrors['sender.signature']}>
+              <input
+                type="text"
+                autoComplete="off"
+                value={draft.sender.signature}
+                aria-invalid={!!fieldErrors['sender.signature']}
+                onChange={(event) => changeSender('signature', event.target.value)}
+              />
+            </Field>
+          </div>
         </div>
       </section>
 
@@ -214,6 +235,7 @@ function EmailSettingsEditor({ saved, mailServerConnected }: { saved: EmailSetti
             event={draft.events[selectedIndex]!}
             eventIndex={selectedIndex}
             sender={draft.sender}
+            senderAddress={senderAddress}
             fieldErrors={fieldErrors}
             onChange={changeEvent}
           />
