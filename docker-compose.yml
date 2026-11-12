@@ -1,0 +1,37 @@
+# Môi trường phát triển: PostgreSQL cho backend (api/).
+# Chạy: docker compose up -d  ·  Dừng: docker compose down  ·  Xóa sạch dữ liệu: docker compose down -v
+# Các biến lấy từ .env (chép từ .env.example).
+# Hai lớp tài khoản: superuser chung của cả instance (POSTGRES_ADMIN_*), và user riêng của dự án (APP_DB_*)
+# chỉ làm chủ database của dự án, do docker/postgres/init/ tạo ở lần khởi động đầu tiên.
+services:
+  postgres:
+    image: postgres:18.6
+    container_name: ulaw-postgres
+    restart: unless-stopped
+    environment:
+      # Superuser chung (chỉ dùng để quản trị, tạo user / database cho từng dự án)
+      POSTGRES_USER: ${POSTGRES_ADMIN_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_ADMIN_PASSWORD}
+      POSTGRES_DB: postgres
+      # User và database riêng của dự án này (đọc trong docker/postgres/init/)
+      APP_DB_USER: ${APP_DB_USER}
+      APP_DB_PASSWORD: ${APP_DB_PASSWORD}
+      APP_DB_NAME: ${APP_DB_NAME}
+      # Giờ Việt Nam cho các hàm now(), log
+      TZ: Asia/Ho_Chi_Minh
+      PGTZ: Asia/Ho_Chi_Minh
+    ports:
+      - '${POSTGRES_PORT:-5432}:5432'
+    volumes:
+      # Từ PostgreSQL 18, dữ liệu nằm trong /var/lib/postgresql/<phiên bản>/…, nên gắn ổ vào thư mục cha
+      - postgres-data:/var/lib/postgresql
+      # Tệp chạy một lần khi khởi tạo: tạo user và database của dự án
+      - ./docker/postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${APP_DB_USER} -d ${APP_DB_NAME}']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  postgres-data:
