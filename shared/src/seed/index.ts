@@ -6,3 +6,4 @@ export * from './email-settings';
 export * from './export-template';
 export { addHours } from './time';
 export { cloneSeedValue } from './clone';
+export * from './sample-pdf';

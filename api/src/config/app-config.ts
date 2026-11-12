@@ -12,6 +12,8 @@ const AppEnvSchema = z.object({
   APP_ENV: z.enum(['dev', '']).default(''),
   API_PORT: z.coerce.number().int().min(1).max(65535).default(3000),
   DATABASE_URL: z.string().startsWith('postgresql://'),
+  // Thư mục lưu tệp tải lên trên ổ đĩa máy chủ (tương đối với thư mục chạy backend, hoặc đường dẫn tuyệt đối)
+  UPLOAD_DIR: z.string().min(1).default('uploads'),
 });
 
 /**
@@ -31,6 +33,8 @@ export class AppConfig {
   readonly port: number;
   /** Chuỗi kết nối PostgreSQL bằng user của dự án. */
   readonly databaseUrl: string;
+  /** Thư mục lưu tệp tải lên, vd 'uploads'. */
+  readonly uploadDir: string;
 
   /**
    * Đọc và kiểm tra biến môi trường.
@@ -45,5 +49,6 @@ export class AppConfig {
     this.isDev = parsed.data.APP_ENV === 'dev';
     this.port = parsed.data.API_PORT;
     this.databaseUrl = parsed.data.DATABASE_URL;
+    this.uploadDir = parsed.data.UPLOAD_DIR;
   }
 }
