@@ -145,7 +145,7 @@ function toSaveRequest(draft: FormTypeDraft): SaveFormTypeVersionRequest {
 }
 
 /**
- * Đưa con trỏ tới ô lỗi đầu tiên trong trình soạn; không có ô nào (lỗi chung) thì cuộn tới khung báo lỗi.
+ * Đưa con trỏ tới ô lỗi đầu tiên trong trình soạn; lỗi chung (không gắn với ô nào) chỉ báo bằng thông báo.
  * Gọi sau khi giao diện đã vẽ lại với các ô lỗi.
  */
 function focusFirstIssue(): void {
@@ -153,9 +153,7 @@ function focusFirstIssue(): void {
   if (firstInvalid) {
     firstInvalid.scrollIntoView({ block: 'center', behavior: 'smooth' });
     firstInvalid.focus({ preventScroll: true });
-    return;
   }
-  document.getElementById('editor-issues')?.scrollIntoView({ block: 'center', behavior: 'smooth' });
 }
 
 /**
@@ -389,7 +387,10 @@ function FormTypeEditor({ managed, requestedVersion }: FormTypeEditorProps) {
     // Kiểm tra bản soạn trước khi gửi
     if (contentChanged) {
       setShowIssues(true);
-      if (validateFormTypeDraft(shownDraft, otherPrefixes).length) {
+      const draftIssues = issueMessages(validateFormTypeDraft(shownDraft, otherPrefixes));
+      if (draftIssues.length) {
+        const otherCount = draftIssues.length - 1;
+        toast(`${draftIssues[0]}${otherCount ? ` (còn ${otherCount} lỗi khác, xem các ô tô đỏ)` : ''}`, 'error');
         setTimeout(focusFirstIssue);
         return;
       }
@@ -593,23 +594,8 @@ function FormTypeEditor({ managed, requestedVersion }: FormTypeEditorProps) {
         </div>
       </div>
 
-      {/* Khung báo lỗi và câu nhắc: dài hết bề ngang trang, trên cả nội dung và khung Phiên bản (như khung thông báo ở trang chi tiết đơn) */}
-      {(issues.length > 0 || pageNotice) && (
-        <div className={styles.notices}>
-          {/* Các lỗi của bản soạn, cập nhật ngay khi sửa; sửa hết thì ẩn */}
-          {issues.length > 0 && (
-            <div id="editor-issues" className={styles.issues} role="alert">
-              <p>Chưa lưu được. Kiểm tra lại:</p>
-              <ul>
-                {issueMessages(issues).map((message) => (
-                  <li key={message}>{message}</li>
-                ))}
-              </ul>
-            </div>
-          )}
-          {pageNotice}
-        </div>
-      )}
+      {/* Khung câu nhắc: dài hết bề ngang trang, trên cả nội dung và khung Phiên bản (như khung thông báo ở trang chi tiết đơn) */}
+      {pageNotice && <div className={styles.notices}>{pageNotice}</div>}
 
       {/* Nội dung soạn; khung Phiên bản đang nằm bên phải thì chia 2 cột */}
       <div className={`${styles.layout} ${showsVersionPanel && !versionPanel.isNarrow && versionPanel.isOpen ? styles.withSide : ''}`}>
