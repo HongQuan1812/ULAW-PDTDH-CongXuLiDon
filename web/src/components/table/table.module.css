@@ -83,6 +83,8 @@
 .pageButton:hover:not(:disabled){background:var(--hover);color:var(--fg)}
 .pageButton[aria-current="page"]{background:var(--accent);color:var(--on-accent);font-weight:600}
 .pageButton:disabled{opacity:.35;cursor:not-allowed}
+/* dấu "…" chỗ các trang bị thu gọn, không bấm được */
+.pageGap{min-width:24px;height:32px;display:inline-flex;align-items:center;justify-content:center;color:var(--faint)}
 /* đang tải: trang vừa bấm vẫn tô rõ */
 .pageButton[aria-current="page"]:disabled{opacity:1;cursor:progress}
 

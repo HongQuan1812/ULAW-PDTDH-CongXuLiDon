@@ -2,6 +2,32 @@
 import { useLayoutEffect, useRef } from 'react';
 import styles from './table.module.css';
 
+/** Nhiều trang hơn số này thì thu gọn bằng "…" (thanh luôn có đúng chừng ấy ô). */
+const MAX_PAGE_ITEMS = 7;
+
+/** Một ô của thanh trang: số thứ tự trang (đếm từ 0), hoặc dấu "…" trước / sau các trang quanh trang đang xem. */
+type PagerItem = number | 'gapBefore' | 'gapAfter';
+
+/**
+ * Các ô trang cần hiện. Ít trang thì hiện đủ; nhiều trang thì luôn có trang đầu, trang cuối và các trang quanh trang đang xem,
+ * chỗ bị bỏ ghi "…", vd 100 trang: đang ở trang 1 → 1 2 3 4 5 … 100 · trang 50 → 1 … 49 50 51 … 100 · trang 99 → 1 … 96 97 98 99 100.
+ * @param pageIndex  trang đang xem, đếm từ 0
+ * @param pageCount  số trang
+ * @returns          các ô theo thứ tự trái sang phải
+ */
+export function pagerItems(pageIndex: number, pageCount: number): PagerItem[] {
+  const pageRange = (from: number, to: number) => Array.from({ length: to - from + 1 }, (_, offset) => from + offset);
+  const lastIndex = pageCount - 1;
+
+  // Ít trang: hiện đủ
+  if (pageCount <= MAX_PAGE_ITEMS) return pageRange(0, lastIndex);
+
+  // Gần đầu hoặc gần cuối: chỉ một dấu "…"; ở giữa: hai dấu "…" kẹp trang đang xem và hai trang bên cạnh
+  if (pageIndex <= 3) return [...pageRange(0, 4), 'gapAfter', lastIndex];
+  if (pageIndex >= lastIndex - 3) return [0, 'gapBefore', ...pageRange(lastIndex - 4, lastIndex)];
+  return [0, 'gapBefore', pageIndex - 1, pageIndex, pageIndex + 1, 'gapAfter', lastIndex];
+}
+
 interface PagerProps {
   /** Trang đang xem, đếm từ 0 */
   pageIndex: number;
@@ -74,18 +100,24 @@ export function Pager({ pageIndex, pageCount, pageSize, total, unit, onPageChang
         >
           ‹
         </button>
-        {Array.from({ length: pageCount }, (_, index) => (
-          <button
-            key={index}
-            type="button"
-            className={styles.pageButton}
-            aria-current={index === pageIndex ? 'page' : undefined}
-            disabled={loading}
-            onClick={() => goTo(index)}
-          >
-            {index + 1}
-          </button>
-        ))}
+        {pagerItems(pageIndex, pageCount).map((pageItem) =>
+          pageItem === 'gapBefore' || pageItem === 'gapAfter' ? (
+            <span key={pageItem} className={styles.pageGap} aria-hidden="true">
+              …
+            </span>
+          ) : (
+            <button
+              key={pageItem}
+              type="button"
+              className={styles.pageButton}
+              aria-current={pageItem === pageIndex ? 'page' : undefined}
+              disabled={loading}
+              onClick={() => goTo(pageItem)}
+            >
+              {pageItem + 1}
+            </button>
+          ),
+        )}
         <button
           type="button"
           className={styles.pageButton}
