@@ -10,6 +10,7 @@ import {
   EMAIL_TAGS,
   EMAIL_TAG_LABEL,
   SendTestEmailRequestSchema,
+  findEmailTags,
   splitEmailTemplate,
   type EmailEventSetting,
   type EmailSender,
@@ -20,13 +21,22 @@ import {
 import { useSendTestEmail } from '../../api/email';
 import { Button } from '../../components/Button';
 import { Field, RequiredMark } from '../../components/Field';
-import { RichTextEditor } from '../../components/rich-text/RichTextEditor';
+import { RichTextEditor, type TextHighlight } from '../../components/rich-text/RichTextEditor';
 import { useToast } from '../../components/Toast';
 import { useAuth } from '../../features/auth/useAuth';
 import type { FieldErrors } from './EmailSettingsPage';
 import fieldStyles from '../../components/Field.module.css';
 import richTextStyles from '../../components/rich-text/RichText.module.css';
 import styles from './EmailSettingsPage.module.css';
+
+/**
+ * Tô màu các mã trong ô Nội dung thư, giống khung xem trước: mã đúng tô nền xanh, mã lạ tô đỏ.
+ * @param text  chữ của một đoạn trong ô soạn
+ * @returns     các đoạn cần tô kèm class
+ */
+function highlightEmailTags(text: string): TextHighlight[] {
+  return findEmailTags(text).map(({ start, end, known }) => ({ start, end, className: (known ? styles.filledTag : styles.unknownTag) ?? '' }));
+}
 
 /** Ô đang gõ khi bấm nút chèn mã. */
 type TextTarget = 'subject' | 'body';
@@ -170,6 +180,7 @@ export function EmailEventEditor({ event, eventIndex, sender, senderAddress, fie
               placeholder="Nội dung thư. Gõ # để làm tiêu đề, - để gạch đầu dòng, Ctrl+B in đậm."
               invalid={!!bodyError}
               editorRef={bodyEditorRef}
+              highlightText={highlightEmailTags}
             />
             {bodyError && (
               <span className={fieldStyles.error} role="alert">
