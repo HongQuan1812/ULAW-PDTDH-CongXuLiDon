@@ -103,6 +103,22 @@ describe('validateAnswer', () => {
     expect(validateAnswer(table, [['Triết học', 3, 'Triết học', 'ĐH KHXH&NV']])).toBe('');
   });
 
+  it('bảng: cột chọn chỉ nhận giá trị có trong danh sách', () => {
+    const table = questionOf({
+      id: 'b',
+      type: 'table',
+      label: 'Môn',
+      rowName: 'môn',
+      columns: [
+        { label: 'Môn', type: 'text' },
+        { label: 'Học kì', type: 'select', options: ['HK1', 'HK2'] },
+      ],
+    });
+    expect(validateAnswer(table, [['Triết học', '']])).toBe('Điền đủ 2 cột cho các ô được tô đỏ.');
+    expect(validateAnswer(table, [['Triết học', 'HK3']])).toBe(ANSWER_MESSAGES.tableChoiceInvalid('Học kì'));
+    expect(validateAnswer(table, [['Triết học', 'HK2']])).toBe('');
+  });
+
   it('câu trả lời trống theo loại câu hỏi', () => {
     expect(emptyAnswer(questionOf({ id: 'n', type: 'number', label: 'Số' }))).toBeNull();
     expect(emptyAnswer(XMM_SECTIONS[0]!.questions[0] as AnswerableQuestion)).toEqual([]);

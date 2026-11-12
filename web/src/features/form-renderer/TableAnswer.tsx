@@ -1,13 +1,13 @@
 /* Ô trả lời bảng nhiều dòng (như QUESTION_UI.table của artifact/js/sections.js). */
 import { useEffect, useRef, type CSSProperties } from 'react';
-import { isEmptyCell, type TableCell, type TableColumn } from '@ulaw/shared';
+import { isEmptyCell, isValidTableCell, type TableCell, type TableColumn } from '@ulaw/shared';
 import { Button } from '../../components/Button';
 import type { AnswerProps } from './answerProps';
 import { emptyTableRow, tableTotalText } from './formAnswers';
 import { GrowingTextarea } from './GrowingTextarea';
 import styles from './FormRenderer.module.css';
 
-/* Độ rộng cột co giãn theo độ dài tên cột (và mô tả nhỏ): tối thiểu 7, tối đa 24 ký tự, cộng 2 ký tự đệm.
+/* Độ rộng cột co giãn theo độ dài tên cột (và mô tả nhỏ, lựa chọn dài nhất của cột chọn): tối thiểu 7, tối đa 24 ký tự, cộng 2 ký tự đệm.
    Tên cột dài hơn thì tự xuống dòng; bảng rộng hơn khung thì cuộn ngang. */
 const COLUMN_MIN_CHARS = 7;
 const COLUMN_MAX_CHARS = 24;
@@ -18,7 +18,9 @@ const COLUMN_MAX_CHARS = 24;
  * @returns       vd 20 (dùng với đơn vị ch)
  */
 function columnWidthChars(column: TableColumn): number {
-  const wanted = Math.max(COLUMN_MIN_CHARS, column.label.length, Math.ceil((column.sub ?? '').length * 0.85));
+  // Cột chọn: thêm 3 ký tự cho mũi tên ▾ của ô chọn
+  const longestOptionChars = Math.max(0, ...(column.options ?? []).map((option) => option.length + 3));
+  const wanted = Math.max(COLUMN_MIN_CHARS, column.label.length, Math.ceil((column.sub ?? '').length * 0.85), longestOptionChars);
   return Math.min(COLUMN_MAX_CHARS, wanted) + 2;
 }
 
@@ -37,20 +39,19 @@ function readRows(answerValue: unknown, columns: readonly TableColumn[]): TableC
 }
 
 /**
- * Ô của bảng có cần tô đỏ không: còn trống, hoặc cột số mà không phải số không âm.
+ * Ô của bảng có cần tô đỏ không: còn trống, cột số mà không phải số không âm, hoặc cột chọn mà giá trị không có trong danh sách.
  * @param column  cột chứa ô
  * @param cell    giá trị ô
  * @returns       true nếu ô sai
  */
 function isInvalidCell(column: TableColumn, cell: TableCell): boolean {
-  if (isEmptyCell(cell)) return true;
-  return column.type === 'number' && !(typeof cell === 'number' && Number.isFinite(cell) && cell >= 0);
+  return isEmptyCell(cell) || !isValidTableCell(column, cell);
 }
 
 /**
  * Bảng nhiều dòng: mỗi dòng một bộ ô theo cột; cột số có thể tính tổng ở chân bảng.
- * Sửa được: mỗi ô là một ô nhập (ô chữ dài thì tự xuống hàng), có nút thêm dòng và xóa dòng. Chỉ xem: bảng chữ.
- * Câu trả lời lưu: mảng các dòng, mỗi dòng một mảng ô theo thứ tự cột (cột số: số hoặc null).
+ * Sửa được: mỗi ô là một ô nhập (ô chữ dài thì tự xuống hàng, cột chọn là danh sách thả xuống), có nút thêm dòng và xóa dòng. Chỉ xem: bảng chữ.
+ * Câu trả lời lưu: mảng các dòng, mỗi dòng một mảng ô theo thứ tự cột (cột số: số hoặc null; cột chọn: lựa chọn, chưa chọn thì "").
  * @returns  bảng và dòng tổng bên dưới
  */
 export function TableAnswer({
@@ -72,7 +73,7 @@ export function TableAnswer({
     const rowIndex = focusRowIndexRef.current;
     if (rowIndex === null) return;
     focusRowIndexRef.current = null;
-    bodyRef.current?.rows[rowIndex]?.querySelector<HTMLElement>('input, textarea')?.focus();
+    bodyRef.current?.rows[rowIndex]?.querySelector<HTMLElement>('input, textarea, select')?.focus();
   }, [rows.length]);
 
   /**
@@ -152,7 +153,6 @@ export function TableAnswer({
                 <td className={styles.rowNumber}>{rowIndex + 1}</td>
                 {columns.map((column, columnIndex) => {
                   const cell = row[columnIndex] ?? null;
-                  const numeric = column.type === 'number';
 
                   // Chỉ xem: ô chữ
                   if (readOnly) {
@@ -164,7 +164,8 @@ export function TableAnswer({
                     );
                   }
 
-                  // Sửa được: cột số là ô nhập số, cột chữ là ô tự xuống hàng khi chữ dài; đang báo lỗi thì tô đỏ ô sai
+                  // Sửa được: cột số là ô nhập số, cột chọn là danh sách thả xuống, cột chữ là ô tự xuống hàng khi chữ dài;
+                  // đang báo lỗi thì tô đỏ ô sai
                   const cellInvalid = invalid && isInvalidCell(column, cell);
                   const cellProps = {
                     placeholder: column.placeholder,
@@ -174,7 +175,24 @@ export function TableAnswer({
                   };
                   return (
                     <td key={columnIndex}>
-                      {numeric ? (
+                      {column.type === 'select' ? (
+                        // Giá trị cũ không còn trong danh sách (người soạn đã sửa lựa chọn) vẫn hiện để người nộp thấy mà chọn lại
+                        <select
+                          className={`${styles.cellSelect} ${isEmptyCell(cell) ? styles.cellSelectEmpty : ''} ${cellInvalid ? styles.invalid : ''}`}
+                          value={typeof cell === 'string' ? cell : ''}
+                          onChange={(event) => updateCell(rowIndex, columnIndex, event.target.value)}
+                          aria-label={cellProps['aria-label']}
+                          aria-invalid={cellProps['aria-invalid']}
+                        >
+                          <option value="">{column.placeholder || '— Chọn —'}</option>
+                          {typeof cell === 'string' && cell && !(column.options ?? []).includes(cell) && <option value={cell}>{cell}</option>}
+                          {(column.options ?? []).map((option) => (
+                            <option key={option} value={option}>
+                              {option}
+                            </option>
+                          ))}
+                        </select>
+                      ) : column.type === 'number' ? (
                         // Khung bọc cao bằng cả dòng, ô nhập số nằm ở đầu khung để số thẳng hàng với dòng chữ đầu của ô bên cạnh
                         // Bấm vào phần trống bên dưới của khung cũng đưa con trỏ vào ô nhập
                         <div

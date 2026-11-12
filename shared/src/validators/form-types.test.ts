@@ -48,6 +48,33 @@ describe('validateFormTypeDraft', () => {
     expect(issueMessages(issues).filter((message) => message.includes('lựa chọn'))).toHaveLength(1);
   });
 
+  it('báo cột kiểu Chọn chưa có lựa chọn hoặc có lựa chọn trống', () => {
+    const section = {
+      id: 's1',
+      title: 'A',
+      main: false,
+      questions: [
+        {
+          id: 'q1',
+          type: 'table',
+          label: 'Bảng',
+          required: false,
+          rowName: 'dòng',
+          columns: [
+            { label: 'Học kì', type: 'select', options: ['HK1', ' '] },
+            { label: 'Năm học', type: 'select', options: [] },
+          ],
+        },
+      ],
+    } as FormSection;
+    const issues = validateFormTypeDraft({ ...validDraft(), sections: [section] }, []);
+    expect(issues.map((issue) => issue.target)).toEqual([
+      FORM_TYPE_ISSUE_TARGET.columnOption('q1', 0, 1),
+      FORM_TYPE_ISSUE_TARGET.columnOption('q1', 1, null),
+    ]);
+    expect(issueMessages(issues)).toEqual([FORM_TYPE_DRAFT_MESSAGES.emptyColumnOption(1, 1)]);
+  });
+
   it('báo mã dùng trong file Word sai dạng, trùng mã có sẵn, trùng nhau (kể cả mã cột)', () => {
     const section = FormSectionSchema.parse({
       id: 's1',

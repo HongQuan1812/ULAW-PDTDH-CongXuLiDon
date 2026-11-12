@@ -63,14 +63,27 @@ const FileQuestionSchema = z.object({
   maxMB: z.number().positive(),
 });
 
+/** Kiểu ô của một cột bảng: chữ, số, chọn. */
+export const TABLE_COLUMN_TYPES = ['text', 'number', 'select'] as const;
+export type TableColumnType = (typeof TABLE_COLUMN_TYPES)[number];
+
+/** Tên kiểu cột hiện trong trình soạn loại đơn. */
+export const TABLE_COLUMN_TYPE_LABEL: Record<TableColumnType, string> = {
+  text: 'Chữ',
+  number: 'Số',
+  select: 'Chọn',
+};
+
 /** Một cột của bảng nhiều dòng. */
 export const TableColumnSchema = z.object({
   /** Tên cột */
   label: z.string().min(1),
   /** Mô tả nhỏ dưới tên cột */
   sub: z.string().optional(),
-  /** Kiểu ô: chữ hoặc số */
-  type: z.enum(['text', 'number']),
+  /** Kiểu ô: chữ, số, hoặc chọn một giá trị trong danh sách người soạn đặt sẵn */
+  type: z.enum(TABLE_COLUMN_TYPES),
+  /** Cột Chọn: các giá trị cho người nộp đơn chọn, theo thứ tự hiện (cột khác không có) */
+  options: z.array(z.string().min(1)).min(1, 'Cột chọn cần ít nhất một lựa chọn.').optional(),
   /** Chữ mờ gợi ý trong ô */
   placeholder: z.string().optional(),
   /** Cột số: tính tổng ở chân bảng */

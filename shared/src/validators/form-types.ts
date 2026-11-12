@@ -14,6 +14,9 @@ export const FORM_TYPE_DRAFT_MESSAGES = {
   questionLabelRequired: (sectionNumber: number, questionNumber: number) => `Phần ${sectionNumber}, câu ${questionNumber}: nhập nội dung câu hỏi.`,
   emptyOption: (sectionNumber: number, questionNumber: number) => `Phần ${sectionNumber}, câu ${questionNumber}: lựa chọn không được để trống.`,
   emptyColumn: (sectionNumber: number, questionNumber: number) => `Phần ${sectionNumber}, câu ${questionNumber}: đặt tên cho mọi cột.`,
+  /** Cột kiểu Chọn có lựa chọn trống (hoặc chưa có lựa chọn nào) */
+  emptyColumnOption: (sectionNumber: number, questionNumber: number) =>
+    `Phần ${sectionNumber}, câu ${questionNumber}: cột kiểu Chọn cần ít nhất một lựa chọn, lựa chọn không được để trống.`,
   noFileFormat: (sectionNumber: number, questionNumber: number) => `Phần ${sectionNumber}, câu ${questionNumber}: chọn ít nhất một định dạng tệp.`,
   openWithoutQuestion: 'Loại đơn đang mở phải có ít nhất một câu hỏi.',
   /** Mã dùng trong file Word sai dạng */
@@ -41,6 +44,9 @@ export const FORM_TYPE_ISSUE_TARGET = {
   questionLabel: (questionId: string) => `question-label:${questionId}`,
   option: (questionId: string, optionIndex: number) => `option:${questionId}:${optionIndex}`,
   column: (questionId: string, columnIndex: number) => `column:${questionId}:${columnIndex}`,
+  /** Một lựa chọn của cột kiểu Chọn; optionIndex null = cột chưa có lựa chọn nào */
+  columnOption: (questionId: string, columnIndex: number, optionIndex: number | null) =>
+    `column-option:${questionId}:${columnIndex}:${optionIndex ?? 'none'}`,
   fileFormats: (questionId: string) => `file-formats:${questionId}`,
   questionTag: (questionId: string) => `question-tag:${questionId}`,
 } as const;
@@ -91,6 +97,17 @@ export function validateFormTypeDraft(draft: FormTypeDraftInput, otherPrefixes: 
       if (question.type === 'table') {
         const emptyIndexes = question.columns.flatMap((column, i) => (column.label.trim() ? [] : [i]));
         emptyIndexes.forEach((i) => add(FORM_TYPE_ISSUE_TARGET.column(question.id, i), FORM_TYPE_DRAFT_MESSAGES.emptyColumn(sectionNumber, questionNumber)));
+
+        // Cột kiểu Chọn: cần ít nhất một lựa chọn, không lựa chọn nào trống
+        question.columns.forEach((column, columnIndex) => {
+          if (column.type !== 'select') return;
+          const options = column.options ?? [];
+          const optionMessage = FORM_TYPE_DRAFT_MESSAGES.emptyColumnOption(sectionNumber, questionNumber);
+          if (!options.length) add(FORM_TYPE_ISSUE_TARGET.columnOption(question.id, columnIndex, null), optionMessage);
+          options.forEach((option, optionIndex) => {
+            if (!option.trim()) add(FORM_TYPE_ISSUE_TARGET.columnOption(question.id, columnIndex, optionIndex), optionMessage);
+          });
+        });
       }
       if (question.type === 'file' && !question.accept.length) {
         add(FORM_TYPE_ISSUE_TARGET.fileFormats(question.id), FORM_TYPE_DRAFT_MESSAGES.noFileFormat(sectionNumber, questionNumber));

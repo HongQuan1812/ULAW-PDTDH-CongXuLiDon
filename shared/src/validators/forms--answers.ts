@@ -1,6 +1,6 @@
 /* Kiểm tra câu trả lời của lá đơn theo cấu trúc loại đơn (như check() của từng loại câu hỏi trong artifact/js/sections.js).
    Trang nộp đơn, API giả và backend cùng dùng validateAnswers(), nên câu báo lỗi giống nhau ở mọi nơi. */
-import type { AnswerableQuestion, QuestionOf } from '../aux-schema/form-types--question-types';
+import type { AnswerableQuestion, QuestionOf, TableColumn } from '../aux-schema/form-types--question-types';
 import type { FormSection } from '../aux-schema/form-types--sections';
 import { RichTextDocSchema, isRichTextEmpty, type RichTextDoc } from '../aux-schema/rich-text';
 import { isAnswerable, type AnswerValue, type FileRef, type FormAnswers, type TableCell } from '../aux-schema/forms--answers';
@@ -28,6 +28,8 @@ export const ANSWER_MESSAGES = {
   tableCellsMissing: (columnCount: number) => `Điền đủ ${columnCount} cột cho các ô được tô đỏ.`,
   /** Cột số có ô không phải số không âm */
   tableNumberInvalid: (columnLabel: string) => `Cột “${columnLabel}” chỉ nhận số không âm.`,
+  /** Cột chọn có ô không thuộc danh sách lựa chọn */
+  tableChoiceInvalid: (columnLabel: string) => `Cột “${columnLabel}”: chọn một giá trị trong danh sách.`,
   /** Câu báo chung dưới nút Gửi đơn cho phần có lỗi */
   section: (sectionTitle: string) => `Kiểm tra lại phần “${sectionTitle}”.`,
   /** Một câu gộp các phần có lỗi (toast khi bấm Gửi đơn), vd "Kiểm tra lại các phần “A”, “B”." */
@@ -46,6 +48,18 @@ export const ANSWER_MESSAGES = {
  */
 export function isEmptyCell(cell: TableCell | undefined): boolean {
   return cell === null || cell === undefined || (typeof cell === 'string' && cell.trim() === '');
+}
+
+/**
+ * Ô đã điền của bảng có đúng kiểu cột không (ô trống thì kiểm tra riêng bằng isEmptyCell).
+ * @param column  cột chứa ô
+ * @param cell    giá trị ô
+ * @returns       cột số: số không âm · cột chọn: một giá trị trong danh sách lựa chọn · cột chữ: luôn đúng
+ */
+export function isValidTableCell(column: Pick<TableColumn, 'type' | 'options'>, cell: TableCell | undefined): boolean {
+  if (column.type === 'number') return typeof cell === 'number' && Number.isFinite(cell) && cell >= 0;
+  if (column.type === 'select') return typeof cell === 'string' && (column.options ?? []).includes(cell);
+  return true;
 }
 
 /* ---------- Tệp tải lên ---------- */
@@ -208,14 +222,12 @@ export function validateAnswer(question: AnswerableQuestion, value: AnswerValue 
       );
       if (!allFilled) return ANSWER_MESSAGES.tableCellsMissing(columns.length);
 
-      // Cột số chỉ nhận số không âm
+      // Cột số chỉ nhận số không âm; cột chọn chỉ nhận giá trị có trong danh sách
       for (const [index, column] of columns.entries()) {
-        if (column.type !== 'number') continue;
-        const valid = rows.every((row) => {
-          const cell = (row as TableCell[])[index];
-          return typeof cell === 'number' && Number.isFinite(cell) && cell >= 0;
-        });
-        if (!valid) return ANSWER_MESSAGES.tableNumberInvalid(column.label);
+        if (column.type === 'text') continue;
+        const valid = rows.every((row) => isValidTableCell(column, (row as TableCell[])[index]));
+        if (valid) continue;
+        return column.type === 'number' ? ANSWER_MESSAGES.tableNumberInvalid(column.label) : ANSWER_MESSAGES.tableChoiceInvalid(column.label);
       }
       return '';
     }
