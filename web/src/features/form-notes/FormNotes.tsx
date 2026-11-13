@@ -154,6 +154,60 @@ function useFabBottom(buttonRef: RefObject<HTMLButtonElement | null>): number | 
 }
 
 /**
+ * Chỗ nhớ các ghi chú đã xem trong trình duyệt: mỗi người, mỗi lá đơn một mục (cùng trình duyệt có thể đăng nhập nhiều người).
+ * @param userId  id người đang đăng nhập
+ * @param code    mã đơn
+ * @returns       vd 'form-notes-seen:cb-1:XMM-2026-001-00001'
+ */
+const seenNotesStorageKey = (userId: string, code: string) => `form-notes-seen:${userId}:${code}`;
+
+/**
+ * Đọc các ghi chú một người đã xem trên một lá đơn.
+ * @param storageKey  chỗ nhớ, từ seenNotesStorageKey
+ * @returns           id các ghi chú đã xem; chưa mở khung lần nào, hoặc trình duyệt chặn bộ nhớ, thì rỗng
+ */
+function readSeenNoteIds(storageKey: string): Set<string> {
+  try {
+    const saved: unknown = JSON.parse(localStorage.getItem(storageKey) ?? '[]');
+    if (Array.isArray(saved)) return new Set(saved.filter((noteId): noteId is string => typeof noteId === 'string'));
+  } catch {
+    // Bộ nhớ bị chặn hoặc dữ liệu hỏng: coi như chưa xem ghi chú nào
+  }
+  return new Set();
+}
+
+/**
+ * Số ghi chú người khác viết mà mình chưa xem. Mở khung ghi chú là xem hết các ghi chú đang có (nhớ trong trình duyệt).
+ * @param code       mã đơn
+ * @param notes      các ghi chú đã tải (undefined: chưa tải xong)
+ * @param panelOpen  true: đang mở khung ghi chú
+ * @returns          số ghi chú chưa xem; ghi chú của mình không tính
+ */
+function useUnseenNoteCount(code: string, notes: FormNote[] | undefined, panelOpen: boolean): number {
+  const { user } = useAuth();
+  const storageKey = seenNotesStorageKey(user?.id ?? '', code);
+  const [seen, setSeen] = useState(() => ({ storageKey, noteIds: readSeenNoteIds(storageKey) }));
+
+  // Đổi người đăng nhập (vd đổi vai trò khi dev) hoặc đổi lá đơn: đọc lại danh sách đã xem của người đó, lá đơn đó
+  const seenNoteIds = seen.storageKey === storageKey ? seen.noteIds : readSeenNoteIds(storageKey);
+  if (seen.storageKey !== storageKey) setSeen({ storageKey, noteIds: seenNoteIds });
+
+  // Đang mở khung: các ghi chú đang có coi như đã xem (chỉ giữ id còn tồn tại, ghi chú đã xóa thì bỏ)
+  useEffect(() => {
+    if (!panelOpen || !notes || notes.every((note) => seenNoteIds.has(note.id))) return;
+    const currentNoteIds = notes.map((note) => note.id);
+    try {
+      localStorage.setItem(storageKey, JSON.stringify(currentNoteIds));
+    } catch {
+      // Bộ nhớ bị chặn: chỉ nhớ đến khi rời trang
+    }
+    setSeen({ storageKey, noteIds: new Set(currentNoteIds) });
+  }, [storageKey, notes, panelOpen, seenNoteIds]);
+
+  return notes?.filter((note) => note.author.id !== user?.id && !seenNoteIds.has(note.id)).length ?? 0;
+}
+
+/**
  * Nút tròn và khung ghi chú nội bộ của một lá đơn. Chỉ đặt vào trang khi người xem có quyền internalNotes.
  * @param code         mã đơn
  * @param initialOpen  true: mở sẵn khung (vd bấm ô Ghi chú ở bảng đơn)
@@ -161,10 +215,11 @@ function useFabBottom(buttonRef: RefObject<HTMLButtonElement | null>): number | 
  */
 export function FormNotes({ code, initialOpen = false }: { code: string; initialOpen?: boolean }) {
   const [open, setOpen] = useState(initialOpen);
-  const notesQuery = useFormNotes(code);
+  const notesQuery = useFormNotes(code, open);
   const { size, handleProps } = usePanelResize();
   const buttonRef = useRef<HTMLButtonElement>(null);
   const noteCount = notesQuery.data?.length ?? 0;
+  const unseenNoteCount = useUnseenNoteCount(code, notesQuery.data, open);
   const fabBottom = useFabBottom(buttonRef);
   // Khung đứng ngay trên nút tròn, nút nâng lên thì khung nâng theo
   const fabBottomStyle = fabBottom === null ? undefined : ({ '--fab-bottom': `${fabBottom}px` } as CSSProperties);
@@ -206,11 +261,12 @@ export function FormNotes({ code, initialOpen = false }: { code: string; initial
         style={fabBottomStyle}
         onClick={() => (open ? closePanel() : setOpen(true))}
         aria-expanded={open}
-        aria-label={noteCount ? `Ghi chú nội bộ (${noteCount})` : 'Ghi chú nội bộ'}
-        title="Ghi chú nội bộ"
+        aria-label={`Ghi chú nội bộ${noteCount ? ` (${noteCount}${unseenNoteCount ? `, ${unseenNoteCount} chưa xem` : ''})` : ''}`}
+        title={unseenNoteCount ? `Ghi chú nội bộ: ${unseenNoteCount} ghi chú chưa xem` : 'Ghi chú nội bộ'}
       >
         <NoteIcon />
-        {noteCount > 0 && <span className={styles.badge}>{noteCount}</span>}
+        {/* Số ghi chú; có ghi chú người khác viết mà mình chưa xem thì số màu đỏ */}
+        {noteCount > 0 && <span className={`${styles.badge} ${unseenNoteCount ? styles.badgeUnseen : ''}`}>{noteCount}</span>}
       </button>
     </>
   );

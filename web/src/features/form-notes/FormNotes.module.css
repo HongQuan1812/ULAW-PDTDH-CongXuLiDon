@@ -6,6 +6,8 @@
 .fab:focus-visible{outline:3px solid color-mix(in srgb,var(--focus) 40%,transparent);outline-offset:3px}
 .fabOpen{background:var(--accent-ink)}
 .badge{position:absolute;top:-2px;right:-2px;min-width:20px;height:20px;padding:0 6px;border-radius:999px;background:var(--surface);color:var(--accent-ink);border:1px solid var(--line);font-size:11.5px;font-weight:700;line-height:18px;text-align:center}
+/* có ghi chú chưa xem: số màu đỏ */
+.badgeUnseen{background:var(--danger);color:var(--surface);border-color:var(--danger)}
 
 /* Khung: neo góc phải dưới, ngay trên nút tròn (nút nâng lên thì khung nâng theo); cỡ theo người dùng kéo, không quá màn hình */
 .panel{position:fixed;right:24px;bottom:calc(var(--fab-bottom,24px) + 64px + env(safe-area-inset-bottom,0px));z-index:40;

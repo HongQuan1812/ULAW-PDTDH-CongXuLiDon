@@ -24,16 +24,25 @@ function refreshNoteCountTables(queryClient: QueryClient): void {
   void queryClient.invalidateQueries({ predicate: (query) => query.queryKey[0] === 'profile' && query.queryKey.includes(PERSON_HANDLED_FORMS_SEGMENT) });
 }
 
+/** Bao lâu (ms) tải lại ghi chú để thấy ghi chú người khác vừa viết: khi đang mở khung ghi chú, và khi khung đang đóng. */
+const NOTES_REFRESH_MS_PANEL_OPEN = 10_000;
+const NOTES_REFRESH_MS_PANEL_CLOSED = 30_000;
+
 /**
  * Các ghi chú của một lá đơn. Tải ngay khi mở trang (nút ghi chú hiện số ghi chú, chưa cần mở khung).
- * @param code  mã đơn
- * @returns     kết quả useQuery; data = các ghi chú, cũ trước mới sau
+ * Tự tải lại định kì (mở khung thì nhanh hơn) để thấy ghi chú mới của người khác mà không cần tải lại trang;
+ * tab đang ẩn thì ngừng, quay lại tab thì tải lại ngay.
+ * @param code       mã đơn
+ * @param panelOpen  true: đang mở khung ghi chú
+ * @returns          kết quả useQuery; data = các ghi chú, cũ trước mới sau
  */
-export function useFormNotes(code: string) {
+export function useFormNotes(code: string, panelOpen: boolean) {
   return useQuery({
     queryKey: formNotesKey(code),
     queryFn: () => apiFetch<FormNotesResponse>(formNotesPath(code)),
     select: (response) => response.notes,
+    refetchInterval: panelOpen ? NOTES_REFRESH_MS_PANEL_OPEN : NOTES_REFRESH_MS_PANEL_CLOSED,
+    refetchOnWindowFocus: true,
   });
 }
 
