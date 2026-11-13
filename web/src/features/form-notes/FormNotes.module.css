@@ -1,15 +1,15 @@
 /* Ghi chú nội bộ: nút tròn góc phải dưới và khung ghi chú nổi phía trên nút. */
 
 /* Nút tròn: nền xanh, có số ghi chú ở góc */
-.fab{position:fixed;right:24px;bottom:calc(24px + env(safe-area-inset-bottom,0px));z-index:40;width:52px;height:52px;border:0;border-radius:50%;display:grid;place-items:center;background:var(--accent);color:var(--on-accent);box-shadow:var(--shadow-lg),var(--shadow);cursor:pointer;transition:transform .15s,background .15s}
+.fab{position:fixed;right:24px;bottom:calc(var(--fab-bottom,24px) + env(safe-area-inset-bottom,0px));z-index:40;width:52px;height:52px;border:0;border-radius:50%;display:grid;place-items:center;background:var(--accent);color:var(--on-accent);box-shadow:var(--shadow-lg),var(--shadow);cursor:pointer;transition:transform .15s,background .15s,bottom .18s ease-out}
 .fab:hover{background:var(--accent-ink);transform:translateY(-1px)}
 .fab:focus-visible{outline:3px solid color-mix(in srgb,var(--focus) 40%,transparent);outline-offset:3px}
 .fabOpen{background:var(--accent-ink)}
 .badge{position:absolute;top:-2px;right:-2px;min-width:20px;height:20px;padding:0 6px;border-radius:999px;background:var(--surface);color:var(--accent-ink);border:1px solid var(--line);font-size:11.5px;font-weight:700;line-height:18px;text-align:center}
 
-/* Khung: neo góc phải dưới, phía trên nút tròn; cỡ theo người dùng kéo, không quá màn hình */
-.panel{position:fixed;right:24px;bottom:calc(88px + env(safe-area-inset-bottom,0px));z-index:40;
-  width:min(var(--panel-width),calc(100vw - 32px));height:min(var(--panel-height),calc(100vh - 120px));
+/* Khung: neo góc phải dưới, ngay trên nút tròn (nút nâng lên thì khung nâng theo); cỡ theo người dùng kéo, không quá màn hình */
+.panel{position:fixed;right:24px;bottom:calc(var(--fab-bottom,24px) + 64px + env(safe-area-inset-bottom,0px));z-index:40;
+  width:min(var(--panel-width),calc(100vw - 32px));height:min(var(--panel-height),calc(100vh - var(--fab-bottom,24px) - 96px));
   display:flex;flex-direction:column;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);box-shadow:var(--shadow-lg),var(--shadow);overflow:hidden;animation:panelIn .16s ease-out}
 @keyframes panelIn{from{opacity:0;transform:translateY(8px) scale(.98)}to{opacity:1;transform:none}}
 
@@ -58,7 +58,7 @@
 
 /* Màn hình hẹp: khung gần hết bề ngang, không kéo co giãn */
 @media (max-width:560px){
-  .fab{right:16px;bottom:calc(16px + env(safe-area-inset-bottom,0px))}
-  .panel{right:8px;left:8px;bottom:calc(80px + env(safe-area-inset-bottom,0px));width:auto;height:min(var(--panel-height),calc(100vh - 110px))}
+  .fab{right:16px;bottom:calc(var(--fab-bottom,16px) + env(safe-area-inset-bottom,0px))}
+  .panel{right:8px;left:8px;bottom:calc(var(--fab-bottom,16px) + 64px + env(safe-area-inset-bottom,0px));width:auto;height:min(var(--panel-height),calc(100vh - var(--fab-bottom,16px) - 90px))}
   .resizeHandle{display:none}
 }

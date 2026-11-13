@@ -68,7 +68,8 @@ export function checkBeforeSending(
  */
 export function SubmitBar({ commitment, children }: { commitment: CommitmentState; children: ReactNode }) {
   return (
-    <div className={styles.submitRow}>
+    // data-avoid-notes-button: nút tròn Ghi chú nội bộ không che thanh này (đứng lên trên khi chồng nhau)
+    <div className={styles.submitRow} data-avoid-notes-button>
       <label className={`${styles.commitment} ${commitment.showError ? styles.commitmentInvalid : ''}`}>
         <input
           ref={commitment.inputRef}

@@ -1,7 +1,7 @@
 /* Ghi chú nội bộ trên lá đơn (chỉ cán bộ có quyền internalNotes; người nộp đơn không thấy).
    Nút tròn ở góc phải dưới, có số ghi chú; bấm thì mở khung nhỏ kiểu Notion: chuỗi ghi chú cũ trước mới sau, ô soạn ở đáy.
    Khung kéo góc trên bên trái để co giãn; cỡ khung nhớ trong trình duyệt. Ghi chú của mình thì sửa, xóa được. */
-import { useEffect, useRef, useState, type CSSProperties, type KeyboardEvent, type PointerEvent } from 'react';
+import { useEffect, useRef, useState, type CSSProperties, type KeyboardEvent, type PointerEvent, type RefObject } from 'react';
 import { EMPTY_RICH_TEXT_DOC, canEditFormNote, isRichTextEmpty, type FormNote, type RichTextDoc } from '@ulaw/shared';
 import { useFormNoteActions, useFormNotes } from '../../api/form-notes';
 import { Avatar } from '../../components/Avatar';
@@ -93,6 +93,66 @@ function usePanelResize() {
   return { size, handleProps: { onPointerDown, onPointerMove, onPointerUp, onPointerCancel: onPointerUp } };
 }
 
+/** Thuộc tính đánh dấu thanh nằm ở đáy màn hình mà nút tròn không được che (vd hàng nút Duyệt / Lưu thay đổi dính đáy). */
+export const AVOID_NOTES_BUTTON_ATTRIBUTE = 'data-avoid-notes-button';
+
+/** Khoảng cách giữa nút tròn và thanh nằm dưới nó (px). */
+const FAB_GAP = 12;
+
+/**
+ * Chỗ đứng của nút tròn tính từ đáy màn hình. Bình thường ở góc phải dưới; thanh có AVOID_NOTES_BUTTON_ATTRIBUTE
+ * mà nằm đúng chỗ đó (màn hình hẹp, thanh kéo dài tới mép phải) thì nút nâng lên đứng trên thanh.
+ * Tính lại khi cuộn, đổi cỡ màn hình, hoặc trang đổi (thanh hiện / ẩn, khung Thông tin đơn mở / đóng).
+ * @param buttonRef  nút tròn
+ * @returns          khoảng cách tới đáy màn hình (px); chưa tính xong thì null (dùng chỗ mặc định của CSS)
+ */
+function useFabBottom(buttonRef: RefObject<HTMLButtonElement | null>): number | null {
+  const [fabBottom, setFabBottom] = useState<number | null>(null);
+
+  useEffect(() => {
+    let frame = 0;
+
+    /** Tính lại chỗ đứng, gộp nhiều lần gọi trong cùng một khung hình. */
+    const update = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        const button = buttonRef.current;
+        if (!button) return;
+
+        // Chỗ mặc định ở góc phải dưới (màn hình hẹp sát góc hơn, như CSS)
+        const baseBottom = window.matchMedia('(max-width:560px)').matches ? 16 : 24;
+        const { left, right } = button.getBoundingClientRect();
+        const defaultTop = window.innerHeight - baseBottom - button.offsetHeight;
+
+        // Thanh nào chồng lên chỗ mặc định thì đứng trên thanh đó
+        let nextBottom = baseBottom;
+        document.querySelectorAll<HTMLElement>(`[${AVOID_NOTES_BUTTON_ATTRIBUTE}]`).forEach((bar) => {
+          const rect = bar.getBoundingClientRect();
+          const overlapsAcross = rect.left < right + FAB_GAP && rect.right > left - FAB_GAP;
+          const overlapsDown = rect.top < window.innerHeight - baseBottom && rect.bottom > defaultTop - FAB_GAP;
+          if (overlapsAcross && overlapsDown) nextBottom = Math.max(nextBottom, window.innerHeight - rect.top + FAB_GAP);
+        });
+        setFabBottom(nextBottom);
+      });
+    };
+
+    // Tính ngay, rồi theo dõi cuộn, đổi cỡ, trang đổi
+    update();
+    window.addEventListener('scroll', update, { passive: true, capture: true });
+    window.addEventListener('resize', update);
+    const pageObserver = new MutationObserver(update);
+    pageObserver.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'] });
+    return () => {
+      cancelAnimationFrame(frame);
+      window.removeEventListener('scroll', update, { capture: true });
+      window.removeEventListener('resize', update);
+      pageObserver.disconnect();
+    };
+  }, [buttonRef]);
+
+  return fabBottom;
+}
+
 /**
  * Nút tròn và khung ghi chú nội bộ của một lá đơn. Chỉ đặt vào trang khi người xem có quyền internalNotes.
  * @param code         mã đơn
@@ -105,6 +165,9 @@ export function FormNotes({ code, initialOpen = false }: { code: string; initial
   const { size, handleProps } = usePanelResize();
   const buttonRef = useRef<HTMLButtonElement>(null);
   const noteCount = notesQuery.data?.length ?? 0;
+  const fabBottom = useFabBottom(buttonRef);
+  // Khung đứng ngay trên nút tròn, nút nâng lên thì khung nâng theo
+  const fabBottomStyle = fabBottom === null ? undefined : ({ '--fab-bottom': `${fabBottom}px` } as CSSProperties);
 
   /** Đóng khung, trả con trỏ bàn phím về nút tròn. */
   const closePanel = () => {
@@ -117,7 +180,7 @@ export function FormNotes({ code, initialOpen = false }: { code: string; initial
       {open && (
         <section
           className={styles.panel}
-          style={{ '--panel-width': `${size.width}px`, '--panel-height': `${size.height}px` } as CSSProperties}
+          style={{ '--panel-width': `${size.width}px`, '--panel-height': `${size.height}px`, ...fabBottomStyle } as CSSProperties}
           aria-label="Ghi chú nội bộ"
           onKeyDown={(event) => event.key === 'Escape' && closePanel()}
         >
@@ -140,6 +203,7 @@ export function FormNotes({ code, initialOpen = false }: { code: string; initial
         ref={buttonRef}
         type="button"
         className={`${styles.fab} ${open ? styles.fabOpen : ''}`}
+        style={fabBottomStyle}
         onClick={() => (open ? closePanel() : setOpen(true))}
         aria-expanded={open}
         aria-label={noteCount ? `Ghi chú nội bộ (${noteCount})` : 'Ghi chú nội bộ'}

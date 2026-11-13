@@ -99,7 +99,7 @@ function FormDetailView({ form }: { form: FormDetail }) {
   const openNotesOnLoad = readOpenNotes(useLocation().state);
 
   return (
-    <div className={`${styles.form} ${showNotes ? styles.withNotes : ''}`}>
+    <div className={styles.form}>
       <div className={styles.head}>
         <div className={styles.headText}>
           <h1 className={styles.title}>Chi tiết đơn {form.code}</h1>

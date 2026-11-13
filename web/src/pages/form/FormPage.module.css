@@ -4,8 +4,6 @@
 .back{display:inline-flex;align-items:center;gap:4px;border:0;background:none;color:var(--muted);font-weight:500;font-size:13.5px;cursor:pointer;padding:4px 0;margin-bottom:-12px;justify-self:start}
 .back:hover{color:var(--accent)}
 .form{display:grid;gap:18px;min-width:0}
-/* có nút tròn Ghi chú nội bộ ở góc phải dưới: hàng nút dính đáy chừa chỗ để không bị nút che */
-.withNotes .submitRow{margin-right:68px}
 .errorCard{display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);padding:28px}
 
 /* đầu trang: tiêu đề bên trái, nút "Thông tin đơn" bên phải */
