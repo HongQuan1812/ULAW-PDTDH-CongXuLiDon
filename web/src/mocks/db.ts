@@ -1236,6 +1236,15 @@ export function getFormNotes(code: string): FormNote[] {
 }
 
 /**
+ * Đếm ghi chú của nhiều lá đơn.
+ * @param codes  các mã đơn
+ * @returns      số ghi chú theo mã đơn, đủ mọi mã đã hỏi (chưa có ghi chú thì 0)
+ */
+export function countFormNotes(codes: readonly string[]): Record<string, number> {
+  return Object.fromEntries(codes.map((code) => [code, FORM_NOTES.get(code)?.length ?? 0]));
+}
+
+/**
  * Thêm một ghi chú vào cuối chuỗi.
  * @param code     mã đơn (đã biết là có)
  * @param content  nội dung (đã kiểm tra không trống)

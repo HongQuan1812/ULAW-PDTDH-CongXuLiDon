@@ -18,7 +18,13 @@ export const FORM_NOTE_ENDPOINTS = {
   /** PATCH SaveFormNoteRequest → FormNote: sửa nội dung · DELETE → 204: xóa.
       Cần quyền internalNotes và là người viết ghi chú (không thì 403); không có đơn, không có ghi chú thì 404 */
   note: '/forms/:code/notes/:noteId',
+  /** GET ?codes=<mã đơn>,<mã đơn>… → FormNoteCountsResponse: số ghi chú của từng đơn (cột Ghi chú của bảng đơn).
+      Mã đơn không có, hoặc chưa có ghi chú thì 0. Cần quyền internalNotes */
+  counts: '/form-notes/counts',
 } as const;
+
+/** Tên tham số chứa các mã đơn của lệnh đếm ghi chú. */
+export const FORM_NOTE_COUNTS_PARAM = 'codes';
 
 /**
  * Đường dẫn API các ghi chú của một lá đơn.
@@ -37,6 +43,24 @@ export function formNotesPath(code: string): string {
  */
 export function formNotePath(code: string, noteId: string): string {
   return `${formNotesPath(code)}/${encodeURIComponent(noteId)}`;
+}
+
+/**
+ * Đường dẫn API đếm ghi chú của nhiều lá đơn.
+ * @param codes  các mã đơn (mã đơn không có dấu phẩy)
+ * @returns      vd '/form-notes/counts?codes=XMM-2026-001-00001%2CXMM-2026-001-00002'
+ */
+export function formNoteCountsPath(codes: readonly string[]): string {
+  return `${FORM_NOTE_ENDPOINTS.counts}?${new URLSearchParams({ [FORM_NOTE_COUNTS_PARAM]: codes.join(',') })}`;
+}
+
+/**
+ * Đọc các mã đơn từ tham số của lệnh đếm ghi chú.
+ * @param codesParam  giá trị tham số codes; không có thì null
+ * @returns           các mã đơn, bỏ chỗ trống và mã trùng
+ */
+export function parseFormNoteCountsParam(codesParam: string | null): string[] {
+  return [...new Set((codesParam ?? '').split(',').map((code) => code.trim()).filter(Boolean))];
 }
 
 /* ---------- Câu thông báo ---------- */
@@ -80,3 +104,7 @@ export const SaveFormNoteRequestSchema = z.object({
   content: RichTextDocSchema.refine((doc) => !isRichTextEmpty(doc), FORM_NOTE_MESSAGES.empty),
 });
 export type SaveFormNoteRequest = z.infer<typeof SaveFormNoteRequestSchema>;
+
+/** Trả về từ GET /form-notes/counts: số ghi chú theo mã đơn, đủ mọi mã đơn đã hỏi. */
+export const FormNoteCountsResponseSchema = z.object({ counts: z.record(z.string(), z.number().int().nonnegative()) });
+export type FormNoteCountsResponse = z.infer<typeof FormNoteCountsResponseSchema>;

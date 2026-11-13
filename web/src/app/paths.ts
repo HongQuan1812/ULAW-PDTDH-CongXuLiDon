@@ -87,6 +87,21 @@ export interface ReturnState {
   previousPageLabel: string;
 }
 
+/** state gửi kèm khi mở trang chi tiết đơn từ một bảng đơn. */
+export interface FormPageState extends ReturnState {
+  /** true: mở sẵn khung Ghi chú nội bộ (bấm ô Ghi chú của bảng) */
+  openNotes?: boolean;
+}
+
+/**
+ * Đọc yêu cầu mở sẵn khung ghi chú từ state của trang chi tiết đơn.
+ * @param locationState  location.state của React Router
+ * @returns              true nếu trang trước muốn mở sẵn khung ghi chú
+ */
+export function readOpenNotes(locationState: unknown): boolean {
+  return (locationState as Partial<FormPageState> | null)?.openNotes === true;
+}
+
 /**
  * Đọc tên trang trước từ state của trang (nếu trang trước có gửi kèm).
  * @param locationState  location.state của React Router

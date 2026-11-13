@@ -2,16 +2,19 @@
 import { delay, http, HttpResponse } from 'msw';
 import {
   ENDPOINTS,
+  FORM_NOTE_COUNTS_PARAM,
   FORM_NOTE_MESSAGES,
   SaveFormNoteRequestSchema,
   can,
   canEditFormNote,
+  parseFormNoteCountsParam,
+  type FormNoteCountsResponse,
   type FormNote,
   type FormNotesResponse,
   type SaveFormNoteRequest,
   type Session,
 } from '@ulaw/shared';
-import { addFormNote, deleteFormNote, findFormNote, formExists, getFormNotes, readSession, updateFormNote } from '../db';
+import { addFormNote, countFormNotes, deleteFormNote, findFormNote, formExists, getFormNotes, readSession, updateFormNote } from '../db';
 import { MOCK_DELAY_MS, api, apiError } from '../http';
 
 /**
@@ -54,6 +57,16 @@ function noteAccessError(code: string, noteId: string, session: Session): Respon
 }
 
 export const formNoteHandlers = [
+  // Số ghi chú của nhiều đơn (cột Ghi chú của bảng đơn); mã đơn không có thì 0
+  http.get(api(ENDPOINTS.formNotes.counts), async ({ request }) => {
+    await delay(MOCK_DELAY_MS);
+    const session = await readSession();
+    if (!session) return apiError(401, FORM_NOTE_MESSAGES[401]);
+    if (!can(session.role, 'internalNotes')) return apiError(403, FORM_NOTE_MESSAGES[403]);
+    const codes = parseFormNoteCountsParam(new URL(request.url).searchParams.get(FORM_NOTE_COUNTS_PARAM));
+    return HttpResponse.json<FormNoteCountsResponse>({ counts: countFormNotes(codes) });
+  }),
+
   // Các ghi chú của lá đơn
   http.get(api(ENDPOINTS.formNotes.list), async ({ params }) => {
     await delay(MOCK_DELAY_MS);

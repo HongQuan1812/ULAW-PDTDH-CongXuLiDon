@@ -82,6 +82,7 @@ function HandledFormsSection({
         emptyText={emptyText}
         groupStartKey="receiver"
         pageLabel={pageLabel}
+        showNotes
       />
     </section>
   );

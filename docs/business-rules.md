@@ -96,6 +96,7 @@ Có lí do của Phòng Đào tạo thì hiện thêm dòng "Phòng Đào tạo:
 - Mỗi ghi chú có người viết, lúc viết; nội dung là văn bản có định dạng, không được trống.
 - **Chỉ người viết sửa, xóa được ghi chú của mình** (`canEditFormNote`), Admin cũng không sửa, xóa ghi chú người khác. Sửa thì hiện "đã sửa".
 - Trang chi tiết đơn: nút tròn ở góc phải dưới, có số ghi chú; bấm thì mở khung ghi chú, kéo góc trên bên trái để co giãn.
+- Bảng Quản lí đơn và Đơn phụ trách có cột **Ghi chú** (số ghi chú của đơn); bấm ô đó thì mở trang chi tiết đơn và mở sẵn khung ghi chú.
 - Hợp đồng API: `shared/src/api-contract/form-notes.ts`. Hiện mới có API giả, ghi chú mất khi tải lại trang.
 
 ## Loại đơn

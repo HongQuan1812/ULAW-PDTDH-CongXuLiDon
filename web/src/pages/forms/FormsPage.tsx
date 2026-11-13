@@ -132,6 +132,7 @@ export function FormsPage() {
           groupStartKey="name"
           pageLabel="Quản lí đơn"
           renderCell={renderCell}
+          showNotes
           extraButtons={
             <CccdToggleButton
               shown={showCccd}

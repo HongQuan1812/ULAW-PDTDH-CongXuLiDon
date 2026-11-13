@@ -12,6 +12,7 @@ import { RichTextEditor } from '../../components/rich-text/RichTextEditor';
 import { RichTextView } from '../../components/rich-text/RichTextView';
 import { useAuth } from '../auth/useAuth';
 import { formatDateTime } from '../../lib/format';
+import { NoteIcon } from './NoteIcon';
 import styles from './FormNotes.module.css';
 
 /** Câu báo khi gửi lỗi mà máy chủ không gửi kèm câu nào (vd mất mạng). */
@@ -94,11 +95,12 @@ function usePanelResize() {
 
 /**
  * Nút tròn và khung ghi chú nội bộ của một lá đơn. Chỉ đặt vào trang khi người xem có quyền internalNotes.
- * @param code  mã đơn
- * @returns     nút tròn cố định ở góc phải dưới, và khung ghi chú khi đang mở
+ * @param code         mã đơn
+ * @param initialOpen  true: mở sẵn khung (vd bấm ô Ghi chú ở bảng đơn)
+ * @returns            nút tròn cố định ở góc phải dưới, và khung ghi chú khi đang mở
  */
-export function FormNotes({ code }: { code: string }) {
-  const [open, setOpen] = useState(false);
+export function FormNotes({ code, initialOpen = false }: { code: string; initialOpen?: boolean }) {
+  const [open, setOpen] = useState(initialOpen);
   const notesQuery = useFormNotes(code);
   const { size, handleProps } = usePanelResize();
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -143,16 +145,7 @@ export function FormNotes({ code }: { code: string }) {
         aria-label={noteCount ? `Ghi chú nội bộ (${noteCount})` : 'Ghi chú nội bộ'}
         title="Ghi chú nội bộ"
       >
-        <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true">
-          <path
-            d="M4 5.5A2.5 2.5 0 0 1 6.5 3h11A2.5 2.5 0 0 1 20 5.5v8a2.5 2.5 0 0 1-2.5 2.5H10l-4.2 3.6c-.5.4-1.3.1-1.3-.6V16H6.5"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.8"
-            strokeLinejoin="round"
-          />
-          <path d="M8 8h8M8 11.5h5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-        </svg>
+        <NoteIcon />
         {noteCount > 0 && <span className={styles.badge}>{noteCount}</span>}
       </button>
     </>

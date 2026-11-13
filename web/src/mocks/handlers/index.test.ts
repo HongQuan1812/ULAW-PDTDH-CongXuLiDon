@@ -52,4 +52,11 @@ describe('buildHandlers', () => {
     expect(await routeOf(orderedHandlers, 'GET', '/api/forms/mine')).toBe('passthrough');
     expect(await routeOf(orderedHandlers, 'GET', '/api/forms/XMM-2026-001-00001')).toBe('mock');
   });
+
+  test('nhóm forms, form thật, form-notes giả: ghi chú và đếm ghi chú vẫn dùng API giả', async () => {
+    const [, ...orderedHandlers] = buildHandlers(new Set(['forms', 'form']));
+    expect(await routeOf(orderedHandlers, 'GET', '/api/form-notes/counts?codes=XMM-2026-001-00001')).toBe('mock');
+    expect(await routeOf(orderedHandlers, 'GET', '/api/forms/XMM-2026-001-00001/notes')).toBe('mock');
+    expect(await routeOf(orderedHandlers, 'GET', '/api/forms/XMM-2026-001-00001')).toBe('passthrough');
+  });
 });

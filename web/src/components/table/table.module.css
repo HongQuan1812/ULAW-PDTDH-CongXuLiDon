@@ -71,6 +71,9 @@
 .table .groupStart{border-left:1px solid var(--line)}
 .numberCell{color:var(--muted)}
 .goCell{text-align:right;width:1%}
+/* cột Ghi chú của bảng đơn: hẹp, căn giữa */
+.noteHead{text-align:center;width:1%;white-space:nowrap}
+.noteCell{text-align:center;width:1%}
 .goLabel{display:inline-flex;align-items:center;color:var(--faint);font-weight:500;font-size:13px}
 .rowLink:hover .goLabel{color:var(--accent)}
 .table td.messageCell{text-align:center;color:var(--muted);padding:56px 20px;white-space:normal}

@@ -8,10 +8,10 @@
    Cán bộ có quyền internalNotes thấy nút tròn Ghi chú nội bộ ở góc phải dưới (người nộp đơn không thấy).
    Lịch sử: thêm ở phần sau của bước 5. */
 import { useState, type FormEvent } from 'react';
-import { Link, useParams } from 'react-router';
+import { Link, useLocation, useParams } from 'react-router';
 import { FORM_MESSAGES, can, canDecideOn, canEditForm, canReceiveForm, canTransferForm, type FormDetail, type FormStatus } from '@ulaw/shared';
 import { useFormDetail, useReceiveForm } from '../../api/form';
-import { PAGE_PATH, personProfilePath, type ReturnState } from '../../app/paths';
+import { PAGE_PATH, personProfilePath, readOpenNotes, type ReturnState } from '../../app/paths';
 import { Button } from '../../components/Button';
 import { LoadError, loadErrorMessage } from '../../components/LoadError';
 import { RefreshButton } from '../../components/RefreshButton';
@@ -95,6 +95,8 @@ function FormDetailView({ form }: { form: FormDetail }) {
   const [editorKey, setEditorKey] = useState(0);
   const [transferOpen, setTransferOpen] = useState(false);
   const showNotes = can(role, 'internalNotes');
+  // Mở từ ô Ghi chú của bảng đơn thì mở sẵn khung ghi chú
+  const openNotesOnLoad = readOpenNotes(useLocation().state);
 
   return (
     <div className={`${styles.form} ${showNotes ? styles.withNotes : ''}`}>
@@ -154,7 +156,7 @@ function FormDetailView({ form }: { form: FormDetail }) {
         </FormInfoPanel>
       </div>
       <TransferDialog form={form} open={transferOpen} onClose={() => setTransferOpen(false)} />
-      {showNotes && <FormNotes code={form.code} />}
+      {showNotes && <FormNotes code={form.code} initialOpen={openNotesOnLoad} />}
     </div>
   );
 }

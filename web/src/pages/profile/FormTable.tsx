@@ -4,8 +4,9 @@
    Nút › đầu dòng (và nút mở / đóng tất cả ở tiêu đề) sổ xuống phần xem nhanh ngay trong bảng (QuickView). */
 import { Fragment, useState, type KeyboardEvent, type ReactElement, type ReactNode } from 'react';
 import { useNavigate } from 'react-router';
-import type { FormSummary } from '@ulaw/shared';
-import { formPath, PAGE_LABEL, type ReturnState } from '../../app/paths';
+import { can, type FormSummary } from '@ulaw/shared';
+import { useFormNoteCounts } from '../../api/form-notes';
+import { formPath, PAGE_LABEL, type FormPageState } from '../../app/paths';
 import { StatusPill } from '../../components/StatusPill';
 import { LoadError } from '../../components/LoadError';
 import { HeaderCell } from '../../components/table/HeaderCell';
@@ -14,6 +15,8 @@ import { Pager } from '../../components/table/Pager';
 import { TableToolbar } from '../../components/table/TableToolbar';
 import { displayText, type TableField } from '../../components/table/tableTools';
 import type { ServerTable } from '../../components/table/useServerTable';
+import { useAuth } from '../../features/auth/useAuth';
+import { NoteCountButton } from '../../features/form-notes/NoteCountButton';
 import { EMPTY_TEXT, formatDate } from '../../lib/format';
 import tableStyles from '../../components/table/table.module.css';
 import { QuickView } from './QuickView';
@@ -43,6 +46,8 @@ interface FormTableProps<Row extends FormSummary> {
   renderCell?: (field: TableField<Row>, form: Row, query: string) => ReactElement | undefined;
   /** Tùy chọn: các nút thêm trên thanh công cụ, ngay sau nút Lọc (vd Hiện CCCD) */
   extraButtons?: ReactNode;
+  /** true: có cột Ghi chú (số ghi chú nội bộ, bấm thì mở đơn kèm khung ghi chú); chỉ hiện khi người xem có quyền internalNotes */
+  showNotes?: boolean;
 }
 
 /**
@@ -62,12 +67,26 @@ export function FormTable<Row extends FormSummary>({
   pageLabel = PAGE_LABEL.profile,
   renderCell: renderCustomCell,
   extraButtons,
+  showNotes = false,
 }: FormTableProps<Row>) {
   const navigate = useNavigate();
+  const { role } = useAuth();
   // Tô sáng theo chữ đã gửi lên máy chủ (ứng với các dòng đang hiện), không theo chữ đang gõ dở
   const { searchText: query, sorting, filterRules, hasCriteria, isPageLoading } = table;
   const pageRows = rows ?? table.rows;
-  const columnCount = fields.length + 2;
+
+  // Cột Ghi chú: số ghi chú của các đơn trên trang đang xem
+  const notesShown = showNotes && can(role, 'internalNotes');
+  const noteCountsQuery = useFormNoteCounts(
+    pageRows.map((form) => form.code),
+    notesShown,
+  );
+  const columnCount = fields.length + (notesShown ? 3 : 2);
+  // Cột Ghi chú thuộc nhóm thông tin đơn: đứng cuối nhóm, ngay trước nhóm cột bên phải (người tiếp nhận / người nộp…)
+  const groupStartIndex = fields.findIndex((field) => field.key === groupStartKey);
+  const noteColumnIndex = groupStartIndex === -1 ? fields.length : groupStartIndex;
+  const formFields = fields.slice(0, noteColumnIndex);
+  const groupFields = fields.slice(noteColumnIndex);
 
   // Các đơn đang mở xem nhanh (theo mã đơn)
   const [openCodes, setOpenCodes] = useState<ReadonlySet<string>>(new Set());
@@ -88,9 +107,18 @@ export function FormTable<Row extends FormSummary>({
     });
   const groupClass = (key: string) => (key === groupStartKey ? tableStyles.groupStart : '');
 
+  /**
+   * Ô tiêu đề của một cột (bấm để sắp xếp, lọc).
+   * @param field  cột
+   * @returns      thẻ <th>
+   */
+  const renderHeaderCell = (field: TableField<Row>) => (
+    <HeaderCell key={field.key} field={field} sorting={sorting} filterRules={filterRules} className={groupClass(field.key)} />
+  );
+
   // Bấm dòng hoặc nhấn Enter khi dòng đang được chọn: mở trang chi tiết đơn (trang đó có nút "‹ Quay lại <pageLabel>")
-  const openForm = (code: string) =>
-    navigate(formPath(code), { state: { previousPageLabel: pageLabel } satisfies ReturnState });
+  const openForm = (code: string, openNotes = false) =>
+    navigate(formPath(code), { state: { previousPageLabel: pageLabel, openNotes } satisfies FormPageState });
   const openOnEnter = (event: KeyboardEvent<HTMLTableRowElement>, code: string) => {
     if (event.target !== event.currentTarget || event.key !== 'Enter') return;
     event.preventDefault();
@@ -176,15 +204,9 @@ export function FormTable<Row extends FormSummary>({
                   ›
                 </button>
               </th>
-              {fields.map((field) => (
-                <HeaderCell
-                  key={field.key}
-                  field={field}
-                  sorting={sorting}
-                  filterRules={filterRules}
-                  className={groupClass(field.key)}
-                />
-              ))}
+              {formFields.map(renderHeaderCell)}
+              {notesShown && <th className={tableStyles.noteHead}>Ghi chú</th>}
+              {groupFields.map(renderHeaderCell)}
               <th>
                 <span className="sr-only">Mở đơn</span>
               </th>
@@ -229,7 +251,13 @@ export function FormTable<Row extends FormSummary>({
                           ›
                         </button>
                       </td>
-                      {fields.map((field) => renderCell(field, form))}
+                      {formFields.map((field) => renderCell(field, form))}
+                      {notesShown && (
+                        <td className={tableStyles.noteCell}>
+                          <NoteCountButton code={form.code} count={noteCountsQuery.data?.[form.code]} onOpen={() => openForm(form.code, true)} />
+                        </td>
+                      )}
+                      {groupFields.map((field) => renderCell(field, form))}
                       <td className={tableStyles.goCell}>
                         <span className={tableStyles.goLabel}>Chi tiết ›</span>
                       </td>
@@ -237,7 +265,7 @@ export function FormTable<Row extends FormSummary>({
                     {isOpen && (
                       <tr>
                         <td className={quickStyles.detailCell} />
-                        <td colSpan={fields.length + 1} className={quickStyles.detailCell}>
+                        <td colSpan={columnCount - 1} className={quickStyles.detailCell}>
                           <QuickView code={form.code} />
                         </td>
                       </tr>
