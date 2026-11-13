@@ -1,6 +1,6 @@
 /* Lá đơn mẫu (Xét miễn môn) và người tiếp nhận, xử lí. */
 import type { FormSummary, FormType } from '../api-contract';
-import type { FormAnswers, FormStatus, TableCell } from '../aux-schema';
+import type { FileRef, FormAnswers, FormStatus, TableCell } from '../aux-schema';
 import { formatFormCode } from '../business-rules';
 import { FORM_TYPE_SEED } from './form-types';
 import { cloneSeedValue } from './clone';
@@ -148,6 +148,116 @@ function seedOtherStudentForms(): UnassignedForm[] {
   return forms;
 }
 
+/** Bản chụp phiên bản mới nhất (2) của đơn thử nghiệm cho đơn mẫu. */
+const TEST_FORM_VERSION = 2;
+const testSnapshot = () => cloneSeedValue(FORM_TYPE_SEED.find((formType) => formType.id === 'thu')!);
+
+/** Văn bản có định dạng gồm các đoạn, cho câu trả lời "đoạn văn". */
+const richText = (...paragraphs: string[]): FormAnswers[string] => ({
+  type: 'doc',
+  content: paragraphs.map((text) => ({ type: 'paragraph', content: [{ type: 'text', text }] })),
+});
+
+/* Câu trả lời mẫu của đơn thử nghiệm: đủ loại câu hỏi, số dòng bảng 0 – 4, số lựa chọn và số tệp khác nhau. */
+const TEST_FORM_SAMPLES: { status: FormStatus; answers: FormAnswers }[] = [
+  {
+    status: 'nop',
+    answers: {
+      'tieu-de': 'Xin nghỉ học kỳ 1 vì lí do sức khỏe',
+      'li-do': richText('Em bị tai nạn giao thông, cần điều trị dài ngày.', 'Em xin phép nghỉ từ đầu học kỳ.'),
+      'so-tin-chi': 62,
+      'ngay-nghi': '2026-09-05',
+      'hoc-ky': 'Học kỳ 1',
+      'giay-to': ['Bảng điểm', 'Giấy xác nhận sinh viên'],
+      'co-so': 'Cơ sở Nguyễn Tất Thành',
+      'mon-hoc': [['Luật Dân sự 1', 3, 'Lớp DS01'], ['Luật Hình sự 1', 3, 'Lớp HS02'], ['Tiếng Anh pháp lý 1', 2, null], ['Logic học', 2, 'Học cùng khóa trên']],
+      'tep-dinh-kem': [{ id: '', name: 'Giay_ra_vien.pdf', sizeBytes: 412_880 }],
+    },
+  },
+  {
+    status: 'xet',
+    answers: {
+      'tieu-de': 'Đăng ký học vượt hai môn',
+      'li-do': richText('Em muốn rút ngắn thời gian học.'),
+      'so-tin-chi': 90,
+      'ngay-nghi': '',
+      'hoc-ky': 'Học kỳ hè',
+      'giay-to': ['Bảng điểm', 'Giấy xác nhận sinh viên', 'Đơn có chữ ký phụ huynh'],
+      'co-so': 'Cơ sở Bình Thạnh',
+      'mon-hoc': [['Luật Thương mại 1', 3, 'Lớp TM01'], ['Luật Lao động', 2, '']],
+      'tep-dinh-kem': [],
+    },
+  },
+  {
+    status: 'bs',
+    answers: {
+      'tieu-de': 'Xin hoãn thi cuối kỳ',
+      'li-do': richText('Em trùng lịch thi hai môn.'),
+      'so-tin-chi': 48,
+      'ngay-nghi': '2026-10-12',
+      'hoc-ky': 'Học kỳ 2',
+      'giay-to': ['Bảng điểm'],
+      'co-so': '',
+      'mon-hoc': [],
+      'tep-dinh-kem': [{ id: '', name: 'Lich_thi_trung.docx', sizeBytes: 98_304 }, { id: '', name: 'Don_xac_nhan.pdf', sizeBytes: 215_040 }],
+    },
+  },
+  {
+    status: 'duyet',
+    answers: {
+      'tieu-de': 'Đăng ký học lại ba môn',
+      'li-do': richText('Em chưa đạt ba môn ở học kỳ trước.', 'Em xin đăng ký học lại cùng khóa dưới.', 'Em xin cảm ơn Phòng Đào tạo.'),
+      'so-tin-chi': 75,
+      'ngay-nghi': '2026-08-20',
+      'hoc-ky': 'Học kỳ 1',
+      'giay-to': ['Bảng điểm', 'Đơn có chữ ký phụ huynh'],
+      'co-so': 'Cơ sở Thủ Đức',
+      'mon-hoc': [['Luật Hành chính', 3, 'Học lại'], ['Luật Hiến pháp', 3, 'Học lại'], ['Luật Đất đai', 2, 'Học lại'], ['Luật Tố tụng dân sự', 3, ''], ['Công pháp quốc tế', 3, 'Học cải thiện']],
+      'tep-dinh-kem': [{ id: '', name: 'Bang_diem_hoc_ky.pdf', sizeBytes: 530_112 }],
+    },
+  },
+  {
+    status: 'tc',
+    answers: {
+      'tieu-de': 'Xin bảo lưu kết quả',
+      'li-do': richText('Em xin bảo lưu để đi du học trao đổi.'),
+      'so-tin-chi': 30,
+      'ngay-nghi': '2026-11-01',
+      'hoc-ky': 'Học kỳ 2',
+      'giay-to': [],
+      'co-so': 'Cơ sở Nguyễn Tất Thành',
+      'mon-hoc': [['Triết học Mác – Lênin', 3, '']],
+      'tep-dinh-kem': [],
+    },
+  },
+];
+
+/**
+ * Sinh các đơn thử nghiệm mẫu (đủ 10 loại câu hỏi), của các sinh viên khác sv-1.
+ * @returns  các đơn thử nghiệm đã điền, mã THU-<năm>-002-<STT>
+ */
+function seedTestForms(): UnassignedForm[] {
+  return TEST_FORM_SAMPLES.map(({ status, answers }, i) => {
+    const day = new Date(2026, 9, 28 - i * 6);
+    const code = formatFormCode('THU', day.getFullYear(), TEST_FORM_VERSION, i + 1);
+    const submittedAt = `${dateText(day)}T${twoDigits(9 + i)}:${twoDigits((i * 23) % 60)}`;
+    const files = (answers['tep-dinh-kem'] as FileRef[]).map((file, k) => ({ ...file, id: `${SEED_FILE_ID_PREFIX}${code}-${k + 1}` }));
+    return {
+      ownerId: OTHER_STUDENT_IDS[i]!,
+      code,
+      formTypeId: 'thu',
+      formTypeName: 'Đơn thử nghiệm (đủ loại câu hỏi)',
+      submittedAt,
+      updatedAt: submittedAt,
+      status,
+      note: SAMPLE_NOTES[status] ?? '',
+      receivedAt: status === 'nop' ? null : addHours(submittedAt, 4 + i),
+      answers: cloneSeedValue({ ...answers, 'tep-dinh-kem': files }),
+      formTypeSnapshot: testSnapshot(),
+    };
+  });
+}
+
 /**
  * Gán người tiếp nhận, người xử lí cho các đơn:
  * đơn Đã nộp chưa ai tiếp nhận; đơn khác do lần lượt 3 cán bộ tiếp nhận,
@@ -175,5 +285,5 @@ function assignStaff(forms: UnassignedForm[]): SeedForm[] {
  * @returns  đơn của sinh viên đăng nhập thử rồi đơn của sinh viên khác, đã gán cán bộ
  */
 export function seedForms(): SeedForm[] {
-  return assignStaff([...seedStudentForms(), ...seedOtherStudentForms()]);
+  return assignStaff([...seedStudentForms(), ...seedOtherStudentForms(), ...seedTestForms()]);
 }

@@ -117,7 +117,10 @@ async function seedAll(prisma: PrismaClient): Promise<void> {
 
   await prisma.fileObject.createMany({
     data: forms.flatMap((form) =>
-      (form.answers['files'] as { id: string; name: string; sizeBytes: number }[] | undefined ?? [])
+      // Mọi tệp mẫu trong câu trả lời (câu hỏi tải tệp có id tùy loại đơn): mảng gồm các đối tượng có id bắt đầu bằng tiền tố tệp mẫu
+      Object.values(form.answers)
+        .flatMap((answer) => (Array.isArray(answer) ? answer : []))
+        .filter((file): file is { id: string; name: string; sizeBytes: number } => typeof file === 'object' && file !== null && !Array.isArray(file) && 'sizeBytes' in file)
         .filter((file) => file.id.startsWith(SEED_FILE_ID_PREFIX))
         .map((file) => ({ id: file.id, formCode: form.code, name: file.name, sizeBytes: file.sizeBytes, storagePath: null, uploadedAt: toDate(form.submittedAt) })),
     ),

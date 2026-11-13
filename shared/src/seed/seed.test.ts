@@ -39,4 +39,14 @@ describe('dữ liệu mẫu', () => {
     expect(new Set(studentIds).size).toBe(studentIds.length);
     expect(Object.keys(STUDENT_DIRECTORY).filter((id) => !(id in SEED_ACCOUNTS))).toEqual([]);
   });
+
+  test('đơn thử nghiệm mẫu có đủ loại câu trả lời, bảng đủ 0 – 4 dòng, id tệp không trùng', () => {
+    const testForms = seedForms().filter((form) => form.formTypeId === 'thu');
+    const tableSizes = testForms.map((form) => (form.answers['mon-hoc'] as unknown[]).length);
+    const fileIds = testForms.flatMap((form) => (form.answers['tep-dinh-kem'] as { id: string }[]).map((file) => file.id));
+
+    expect(testForms.length).toBeGreaterThanOrEqual(5);
+    expect(new Set(tableSizes)).toEqual(new Set([0, 1, 2, 4, 5]));
+    expect(new Set(fileIds).size).toBe(fileIds.length);
+  });
 });
