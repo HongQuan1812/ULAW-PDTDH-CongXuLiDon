@@ -155,24 +155,24 @@ function FilterValueInputs<Row>({
     );
     if (rule.operator === 'range') {
       return (
-        <>
+        <div className={`${styles.rangeGroup} ${styles.dateRangeGroup}`}>
           {dateInput('Từ ngày', rule.from, (from) => onChange({ from }))}
           <span className={styles.rangeTo}>đến</span>
           {dateInput('Đến ngày', rule.to, (to) => onChange({ to }))}
-        </>
+        </div>
       );
     }
     return dateInput('Ngày', rule.value, (value) => onChange({ value }));
   }
 
-  // Số
+  // Số: "Từ … đến …" gom một cụm, không bị tách xuống hai dòng
   if (rule.operator === 'range') {
     return (
-      <>
+      <div className={styles.rangeGroup}>
         <input type="number" aria-label="Từ" placeholder="Từ" value={rule.from} onChange={(event) => onChange({ from: event.target.value })} />
         <span className={styles.rangeTo}>đến</span>
         <input type="number" aria-label="Đến" placeholder="Đến" value={rule.to} onChange={(event) => onChange({ to: event.target.value })} />
-      </>
+      </div>
     );
   }
   return (
