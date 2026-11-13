@@ -127,7 +127,7 @@ Cổng xử lí đơn/
 └── tsconfig.base.json
 ```
 
-## Lệnh thường dùng (khi đã dựng xong)
+## Lệnh thường dùng
 
 ```bash
 pnpm install
@@ -137,8 +137,13 @@ pnpm --filter web dev                   # chỉ chạy frontend + API giả
 docker compose up -d                    # postgres
 pnpm --filter api prisma migrate dev    # tạo bảng
 pnpm --filter api prisma db seed        # dữ liệu mẫu
-pnpm dev                                # chạy web + api cùng lúc
-pnpm test
+pnpm --filter api dev                   # chạy backend (cổng 3000), mở terminal riêng
+pnpm --filter web dev                   # chạy web (https://localhost:5173), mở terminal riêng
+
+# kiểm thử (gốc repo không có script chung, chạy theo từng gói)
+pnpm --filter shared test
+pnpm --filter api test
+pnpm --filter web test
 ```
 
 ## Quy ước
