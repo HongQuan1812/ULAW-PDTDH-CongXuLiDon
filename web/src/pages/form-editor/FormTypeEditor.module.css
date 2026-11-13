@@ -159,7 +159,7 @@
 .formats{display:flex;flex-wrap:wrap;gap:8px 18px;align-items:center;min-height:43px}
 .check{display:inline-flex;align-items:center;gap:8px;font-size:13.5px;cursor:pointer}
 
-/* hàng nút cuối trình soạn: + Thêm phần bên trái; Bỏ thay đổi, Xóa loại đơn, Lưu bên phải */
+/* hàng nút cuối trình soạn: Xóa, Bỏ thay đổi, Lưu nằm bên phải */
 .bottom{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
 .spacer{flex:1}
 .dialogButtons{display:flex;justify-content:flex-end;gap:8px}

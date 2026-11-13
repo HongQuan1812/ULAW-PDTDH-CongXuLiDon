@@ -1,6 +1,6 @@
 /* Trình soạn loại đơn (#/soan-don/<mã loại đơn>[?phien-ban=<số>], tạo mới: #/soan-don/moi).
    Gồm: nút quay lại, tiêu đề, tab Soạn / Xem trước, khung Phiên bản bên phải (màn hình hẹp: trượt ra), nhãn "Chưa lưu", khung báo lỗi, câu nhắc về phiên bản,
-   thẻ Thông tin loại đơn, các phần và câu hỏi, hàng nút cuối (+ Thêm phần · Xóa · Bỏ thay đổi · Lưu; hai nút cuối chỉ hiện khi có thay đổi).
+   thẻ Thông tin loại đơn, các phần và câu hỏi, nút + Thêm phần, khung Mẫu xuất file, hàng nút cuối (Xóa · Bỏ thay đổi · Lưu; hai nút cuối chỉ hiện khi có thay đổi).
 
    Phiên bản (xem shared/src/api-contract/form-types.ts):
    - Phiên bản Nháp sửa được; Lưu ở Nháp để soạn tiếp, hoặc ở Đang mở để mở (nội dung khóa lại).
@@ -640,6 +640,11 @@ function FormTypeEditor({ managed, requestedVersion }: FormTypeEditorProps) {
                   onQuestionAdded={(questionId) => setFocusTarget({ sectionId: null, questionId })}
                 />
               ))}
+
+              {/* Nút thêm phần: ngay dưới phần cuối, trên khung Mẫu xuất file */}
+              <div>
+                <Button onClick={addSection}>+ Thêm phần</Button>
+              </div>
             </fieldset>
 
             {/* Mẫu xuất file: thuộc loại đơn (mọi phiên bản) nên không bị khóa theo phiên bản; thay đổi chờ bấm Lưu */}
@@ -652,9 +657,6 @@ function FormTypeEditor({ managed, requestedVersion }: FormTypeEditorProps) {
             />
 
             <div className={styles.bottom}>
-              <Button onClick={addSection} disabled={contentLocked}>
-                + Thêm phần
-              </Button>
               <span className={styles.spacer} />
               {selectedSaved?.status === 'draft' && (
                 <Button variant="danger" onClick={() => setConfirmingDelete(true)}>
