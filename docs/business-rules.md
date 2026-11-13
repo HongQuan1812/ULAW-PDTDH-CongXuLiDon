@@ -150,8 +150,15 @@ Mỗi loại đơn có hai nhóm mẫu, lưu ở máy chủ theo loại đơn, d
   `{stt}` là số thứ tự của đơn trong file. Không có đơn nào thì bỏ hàng mẫu.
 - **Hàng chỉ có mã của cả file** (`{so_don}` số đơn, `{loai_don}`, `{ngay_xuat}`) điền một lần, vd tiêu đề, dòng tổng.
   `so_don` cũng là mã dành riêng, không đặt làm mã câu hỏi được.
-- Câu hỏi dạng bảng điền vào một ô, mỗi dòng của bảng một dòng trong ô; có `{so_<mã bảng>}`, `{tong_<mã cột>}` như mẫu Word.
-  Không có vòng lặp, nên mã cột của bảng không dùng được (Kiểm tra báo là mã không có).
+- Câu hỏi dạng bảng có hai cách đặt trong mẫu:
+  - **Mỗi cột một ô** (file mẫu dựng sẵn làm vậy): đặt `{<mã cột>}` ở hàng mẫu. Đơn có bảng n dòng thì **chiếm n hàng**: mỗi hàng điền một dòng của bảng,
+    các ô còn lại của đơn (mã đơn, họ tên, tổng…) **gộp dọc** n hàng. Đơn không có dòng nào thì chiếm một hàng, ô của bảng để trống.
+    Đơn có nhiều bảng thì số hàng theo bảng dài nhất; bảng ngắn hơn để trống phần còn lại. `{stt_dong}` là số thứ tự dòng của bảng (đánh lại từ 1 ở mỗi đơn).
+    Hai bảng có cột trùng mã thì dùng bảng đứng trước.
+  - **Cả bảng một ô**: đặt `{<mã bảng>}`, mỗi dòng của bảng một dòng trong ô, vd "1. Triết học · 3".
+  - Cả hai cách đều có `{so_<mã bảng>}`, `{tong_<mã cột>}` như mẫu Word.
+- **File mẫu dựng sẵn** có đầu cột hai tầng: cột thường gộp dọc hai hàng; câu hỏi dạng bảng là ô gộp ngang trên các cột của nó, tên từng cột nằm ở tầng dưới.
+  Cột tổng (`{tong_<mã cột>}`) đứng sau bảng, thuộc cả đơn nên cũng gộp dọc.
 - Ô chỉ có một mã mà giá trị là số (vd `{stt}`, `{tong_so_tin_chi}`) được điền thành số, để Excel tính toán được.
 - Công thức trong mẫu không tự giãn theo số hàng chèn thêm; nên đặt dòng tổng bằng mã `{so_don}` hoặc tự viết công thức sau khi xuất.
 

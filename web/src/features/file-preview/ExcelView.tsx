@@ -1,10 +1,29 @@
 /* Xem Excel (.xlsx): giống Excel / Google Sheets: tiêu đề cột A, B, C, số dòng bên trái, thẻ sheet ở đáy.
-   Bản xem là gần đúng: chỉ có chữ trong ô, không giữ màu, gộp ô, công thức; file lớn bị cắt bớt. */
+   Bản xem là gần đúng: có chữ trong ô và ô gộp, không giữ màu, công thức; file lớn bị cắt bớt. */
 import { useEffect, useState } from 'react';
 import { columnLabel } from './columnLabel';
-import { MAX_PREVIEW_COLUMNS, MAX_PREVIEW_ROWS, readWorkbookSheets, type PreviewSheet } from './readWorkbookSheets';
+import { MAX_PREVIEW_COLUMNS, MAX_PREVIEW_ROWS, readWorkbookSheets, type PreviewMerge, type PreviewSheet } from './readWorkbookSheets';
 import { PreviewMessage } from './PreviewMessage';
 import styles from './FilePreview.module.css';
+
+/**
+ * Tra cứu ô gộp: ô trên cùng bên trái giữ chỗ cho cả vùng, các ô còn lại trong vùng không vẽ.
+ * @param merges  các vùng gộp của sheet
+ * @returns       vùng gộp theo vị trí "hàng,cột" của ô chính, và tập vị trí các ô bị phủ
+ */
+function indexMerges(merges: readonly PreviewMerge[]): { masters: Map<string, PreviewMerge>; covered: Set<string> } {
+  const masters = new Map<string, PreviewMerge>();
+  const covered = new Set<string>();
+  for (const merge of merges) {
+    masters.set(`${merge.row},${merge.column}`, merge);
+    for (let row = merge.row; row < merge.row + merge.rowSpan; row++) {
+      for (let column = merge.column; column < merge.column + merge.columnSpan; column++) {
+        if (row !== merge.row || column !== merge.column) covered.add(`${row},${column}`);
+      }
+    }
+  }
+  return { masters, covered };
+}
 
 /**
  * @param blob  nội dung tệp .xlsx
@@ -42,6 +61,7 @@ export function ExcelView({ blob }: { blob: Blob }) {
 
   const sheet = sheets[selectedSheetIndex] ?? sheets[0]!;
   const columnCount = sheet.rows[0]?.length ?? 0;
+  const { masters, covered } = indexMerges(sheet.merges);
   return (
     <div className={styles.excel}>
       <div className={styles.sheetScroll}>
@@ -65,9 +85,16 @@ export function ExcelView({ blob }: { blob: Blob }) {
                   <th scope="row" className={styles.sheetRowHead}>
                     {rowIndex + 1}
                   </th>
-                  {row.map((cellText, columnIndex) => (
-                    <td key={columnIndex}>{cellText}</td>
-                  ))}
+                  {row.map((cellText, columnIndex) => {
+                    const cellKey = `${rowIndex},${columnIndex}`;
+                    if (covered.has(cellKey)) return null;
+                    const merge = masters.get(cellKey);
+                    return (
+                      <td key={columnIndex} rowSpan={merge?.rowSpan} colSpan={merge?.columnSpan}>
+                        {cellText}
+                      </td>
+                    );
+                  })}
                 </tr>
               ))}
             </tbody>

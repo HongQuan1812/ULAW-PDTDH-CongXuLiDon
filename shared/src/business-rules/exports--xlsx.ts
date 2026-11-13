@@ -3,14 +3,15 @@
    - Hàng có mã của đơn (vd {ma_don}, {ho_ten}) là hàng mẫu: khi xuất, hàng đó nhân lên, mỗi lá đơn một hàng,
      giữ định dạng của hàng mẫu; {stt} là số thứ tự của đơn trong file.
    - Hàng chỉ có mã chung của file (STATS_SUMMARY_TAGS: {so_don}, {loai_don}, {ngay_xuat}) chỉ điền một lần, vd tiêu đề, dòng tổng.
-   - Câu hỏi dạng bảng điền vào một ô, mỗi dòng của bảng một dòng trong ô; {so_<bảng>}, {tong_<cột>} điền như mẫu Word.
-     Mã cột của bảng không dùng được (Excel không có vòng lặp).
+   - Câu hỏi dạng bảng có hai cách đặt: cả bảng vào một ô ({<bảng>}, mỗi dòng của bảng một dòng trong ô),
+     hoặc mỗi cột một ô ({<cột>}): đơn có n dòng thì chiếm n hàng, ô cột của bảng điền từng dòng,
+     các ô còn lại của đơn gộp dọc n hàng. {stt_dong} là số thứ tự dòng của bảng. {so_<bảng>}, {tong_<cột>} điền như mẫu Word.
    ExcelJS khá nặng nên chỉ tải khi cần (import động). Backend (api/src/exports) và API giả cùng dùng. */
 import type { Cell, Row, Workbook, Worksheet } from 'exceljs';
 import { EXPORT_MESSAGES, type ExportTemplateCheck, type ExportTemplatePurpose } from '../api-contract/exports';
 import type { FormSection } from '../aux-schema/form-types--sections';
 import { openDocx } from './exports--docx';
-import { FORM_COUNT_TAG, ROW_NUMBER_TAG, STATS_SUMMARY_TAGS, columnTagOwners, knownExportTags, questionExportTags, type ExportData } from './exports--tags';
+import { FORM_COUNT_TAG, ROW_NUMBER_TAG, STATS_SUMMARY_TAGS, knownExportTags, questionExportTags, type ExportData } from './exports--tags';
 
 /** Nội dung file: ArrayBuffer (trình duyệt) hoặc Buffer / Uint8Array (Node). */
 export type XlsxBytes = ArrayBuffer | Uint8Array;
@@ -170,28 +171,134 @@ function toSheetData(exportData: ExportData): SheetData {
   return Object.fromEntries(Object.entries(exportData).map(([tag, value]) => [tag, Array.isArray(value) ? tableText(value) : value]));
 }
 
+/** Mã số thứ tự dòng của bảng (khác {stt} là số thứ tự của đơn trong file). */
+export const TABLE_ROW_NUMBER_TAG = 'stt_dong';
+
+/** Một đơn khi điền: giá trị các mã (bảng đã gộp thành chữ) và các bảng còn nguyên từng dòng. */
+interface FormFill {
+  sheetData: SheetData;
+  tables: TableFill[];
+}
+
+/** Một bảng của đơn: mã các cột và các dòng (chỉ bảng có dòng mới biết mã cột). */
+interface TableFill {
+  columnTags: string[];
+  rows: ReadonlyArray<Record<string, string | number>>;
+}
+
+/** Một ô của đơn gộp dọc: hàng đầu, hàng cuối, cột (số thứ tự từ 1). */
+interface VerticalMerge {
+  top: number;
+  bottom: number;
+  column: number;
+}
+
+/** Các ô gộp của một hàng mẫu, kèm số hàng mà hàng mẫu này làm thay đổi (để tính lại vị trí sau khi đã chèn hàng). */
+interface TemplateRowMerges {
+  templateRowNumber: number;
+  addedRows: number;
+  merges: VerticalMerge[];
+}
+
 /**
- * Điền một trang tính: nhân hàng mẫu theo số đơn rồi điền từng đơn; sau đó điền mã chung ở các hàng còn lại.
+ * Các bảng của một đơn, giữ từng dòng.
+ * @param formData  giá trị theo mã của đơn
+ * @returns         các bảng có ít nhất một dòng
+ */
+function tablesOf(formData: ExportData): TableFill[] {
+  return Object.values(formData).flatMap((value): TableFill[] => {
+    if (!Array.isArray(value) || !value.length) return [];
+    return [{ columnTags: Object.keys(value[0]!).filter((tag) => tag !== ROW_NUMBER_TAG), rows: value }];
+  });
+}
+
+/**
+ * Giá trị các cột của bảng ở dòng thứ k của đơn; bảng hết dòng thì để trống.
+ * Hai bảng trùng mã cột thì bảng đứng trước được dùng.
+ * @param tables  các bảng của đơn đang dùng trong hàng mẫu
+ * @param k       thứ tự dòng, từ 0
+ * @returns       giá trị theo mã, có {stt_dong}
+ */
+function tableRowData(tables: readonly TableFill[], k: number): SheetData {
+  const rowData: SheetData = {};
+  for (const table of [...tables].reverse()) {
+    Object.entries(table.rows[k] ?? {}).forEach(([tag, value]) => {
+      if (tag !== ROW_NUMBER_TAG) rowData[tag] = value;
+    });
+  }
+  if (tables.some((table) => table.rows.length > k)) rowData[TABLE_ROW_NUMBER_TAG] = k + 1;
+  return rowData;
+}
+
+/**
+ * Các cột của hàng mẫu thuộc cả đơn (gộp dọc khi đơn chiếm nhiều hàng): mọi ô, trừ ô có mã cột của bảng hoặc {stt_dong}, và ô đã gộp ngang.
+ * @param row          hàng mẫu
+ * @param tableTagSet  mọi mã cột của bảng trong dữ liệu
+ * @returns            số cột (từ 1)
+ */
+function perFormColumns(row: Row, tableTagSet: ReadonlySet<string>): number[] {
+  const columns: number[] = [];
+  for (let column = 1; column <= row.worksheet.columnCount; column++) {
+    const cell = row.getCell(column);
+    if (cell.isMerged) continue;
+    if (!tagsIn(cellText(cell) ?? '').some((tag) => tableTagSet.has(tag))) columns.push(column);
+  }
+  return columns;
+}
+
+/**
+ * Điền một trang tính: mỗi hàng mẫu nhân lên cho từng đơn (đơn có bảng n dòng chiếm n hàng, ô của đơn gộp dọc);
+ * sau đó điền mã chung ở các hàng còn lại.
  * @param sheet        trang tính
- * @param formsData    dữ liệu từng đơn (đã có stt)
+ * @param forms        các đơn (đã có stt)
  * @param summaryData  mã chung của file
  */
-function fillSheet(sheet: Worksheet, formsData: readonly SheetData[], summaryData: SheetData): void {
+function fillSheet(sheet: Worksheet, forms: readonly FormFill[], summaryData: SheetData): void {
   // Hàng mẫu: có mã không thuộc mã chung của file
   const templateRowNumbers: number[] = [];
   sheet.eachRow((row, rowNumber) => {
     if (rowTags(row).some((tag) => !SUMMARY_TAG_SET.has(tag))) templateRowNumbers.push(rowNumber);
   });
+  const tableTagSet = new Set([TABLE_ROW_NUMBER_TAG, ...forms.flatMap((form) => form.tables.flatMap((table) => table.columnTags))]);
 
   // Làm từ dưới lên, để hàng chèn thêm không làm lệch số hàng của các hàng mẫu phía trên.
   // Không có đơn nào thì bỏ hàng mẫu
-  for (const rowNumber of templateRowNumbers.reverse()) {
-    if (!formsData.length) {
-      sheet.spliceRows(rowNumber, 1);
+  const mergesByTemplateRow: TemplateRowMerges[] = [];
+  for (const templateRowNumber of templateRowNumbers.reverse()) {
+    if (!forms.length) {
+      sheet.spliceRows(templateRowNumber, 1);
+      mergesByTemplateRow.push({ templateRowNumber, addedRows: -1, merges: [] });
       continue;
     }
-    if (formsData.length > 1) sheet.duplicateRow(rowNumber, formsData.length - 1, true);
-    formsData.forEach((formData, index) => fillRow(sheet.getRow(rowNumber + index), { ...summaryData, ...formData }));
+
+    // Mỗi đơn chiếm bao nhiêu hàng: số dòng của bảng dài nhất trong các bảng mà hàng mẫu dùng
+    const templateRow = sheet.getRow(templateRowNumber);
+    const templateTags = new Set(rowTags(templateRow));
+    const perForm = perFormColumns(templateRow, tableTagSet);
+    const usedTables = forms.map((form) => form.tables.filter((table) => table.columnTags.some((tag) => templateTags.has(tag))));
+    const heights = usedTables.map((tables) => Math.max(1, ...tables.map((table) => table.rows.length)));
+    const totalRows = heights.reduce((sum, height) => sum + height, 0);
+    if (totalRows > 1) sheet.duplicateRow(templateRowNumber, totalRows - 1, true);
+
+    // Điền từng đơn: mọi hàng của đơn điền cùng dữ liệu đơn kèm dòng bảng tương ứng; ô của đơn gộp dọc lại
+    const merges: VerticalMerge[] = [];
+    let blockTop = templateRowNumber;
+    forms.forEach((form, formIndex) => {
+      const height = heights[formIndex]!;
+      for (let k = 0; k < height; k++) {
+        fillRow(sheet.getRow(blockTop + k), { ...summaryData, ...form.sheetData, ...tableRowData(usedTables[formIndex]!, k) });
+      }
+      if (height > 1) perForm.forEach((column) => merges.push({ top: blockTop, bottom: blockTop + height - 1, column }));
+      blockTop += height;
+    });
+    mergesByTemplateRow.push({ templateRowNumber, addedRows: totalRows - 1, merges });
+  }
+
+  // Gộp ô sau cùng (khi số hàng đã chốt): vị trí dời xuống theo số hàng chèn thêm ở các hàng mẫu phía trên
+  let shift = 0;
+  for (const { addedRows, merges } of mergesByTemplateRow.reverse()) {
+    merges.forEach(({ top, bottom, column }) => sheet.mergeCells(top + shift, column, bottom + shift, column));
+    shift += addedRows;
   }
 
   // Các hàng còn lại: mã chung của file
@@ -210,9 +317,9 @@ export async function renderXlsxTemplate(bytes: XlsxBytes, formsData: readonly E
   if (!workbook) throw new Error(EXPORT_MESSAGES.unreadableXlsx);
 
   // Mỗi đơn có stt theo thứ tự trong file
-  const sheetRows = formsData.map((formData, index) => ({ ...toSheetData(formData), [ROW_NUMBER_TAG]: index + 1 }));
+  const forms = formsData.map((formData, index): FormFill => ({ sheetData: { ...toSheetData(formData), [ROW_NUMBER_TAG]: index + 1 }, tables: tablesOf(formData) }));
   const summary = toSheetData(summaryData);
-  workbook.worksheets.forEach((sheet) => fillSheet(sheet, sheetRows, summary));
+  workbook.worksheets.forEach((sheet) => fillSheet(sheet, forms, summary));
 
   // Node trả Buffer, trình duyệt trả ArrayBuffer: đổi về một ArrayBuffer riêng
   const written = await workbook.xlsx.writeBuffer();
@@ -220,22 +327,23 @@ export async function renderXlsxTemplate(bytes: XlsxBytes, formsData: readonly E
 }
 
 /**
- * Mọi mã dùng được trong mẫu thống kê: như mẫu Word, bỏ mã cột của bảng, thêm {stt} (thứ tự đơn) và {so_don}.
+ * Mọi mã dùng được trong mẫu thống kê: như mẫu Word (có mã cột của bảng), thêm {stt} (thứ tự đơn), {stt_dong} (thứ tự dòng bảng) và {so_don}.
  * @param sections  các phần của loại đơn
  * @returns         các mã
  */
 export function knownStatsTags(sections: readonly FormSection[]): Set<string> {
   const known = knownExportTags(sections);
-  for (const columnTagText of columnTagOwners(sections).keys()) known.delete(columnTagText);
   known.add(ROW_NUMBER_TAG);
+  known.add(TABLE_ROW_NUMBER_TAG);
   known.add(FORM_COUNT_TAG);
   return known;
 }
 
-/** Một cột của file mẫu dựng sẵn: chữ ở đầu cột và mã ở hàng mẫu. */
+/** Một cột của file mẫu dựng sẵn: chữ ở đầu cột, mã ở hàng mẫu, và (nếu là cột của câu hỏi dạng bảng) tên câu hỏi đó. */
 export interface StatsStarterColumn {
   header: string;
   tag: string;
+  tableLabel?: string;
 }
 
 /** Các cột chung đứng đầu file mẫu dựng sẵn; sau đó là từng câu hỏi của loại đơn. */
@@ -250,31 +358,47 @@ export const STATS_STARTER_COMMON_COLUMNS: readonly StatsStarterColumn[] = [
 ];
 
 /**
- * Các cột của file mẫu dựng sẵn: cột chung, rồi mỗi câu hỏi một cột; câu dạng bảng có thêm cột tổng của các cột tính tổng.
+ * Các cột của file mẫu dựng sẵn: cột chung, rồi mỗi câu hỏi một cột;
+ * câu dạng bảng thành một cột cho mỗi cột của bảng (có tableLabel), rồi thêm cột tổng của các cột tính tổng.
  * @param sections  các phần của loại đơn
  * @returns         các cột theo thứ tự
  */
 export function statsStarterColumns(sections: readonly FormSection[]): StatsStarterColumn[] {
-  const questionColumns = questionExportTags(sections).flatMap((question) => [
-    { header: question.label, tag: question.tag },
-    ...(question.columns ?? []).filter((column) => column.sum).map((column) => ({ header: `Tổng ${column.label.toLowerCase()}`, tag: `tong_${column.tag}` })),
-  ]);
+  const questionColumns = questionExportTags(sections).flatMap((question): StatsStarterColumn[] => {
+    if (!question.columns) return [{ header: question.label, tag: question.tag }];
+    const tableColumns = question.columns.map((column) => ({ header: column.label, tag: column.tag, tableLabel: question.label }));
+    const sumColumns = question.columns.filter((column) => column.sum).map((column) => ({ header: `Tổng ${column.label.toLowerCase()}`, tag: `tong_${column.tag}` }));
+    return [...tableColumns, ...sumColumns];
+  });
   return [...STATS_STARTER_COMMON_COLUMNS, ...questionColumns];
 }
 
+/** Hàng đầu cột (tầng trên), hàng tên cột của bảng (tầng dưới) và hàng mẫu của file mẫu dựng sẵn. */
+const STARTER_HEADER_TOP_ROW = 4;
+const STARTER_HEADER_BOTTOM_ROW = 5;
+const STARTER_TEMPLATE_ROW = 6;
+
 /**
  * Dựng sẵn một file mẫu thống kê để người soạn tải về rồi sửa:
- * hàng 1–2 tiêu đề (mã của cả file, điền một lần), hàng 4 đầu cột, hàng 5 hàng mẫu (mã của đơn, nhân lên mỗi đơn một hàng).
+ * hàng 1–2 tiêu đề (mã của cả file, điền một lần); hàng 4–5 đầu cột hai tầng:
+ * cột thường gộp dọc hai hàng, câu hỏi dạng bảng gộp ngang trên các cột của nó, tên cột ở tầng dưới;
+ * hàng 6 hàng mẫu (mã của đơn, nhân lên mỗi đơn một hàng, đơn có bảng n dòng thì n hàng).
  * @param sections  các phần của loại đơn
  * @returns         nội dung file .xlsx
  */
 export async function createStatsStarterXlsx(sections: readonly FormSection[]): Promise<ArrayBuffer> {
   const ExcelJS = await loadExcelJs();
   const workbook = new ExcelJS.Workbook();
-  const sheet = workbook.addWorksheet('Thống kê', { views: [{ state: 'frozen', ySplit: 4 }] });
+  const sheet = workbook.addWorksheet('Thống kê', { views: [{ state: 'frozen', ySplit: STARTER_HEADER_BOTTOM_ROW }] });
   const columns = statsStarterColumns(sections);
   const border = { style: 'thin', color: { argb: 'FFBFBFBF' } } as const;
   const cellBorder = { top: border, left: border, bottom: border, right: border };
+  const headerStyle = {
+    font: { bold: true },
+    fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE8EEF7' } },
+    border: cellBorder,
+    alignment: { vertical: 'middle', horizontal: 'center', wrapText: true },
+  } as const;
 
   // Tiêu đề: chỉ có mã của cả file nên điền một lần
   sheet.getCell('A1').value = 'Danh sách đơn {loai_don}';
@@ -282,20 +406,28 @@ export async function createStatsStarterXlsx(sections: readonly FormSection[]): 
   sheet.getCell('A2').value = 'Ngày xuất: {ngay_xuat} · Số đơn: {so_don}';
   sheet.getCell('A2').font = { italic: true, color: { argb: 'FF666666' } };
 
-  // Hàng 4 đầu cột, hàng 5 hàng mẫu
-  const headerRow = sheet.getRow(4);
-  const templateRow = sheet.getRow(5);
+  // Đầu cột: tô kiểu cho cả hai tầng; cột của bảng có chữ tên câu hỏi ở tầng trên và tên cột ở tầng dưới, cột thường chỉ có một chữ
   columns.forEach((column, index) => {
-    const headerCell = headerRow.getCell(index + 1);
-    headerCell.value = column.header;
-    headerCell.font = { bold: true };
-    headerCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE8EEF7' } };
-    headerCell.border = cellBorder;
-    headerCell.alignment = { vertical: 'middle', wrapText: true };
-    const templateCell = templateRow.getCell(index + 1);
+    const columnNumber = index + 1;
+    const topCell = sheet.getCell(STARTER_HEADER_TOP_ROW, columnNumber);
+    const bottomCell = sheet.getCell(STARTER_HEADER_BOTTOM_ROW, columnNumber);
+    topCell.value = column.tableLabel ?? column.header;
+    if (column.tableLabel) bottomCell.value = column.header;
+    [topCell, bottomCell].forEach((headerCell) => Object.assign(headerCell, headerStyle));
+
+    const templateCell = sheet.getCell(STARTER_TEMPLATE_ROW, columnNumber);
     templateCell.value = `{${column.tag}}`;
     templateCell.border = cellBorder;
     templateCell.alignment = { vertical: 'top', wrapText: true };
+  });
+
+  // Gộp ô đầu cột: cột thường gộp dọc hai tầng; các cột liền nhau của cùng một bảng gộp ngang ở tầng trên
+  columns.forEach((column, index) => {
+    if (!column.tableLabel) sheet.mergeCells(STARTER_HEADER_TOP_ROW, index + 1, STARTER_HEADER_BOTTOM_ROW, index + 1);
+    else if (columns[index - 1]?.tableLabel !== column.tableLabel) {
+      const lastColumnIndex = index + columns.filter((other) => other.tableLabel === column.tableLabel).length - 1;
+      if (lastColumnIndex > index) sheet.mergeCells(STARTER_HEADER_TOP_ROW, index + 1, STARTER_HEADER_TOP_ROW, lastColumnIndex + 1);
+    }
   });
 
   // Độ rộng cột theo chữ ở đầu cột và mã, trong khoảng 6–40
