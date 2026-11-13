@@ -1,12 +1,12 @@
 /* Trình soạn loại đơn (#/soan-don/<mã loại đơn>[?phien-ban=<số>], tạo mới: #/soan-don/moi).
    Gồm: nút quay lại, tiêu đề, nút Xuất thống kê, tab Soạn / Xem trước, khung Phiên bản bên phải (màn hình hẹp: trượt ra), nhãn "Chưa lưu", khung báo lỗi, câu nhắc về phiên bản,
-   thẻ Thông tin loại đơn, các phần và câu hỏi, nút + Thêm phần, khung Mẫu xuất file đơn và Mẫu xuất file thống kê, hàng nút cuối (Xóa · Bỏ thay đổi · Lưu; hai nút cuối chỉ hiện khi có thay đổi).
+   thẻ Thông tin loại đơn, các phần và câu hỏi, nút + Thêm phần, hàng nút cuối (Xóa · Bỏ thay đổi · Lưu; hai nút cuối chỉ hiện khi có thay đổi).
 
    Phiên bản (xem shared/src/api-contract/form-types.ts):
    - Phiên bản Nháp sửa được; Lưu ở Nháp để soạn tiếp, hoặc ở Đang mở để mở (nội dung khóa lại).
    - Phiên bản đã khóa (Đang mở / Đã đóng) chỉ đổi được trạng thái. Sửa nội dung của nó thì trình soạn tự chép ra phiên bản mới;
      nếu đang có phiên bản Nháp thì phiên bản đã khóa chỉ xem được.
-   Mẫu xuất file (đơn và thống kê) thuộc loại đơn (mọi phiên bản): thêm, đổi tên, xóa mẫu cũng là thay đổi chưa lưu, bấm Lưu thì gửi lên
+   Mẫu xuất file (đơn và thống kê; hai nút tròn nổi ở cạnh phải, mỗi nút mở một khung nổi) thuộc loại đơn (mọi phiên bản): thêm, đổi tên, xóa mẫu cũng là thay đổi chưa lưu, bấm Lưu thì gửi lên
    sau khi lưu loại đơn (kể cả khi đang xem phiên bản đã khóa).
    Thay đổi chưa lưu được giữ lại khi đi trang khác (formTypeDrafts.ts). */
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
@@ -41,7 +41,7 @@ import { RefreshButton } from '../../components/RefreshButton';
 import { useToast } from '../../components/Toast';
 import { DraftIssuesContext } from './draftIssues';
 import { StatsExportButton } from '../../features/export/StatsExportButton';
-import { ExportTemplatesPanel } from './ExportTemplatesPanel';
+import { ExportTemplatesDock } from './ExportTemplatesDock';
 import { NO_TEMPLATE_CHANGES, hasTemplateChanges, toSaveTemplatesRequest } from './exportTemplateChanges';
 import { FormTypeInfoCard } from './FormTypeInfoCard';
 import { FormInfoPanelToggle, useFormInfoPanel } from '../form/FormInfoPanel';
@@ -644,25 +644,22 @@ function FormTypeEditor({ managed, requestedVersion }: FormTypeEditorProps) {
                 />
               ))}
 
-              {/* Nút thêm phần: ngay dưới phần cuối, trên khung Mẫu xuất file */}
+              {/* Nút thêm phần: ngay dưới phần cuối */}
               <div>
                 <Button onClick={addSection}>+ Thêm phần</Button>
               </div>
             </fieldset>
 
-            {/* Mẫu xuất file đơn (Word) và thống kê (Excel): thuộc loại đơn (mọi phiên bản) nên không bị khóa theo phiên bản;
+            {/* Mẫu xuất file đơn (Word) và thống kê (Excel): hai nút tròn nổi ở cạnh phải, mỗi nút mở một khung nổi
+                (nằm trong phần Soạn nên tab Xem trước thì ẩn). Thuộc loại đơn (mọi phiên bản) nên không bị khóa theo phiên bản;
                 hai khung dùng chung một bộ thay đổi, chờ bấm Lưu */}
-            {(['form', 'stats'] as const).map((purpose) => (
-              <ExportTemplatesPanel
-                key={purpose}
-                purpose={purpose}
-                formTypeId={managed?.id ?? null}
-                draft={exportDraft}
-                changes={templateChanges}
-                onChangesChange={setTemplateChanges}
-                saving={isSaving}
-              />
-            ))}
+            <ExportTemplatesDock
+              formTypeId={managed?.id ?? null}
+              draft={exportDraft}
+              changes={templateChanges}
+              onChangesChange={setTemplateChanges}
+              saving={isSaving}
+            />
 
             <div className={styles.bottom}>
               <span className={styles.spacer} />

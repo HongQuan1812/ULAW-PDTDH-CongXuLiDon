@@ -56,7 +56,7 @@ export function StatsExportButton({ formTypeId, className }: { formTypeId: strin
         title={
           templates.length
             ? 'Tải về file Excel có mọi đơn của loại đơn này'
-            : 'Chưa có mẫu thống kê. Thêm file Excel ở khung “Mẫu xuất file thống kê” rồi bấm Lưu.'
+            : 'Chưa có mẫu thống kê. Bấm nút tròn “Mẫu xuất file thống kê” ở cạnh phải, thêm file Excel rồi bấm Lưu.'
         }
         onClick={onButtonClick}
       >

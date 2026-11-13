@@ -1,18 +1,34 @@
-/* Khung "Mẫu xuất file" của trình soạn. */
-.card{display:grid;gap:12px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);padding:28px;min-width:0}
-.card>*{min-width:0}
-/* đầu khung: bấm cả hàng để thu / mở; tiêu đề, nút ↻ ngay cạnh, nút mũi tên ở cuối hàng */
-.cardHead{display:flex;align-items:center;gap:10px;cursor:pointer}
-.cardHead h2{font-size:17px;font-weight:600}
-.cardHead:hover h2{color:var(--accent)}
-.toggle{margin-left:auto;display:inline-grid;place-items:center;width:30px;height:30px;border:0;border-radius:50%;background:none;padding:0;color:var(--muted);cursor:pointer;flex:none}
-.toggle:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
-/* mũi tên: đóng thì chỉ sang phải, mở thì quay xuống (như các mục thu gọn bên trong) */
-.chevron{transition:transform .18s;transform:rotate(-90deg)}
-.cardHead:hover .toggle{color:var(--accent)}
-.toggle[aria-expanded="true"] .chevron{transform:rotate(0deg)}
-.intro{color:var(--muted);font-size:14px}
-.body{display:grid;gap:20px;min-width:0}
+/* Mẫu xuất file của trình soạn: hai nút tròn nổi ở cạnh phải màn hình, mỗi nút mở một khung nổi. */
+
+/* Hai nút tròn xếp dọc, giữa cạnh phải màn hình; màn hình hẹp thì xuống góc phải dưới */
+.dock{position:fixed;right:16px;top:50%;transform:translateY(-50%);z-index:41;display:flex;flex-direction:column;gap:12px}
+.fab{position:relative;width:52px;height:52px;border:0;border-radius:50%;display:grid;place-items:center;background:var(--accent);color:var(--on-accent);
+  box-shadow:var(--shadow-lg),var(--shadow);cursor:pointer;transition:transform .15s,background .15s}
+.fab:hover{background:var(--accent-ink);transform:translateY(-1px)}
+.fab:focus-visible{outline:3px solid color-mix(in srgb,var(--focus) 40%,transparent);outline-offset:3px}
+.fabOpen{background:var(--accent-ink)}
+/* số mẫu ở góc nút; có thay đổi chưa lưu thì màu cam như nhãn "Chưa lưu" */
+.fabBadge{position:absolute;top:-2px;right:-2px;min-width:20px;height:20px;padding:0 6px;border-radius:999px;background:var(--surface);color:var(--accent-ink);
+  border:1px solid var(--line);font-size:11.5px;font-weight:700;line-height:18px;text-align:center}
+.fabBadgeUnsaved{background:var(--s-bs-bg);color:var(--s-bs-fg);border-color:var(--s-bs-fg)}
+
+/* Khung nổi: bên trái hai nút, cao từ dưới thanh menu tới đáy màn hình; nội dung cuộn riêng */
+.popup{position:fixed;right:84px;top:calc(var(--nav-h) + 16px);bottom:16px;z-index:40;width:min(760px,calc(100vw - 116px));
+  display:flex;flex-direction:column;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);
+  box-shadow:var(--shadow-lg),var(--shadow);overflow:hidden;animation:popupIn .16s ease-out}
+@keyframes popupIn{from{opacity:0;transform:translateX(8px) scale(.98)}to{opacity:1;transform:none}}
+.popupHead{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:20px 20px 16px 24px;border-bottom:1px solid var(--line)}
+.popupHead h2{font-size:17px;font-weight:600}
+.closeButton{flex:none;display:grid;place-items:center;width:32px;height:32px;border:0;border-radius:8px;background:transparent;color:var(--muted);cursor:pointer}
+.closeButton:hover{background:var(--hover);color:var(--fg)}
+.popupBody{flex:1;min-height:0;overflow-y:auto;display:grid;gap:20px;align-content:start;padding:0 24px 24px;min-width:0}
+.popupBody>*{min-width:0}
+.intro{color:var(--muted);font-size:14px;margin-top:4px}
+
+@media (max-width:640px){
+  .dock{top:auto;bottom:calc(16px + env(safe-area-inset-bottom,0px));transform:none}
+  .popup{left:12px;right:12px;width:auto;bottom:calc(144px + env(safe-area-inset-bottom,0px))}
+}
 
 /* mục con: Mẫu đã tải lên, Bảng mã */
 .block{display:grid;gap:12px;padding-top:20px;border-top:1px solid var(--line);min-width:0}

@@ -1,10 +1,11 @@
-/* Khung "Mẫu xuất file đơn" (Word) và "Mẫu xuất file thống kê" (Excel) trong trình soạn loại đơn: cùng một khung, khác mục đích.
+/* Khung nổi "Mẫu xuất file đơn" (Word) và "Mẫu xuất file thống kê" (Excel) trong trình soạn loại đơn: cùng một khung, khác mục đích;
+   mở từ nút tròn ở cạnh phải màn hình (ExportTemplatesDock.tsx).
    Mẫu thuộc loại đơn (dùng chung mọi phiên bản). Chọn file (bấm hoặc kéo thả, như câu hỏi tải tệp của lá đơn), đổi tên, xóa
    chỉ ghi nhận trong trình duyệt và trình soạn hiện "Chưa lưu"; bấm Lưu mới gửi lên máy chủ (exportTemplateChanges.ts).
    Mã trong mỗi mẫu tự được kiểm tra (không cần bấm nút), theo bản soạn đang hiện
    (kể cả thay đổi chưa lưu, kể cả mẫu chưa lưu). Muốn xem mẫu điền dữ liệu thật: mẫu đơn thì Xuất file ở trang chi tiết
    một lá đơn; mẫu thống kê đã lưu thì bấm Xuất ngay tại dòng mẫu (tải về file Excel điền mọi lá đơn của loại đơn).
-   Mỗi lần mở trình soạn, khung và các mục thu gọn bên trong đều đóng. */
+   Mỗi lần mở khung, các mục thu gọn bên trong đều đóng. */
 import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
 import {
   EXPORT_MESSAGES,
@@ -40,7 +41,7 @@ import styles from './ExportTemplatesPanel.module.css';
 const CHECK_REFRESH_DELAY_MS = 800;
 
 /** Chữ trên khung theo mục đích: tiêu đề, lời giới thiệu, gợi ý ở ô chọn file. */
-const PANEL_TEXT: Record<ExportTemplatePurpose, { title: string; intro: string; dropHint: string }> = {
+export const PANEL_TEXT: Record<ExportTemplatePurpose, { title: string; intro: string; dropHint: string }> = {
   form: {
     title: 'Mẫu xuất file đơn',
     intro: 'File Word có chèn mã. Khi bấm “Xuất file” ở chi tiết đơn, các mã được thay bằng dữ liệu của đơn.',
@@ -59,7 +60,7 @@ interface TemplateResult {
   text: string;
 }
 
-interface ExportTemplatesPanelProps {
+export interface ExportTemplatesPanelProps {
   /** Khung mẫu xuất file đơn (Word) hay thống kê (Excel) */
   purpose: ExportTemplatePurpose;
   /** Mã loại đơn; null = loại đơn mới chưa lưu (chưa có mẫu nào ở máy chủ) */
@@ -112,14 +113,21 @@ function checkResultOf(check: ExportTemplateCheck, tableTags: string[]): Templat
 }
 
 /**
- * Khung Mẫu xuất file đơn / Mẫu xuất file thống kê.
- * @param props  xem ExportTemplatesPanelProps
- * @returns      thẻ có nút thu gọn; mở ra thì có Cách tạo một mẫu, các mẫu, Bảng mã
+ * Khung nổi Mẫu xuất file đơn / Mẫu xuất file thống kê (mở từ nút tròn ở cạnh phải, xem ExportTemplatesDock.tsx).
+ * @param props  xem ExportTemplatesPanelProps; onClose: bấm nút đóng
+ * @returns      khung nổi: đầu khung (tên, lời giới thiệu, nút đóng) và phần cuộn được (Cách tạo một mẫu, các mẫu, Bảng mã)
  */
-export function ExportTemplatesPanel({ purpose, formTypeId, draft, changes, onChangesChange, saving }: ExportTemplatesPanelProps) {
+export function ExportTemplatesPanel({
+  purpose,
+  formTypeId,
+  draft,
+  changes,
+  onChangesChange,
+  saving,
+  onClose,
+}: ExportTemplatesPanelProps & { onClose: () => void }) {
   const text = PANEL_TEXT[purpose];
-  const [open, setOpen] = useState(false);
-  const bodyId = useId();
+  const titleId = useId();
   const questionTags = useMemo(() => questionExportTags(draft.sections), [draft.sections]);
 
   // Bản soạn dùng để kiểm tra mã: chờ ngừng gõ rồi mới lấy bản mới
@@ -128,51 +136,41 @@ export function ExportTemplatesPanel({ purpose, formTypeId, draft, changes, onCh
   // Danh sách mẫu ở máy chủ (loại đơn đã lưu); lượt kiểm tra mã, tăng lên thì mọi mẫu kiểm tra lại
   const templatesQuery = useExportTemplates(formTypeId ?? '', formTypeId !== null);
   const [checkRound, setCheckRound] = useState(0);
-  const toggle = () => setOpen((isOpen) => !isOpen);
 
   /** Nút ↻ cạnh chữ "Các mẫu": ngoài tải lại danh sách mẫu, còn kiểm tra lại mã mọi mẫu. */
   const refreshAll = () => setCheckRound((round) => round + 1);
 
   return (
-    <section className={styles.card} aria-labelledby={`${bodyId}-title`}>
-      {/* Đầu khung: bấm cả hàng để thu / mở (nút mũi tên cho bàn phím) */}
-      <div className={styles.cardHead} onClick={toggle}>
-        <h2 id={`${bodyId}-title`}>{text.title}</h2>
-        <button
-          type="button"
-          className={styles.toggle}
-          aria-expanded={open}
-          aria-controls={bodyId}
-          aria-label={open ? `Thu gọn ${text.title}` : `Mở ${text.title}`}
-          onClick={(event) => {
-            event.stopPropagation();
-            toggle();
-          }}
-        >
-          <svg className={styles.chevron} width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-            <path d="m6 9 6 6 6-6" />
+    <section className={styles.popup} role="dialog" aria-labelledby={titleId}>
+      {/* Đầu khung: tên, lời giới thiệu, nút đóng */}
+      <header className={styles.popupHead}>
+        <div>
+          <h2 id={titleId}>{text.title}</h2>
+          <p className={styles.intro}>{text.intro}</p>
+        </div>
+        <button type="button" className={styles.closeButton} onClick={onClose} aria-label={`Đóng ${text.title}`} title="Đóng">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+            <path d="M6 6l12 12M18 6 6 18" />
           </svg>
         </button>
-      </div>
-      <p className={styles.intro}>{text.intro}</p>
+      </header>
 
-      {open && (
-        <div id={bodyId} className={styles.body}>
-          <TemplateList
-            purpose={purpose}
-            formTypeId={formTypeId}
-            templatesQuery={templatesQuery}
-            checkRound={checkRound}
-            onRefresh={refreshAll}
-            checkDraft={settledDraft}
-            changes={changes}
-            onChangesChange={onChangesChange}
-            saving={saving}
-            howTo={<ExportHowTo purpose={purpose} questionTags={questionTags} />}
-          />
-          <ExportTagGuide purpose={purpose} questionTags={questionTags} />
-        </div>
-      )}
+      {/* Phần cuộn được */}
+      <div className={styles.popupBody}>
+        <TemplateList
+          purpose={purpose}
+          formTypeId={formTypeId}
+          templatesQuery={templatesQuery}
+          checkRound={checkRound}
+          onRefresh={refreshAll}
+          checkDraft={settledDraft}
+          changes={changes}
+          onChangesChange={onChangesChange}
+          saving={saving}
+          howTo={<ExportHowTo purpose={purpose} questionTags={questionTags} />}
+        />
+        <ExportTagGuide purpose={purpose} questionTags={questionTags} />
+      </div>
     </section>
   );
 }
