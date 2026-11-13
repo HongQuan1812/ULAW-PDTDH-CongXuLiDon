@@ -5,8 +5,19 @@
 .muted{color:var(--muted)}
 .errorCard{display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);padding:28px}
 
-/* đầu trang: tiêu đề bên trái; nhãn "Chưa lưu" bên phải */
-.head{display:flex;align-items:center;justify-content:space-between;gap:16px 24px;flex-wrap:wrap}
+/* đầu trang: tiêu đề bên trái; nhãn "Chưa lưu" bên phải.
+   Dính ngay dưới thanh menu khi cuộn, để soạn câu hỏi ở dưới vẫn bấm được Soạn / Xem trước;
+   nền mờ như thanh menu, tràn ra hết lề trang (margin âm bằng padding) để chữ cuộn qua không lộ ở hai bên */
+.head{display:flex;align-items:center;justify-content:space-between;gap:16px 24px;flex-wrap:wrap;
+  position:sticky;top:var(--nav-h);z-index:20;margin:-10px -16px;padding:10px 16px;
+  background:color-mix(in srgb,var(--bg) 90%,transparent);backdrop-filter:saturate(1.4) blur(10px)}
+/* menu trượt: thanh trên cùng thấp hơn thanh menu ngang (58px, xem AppLayout.module.css) */
+:global([data-menu="drawer"]) .head{top:58px}
+/* đã cuộn qua đầu trang: hiện đường kẻ dưới để tách khỏi nội dung (trình duyệt chưa hỗ trợ thì không có đường kẻ) */
+@supports (animation-timeline:scroll()){
+  .head{animation:headStuck linear both;animation-timeline:scroll(root);animation-range:0 48px}
+}
+@keyframes headStuck{to{box-shadow:0 1px 0 var(--line)}}
 .title{font-size:clamp(24px,2.6vw,30px);line-height:1.2;font-weight:600;letter-spacing:-.03em;min-width:0}
 .headActions{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
 .dirty{font-size:12.5px;font-weight:500;color:var(--s-bs-fg);background:var(--s-bs-bg);padding:3px 11px;border-radius:999px}
@@ -165,6 +176,9 @@
 /* nội dung soạn bên trái, khung Phiên bản bên phải (màn hình rộng, khi khung đang hiện) */
 .layout{display:grid;grid-template-columns:minmax(0,1fr);gap:24px;align-items:start}
 .withSide{grid-template-columns:minmax(0,1fr) 300px}
+/* khung Phiên bản dính thấp xuống thêm cỡ chiều cao đầu trang (đầu trang cũng dính), để không bị đầu trang che */
+.withSide>aside{top:calc(var(--nav-h) + 80px + env(safe-area-inset-top,0px))}
+.withSide>aside>section{max-height:calc(100vh - var(--nav-h) - 104px - env(safe-area-inset-top,0px))}
 .main{display:grid;grid-template-columns:minmax(0,1fr);gap:18px;min-width:0}
 
 /* các phần: khung không viền, chỉ để khóa cả khối khi phiên bản chỉ xem được */
