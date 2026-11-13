@@ -14,7 +14,25 @@ const AppEnvSchema = z.object({
   DATABASE_URL: z.string().startsWith('postgresql://'),
   // Thư mục lưu tệp tải lên trên ổ đĩa máy chủ (tương đối với thư mục chạy backend, hoặc đường dẫn tuyệt đối)
   UPLOAD_DIR: z.string().min(1).default('uploads'),
+  // Máy chủ gửi thư (SMTP). Có điền: gửi thư thật, kể cả khi APP_ENV=dev · bỏ trống: không gửi (APP_ENV=dev thì in ra console)
+  SMTP_HOST: z.string().trim().default(''),
+  // 465: kết nối mã hóa ngay (SSL/TLS) · cổng khác (vd 587): nâng lên mã hóa bằng STARTTLS
+  SMTP_PORT: z.coerce.number().int().min(1).max(65535).default(465),
+  // Tài khoản đăng nhập SMTP, cũng là địa chỉ gửi thư (người nộp đơn bấm "Trả lời" thì thư về đây)
+  SMTP_USER: z.email().default('daotao@hcmulaw.edu.vn'),
+  // Mật khẩu ứng dụng của tài khoản SMTP
+  SMTP_PASSWORD: z.string().default(''),
 });
+
+/** Kết nối tới máy chủ gửi thư. */
+export interface SmtpConfig {
+  /** vd 'smtp.gmail.com'; chuỗi rỗng: chưa cấu hình */
+  host: string;
+  port: number;
+  /** tài khoản đăng nhập, cũng là địa chỉ gửi */
+  user: string;
+  password: string;
+}
 
 /**
  * Nạp api/.env vào process.env, nếu có. Biến đã đặt sẵn (vd trên máy chủ) không bị ghi đè.
@@ -35,6 +53,8 @@ export class AppConfig {
   readonly databaseUrl: string;
   /** Thư mục lưu tệp tải lên, vd 'uploads'. */
   readonly uploadDir: string;
+  /** Máy chủ gửi thư. */
+  readonly smtp: SmtpConfig;
 
   /**
    * Đọc và kiểm tra biến môi trường.
@@ -50,5 +70,6 @@ export class AppConfig {
     this.port = parsed.data.API_PORT;
     this.databaseUrl = parsed.data.DATABASE_URL;
     this.uploadDir = parsed.data.UPLOAD_DIR;
+    this.smtp = { host: parsed.data.SMTP_HOST, port: parsed.data.SMTP_PORT, user: parsed.data.SMTP_USER, password: parsed.data.SMTP_PASSWORD };
   }
 }

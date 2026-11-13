@@ -12,6 +12,7 @@ import { FormsModule } from './forms/forms.module';
 import { HealthModule } from './health/health.module';
 import { ProfileModule } from './profile/profile.module';
 import { AccountsModule } from './accounts/accounts.module';
+import { EmailModule } from './email/email.module';
 
-@Module({ imports: [ConfigModule, PrismaModule, AuthModule, HealthModule, ProfileModule, AccountsModule, FormTypesModule, FilesModule, FormsModule, FormModule, ExportsModule, FormNotesModule] })
+@Module({ imports: [ConfigModule, PrismaModule, AuthModule, HealthModule, ProfileModule, AccountsModule, FormTypesModule, FilesModule, FormsModule, FormModule, ExportsModule, FormNotesModule, EmailModule] })
 export class AppModule {}
