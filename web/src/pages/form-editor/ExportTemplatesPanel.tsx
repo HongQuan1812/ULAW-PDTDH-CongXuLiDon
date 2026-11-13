@@ -4,7 +4,7 @@
    chỉ ghi nhận trong trình duyệt và trình soạn hiện "Chưa lưu"; bấm Lưu mới gửi lên máy chủ (exportTemplateChanges.ts).
    Mã trong mỗi mẫu tự được kiểm tra (không cần bấm nút), theo bản soạn đang hiện
    (kể cả thay đổi chưa lưu, kể cả mẫu chưa lưu). Muốn xem mẫu điền dữ liệu thật: mẫu đơn thì Xuất file ở trang chi tiết
-   một lá đơn; mẫu thống kê đã lưu thì bấm Xuất ngay tại dòng mẫu (tải về file Excel điền mọi lá đơn của loại đơn).
+   một lá đơn; mẫu thống kê thì Xuất thống kê ở trang Quản lí đơn.
    Mỗi lần mở khung, các mục thu gọn bên trong đều đóng. */
 import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
 import {
@@ -21,7 +21,6 @@ import {
 import {
   checkExportTemplate,
   checkExportTemplateFile,
-  exportStats,
   fetchExportTemplateFile,
   useExportTemplates,
 } from '../../api/exports';
@@ -31,7 +30,6 @@ import { LoadError, loadErrorMessage } from '../../components/LoadError';
 import { RefreshButton } from '../../components/RefreshButton';
 import { useToast } from '../../components/Toast';
 import { FilePreview, type PreviewFile } from '../../features/file-preview/FilePreview';
-import { saveToDevice } from '../../lib/saveToDevice';
 import { EditorIconButton } from './EditorIconButton';
 import { ExportHowTo, ExportTagGuide } from './ExportTagGuide';
 import { removeRow, renameRow, stageTemplate, templateRows, type ExportTemplateChanges, type TemplateRow } from './exportTemplateChanges';
@@ -176,8 +174,7 @@ export function ExportTemplatesPanel({
 }
 
 /**
- * Mục "Các mẫu": Cách tạo một mẫu, khung chọn file, danh sách mẫu (đã lưu và chưa lưu), mỗi mẫu có Xem, Đổi tên, Xóa;
- * mẫu thống kê đã lưu có thêm Xuất (tải về file Excel điền mọi lá đơn).
+ * Mục "Các mẫu": Cách tạo một mẫu, khung chọn file, danh sách mẫu (đã lưu và chưa lưu), mỗi mẫu có Xem, Đổi tên, Xóa.
  * Thêm, đổi tên, xóa chỉ ghi nhận (lưu khi bấm Lưu của trình soạn); Xem chạy ngay, mẫu chưa lưu thì mở thẳng file trong trình duyệt.
  * Mã trong mỗi mẫu tự được kiểm tra khi mẫu vừa thêm / vừa mở khung, và mỗi khi câu hỏi đổi (sau lúc ngừng gõ);
  * có vấn đề thì hiện cảnh báo ngay dưới mẫu, hợp lệ thì không hiện gì.
@@ -297,22 +294,6 @@ function TemplateList({
   };
 
   /**
-   * Xuất file thống kê theo một mẫu đã lưu: máy chủ điền mọi lá đơn của loại đơn, file Excel tải thẳng về máy.
-   * @param templateId  id mẫu thống kê đã lưu
-   */
-  const exportWith = async (templateId: string) => {
-    setBusyRowId(templateId);
-    try {
-      const exported = await exportStats(formTypeId!, templateId);
-      saveToDevice(exported.content, exported.fileName);
-    } catch (error) {
-      toast(error instanceof Error ? error.message : String(error), 'error');
-    } finally {
-      setBusyRowId(null);
-    }
-  };
-
-  /**
    * Ghi nhận tên mới (đổi tên ngay tại dòng); tên trống hoặc không đổi thì thôi.
    * @param row   dòng mẫu
    * @param name  tên vừa gõ
@@ -377,18 +358,6 @@ function TemplateList({
                   </button>
                 )}
                 <div className={styles.actions}>
-                  {/* Mẫu thống kê đã lưu: xuất ngay (mẫu chưa lưu thì bấm Lưu trước) */}
-                  {purpose === 'stats' && row.kind === 'saved' && (
-                    <Button
-                      variant="primary"
-                      className={styles.smallButton}
-                      disabled={busy}
-                      title="Tải về file Excel có mọi đơn của loại đơn này"
-                      onClick={() => void exportWith(row.id)}
-                    >
-                      {busy ? 'Đang xuất…' : 'Xuất'}
-                    </Button>
-                  )}
                   <Button className={styles.smallButton} disabled={busy} onClick={() => void viewTemplate(row)}>
                     Xem
                   </Button>
