@@ -54,6 +54,7 @@ model User {
   exportTemplates  ExportTemplate[]
   emailSettings    EmailSettings[]
   authSessions     AuthSession[]
+  formNotes        FormNote[]
 }
 
 // Phiên đăng nhập: trình duyệt giữ cookie chứa mã ngẫu nhiên, ở đây chỉ lưu bản băm SHA-256 của mã đó
@@ -137,6 +138,7 @@ model Form {
   formTypeSnapshot Json
 
   files  FileObject[]
+  notes  FormNote[]
 
   @@index([ownerId, submittedAt])
   @@index([status])
@@ -151,6 +153,22 @@ model FormCodeCounter {
   last    Int    @default(0)
 
   @@id([prefix, year, version])
+}
+
+// Ghi chú nội bộ của cán bộ trên lá đơn (người nộp đơn không thấy), nối thành chuỗi theo lúc viết
+model FormNote {
+  id        String    @id
+  formCode  String
+  form      Form      @relation(fields: [formCode], references: [code], onDelete: Cascade)
+  authorId  String
+  author    User      @relation(fields: [authorId], references: [id])
+  // Văn bản có định dạng (RichTextDoc của Tiptap)
+  content   Json
+  createdAt DateTime  @default(now()) @db.Timestamptz(3)
+  // Lần sửa gần nhất; null = chưa sửa lần nào
+  editedAt  DateTime? @db.Timestamptz(3)
+
+  @@index([formCode, createdAt])
 }
 
 // Tệp minh chứng đính kèm đơn
