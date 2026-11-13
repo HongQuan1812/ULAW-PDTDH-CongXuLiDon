@@ -104,7 +104,7 @@ export const FORM_TYPE_SEED: readonly FormType[] = [
           },
           { id: 'tieu-de', tag: 'tieu_de', type: 'text', label: 'Tiêu đề đơn', required: true, help: 'Trả lời ngắn: không xuống dòng bằng Enter.' },
           { id: 'li-do', tag: 'li_do', type: 'para', label: 'Lí do', help: 'Đoạn văn, viết được nhiều dòng.' },
-          { id: 'so-tin-chi', tag: 'so_tin_chi', type: 'number', label: 'Số tín chỉ đã tích lũy', required: true },
+          { id: 'so-tin-chi', tag: 'so_tin_chi_tich_luy', type: 'number', label: 'Số tín chỉ đã tích lũy', required: true },
           { id: 'ngay-nghi', tag: 'ngay_nghi', type: 'date', label: 'Ngày bắt đầu nghỉ học' },
         ],
       },

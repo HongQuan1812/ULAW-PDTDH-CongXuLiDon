@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'vitest';
 import { FormTypeSchema } from '../api-contract';
 import { SEED_ACCOUNTS } from './accounts';
+import { validateFormTypeDraft } from '../validators';
 import { seedFormTypes } from './form-types';
 import { seedForms } from './forms';
 import { STUDENT_DIRECTORY } from './students';
@@ -48,5 +49,18 @@ describe('dữ liệu mẫu', () => {
     expect(testForms.length).toBeGreaterThanOrEqual(5);
     expect(new Set(tableSizes)).toEqual(new Set([0, 1, 2, 4, 5]));
     expect(new Set(fileIds).size).toBe(fileIds.length);
+  });
+
+  test('mọi phiên bản loại đơn mẫu qua bộ kiểm tra của trình soạn (mã không trùng, đúng dạng)', () => {
+    const formTypes = seedFormTypes();
+
+    for (const formType of formTypes) {
+      const otherPrefixes = formTypes.filter((other) => other.id !== formType.id).map((other) => other.prefix);
+      for (const version of formType.versions) {
+        const issues = validateFormTypeDraft({ name: version.name, prefix: formType.prefix, status: version.status, sections: version.sections }, otherPrefixes);
+
+        expect({ id: formType.id, version: version.version, issues }).toEqual({ id: formType.id, version: version.version, issues: [] });
+      }
+    }
   });
 });
