@@ -1,12 +1,15 @@
 /* Mẫu xuất file của trình soạn: hai nút tròn nổi ở cạnh phải màn hình, mỗi nút mở một khung nổi. */
 
-/* Hai nút tròn xếp dọc, giữa cạnh phải màn hình; màn hình hẹp thì xuống góc phải dưới */
-.dock{position:fixed;right:16px;top:50%;transform:translateY(-50%);z-index:41;display:flex;flex-direction:column;gap:12px}
+/* Hai nút tròn xếp dọc ở góc phải dưới màn hình */
+.dock{position:fixed;right:16px;bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:41;display:flex;flex-direction:column;gap:12px}
 .fab{position:relative;width:52px;height:52px;border:0;border-radius:50%;display:grid;place-items:center;background:var(--accent);color:var(--on-accent);
   box-shadow:var(--shadow-lg),var(--shadow);cursor:pointer;transition:transform .15s,background .15s}
 .fab:hover{background:var(--accent-ink);transform:translateY(-1px)}
 .fab:focus-visible{outline:3px solid color-mix(in srgb,var(--focus) 40%,transparent);outline-offset:3px}
 .fabOpen{background:var(--accent-ink)}
+/* nút mẫu thống kê (Excel) màu xanh lá */
+.fabStats{background:var(--ok)}
+.fabStats:hover,.fabStats.fabOpen{background:color-mix(in srgb,var(--ok) 80%,#000)}
 /* số mẫu ở góc nút; có thay đổi chưa lưu thì màu cam như nhãn "Chưa lưu" */
 .fabBadge{position:absolute;top:-2px;right:-2px;min-width:20px;height:20px;padding:0 6px;border-radius:999px;background:var(--surface);color:var(--accent-ink);
   border:1px solid var(--line);font-size:11.5px;font-weight:700;line-height:18px;text-align:center}
@@ -27,7 +30,6 @@
 .intro{color:var(--muted);font-size:14px;margin-top:4px}
 
 @media (max-width:640px){
-  .dock{top:auto;bottom:calc(16px + env(safe-area-inset-bottom,0px));transform:none}
   .popup{left:12px;right:12px;width:auto;bottom:calc(144px + env(safe-area-inset-bottom,0px))}
 }
 
@@ -36,7 +38,6 @@
 .blockHead{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .blockHead h3{font-size:15px;font-weight:600}
 .count{font-size:12.5px;color:var(--faint)}
-.notice{border-radius:var(--r);padding:12px 16px;font-size:13.5px;background:var(--s-nop-bg);color:var(--fg)}
 .empty{margin:0;padding:18px;border-radius:var(--r);background:var(--surface-2);color:var(--muted);font-size:13.5px;text-align:center}
 .hint{color:var(--muted);font-size:13px}
 
@@ -59,7 +60,8 @@
 .bad{color:var(--danger)}
 .good{color:var(--ok)}
 
-/* Cách tạo một mẫu */
+/* Cách tạo một mẫu; Mẫu đã tải lên dùng chung kiểu thu gọn */
+.summaryResult{font-size:12.5px;font-weight:500;margin-left:auto}
 .guide{border-radius:var(--r-lg);background:var(--surface-2)}
 .guide>summary,.tagGroup>summary{cursor:pointer;list-style:none;display:flex;align-items:center;gap:10px;font-weight:500;font-size:14px}
 .guide>summary{padding:14px 18px}

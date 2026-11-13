@@ -190,6 +190,18 @@ function TemplateList({
   const savedTemplates = templatesQuery.data;
   const rows = useMemo(() => templateRows(savedTemplates ?? [], changes, purpose), [savedTemplates, changes, purpose]);
   const listLoading = formTypeId !== null && templatesQuery.isPending;
+
+  // Danh sách mẫu đã tải lên thu gọn sẵn cho đỡ rối; tự mở khi người dùng vừa thêm file mới
+  const [listOpen, setListOpen] = useState(false);
+  const stagedCount = rows.filter((row) => row.kind === 'staged').length;
+  const previousStagedCount = useRef(stagedCount);
+  useEffect(() => {
+    if (stagedCount > previousStagedCount.current) setListOpen(true);
+    previousStagedCount.current = stagedCount;
+  }, [stagedCount]);
+
+  // Số mẫu có mã không khớp, báo ngay trên dòng thu gọn
+  const badCount = rows.filter((row) => checkResults[row.id]?.tone === 'bad').length;
   const fileInfo = EXPORT_TEMPLATE_FILE[purpose];
   // Mẫu đã lưu cùng mục đích đang chờ xóa (hai khung dùng chung một bộ thay đổi)
   const removedIds = changes.removed.filter((templateId) => savedTemplates?.some((template) => template.id === templateId && template.purpose === purpose));
@@ -285,7 +297,6 @@ function TemplateList({
       <div className={styles.blockHead}>
         <h3>Các mẫu</h3>
         {formTypeId !== null && <RefreshButton query={templatesQuery} label="các mẫu xuất file" size="small" onRefresh={onRefresh} />}
-        {!listLoading && <span className={styles.count}>{rows.length} mẫu</span>}
       </div>
 
       {/* Cách tạo một mẫu: ngay trên khung chọn file, đọc xong là chọn file luôn */}
@@ -311,54 +322,62 @@ function TemplateList({
       ) : templatesQuery.isError ? (
         <LoadError message={loadErrorMessage(templatesQuery) ?? EXPORT_MESSAGES.formTypeNotFound} />
       ) : rows.length ? (
-        <div className={styles.list}>
-          {rows.map((row) => {
-            const busy = busyRowId === row.id;
-            const fileName = row.kind === 'staged' ? row.staged.file.name : row.template.fileName;
-            const sizeBytes = row.kind === 'staged' ? row.staged.file.size : row.template.sizeBytes;
-            return (
-              <div key={row.id} className={styles.template}>
-                <span className={styles.fileType}>{fileInfo.typeLabel}</span>
-                {renamingId === row.id ? (
-                  <RenameInput name={row.name} onDone={(name) => saveName(row, name)} onCancel={() => setRenamingId(null)} />
-                ) : (
-                  <button type="button" className={styles.templateName} title="Xem mẫu" disabled={busy} onClick={() => void viewTemplate(row)}>
-                    <b>{row.name}</b>
-                    <span>
-                      {fileName} · {formatFileSize(sizeBytes)}
-                      {row.kind === 'saved' && ` · ${row.template.uploadedBy}`}
-                    </span>
-                  </button>
-                )}
-                <div className={styles.actions}>
-                  <Button className={styles.smallButton} disabled={busy} onClick={() => void viewTemplate(row)}>
-                    Xem
-                  </Button>
-                  <Button
-                    className={styles.smallButton}
-                    disabled={busy || saving}
-                    title={purpose === 'form' ? 'Tên này hiện khi chọn mẫu lúc Xuất file' : 'Tên này cũng là phần sau của tên file xuất ra'}
-                    onClick={() => setRenamingId(row.id)}
-                  >
-                    Đổi tên
-                  </Button>
-                  <EditorIconButton
-                    icon="delete"
-                    label={row.kind === 'staged' ? 'Gỡ mẫu chưa lưu' : 'Xóa mẫu'}
-                    disabled={busy || saving}
-                    onClick={() => onChangesChange(removeRow(changes, row))}
-                  />
+        <details className={styles.guide} open={listOpen} onToggle={(event) => setListOpen(event.currentTarget.open)}>
+          <summary>
+            Mẫu đã tải lên
+            <span className={styles.count}>{rows.length} mẫu</span>
+            {/* chỉ báo khi có mẫu lệch mã, để khỏi mở ra mới biết; khớp hết thì không hiện gì */}
+            {badCount > 0 && <span className={`${styles.summaryResult} ${styles.bad}`}>{badCount} mẫu có mã không khớp</span>}
+          </summary>
+          <div className={`${styles.list} ${styles.guideBody}`}>
+            {rows.map((row) => {
+              const busy = busyRowId === row.id;
+              const fileName = row.kind === 'staged' ? row.staged.file.name : row.template.fileName;
+              const sizeBytes = row.kind === 'staged' ? row.staged.file.size : row.template.sizeBytes;
+              return (
+                <div key={row.id} className={styles.template}>
+                  <span className={styles.fileType}>{fileInfo.typeLabel}</span>
+                  {renamingId === row.id ? (
+                    <RenameInput name={row.name} onDone={(name) => saveName(row, name)} onCancel={() => setRenamingId(null)} />
+                  ) : (
+                    <button type="button" className={styles.templateName} title="Xem mẫu" disabled={busy} onClick={() => void viewTemplate(row)}>
+                      <b>{row.name}</b>
+                      <span>
+                        {fileName} · {formatFileSize(sizeBytes)}
+                        {row.kind === 'saved' && ` · ${row.template.uploadedBy}`}
+                      </span>
+                    </button>
+                  )}
+                  <div className={styles.actions}>
+                    <Button className={styles.smallButton} disabled={busy} onClick={() => void viewTemplate(row)}>
+                      Xem
+                    </Button>
+                    <Button
+                      className={styles.smallButton}
+                      disabled={busy || saving}
+                      title={purpose === 'form' ? 'Tên này hiện khi chọn mẫu lúc Xuất file' : 'Tên này cũng là phần sau của tên file xuất ra'}
+                      onClick={() => setRenamingId(row.id)}
+                    >
+                      Đổi tên
+                    </Button>
+                    <EditorIconButton
+                      icon="delete"
+                      label={row.kind === 'staged' ? 'Gỡ mẫu chưa lưu' : 'Xóa mẫu'}
+                      disabled={busy || saving}
+                      onClick={() => onChangesChange(removeRow(changes, row))}
+                    />
+                  </div>
+                  {/* kết quả của lần tự kiểm tra mã: đỏ khi có vấn đề, xanh khi khớp hết */}
+                  {checkResults[row.id] && (
+                    <p className={`${styles.result} ${checkResults[row.id]!.tone === 'bad' ? styles.bad : styles.good}`} role="status">
+                      {checkResults[row.id]!.text}
+                    </p>
+                  )}
                 </div>
-                {/* kết quả của lần tự kiểm tra mã: đỏ khi có vấn đề, xanh khi khớp hết */}
-                {checkResults[row.id] && (
-                  <p className={`${styles.result} ${checkResults[row.id]!.tone === 'bad' ? styles.bad : styles.good}`} role="status">
-                    {checkResults[row.id]!.text}
-                  </p>
-                )}
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        </details>
       ) : null}
 
       {/* Mẫu đã lưu vừa bấm xóa: chỉ xóa thật khi bấm Lưu; Hoàn tác để giữ lại */}

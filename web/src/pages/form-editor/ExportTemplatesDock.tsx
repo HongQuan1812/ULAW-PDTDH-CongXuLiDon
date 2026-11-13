@@ -72,7 +72,7 @@ export function ExportTemplatesDock(props: Omit<ExportTemplatesPanelProps, 'purp
             <button
               key={purpose}
               type="button"
-              className={`${styles.fab} ${isOpen ? styles.fabOpen : ''}`}
+              className={`${styles.fab} ${purpose === 'stats' ? styles.fabStats : ''} ${isOpen ? styles.fabOpen : ''}`}
               aria-expanded={isOpen}
               aria-label={`${isOpen ? 'Đóng' : 'Mở'} ${title}${count ? `, ${count} mẫu` : ''}${unsaved ? ', có thay đổi chưa lưu' : ''}`}
               title={unsaved ? `${title} · có thay đổi chưa lưu` : title}

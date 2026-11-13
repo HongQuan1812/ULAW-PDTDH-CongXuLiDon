@@ -324,24 +324,6 @@ async function writeWorkbook(workbook: Workbook): Promise<ArrayBuffer> {
   return new Uint8Array(written as ArrayBuffer).slice().buffer;
 }
 
-/**
- * Điền mẫu thống kê.
- * @param bytes        nội dung file mẫu
- * @param formsData    dữ liệu từng lá đơn theo thứ tự (buildExportData)
- * @param summaryData  mã chung của file: so_don, loai_don, ngay_xuat
- * @returns            nội dung file Excel đã điền; không đọc được mẫu thì ném lỗi
- */
-export async function renderXlsxTemplate(bytes: XlsxBytes, formsData: readonly ExportData[], summaryData: ExportData): Promise<ArrayBuffer> {
-  const workbook = await openWorkbook(bytes);
-  if (!workbook) throw new Error(EXPORT_MESSAGES.unreadableXlsx);
-
-  // Mỗi đơn có stt theo thứ tự trong file
-  const forms = formFillsOf(formsData);
-  const summary = toSheetData(summaryData);
-  workbook.worksheets.forEach((sheet) => fillSheet(sheet, forms, summary));
-  return writeWorkbook(workbook);
-}
-
 /** Các đơn và mã chung của một phiên bản, điền vào sheet có tên sheetName. */
 export interface VersionSheetGroup {
   /** Tên sheet của phiên bản (vd "Phiên bản 2"); mẫu nhiều sheet thì ghép sau tên sheet mẫu */
@@ -398,21 +380,27 @@ export async function renderXlsxByVersion(bytes: XlsxBytes, groups: readonly Ver
   if (!workbook) throw new Error(EXPORT_MESSAGES.unreadableXlsx);
   if (!groups.length) return writeWorkbook(workbook);
 
-  // Với từng phiên bản: sao chép mọi sheet mẫu rồi điền bản sao
+  // Với từng phiên bản: sao chép mọi sheet mẫu rồi điền bản sao. Bản sao mang tên tạm (tên cuối có thể trùng tên sheet mẫu),
+  // đổi sang tên cuối sau khi đã bỏ các sheet mẫu gốc
   const templateSheets = [...workbook.worksheets];
+  const finalNames = new Map<Worksheet, string>();
   for (const group of groups) {
     const forms = formFillsOf(group.formsData);
     const summary = toSheetData(group.summaryData);
     for (const templateSheet of templateSheets) {
-      const sheetName = templateSheets.length > 1 ? `${templateSheet.name} - ${group.sheetName}` : group.sheetName;
-      const copy = workbook.addWorksheet(sheetName.slice(0, MAX_SHEET_NAME_LENGTH));
+      const finalName = templateSheets.length > 1 ? `${templateSheet.name} - ${group.sheetName}` : group.sheetName;
+      const copy = workbook.addWorksheet(`__copy${finalNames.size}`);
       cloneSheet(templateSheet, copy);
       fillSheet(copy, forms, summary);
+      finalNames.set(copy, finalName.slice(0, MAX_SHEET_NAME_LENGTH));
     }
   }
 
-  // Bỏ các sheet mẫu gốc
+  // Bỏ các sheet mẫu gốc, rồi đặt tên cuối cho các bản sao
   templateSheets.forEach((templateSheet) => workbook.removeWorksheet(templateSheet.id));
+  finalNames.forEach((finalName, copy) => {
+    copy.name = finalName;
+  });
   return writeWorkbook(workbook);
 }
 

@@ -1,7 +1,18 @@
 import ExcelJS from 'exceljs';
 import { describe, expect, test } from 'vitest';
 import { FormSectionSchema } from '../aux-schema/form-types--sections';
-import { checkXlsxTemplate, createStatsStarterXlsx, isReadableXlsx, renderXlsxByVersion, renderXlsxTemplate } from './exports--xlsx';
+import type { ExportData } from './exports--tags';
+import { checkXlsxTemplate, createStatsStarterXlsx, isReadableXlsx, renderXlsxByVersion } from './exports--xlsx';
+
+/**
+ * Điền mẫu cho một phiên bản duy nhất (file chỉ có một sheet).
+ * @param bytes        file mẫu
+ * @param formsData    dữ liệu từng đơn
+ * @param summaryData  mã chung của file
+ * @returns            file đã điền
+ */
+const renderXlsxTemplate = (bytes: ArrayBuffer | Uint8Array, formsData: readonly ExportData[], summaryData: ExportData) =>
+  renderXlsxByVersion(bytes, [{ sheetName: 'Thống kê', formsData, summaryData }]);
 
 /** Loại đơn thử: một câu chữ, một bảng có cột tính tổng. */
 const sections = [
@@ -245,6 +256,18 @@ describe('renderXlsxByVersion', () => {
 
     expect(workbook.worksheets.map((sheet) => sheet.name)).toEqual(['Phiên bản 3']);
     expect(workbook.worksheets[0]!.getCell('A3').value).toBe('Tổng: 0 đơn');
+  });
+
+  test('sheet trong mẫu trùng tên sheet của phiên bản thì vẫn xuất được', async () => {
+    const book = new ExcelJS.Workbook();
+    book.addWorksheet('Phiên bản 1').addRow(['{ma_don}']);
+    const template = (await book.xlsx.writeBuffer()) as ArrayBuffer;
+
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.load(await renderXlsxByVersion(template, [{ sheetName: 'Phiên bản 1', formsData: [{ ma_don: 'A-1' }], summaryData: {} }]));
+
+    expect(workbook.worksheets.map((sheet) => sheet.name)).toEqual(['Phiên bản 1']);
+    expect(workbook.worksheets[0]!.getCell('A1').value).toBe('A-1');
   });
 
   test('mẫu không đọc được thì ném lỗi', async () => {
