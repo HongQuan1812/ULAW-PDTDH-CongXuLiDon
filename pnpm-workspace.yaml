@@ -6,4 +6,5 @@ allowBuilds:
   '@parcel/watcher': false
   '@prisma/engines': true
   '@scarf/scarf': false
+  esbuild: false
   prisma: true
