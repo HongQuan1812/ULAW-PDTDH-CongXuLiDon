@@ -1,7 +1,9 @@
 /* Mẫu xuất file của trình soạn: hai nút tròn nổi ở cạnh phải màn hình, mỗi nút mở một khung nổi. */
 
 /* Hai nút tròn xếp dọc ở góc phải dưới màn hình */
-.dock{position:fixed;right:16px;bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:41;display:flex;flex-direction:column;gap:12px}
+/* chỉ để các nút và khung con thừa hưởng --dock-bottom (chỗ đứng đã tính để không đè thanh dính đáy) */
+.dockScope{display:contents}
+.dock{position:fixed;right:16px;bottom:calc(var(--dock-bottom,16px) + env(safe-area-inset-bottom,0px));transition:bottom .18s ease-out;z-index:41;display:flex;flex-direction:column;gap:12px}
 .fab{position:relative;width:52px;height:52px;border:0;border-radius:50%;display:grid;place-items:center;background:var(--accent);color:var(--on-accent);
   box-shadow:var(--shadow-lg),var(--shadow);cursor:pointer;transition:transform .15s,background .15s}
 .fab:hover{background:var(--accent-ink);transform:translateY(-1px)}
@@ -16,7 +18,7 @@
 .fabBadgeUnsaved{background:var(--s-bs-bg);color:var(--s-bs-fg);border-color:var(--s-bs-fg)}
 
 /* Khung nổi: bên trái hai nút, cao từ dưới thanh menu tới đáy màn hình; nội dung cuộn riêng */
-.popup{position:fixed;right:84px;top:calc(var(--nav-h) + 16px);bottom:16px;z-index:40;width:min(760px,calc(100vw - 116px));
+.popup{position:fixed;right:84px;top:calc(var(--nav-h) + 16px);bottom:var(--dock-bottom,16px);z-index:40;width:min(760px,calc(100vw - 116px));
   display:flex;flex-direction:column;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);
   box-shadow:var(--shadow-lg),var(--shadow);overflow:hidden;animation:popupIn .16s ease-out}
 @keyframes popupIn{from{opacity:0;transform:translateX(8px) scale(.98)}to{opacity:1;transform:none}}
@@ -30,7 +32,7 @@
 .intro{color:var(--muted);font-size:14px;margin-top:4px}
 
 @media (max-width:640px){
-  .popup{left:12px;right:12px;width:auto;bottom:calc(144px + env(safe-area-inset-bottom,0px))}
+  .popup{left:12px;right:12px;width:auto;bottom:calc(var(--dock-bottom,16px) + 128px + env(safe-area-inset-bottom,0px))}
 }
 
 /* mục con: Mẫu đã tải lên, Bảng mã */

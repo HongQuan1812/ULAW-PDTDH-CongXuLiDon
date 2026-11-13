@@ -160,7 +160,7 @@
 .check{display:inline-flex;align-items:center;gap:8px;font-size:13.5px;cursor:pointer}
 
 /* hàng nút cuối trình soạn: Xóa, Bỏ thay đổi, Lưu nằm bên phải */
-.bottom{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.bottom{position:sticky;bottom:0;z-index:20;display:flex;gap:10px;align-items:center;flex-wrap:wrap;background:color-mix(in srgb,var(--surface) 94%,transparent);backdrop-filter:blur(10px);border:1px solid var(--line);border-radius:999px;padding:10px;margin-bottom:calc(env(safe-area-inset-bottom,0px) + 12px);box-shadow:var(--shadow)}
 .spacer{flex:1}
 .dialogButtons{display:flex;justify-content:flex-end;gap:8px}
 

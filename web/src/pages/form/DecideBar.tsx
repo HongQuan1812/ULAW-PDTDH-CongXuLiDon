@@ -76,8 +76,8 @@ export function DecideBar({ form }: { form: FormDetail }) {
   // Hộp thoại đặt NGOÀI thanh nút: thanh nút có backdrop-filter nên sẽ giữ luôn vị trí của phần tử position:fixed nằm trong nó
   return (
     <>
-      {/* data-avoid-notes-button: nút tròn Ghi chú nội bộ không che thanh này (đứng lên trên khi chồng nhau) */}
-      <div className={pageStyles.submitRow} data-avoid-notes-button>
+      {/* data-avoid-floating-button: các nút tròn nổi (Ghi chú nội bộ…) không che thanh này (đứng lên trên khi chồng nhau) */}
+      <div className={pageStyles.submitRow} data-avoid-floating-button>
         <div className={pageStyles.buttons}>
           <Button className={styles.needSupplement} onClick={() => askForNote('bs')} disabled={decideForm.isPending}>
             Yêu cầu bổ sung

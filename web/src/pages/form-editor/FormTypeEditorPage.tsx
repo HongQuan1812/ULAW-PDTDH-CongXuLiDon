@@ -1,6 +1,6 @@
 /* Trình soạn loại đơn (#/soan-don/<mã loại đơn>[?phien-ban=<số>], tạo mới: #/soan-don/moi).
    Gồm: nút quay lại, tiêu đề, nút Xuất thống kê, tab Soạn / Xem trước, khung Phiên bản bên phải (màn hình hẹp: trượt ra), nhãn "Chưa lưu", khung báo lỗi, câu nhắc về phiên bản,
-   thẻ Thông tin loại đơn, các phần và câu hỏi, nút + Thêm phần, hàng nút cuối (Xóa · Bỏ thay đổi · Lưu; hai nút cuối chỉ hiện khi có thay đổi).
+   thẻ Thông tin loại đơn, các phần và câu hỏi, nút + Thêm phần, hàng nút cuối dính đáy màn hình (Xóa · Bỏ thay đổi · Lưu; hai nút cuối chỉ hiện khi có thay đổi).
 
    Phiên bản (xem shared/src/api-contract/form-types.ts):
    - Phiên bản Nháp sửa được; Lưu ở Nháp để soạn tiếp, hoặc ở Đang mở để mở (nội dung khóa lại).
@@ -662,26 +662,27 @@ function FormTypeEditor({ managed, requestedVersion }: FormTypeEditorProps) {
               saving={isSaving}
             />
 
-            <div className={styles.bottom}>
-              <span className={styles.spacer} />
-              {selectedSaved?.status === 'draft' && (
-                <Button variant="danger" onClick={() => setConfirmingDelete(true)}>
-                  {deletesWholeFormType ? 'Xóa loại đơn' : 'Xóa bản nháp'}
-                </Button>
-              )}
-
-              {/* Bỏ thay đổi · Lưu: đi thành cặp, chỉ hiện khi phiên bản đang xem có thay đổi */}
-              {dirty && (
-                <>
-                  <Button onClick={discardChanges} disabled={isSaving}>
-                    Bỏ thay đổi
+            {/* Hàng nút dính đáy màn hình khi cuộn (như trang chi tiết đơn): Xóa bên trái; Bỏ thay đổi · Lưu bên phải, chỉ hiện khi phiên bản đang xem có thay đổi */}
+            {(selectedSaved?.status === 'draft' || dirty) && (
+              <div className={styles.bottom} data-avoid-floating-button>
+                {selectedSaved?.status === 'draft' && (
+                  <Button variant="danger" onClick={() => setConfirmingDelete(true)}>
+                    {deletesWholeFormType ? 'Xóa loại đơn' : 'Xóa bản nháp'}
                   </Button>
-                  <Button variant="primary" onClick={() => void save()} disabled={isSaving}>
-                    {isSaving ? 'Đang lưu…' : 'Lưu'}
-                  </Button>
-                </>
-              )}
-            </div>
+                )}
+                <span className={styles.spacer} />
+                {dirty && (
+                  <>
+                    <Button onClick={discardChanges} disabled={isSaving}>
+                      Bỏ thay đổi
+                    </Button>
+                    <Button variant="primary" onClick={() => void save()} disabled={isSaving}>
+                      {isSaving ? 'Đang lưu…' : 'Lưu'}
+                    </Button>
+                  </>
+                )}
+              </div>
+            )}
           </div>
         </div>
 

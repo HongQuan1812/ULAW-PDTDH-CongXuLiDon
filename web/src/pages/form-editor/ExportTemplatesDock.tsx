@@ -1,12 +1,16 @@
 /* Hai nút tròn nổi ở cạnh phải màn hình của trình soạn loại đơn: "Mẫu xuất file đơn" (Word) và "Mẫu xuất file thống kê" (Excel).
    Bấm một nút thì mở khung nổi của mẫu đó (ExportTemplatesPanel), bấm lại hoặc bấm nút đóng thì đóng; mỗi lúc chỉ mở một khung.
    Số ở góc nút là số mẫu đang có (kể cả mẫu chưa lưu); có thay đổi chưa lưu thì số đổi màu cam. */
-import { useState } from 'react';
+import { useRef, useState, type CSSProperties } from 'react';
 import type { ExportTemplate, ExportTemplatePurpose } from '@ulaw/shared';
 import { useExportTemplates } from '../../api/exports';
+import { useFloatingButtonBottom } from '../../lib/useFloatingButtonBottom';
 import { PANEL_TEXT, ExportTemplatesPanel, type ExportTemplatesPanelProps } from './ExportTemplatesPanel';
 import { templateRows, type ExportTemplateChanges } from './exportTemplateChanges';
 import styles from './ExportTemplatesPanel.module.css';
+
+/** Khoảng cách từ hai nút tròn tới đáy màn hình (px): màn hình rộng, màn hình hẹp (như CSS). */
+const DOCK_BOTTOM = { wide: 16, narrow: 16 };
 
 /** Thứ tự các nút, trên xuống dưới. */
 const PURPOSES: readonly ExportTemplatePurpose[] = ['form', 'stats'];
@@ -59,10 +63,14 @@ export function ExportTemplatesDock(props: Omit<ExportTemplatesPanelProps, 'purp
   const { formTypeId, changes } = props;
   const [openPurpose, setOpenPurpose] = useState<ExportTemplatePurpose | null>(null);
   const savedTemplates = useExportTemplates(formTypeId ?? '', formTypeId !== null).data ?? [];
+  // Có thanh dính đáy (Lưu…) chồng lên chỗ của hai nút thì nút và khung nâng lên đứng trên thanh
+  const dockRef = useRef<HTMLDivElement>(null);
+  const dockBottom = useFloatingButtonBottom(dockRef, DOCK_BOTTOM);
+  const dockBottomStyle = dockBottom === null ? undefined : ({ '--dock-bottom': `${dockBottom}px` } as CSSProperties);
 
   return (
-    <>
-      <div className={styles.dock}>
+    <div className={styles.dockScope} style={dockBottomStyle}>
+      <div className={styles.dock} ref={dockRef}>
         {PURPOSES.map((purpose) => {
           const title = PANEL_TEXT[purpose].title;
           const count = templateRows(savedTemplates, changes, purpose).length;
@@ -87,6 +95,6 @@ export function ExportTemplatesDock(props: Omit<ExportTemplatesPanelProps, 'purp
 
       {/* Khung của nút đang mở; đổi nút thì dựng lại khung mới */}
       {openPurpose && <ExportTemplatesPanel key={openPurpose} purpose={openPurpose} {...props} onClose={() => setOpenPurpose(null)} />}
-    </>
+    </div>
   );
 }

@@ -7,7 +7,16 @@
 .errorCard{display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);padding:28px}
 
 /* đầu trang: tiêu đề bên trái, nút "Thông tin đơn" bên phải */
-.head{display:flex;align-items:flex-end;justify-content:space-between;gap:16px 24px;flex-wrap:wrap;margin-bottom:6px}
+/* Dính ngay dưới thanh menu khi cuộn, để nút Tiếp nhận · Xuất file luôn bấm được (giống đầu trang soạn loại đơn) */
+.head{display:flex;align-items:center;justify-content:space-between;gap:16px 24px;flex-wrap:wrap;
+  position:sticky;top:var(--nav-h);z-index:20;margin:-10px -16px 6px;padding:10px 16px;
+  background:color-mix(in srgb,var(--bg) 90%,transparent);backdrop-filter:saturate(1.4) blur(10px)}
+/* menu trượt: thanh trên cùng thấp hơn thanh menu ngang (58px, xem AppLayout.module.css) */
+:global([data-menu="drawer"]) .head{top:58px}
+@supports (animation-timeline:scroll()){
+  .head{animation:headStuck linear both;animation-timeline:scroll(root);animation-range:0 48px}
+}
+@keyframes headStuck{to{box-shadow:0 1px 0 var(--line)}}
 .headText{display:grid;gap:6px;min-width:0;max-width:68ch}
 .headActions{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
 .title{font-size:clamp(24px,2.6vw,30px);line-height:1.2;font-weight:600;letter-spacing:-.03em}
