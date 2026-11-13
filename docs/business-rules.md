@@ -144,7 +144,7 @@ Mỗi loại đơn có hai nhóm mẫu, lưu ở máy chủ theo loại đơn, d
 ### Mẫu xuất file thống kê (Excel)
 
 - Cán bộ soạn mẫu bằng Excel, dùng cùng các mã như mẫu Word, rồi tải file `.xlsx` lên ở khung "Mẫu xuất file thống kê" của trình soạn loại đơn.
-  Ở mẫu đã lưu, bấm **Xuất** để tải về file Excel (máy chủ dùng ExcelJS, `shared/src/business-rules/exports--xlsx.ts`). Cần quyền `manageFormTypes`.
+  Ở mẫu đã lưu, bấm **Xuất** (hoặc **Xuất thống kê** ở đầu trình soạn) để mở trình xem file Excel đã điền, rồi bấm **Tải file Excel** (máy chủ dùng ExcelJS, `shared/src/business-rules/exports--xlsx.ts`). Cần quyền `manageFormTypes`.
 - File xuất ra gồm mọi lá đơn của loại đơn: mọi phiên bản, mọi trạng thái, theo thứ tự nộp. Muốn lọc thì lọc trong Excel.
 - **Hàng có mã của đơn** (vd `{ma_don}`, `{ho_ten}`) là hàng mẫu: hàng đó nhân lên, mỗi đơn một hàng, giữ định dạng của hàng mẫu.
   `{stt}` là số thứ tự của đơn trong file. Không có đơn nào thì bỏ hàng mẫu.

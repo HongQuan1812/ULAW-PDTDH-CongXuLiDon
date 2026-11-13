@@ -1,15 +1,18 @@
 /* Nút "Xuất thống kê" ở đầu trình soạn loại đơn:
    theo các mẫu xuất file thống kê ĐÃ LƯU của loại đơn. Một mẫu thì bấm là xuất; nhiều mẫu thì mở danh sách "Chọn mẫu";
    chưa có mẫu thì nút mờ, rê chuột vào thấy cách thêm mẫu.
-   Máy chủ điền mọi lá đơn của loại đơn vào mẫu; file Excel tải thẳng về máy (trình duyệt không xem trước được Excel). */
+   Máy chủ điền mọi lá đơn của loại đơn vào mẫu; file Excel nhận về mở trong trình xem, có nút "Tải file Excel" trên thanh xem. */
 import { useState } from 'react';
 import type { ExportTemplate } from '@ulaw/shared';
 import { exportStats, useExportTemplates } from '../../api/exports';
 import { Button } from '../../components/Button';
 import { useToast } from '../../components/Toast';
-import { saveToDevice } from '../../lib/saveToDevice';
+import { FilePreview, type PreviewFile } from '../file-preview/FilePreview';
 import styles from './ExportButton.module.css';
 import { useTemplateMenu } from './useTemplateMenu';
+
+/** Ghi chú trên thanh xem: bản xem chỉ có chữ trong ô, file tải về mới đủ định dạng. */
+export const XLSX_PREVIEW_NOTE = 'Xem trước gần đúng · chỉ hiện chữ trong ô';
 
 /**
  * Nút Xuất thống kê của một loại đơn.
@@ -23,9 +26,10 @@ export function StatsExportButton({ formTypeId, className }: { formTypeId: strin
   const templates = (templatesQuery.data ?? []).filter((template) => template.purpose === 'stats');
   const { menuOpen, setMenuOpen, wrapRef, buttonRef } = useTemplateMenu();
   const [exporting, setExporting] = useState(false);
+  const [exportedFile, setExportedFile] = useState<PreviewFile | null>(null);
 
   /**
-   * Xuất theo một mẫu thống kê: xong thì tải file Excel về máy; lỗi thì báo câu máy chủ gửi.
+   * Xuất theo một mẫu thống kê: xong thì mở trình xem file Excel đã điền; lỗi thì báo câu máy chủ gửi.
    * @param template  mẫu đã chọn
    */
   const exportWith = async (template: ExportTemplate) => {
@@ -33,7 +37,15 @@ export function StatsExportButton({ formTypeId, className }: { formTypeId: strin
     setExporting(true);
     try {
       const exported = await exportStats(formTypeId, template.id);
-      saveToDevice(exported.content, exported.fileName);
+      setExportedFile({
+        id: `export-stats-${formTypeId}-${template.id}-${Date.now()}`,
+        name: exported.fileName,
+        sizeBytes: exported.content.size,
+        content: exported.content,
+        title: `Thống kê · ${template.name}`,
+        note: XLSX_PREVIEW_NOTE,
+        downloadLabel: 'Tải file Excel',
+      });
     } catch (error) {
       toast(error instanceof Error ? error.message : String(error), 'error');
     } finally {
@@ -55,7 +67,7 @@ export function StatsExportButton({ formTypeId, className }: { formTypeId: strin
         disabled={exporting || !templates.length}
         title={
           templates.length
-            ? 'Tải về file Excel có mọi đơn của loại đơn này'
+            ? 'Xem và tải file Excel có mọi đơn của loại đơn này'
             : 'Chưa có mẫu thống kê. Bấm nút tròn “Mẫu xuất file thống kê” ở cạnh phải, thêm file Excel rồi bấm Lưu.'
         }
         onClick={onButtonClick}
@@ -78,6 +90,7 @@ export function StatsExportButton({ formTypeId, className }: { formTypeId: strin
           ))}
         </div>
       )}
+      <FilePreview file={exportedFile} onClose={() => setExportedFile(null)} />
     </div>
   );
 }
