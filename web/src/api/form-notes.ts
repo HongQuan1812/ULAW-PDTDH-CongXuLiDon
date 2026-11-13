@@ -25,7 +25,7 @@ function refreshNoteCountTables(queryClient: QueryClient): void {
 }
 
 /** Bao lâu (ms) tải lại ghi chú để thấy ghi chú người khác vừa viết: khi đang mở khung ghi chú, và khi khung đang đóng. */
-const NOTES_REFRESH_MS_PANEL_OPEN = 10_000;
+const NOTES_REFRESH_MS_PANEL_OPEN = 3_000;
 const NOTES_REFRESH_MS_PANEL_CLOSED = 30_000;
 
 /**
