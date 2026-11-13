@@ -20,6 +20,7 @@ import {
 } from '@ulaw/shared';
 import { Button } from '../../components/Button';
 import { useToast } from '../../components/Toast';
+import { FilePreview, type PreviewFile } from '../../features/file-preview/FilePreview';
 import { saveToDevice } from '../../lib/saveToDevice';
 import styles from './ExportTemplatesPanel.module.css';
 
@@ -264,6 +265,8 @@ interface ExportTagGuideProps {
   purpose: ExportTemplatePurpose;
   /** Mã của các câu hỏi đang soạn */
   questionTags: QuestionExportTag[];
+  /** Số phiên bản đang xem */
+  version: number;
 }
 
 /** Ví dụ của "Cách tạo một mẫu": mỗi dòng một kiểu định dạng của mã (thường, in đậm, in nghiêng, cỡ chữ lớn). Chỉ để minh họa. */
@@ -333,36 +336,81 @@ function SheetExample({ label, title, rows }: { label: string; title: string; ro
  * @param formTypeName  tên loại đơn đang soạn
  * @param prefix        phần đầu tên file, vd "Mẫu thống kê"
  * @param extension     đuôi file
+ * @param version       số phiên bản đang xem
  * @returns             tên file
  */
-function starterFileName(formTypeName: string, prefix: string, extension: 'xlsx' | 'docx'): string {
+function starterFileName(formTypeName: string, prefix: string, extension: 'xlsx' | 'docx', version: number): string {
   const safeName = formTypeName.replace(/[\\/:*?"<>|]/g, '').trim();
-  return `${prefix}${safeName ? ` - ${safeName}` : ''}.${extension}`;
+  return `${prefix}${safeName ? ` - ${safeName}` : ''} - phiên bản ${version}.${extension}`;
+}
+
+/**
+ * Hai nút của file mẫu có sẵn: "Tải" về máy và "Xem" ngay trong trình duyệt (xem file Word / Excel dựng sẵn, còn nguyên các mã).
+ * @param purpose       mẫu Word hay Excel
+ * @param sections      các phần của loại đơn đang soạn
+ * @param formTypeName  tên loại đơn (đặt tên file)
+ * @param version       số phiên bản đang xem (ghi trên nút và tên file)
+ * @returns             hai nút và trình xem
+ */
+function StarterButtons({ purpose, sections, formTypeName, version }: { purpose: ExportTemplatePurpose; sections: readonly FormSection[]; formTypeName: string; version: number }) {
+  const toast = useToast();
+  const [busy, setBusy] = useState(false);
+  const [previewedFile, setPreviewedFile] = useState<PreviewFile | null>(null);
+
+  /** Dựng file mẫu có sẵn theo bản soạn hiện tại (Word dựng ngay, Excel chờ thư viện bảng tính). */
+  const buildStarter = async (): Promise<{ blob: Blob; fileName: string }> => {
+    if (purpose === 'form') {
+      return { blob: new Blob([createFormStarterDocx(sections)], { type: DOCX_CONTENT_TYPE }), fileName: starterFileName(formTypeName, 'Mẫu đơn', 'docx', version) };
+    }
+    return { blob: new Blob([await createStatsStarterXlsx(sections)], { type: XLSX_CONTENT_TYPE }), fileName: starterFileName(formTypeName, 'Mẫu thống kê', 'xlsx', version) };
+  };
+
+  /** Dựng file rồi tải về máy hoặc mở xem. */
+  const run = async (action: 'download' | 'view') => {
+    setBusy(true);
+    try {
+      const { blob, fileName } = await buildStarter();
+      if (action === 'download') saveToDevice(blob, fileName);
+      else {
+        setPreviewedFile({
+          id: `starter-${purpose}-${Date.now()}`,
+          name: fileName,
+          sizeBytes: blob.size,
+          content: blob,
+          title: fileName,
+          note: `File mẫu có sẵn · phiên bản ${version}`,
+          downloadLabel: 'Tải file mẫu',
+        });
+      }
+    } catch {
+      toast('Không tạo được file mẫu, hãy thử lại.', 'error');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className={styles.starterButtons}>
+      <Button className={styles.smallButton} disabled={busy} onClick={() => void run('download')}>
+        {busy ? 'Đang tạo…' : `Tải file mẫu có sẵn (phiên bản ${version})`}
+      </Button>
+      <Button className={styles.smallButton} disabled={busy} onClick={() => void run('view')}>
+        Xem file mẫu
+      </Button>
+      <FilePreview file={previewedFile} onClose={() => setPreviewedFile(null)} />
+    </div>
+  );
 }
 
 /**
  * Nội dung "Cách tạo một mẫu" của mẫu Excel (luôn hiện): nút tải file mẫu có sẵn, 3 dòng hướng dẫn, ví dụ file mẫu → file xuất ra.
  * @param sections      các phần của loại đơn đang soạn (để dựng file mẫu có sẵn)
  * @param formTypeName  tên loại đơn (đặt tên file)
+ * @param version       số phiên bản đang xem (ghi trên nút và tên file)
  * @returns             nội dung mục
  */
-function StatsHowTo({ sections, formTypeName }: { sections: readonly FormSection[]; formTypeName: string }) {
-  const toast = useToast();
-  const [creating, setCreating] = useState(false);
+function StatsHowTo({ sections, formTypeName, version }: { sections: readonly FormSection[]; formTypeName: string; version: number }) {
   const headers = STATS_EXAMPLE.columns.map((column) => column.header);
-
-  /** Dựng file mẫu có sẵn theo bản soạn hiện tại rồi tải về máy. */
-  const downloadStarter = async () => {
-    setCreating(true);
-    try {
-      const content = await createStatsStarterXlsx(sections);
-      saveToDevice(new Blob([content], { type: XLSX_CONTENT_TYPE }), starterFileName(formTypeName, 'Mẫu thống kê', 'xlsx'));
-    } catch {
-      toast('Không tạo được file mẫu, hãy thử lại.', 'error');
-    } finally {
-      setCreating(false);
-    }
-  };
 
   return (
     <div className={styles.guideBody}>
@@ -394,9 +442,7 @@ function StatsHowTo({ sections, formTypeName }: { sections: readonly FormSection
         1, 2, 3… của hàng, không phải mã đơn.
       </p>
       {/* File mẫu dựng sẵn: đầu cột và mã mọi câu hỏi của loại đơn đang soạn */}
-      <Button className={styles.smallButton} disabled={creating} onClick={() => void downloadStarter()}>
-        {creating ? 'Đang tạo…' : 'Tải file mẫu có sẵn'}
-      </Button>
+      <StarterButtons purpose="stats" sections={sections} formTypeName={formTypeName} version={version} />
     </div>
   );
 }
@@ -405,18 +451,7 @@ function StatsHowTo({ sections, formTypeName }: { sections: readonly FormSection
  * Nội dung "Cách tạo một mẫu" của mẫu Word: 3 bước, ví dụ trước / sau theo kiểu định dạng.
  * @returns  nội dung mục
  */
-function FormHowTo({ sections, formTypeName }: { sections: readonly FormSection[]; formTypeName: string }) {
-  const toast = useToast();
-
-  /** Dựng file Word mẫu có sẵn theo bản soạn hiện tại rồi tải về máy. */
-  const downloadStarter = () => {
-    try {
-      saveToDevice(new Blob([createFormStarterDocx(sections)], { type: DOCX_CONTENT_TYPE }), starterFileName(formTypeName, 'Mẫu đơn', 'docx'));
-    } catch {
-      toast('Không tạo được file mẫu, hãy thử lại.', 'error');
-    }
-  };
-
+function FormHowTo({ sections, formTypeName, version }: { sections: readonly FormSection[]; formTypeName: string; version: number }) {
   return (
     <div className={styles.guideBody}>
       <ol className={styles.steps}>
@@ -458,9 +493,7 @@ function FormHowTo({ sections, formTypeName }: { sections: readonly FormSection[
       {/* giá trị điền vào lấy định dạng của chỗ gõ mã, không tự in đậm */}
       <p className={styles.hint}>Chữ điền vào giữ đúng định dạng của mã trong file mẫu: mã in đậm thì chữ điền vào in đậm, mã cỡ 13 thì chữ cỡ 13.</p>
       {/* File mẫu dựng sẵn: thông tin người nộp, mã mọi câu hỏi của loại đơn đang soạn */}
-      <Button className={styles.smallButton} onClick={downloadStarter}>
-        Tải file mẫu có sẵn
-      </Button>
+      <StarterButtons purpose="form" sections={sections} formTypeName={formTypeName} version={version} />
     </div>
   );
 }
@@ -493,11 +526,11 @@ function TagGroup({ title, purpose, children }: { title: string; purpose: Export
  * @param formTypeName  tên loại đơn đang soạn (tên file mẫu có sẵn)
  * @returns             mục thu gọn
  */
-export function ExportHowTo({ purpose, sections, formTypeName }: { purpose: ExportTemplatePurpose; sections: readonly FormSection[]; formTypeName: string }) {
+export function ExportHowTo({ purpose, sections, formTypeName, version }: { purpose: ExportTemplatePurpose; sections: readonly FormSection[]; formTypeName: string; version: number }) {
   return (
     <details className={styles.guide}>
       <summary>Cách tạo một mẫu</summary>
-      {purpose === 'form' ? <FormHowTo sections={sections} formTypeName={formTypeName} /> : <StatsHowTo sections={sections} formTypeName={formTypeName} />}
+      {purpose === 'form' ? <FormHowTo sections={sections} formTypeName={formTypeName} version={version} /> : <StatsHowTo sections={sections} formTypeName={formTypeName} version={version} />}
     </details>
   );
 }
@@ -508,7 +541,7 @@ export function ExportHowTo({ purpose, sections, formTypeName }: { purpose: Expo
  * @param props  xem ExportTagGuideProps
  * @returns      các nhóm mã thu gọn được
  */
-function TagGroups({ purpose, questionTags }: ExportTagGuideProps) {
+function TagGroups({ purpose, questionTags }: Omit<ExportTagGuideProps, 'version'>) {
   return (
     <div className={styles.tagGroups}>
       {/* Mẫu Excel: mã chỉ điền một lần cho cả file */}
@@ -552,11 +585,12 @@ function TagGroups({ purpose, questionTags }: ExportTagGuideProps) {
  * @param props  xem ExportTagGuideProps
  * @returns      mục Bảng mã
  */
-export function ExportTagGuide({ purpose, questionTags }: ExportTagGuideProps) {
+export function ExportTagGuide({ purpose, questionTags, version }: ExportTagGuideProps) {
   return (
     <div className={styles.block}>
       <div className={styles.blockHead}>
         <h3>Bảng mã</h3>
+        <span className={styles.versionChip}>Phiên bản {version}</span>
       </div>
       <p className={styles.hint}>Bấm vào mã để sao chép, rồi dán vào file {APP_NAME[purpose]}.</p>
       <TagGroups purpose={purpose} questionTags={questionTags} />

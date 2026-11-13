@@ -656,6 +656,7 @@ function FormTypeEditor({ managed, requestedVersion }: FormTypeEditorProps) {
             <ExportTemplatesDock
               formTypeId={managed?.id ?? null}
               draft={exportDraft}
+              version={selectedVersion}
               changes={templateChanges}
               onChangesChange={setTemplateChanges}
               saving={isSaving}

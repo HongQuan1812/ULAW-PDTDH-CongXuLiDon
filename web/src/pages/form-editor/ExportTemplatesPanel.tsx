@@ -65,6 +65,8 @@ export interface ExportTemplatesPanelProps {
   formTypeId: string | null;
   /** Bản soạn đang hiện: tên, mã đơn, các phần */
   draft: ExportDraftRequest;
+  /** Số phiên bản đang xem (bản soạn ở trên là của phiên bản này) */
+  version: number;
   /** Các thay đổi chưa lưu về mẫu */
   changes: ExportTemplateChanges;
   /** Gọi với các thay đổi mới (thêm, đổi tên, xóa mẫu) */
@@ -119,6 +121,7 @@ export function ExportTemplatesPanel({
   purpose,
   formTypeId,
   draft,
+  version,
   changes,
   onChangesChange,
   saving,
@@ -165,9 +168,10 @@ export function ExportTemplatesPanel({
           changes={changes}
           onChangesChange={onChangesChange}
           saving={saving}
-          howTo={<ExportHowTo purpose={purpose} sections={draft.sections} formTypeName={draft.name} />}
+          version={version}
+          howTo={<ExportHowTo purpose={purpose} sections={draft.sections} formTypeName={draft.name} version={version} />}
         />
-        <ExportTagGuide purpose={purpose} questionTags={questionTags} />
+        <ExportTagGuide purpose={purpose} questionTags={questionTags} version={version} />
       </div>
     </section>
   );
@@ -192,6 +196,7 @@ function TemplateList({
   changes,
   onChangesChange,
   saving,
+  version,
   howTo,
 }: Omit<ExportTemplatesPanelProps, 'draft'> & {
   /** Mục "Cách tạo một mẫu", đặt trên khung chọn file */
@@ -320,7 +325,13 @@ function TemplateList({
       {!saving && (
         <FileDropZone
           accept={`${fileInfo.extension},${fileInfo.contentType}`}
-          hint={PANEL_TEXT[purpose].dropHint}
+          hint={
+            <>
+              {PANEL_TEXT[purpose].dropHint}
+              <br />
+              Mã trong file được kiểm theo <b className={styles.versionEmphasis}>Phiên bản {version}</b>
+            </>
+          }
           describedBy={rejectedMessages.length ? rejectedId : undefined}
           onFiles={addFiles}
         />

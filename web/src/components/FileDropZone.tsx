@@ -1,14 +1,14 @@
 /* Khung chọn tệp dùng chung: bấm, Enter / phím cách, hoặc kéo thả tệp vào.
    Chỉ đưa tệp vừa chọn cho nơi dùng; giữ tệp, kiểm tra định dạng, tải lên là việc của nơi dùng.
    Dùng ở câu hỏi tải tệp của lá đơn và khung Mẫu xuất file của trình soạn. */
-import { useRef, useState, type DragEvent, type KeyboardEvent } from 'react';
+import { useRef, useState, type DragEvent, type KeyboardEvent, type ReactNode } from 'react';
 import styles from './FileDropZone.module.css';
 
 interface FileDropZoneProps {
   /** Thuộc tính accept của hộp chọn tệp, vd '.pdf,application/pdf' */
   accept: string;
   /** Câu hướng dẫn nhỏ dưới dòng chính, vd 'PDF, ảnh — tối đa 10 MB/tệp' */
-  hint: string;
+  hint: ReactNode;
   /** Gọi với các tệp vừa chọn hoặc kéo thả vào */
   onFiles: (chosenFiles: FileList) => void;
   /** Chọn được nhiều tệp một lần; mặc định true */
