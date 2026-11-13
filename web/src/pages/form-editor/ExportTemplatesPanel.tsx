@@ -328,6 +328,9 @@ function TemplateList({
             <span className={styles.count}>{rows.length} mẫu</span>
             {/* chỉ báo khi có mẫu lệch mã, để khỏi mở ra mới biết; khớp hết thì không hiện gì */}
             {badCount > 0 && <span className={`${styles.summaryResult} ${styles.bad}`}>{badCount} mẫu có mã không khớp</span>}
+            {badCount === 0 && rows.length > 0 && rows.every((row) => checkResults[row.id]) && (
+              <span className={`${styles.summaryResult} ${styles.good}`}>Tất cả mẫu đều khớp mã</span>
+            )}
           </summary>
           <div className={`${styles.list} ${styles.guideBody}`}>
             {rows.map((row) => {
