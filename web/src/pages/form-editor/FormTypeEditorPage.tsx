@@ -287,7 +287,12 @@ function FormTypeEditor({ managed, requestedVersion }: FormTypeEditorProps) {
   const editDraft = (changeDraft: (current: FormTypeDraft) => FormTypeDraft) => {
     if (contentLocked) return;
     if (editingSelected) {
-      setEdit((current) => current && { ...current, draft: changeDraft(current.draft) });
+      // Bản đang sửa có thể vừa bị bỏ (sửa về đúng như lúc đầu) mà trang chưa kịp vẽ lại, vd bộ gõ tiếng Việt
+      // xóa "d" rồi chèn "Đ" liền nhau: khi đó sửa tiếp trên bản ngay trước, không bỏ mất chữ vừa gõ
+      setEdit((current) => {
+        const latestEdit = current ?? edit;
+        return latestEdit && { ...latestEdit, draft: changeDraft(latestEdit.draft) };
+      });
       return;
     }
     if (isNew || selectedSaved?.status === 'draft') {
