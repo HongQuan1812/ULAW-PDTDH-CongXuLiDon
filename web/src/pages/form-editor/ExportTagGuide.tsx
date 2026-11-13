@@ -1,6 +1,6 @@
-/* Hai mục dưới danh sách mẫu trong khung "Mẫu xuất file đơn" / "Mẫu xuất file thống kê":
-   - "Cách tạo một mẫu": 3 bước và ví dụ trước / sau;
-   - "Bảng mã": mã câu trả lời của từng câu hỏi và mã chung, mỗi mã một dòng (Gõ vào file Word / Excel · Sẽ được điền bằng).
+/* Hai mục hướng dẫn trong khung "Mẫu xuất file đơn" / "Mẫu xuất file thống kê":
+   - "Cách tạo một mẫu" (ExportHowTo, ngay trên khung chọn file): 3 bước và ví dụ trước / sau;
+   - "Bảng mã" (ExportTagGuide, dưới danh sách mẫu): mã câu trả lời của từng câu hỏi và mã chung, mỗi mã một dòng (Gõ vào file Word / Excel · Sẽ được điền bằng).
    Bấm vào mã để sao chép.
    Mẫu Word: câu hỏi dạng bảng có bảng mẫu một dòng (vòng lặp) và nút sao chép để dán vào Word thành bảng thật.
    Mẫu Excel: không có vòng lặp; hàng có mã của đơn tự nhân lên mỗi đơn một hàng, câu hỏi dạng bảng gộp vào một ô;
@@ -458,19 +458,28 @@ function TagGroup({ title, purpose, children }: { title: string; purpose: Export
 }
 
 /**
- * Mục "Cách tạo một mẫu" và "Bảng mã" (các mục thu gọn được, mặc định đóng).
+ * Mục "Cách tạo một mẫu" (thu gọn được, mặc định đóng); đặt ngay trên khung chọn file.
+ * @param props  xem ExportTagGuideProps
+ * @returns      mục thu gọn
+ */
+export function ExportHowTo({ purpose, questionTags }: ExportTagGuideProps) {
+  return (
+    <details className={styles.guide}>
+      <summary>Cách tạo một mẫu</summary>
+      {purpose === 'form' ? <FormHowTo /> : <StatsHowTo questionTags={questionTags} />}
+    </details>
+  );
+}
+
+/**
+ * Mục "Bảng mã" (các nhóm mã thu gọn được, mặc định đóng).
  * Mẫu Excel có thêm nhóm "Cả file" (mã chỉ điền một lần, {stt} là thứ tự của đơn); câu hỏi dạng bảng gộp vào một ô.
  * @param props  xem ExportTagGuideProps
- * @returns      hai mục
+ * @returns      mục Bảng mã
  */
 export function ExportTagGuide({ purpose, questionTags }: ExportTagGuideProps) {
   return (
     <>
-      <details className={styles.guide}>
-        <summary>Cách tạo một mẫu</summary>
-        {purpose === 'form' ? <FormHowTo /> : <StatsHowTo questionTags={questionTags} />}
-      </details>
-
       <div className={styles.block}>
         <div className={styles.blockHead}>
           <h3>Bảng mã</h3>

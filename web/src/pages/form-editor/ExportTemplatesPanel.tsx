@@ -5,7 +5,7 @@
    (kể cả thay đổi chưa lưu, kể cả mẫu chưa lưu). Muốn xem mẫu điền dữ liệu thật: mẫu đơn thì Xuất file ở trang chi tiết
    một lá đơn; mẫu thống kê đã lưu thì bấm Xuất ngay tại dòng mẫu (tải về file Excel điền mọi lá đơn của loại đơn).
    Mỗi lần mở trình soạn, khung và các mục thu gọn bên trong đều đóng. */
-import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from 'react';
+import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
 import {
   EXPORT_MESSAGES,
   EXPORT_TEMPLATE_FILE,
@@ -32,7 +32,7 @@ import { useToast } from '../../components/Toast';
 import { FilePreview, type PreviewFile } from '../../features/file-preview/FilePreview';
 import { saveToDevice } from '../../lib/saveToDevice';
 import { EditorIconButton } from './EditorIconButton';
-import { ExportTagGuide } from './ExportTagGuide';
+import { ExportHowTo, ExportTagGuide } from './ExportTagGuide';
 import { removeRow, renameRow, stageTemplate, templateRows, type ExportTemplateChanges, type TemplateRow } from './exportTemplateChanges';
 import styles from './ExportTemplatesPanel.module.css';
 
@@ -114,7 +114,7 @@ function checkResultOf(check: ExportTemplateCheck, tableTags: string[]): Templat
 /**
  * Khung Mẫu xuất file đơn / Mẫu xuất file thống kê.
  * @param props  xem ExportTemplatesPanelProps
- * @returns      thẻ có nút thu gọn; mở ra thì có các mẫu, Cách tạo một mẫu, Bảng mã
+ * @returns      thẻ có nút thu gọn; mở ra thì có Cách tạo một mẫu, các mẫu, Bảng mã
  */
 export function ExportTemplatesPanel({ purpose, formTypeId, draft, changes, onChangesChange, saving }: ExportTemplatesPanelProps) {
   const text = PANEL_TEXT[purpose];
@@ -168,6 +168,7 @@ export function ExportTemplatesPanel({ purpose, formTypeId, draft, changes, onCh
             changes={changes}
             onChangesChange={onChangesChange}
             saving={saving}
+            howTo={<ExportHowTo purpose={purpose} questionTags={questionTags} />}
           />
           <ExportTagGuide purpose={purpose} questionTags={questionTags} />
         </div>
@@ -177,7 +178,7 @@ export function ExportTemplatesPanel({ purpose, formTypeId, draft, changes, onCh
 }
 
 /**
- * Mục "Các mẫu": khung chọn file, danh sách mẫu (đã lưu và chưa lưu), mỗi mẫu có Xem, Đổi tên, Xóa;
+ * Mục "Các mẫu": Cách tạo một mẫu, khung chọn file, danh sách mẫu (đã lưu và chưa lưu), mỗi mẫu có Xem, Đổi tên, Xóa;
  * mẫu thống kê đã lưu có thêm Xuất (tải về file Excel điền mọi lá đơn).
  * Thêm, đổi tên, xóa chỉ ghi nhận (lưu khi bấm Lưu của trình soạn); Xem chạy ngay, mẫu chưa lưu thì mở thẳng file trong trình duyệt.
  * Mã trong mỗi mẫu tự được kiểm tra khi mẫu vừa thêm / vừa mở khung, và mỗi khi câu hỏi đổi (sau lúc ngừng gõ);
@@ -196,7 +197,10 @@ function TemplateList({
   changes,
   onChangesChange,
   saving,
+  howTo,
 }: Omit<ExportTemplatesPanelProps, 'draft'> & {
+  /** Mục "Cách tạo một mẫu", đặt trên khung chọn file */
+  howTo: ReactNode;
   templatesQuery: ReturnType<typeof useExportTemplates>;
   checkRound: number;
   /** Bấm nút ↻ */
@@ -329,6 +333,9 @@ function TemplateList({
         {formTypeId !== null && <RefreshButton query={templatesQuery} label="các mẫu xuất file" size="small" onRefresh={onRefresh} />}
         {!listLoading && <span className={styles.count}>{rows.length} mẫu</span>}
       </div>
+
+      {/* Cách tạo một mẫu: ngay trên khung chọn file, đọc xong là chọn file luôn */}
+      {howTo}
 
       {/* Chọn file: bấm hoặc kéo thả, như câu hỏi tải tệp của lá đơn; bấm Lưu mới tải lên */}
       {!saving && (
