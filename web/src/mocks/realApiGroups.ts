@@ -8,6 +8,7 @@ export const API_GROUPS = [
   'email',
   'exports',
   'files',
+  'form-notes',
   'form-types',
   'form',
   'forms',

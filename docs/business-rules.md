@@ -43,6 +43,7 @@ Giao diện ẩn / hiện nút theo quyền; **máy chủ kiểm tra lại mọi
 | Yêu cầu bổ sung / Duyệt / Từ chối đơn **mình phụ trách** | `decide` | ✗ | ✓ | ✓ |
 | Yêu cầu bổ sung / Duyệt / Từ chối đơn **người khác phụ trách** | `decideAny` | ✗ | ✗ | ✓ |
 | Chuyển giao đơn cho người xử lí khác | `transfer` | ✗ | ✓ | ✓ |
+| Xem, viết ghi chú nội bộ trên đơn; sửa, xóa ghi chú của mình | `internalNotes` | ✗ | ✓ | ✓ |
 | Xem thông tin người nộp đơn khác | `viewApplicant` | ✗ | ✓ | ✓ |
 | Sửa thông tin người nộp đơn khác | `editApplicant` | ✗ | ✗ | ✓ |
 | Nộp đơn thay người nộp đơn khác | `submitForApplicant` | ✗ | ✗ | ✓ |
@@ -87,6 +88,15 @@ nop Đã nộp ──Tiếp nhận──▶ xet Đang xét ──▶ duyet Đã 
 
 Giống nhau với mọi người xem. Khai báo ở `STATUS_NOTICE` trong `web/src/pages/form/FormDetailPage.tsx`.
 Có lí do của Phòng Đào tạo thì hiện thêm dòng "Phòng Đào tạo: <lí do>".
+
+### Ghi chú nội bộ
+
+- Cán bộ (quyền `internalNotes`) để lại ghi chú trên một lá đơn, nối thành chuỗi theo thứ tự viết, như bình luận.
+  **Người nộp đơn không thấy**, không biết có ghi chú. Khác với lí do Yêu cầu bổ sung / Từ chối (người nộp đơn thấy).
+- Mỗi ghi chú có người viết, lúc viết; nội dung là văn bản có định dạng, không được trống.
+- **Chỉ người viết sửa, xóa được ghi chú của mình** (`canEditFormNote`), Admin cũng không sửa, xóa ghi chú người khác. Sửa thì hiện "đã sửa".
+- Trang chi tiết đơn: nút tròn ở góc phải dưới, có số ghi chú; bấm thì mở khung ghi chú, kéo góc trên bên trái để co giãn.
+- Hợp đồng API: `shared/src/api-contract/form-notes.ts`. Hiện mới có API giả, ghi chú mất khi tải lại trang.
 
 ## Loại đơn
 

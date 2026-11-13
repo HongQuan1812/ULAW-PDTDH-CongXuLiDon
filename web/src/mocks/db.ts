@@ -10,6 +10,7 @@ import type {
   FormAnswers,
   FormDecision,
   FormDetail,
+  FormNote,
   FormSection,
   FormStats,
   FormSummary,
@@ -21,6 +22,7 @@ import type {
   ManagedFormType,
   ManagedFormSummary,
   OpenFormType,
+  RichTextDoc,
   RoleId,
   SaveFormTypeVersionRequest,
   Session,
@@ -36,6 +38,7 @@ import {
   FORM_STATUSES,
   FORM_TYPE_MESSAGES,
   can,
+  formDetailPath,
   isAnswerable,
   maskCccd,
   nextFormCode,
@@ -924,6 +927,7 @@ export function resetMockDb(): void {
   FORM_TYPES = seedFormTypes();
   FILES.clear();
   EXPORT_TEMPLATES = seedExportTemplates();
+  FORM_NOTES.clear();
   try {
     sessionStorage.removeItem(ACCOUNTS_KEY);
   } catch {
@@ -1196,4 +1200,84 @@ export function saveEmailSettings(settings: EmailSettings, staffId: string): Ema
   emailSettings = structuredClone(settings);
   emailSettingsUpdate = { updatedAt: vietnamNow(), updatedById: staffId };
   return getEmailSettings();
+}
+
+/* ---------- Ghi chú nội bộ trên lá đơn ---------- */
+
+/** Ghi chú theo mã đơn, cũ trước mới sau. Giữ trong bộ nhớ, tải lại trang là mất (chưa có ghi chú mẫu). */
+const FORM_NOTES = new Map<string, FormNote[]>();
+
+/** Số tăng dần để sinh id ghi chú. */
+let nextFormNoteNumber = 1;
+
+/**
+ * Lá đơn có tồn tại không. Nhóm form đã dùng API thật thì hỏi backend (đơn nộp ở backend không có trong dữ liệu giả).
+ * Gọi khi người hỏi đã là cán bộ (xem được mọi đơn), nên backend trả 200 nghĩa là có đơn.
+ * @param code  mã đơn
+ * @returns     Promise true nếu có đơn
+ */
+export async function formExists(code: string): Promise<boolean> {
+  if (!REAL_API_GROUPS.has('form')) return FORMS.some((form) => form.code === code);
+  try {
+    const response = await fetch(bypass(`/api${formDetailPath(code)}`), { credentials: 'include' });
+    return response.ok;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Các ghi chú của một lá đơn.
+ * @param code  mã đơn
+ * @returns     bản sao, cũ trước mới sau; chưa có thì []
+ */
+export function getFormNotes(code: string): FormNote[] {
+  return structuredClone(FORM_NOTES.get(code) ?? []);
+}
+
+/**
+ * Thêm một ghi chú vào cuối chuỗi.
+ * @param code     mã đơn (đã biết là có)
+ * @param content  nội dung (đã kiểm tra không trống)
+ * @param author   cán bộ viết
+ * @returns        ghi chú mới
+ */
+export function addFormNote(code: string, content: RichTextDoc, author: StaffRef): FormNote {
+  const note: FormNote = { id: `note-${nextFormNoteNumber++}`, content: structuredClone(content), author, createdAt: vietnamNow(), editedAt: null };
+  FORM_NOTES.set(code, [...(FORM_NOTES.get(code) ?? []), note]);
+  return structuredClone(note);
+}
+
+/**
+ * Tìm một ghi chú của lá đơn.
+ * @param code    mã đơn
+ * @param noteId  id ghi chú
+ * @returns       bản sao ghi chú; không có thì null
+ */
+export function findFormNote(code: string, noteId: string): FormNote | null {
+  const note = FORM_NOTES.get(code)?.find((candidate) => candidate.id === noteId);
+  return note ? structuredClone(note) : null;
+}
+
+/**
+ * Sửa nội dung một ghi chú, ghi lại lúc sửa.
+ * @param code     mã đơn
+ * @param noteId   id ghi chú (đã biết là có)
+ * @param content  nội dung mới (đã kiểm tra không trống)
+ * @returns        ghi chú sau khi sửa
+ */
+export function updateFormNote(code: string, noteId: string, content: RichTextDoc): FormNote {
+  const notes = FORM_NOTES.get(code) ?? [];
+  const updated = notes.map((note) => (note.id === noteId ? { ...note, content: structuredClone(content), editedAt: vietnamNow() } : note));
+  FORM_NOTES.set(code, updated);
+  return structuredClone(updated.find((note) => note.id === noteId)!);
+}
+
+/**
+ * Xóa một ghi chú.
+ * @param code    mã đơn
+ * @param noteId  id ghi chú
+ */
+export function deleteFormNote(code: string, noteId: string): void {
+  FORM_NOTES.set(code, (FORM_NOTES.get(code) ?? []).filter((note) => note.id !== noteId));
 }

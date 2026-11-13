@@ -5,6 +5,7 @@ import { authHandlers } from './auth';
 import { emailHandlers } from './email';
 import { exportHandlers } from './exports';
 import { fileHandlers } from './files';
+import { formNoteHandlers } from './form-notes';
 import { formTypeHandlers } from './form-types';
 import { formHandlers } from './form';
 import { formsHandlers } from './forms';
@@ -21,6 +22,8 @@ const HANDLER_GROUPS: readonly (readonly [ApiGroup, readonly HttpHandler[]])[] =
   ['forms', formsHandlers],
   // mẫu xuất file trước form-types: /form-types/:id/export-templates không bị hiểu nhầm; /forms/:code/export trước /forms/:code
   ['exports', exportHandlers],
+  // ghi chú trước form: /forms/:code/notes không bị hiểu nhầm
+  ['form-notes', formNoteHandlers],
   ['form', formHandlers],
   ['files', fileHandlers],
   ['form-types', formTypeHandlers],

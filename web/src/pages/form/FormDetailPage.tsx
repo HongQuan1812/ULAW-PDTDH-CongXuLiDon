@@ -5,6 +5,7 @@
    Cán bộ có quyền receive thấy nút "Tiếp nhận" ở đầu trang khi đơn Đã nộp / Đã bổ sung.
    Đơn Đang xét mà mình được ra quyết định (canDecideOn) thì có hàng nút Yêu cầu bổ sung / Từ chối / Duyệt ở đáy trang.
    Loại đơn có mẫu xuất file thì có nút "Xuất file" ở đầu trang (điền đơn vào mẫu Word, xem trước rồi tải về).
+   Cán bộ có quyền internalNotes thấy nút tròn Ghi chú nội bộ ở góc phải dưới (người nộp đơn không thấy).
    Lịch sử: thêm ở phần sau của bước 5. */
 import { useState, type FormEvent } from 'react';
 import { Link, useParams } from 'react-router';
@@ -18,6 +19,7 @@ import { StatusPill } from '../../components/StatusPill';
 import { useToast } from '../../components/Toast';
 import { useAuth } from '../../features/auth/useAuth';
 import { ExportButton } from '../../features/export/ExportButton';
+import { FormNotes } from '../../features/form-notes/FormNotes';
 import { FormSections } from '../../features/form-renderer/FormSections';
 import { answersChanged } from '../../features/form-renderer/formAnswers';
 import { useFormAnswers } from '../../features/form-renderer/useFormAnswers';
@@ -92,9 +94,10 @@ function FormDetailView({ form }: { form: FormDetail }) {
   const editable = canEditForm({ id: user.id, role }, { status: form.status, applicantId: form.applicant.id });
   const [editorKey, setEditorKey] = useState(0);
   const [transferOpen, setTransferOpen] = useState(false);
+  const showNotes = can(role, 'internalNotes');
 
   return (
-    <div className={styles.form}>
+    <div className={`${styles.form} ${showNotes ? styles.withNotes : ''}`}>
       <div className={styles.head}>
         <div className={styles.headText}>
           <h1 className={styles.title}>Chi tiết đơn {form.code}</h1>
@@ -151,6 +154,7 @@ function FormDetailView({ form }: { form: FormDetail }) {
         </FormInfoPanel>
       </div>
       <TransferDialog form={form} open={transferOpen} onClose={() => setTransferOpen(false)} />
+      {showNotes && <FormNotes code={form.code} />}
     </div>
   );
 }

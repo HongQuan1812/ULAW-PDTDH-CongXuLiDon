@@ -4,6 +4,7 @@ import { AUTH_ENDPOINTS } from './auth';
 import { EMAIL_ENDPOINTS } from './email';
 import { EXPORT_ENDPOINTS } from './exports';
 import { FILE_ENDPOINTS } from './files';
+import { FORM_NOTE_ENDPOINTS } from './form-notes';
 import { FORM_TYPE_ENDPOINTS } from './form-types';
 import { FORM_ENDPOINTS } from './form';
 import { FORMS_ENDPOINTS } from './forms';
@@ -16,6 +17,7 @@ export * from './auth';
 export * from './email';
 export * from './exports';
 export * from './files';
+export * from './form-notes';
 export * from './form-types';
 export * from './form';
 export * from './forms';
@@ -29,6 +31,7 @@ export const ENDPOINTS = {
   email: EMAIL_ENDPOINTS,
   exports: EXPORT_ENDPOINTS,
   form: FORM_ENDPOINTS,
+  formNotes: FORM_NOTE_ENDPOINTS,
   files: FILE_ENDPOINTS,
   forms: FORMS_ENDPOINTS,
   formTypes: FORM_TYPE_ENDPOINTS,

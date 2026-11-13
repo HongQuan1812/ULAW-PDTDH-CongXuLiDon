@@ -25,7 +25,7 @@ export const ROLES: Record<RoleId, Role> = {
     name: 'Người xử lí đơn',
     pages: ['profile', 'forms', 'formTypes', 'emailSettings'],
     home: 'forms',
-    permissions: ['submit', 'editOwn', 'viewAll', 'receive', 'viewApplicant', 'decide', 'transfer', 'manageFormTypes', 'manageEmail'],
+    permissions: ['submit', 'editOwn', 'viewAll', 'receive', 'viewApplicant', 'decide', 'transfer', 'internalNotes', 'manageFormTypes', 'manageEmail'],
   },
   admin: {
     name: 'Admin',
@@ -33,7 +33,7 @@ export const ROLES: Record<RoleId, Role> = {
     home: 'forms',
     permissions: [
       'manageFormTypes', 'submit', 'editOwn', 'viewAll', 'receive', 'viewApplicant', 'editApplicant',
-      'submitForApplicant', 'decide', 'decideAny', 'transfer', 'editAnyForm', 'manageAccounts', 'manageEmail',
+      'submitForApplicant', 'decide', 'decideAny', 'transfer', 'editAnyForm', 'internalNotes', 'manageAccounts', 'manageEmail',
     ],
   },
 };
@@ -128,6 +128,17 @@ export function canTransferForm(
   form: { status: FormStatus; handler?: { email: string } | null },
 ): boolean {
   return can(role, 'transfer') && !!form.handler && isTransferable(form.status);
+}
+
+/**
+ * Kiểm tra người dùng có được sửa, xóa một ghi chú nội bộ hay không.
+ * @param user  người dùng đang đăng nhập (cần id, role)
+ * @param note  ghi chú (cần author: người viết)
+ * @returns     true khi có quyền internalNotes và là người viết ghi chú
+ */
+export function canEditFormNote(user: { id: string; role: RoleId } | null | undefined, note: { author: { id: string } }): boolean {
+  if (!user) return false;
+  return can(user.role, 'internalNotes') && note.author.id === user.id;
 }
 
 /**

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { canChangeAccountRole, canEditForm, canReceiveForm, canTransferForm } from './accounts--permissions';
+import { can, canChangeAccountRole, canEditForm, canEditFormNote, canReceiveForm, canTransferForm } from './accounts--permissions';
 
 describe('canTransferForm', () => {
   const handler = { email: 'thuha.pham.pdt@hcmulaw.edu.vn' };
@@ -75,5 +75,22 @@ describe('canChangeAccountRole', () => {
   it('vai trò không có quyền manageAccounts hoặc chưa đăng nhập thì không đổi được', () => {
     expect(canChangeAccountRole({ id: 'cb-1', role: 'nguoiXuLiDon' }, 'sv-1')).toBe(false);
     expect(canChangeAccountRole(null, 'sv-1')).toBe(false);
+  });
+});
+
+describe('ghi chú nội bộ', () => {
+  const note = { author: { id: 'cb-1' } };
+
+  it('chỉ cán bộ (Người xử lí đơn, Admin) xem, viết được; người nộp đơn không', () => {
+    expect(can('nguoiXuLiDon', 'internalNotes')).toBe(true);
+    expect(can('admin', 'internalNotes')).toBe(true);
+    expect(can('nguoiNopDon', 'internalNotes')).toBe(false);
+  });
+
+  it('chỉ người viết sửa, xóa được ghi chú của mình; Admin cũng không sửa ghi chú người khác', () => {
+    expect(canEditFormNote({ id: 'cb-1', role: 'nguoiXuLiDon' }, note)).toBe(true);
+    expect(canEditFormNote({ id: 'ad-1', role: 'admin' }, note)).toBe(false);
+    expect(canEditFormNote({ id: 'cb-1', role: 'nguoiNopDon' }, note)).toBe(false);
+    expect(canEditFormNote(null, note)).toBe(false);
   });
 });

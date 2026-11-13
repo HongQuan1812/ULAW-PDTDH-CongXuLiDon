@@ -13,6 +13,7 @@ export const PERMISSIONS = [
   'decideAny', //          làm việc đó trên đơn người khác phụ trách
   'transfer', //           chuyển giao đơn cho người xử lí khác
   'editAnyForm', //        sửa nội dung đơn của người khác (cùng điều kiện EDITABLE)
+  'internalNotes', //      xem, viết ghi chú nội bộ trên lá đơn (người nộp đơn không thấy); sửa, xóa ghi chú của mình
   'manageAccounts', //     trang Quản lí tài khoản
   'manageFormTypes', //    trang Quản lí loại đơn
   'manageEmail', //        trang Cấu hình email: người gửi, bật / tắt và nội dung email báo khi đơn đổi trạng thái
