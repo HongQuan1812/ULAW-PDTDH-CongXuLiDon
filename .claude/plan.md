@@ -51,7 +51,7 @@ Làm từng nhóm API. Xong nhóm nào thì chuyển nhóm đó sang API thật,
 | 9 | Nộp, sửa đơn | `backend-nop-don` | nhóm `form`: chi tiết, nộp, sửa · sinh mã đơn trong transaction · lưu bản chụp cấu trúc loại đơn | ✓ |
 | 10 | Xử lí đơn | `backend-xu-li-don` | `workflow.service.ts`: tiếp nhận, yêu cầu bổ sung, duyệt, từ chối, chuyển giao | ✓ |
 | 11 | Xuất Word | `backend-xuat-file` | nhóm `exports`: mẫu Word theo loại đơn, kiểm tra mã `{...}`, docxtemplater | ✓ |
-| 12 | Thư điện tử | `backend-email` | nhóm `email`: lưu cấu hình, gửi thư thử | |
+| 12 | Thư điện tử | `backend-email` | nhóm `email`: lưu cấu hình, gửi thư thử · thư tự động khi nộp đơn, ra quyết định | ✓ |
 
 Chưa làm, chờ thông tin từ bên ngoài:
 - Đăng nhập Google OAuth: cần tạo OAuth client và xác nhận tên miền email thật.
