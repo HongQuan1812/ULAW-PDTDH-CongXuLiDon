@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'vitest';
 import { FormTypeSchema } from '../api-contract';
 import { SEED_ACCOUNTS } from './accounts';
-import { validateAnswers, validateFile, validateFormTypeDraft } from '../validators';
+import { assertSeedValid, findSeedProblems } from './validate';
 import { seedFormTypes } from './form-types';
 import { seedForms } from './forms';
 import { STUDENT_DIRECTORY } from './students';
@@ -51,39 +51,11 @@ describe('dữ liệu mẫu', () => {
     expect(new Set(fileIds).size).toBe(fileIds.length);
   });
 
-  test('mọi phiên bản loại đơn mẫu qua bộ kiểm tra của trình soạn (mã không trùng, đúng dạng)', () => {
-    const formTypes = seedFormTypes();
-
-    for (const formType of formTypes) {
-      const otherPrefixes = formTypes.filter((other) => other.id !== formType.id).map((other) => other.prefix);
-      for (const version of formType.versions) {
-        const issues = validateFormTypeDraft({ name: version.name, prefix: formType.prefix, status: version.status, sections: version.sections }, otherPrefixes);
-
-        expect({ id: formType.id, version: version.version, issues }).toEqual({ id: formType.id, version: version.version, issues: [] });
-      }
-    }
+  test('dữ liệu mẫu qua đủ bộ luật: loại đơn (trình soạn), câu trả lời, tệp, mã đơn', () => {
+    expect(findSeedProblems()).toEqual([]);
   });
 
-  test('câu trả lời của mọi đơn mẫu hợp lệ theo bản chụp loại đơn, tệp đúng định dạng và dung lượng', () => {
-    for (const form of seedForms()) {
-      const { questionErrors } = validateAnswers(form.formTypeSnapshot.sections, form.answers);
-      const fileErrors = form.formTypeSnapshot.sections
-        .flatMap((section) => section.questions)
-        .flatMap((question) =>
-          question.type === 'file' ? ((form.answers[question.id] as { name: string; sizeBytes: number }[]) ?? []).map((file) => validateFile(question, file.name, file.sizeBytes)) : [],
-        )
-        .filter(Boolean);
-
-      expect({ code: form.code, questionErrors, fileErrors }).toEqual({ code: form.code, questionErrors: {}, fileErrors: [] });
-    }
-  });
-
-  test('mã đơn mẫu đúng dạng <TIỀN TỐ>-<NĂM>-<PHIÊN BẢN>-<STT>, tiền tố khớp loại đơn', () => {
-    const prefixById = new Map(seedFormTypes().map((formType) => [formType.id, formType.prefix]));
-
-    for (const form of seedForms()) {
-      expect(form.code).toMatch(/^[A-Z]{2,5}-\d{4}-\d{3}-\d{5}$/);
-      expect(form.code.startsWith(`${prefixById.get(form.formTypeId)}-`)).toBe(true);
-    }
+  test('assertSeedValid không ném lỗi khi dữ liệu mẫu hợp lệ', () => {
+    expect(() => assertSeedValid()).not.toThrow();
   });
 });

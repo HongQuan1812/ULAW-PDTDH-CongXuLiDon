@@ -7,3 +7,4 @@ export * from './export-template';
 export { addHours } from './time';
 export { cloneSeedValue } from './clone';
 export * from './sample-pdf';
+export * from './validate';

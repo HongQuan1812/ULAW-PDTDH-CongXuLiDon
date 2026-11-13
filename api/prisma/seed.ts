@@ -9,6 +9,7 @@ import {
   SEED_ACCOUNTS,
   SEED_EXPORT_TEMPLATE,
   SEED_FILE_ID_PREFIX,
+  assertSeedValid,
   STUDENT_DIRECTORY,
   seedFormTypes,
   seedForms,
@@ -152,6 +153,8 @@ async function seedAll(prisma: PrismaClient): Promise<void> {
 
 const prisma = new PrismaClient({ adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL }) });
 try {
+  // Dữ liệu mẫu phải thỏa mọi luật mới được nạp; kiểm tra trước khi xóa dữ liệu cũ để không mất dữ liệu vô ích
+  assertSeedValid();
   await clearAll(prisma);
   await seedAll(prisma);
   console.log('Đã nạp dữ liệu mẫu.');
