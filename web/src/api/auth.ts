@@ -1,5 +1,5 @@
 /* Hook gọi API đăng nhập: phiên hiện tại, đăng nhập thử, đăng xuất. */
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
 import { ENDPOINTS, type DevLoginRequest, type Session } from '@ulaw/shared';
 import { clearTableStates } from '../components/table/tableStateStore';
 import { ApiError, apiFetch } from './client';
@@ -26,6 +26,20 @@ async function fetchSession(): Promise<Session | null> {
  */
 export function useSession() {
   return useQuery({ queryKey: SESSION_KEY, queryFn: fetchSession, staleTime: Infinity });
+}
+
+/**
+ * Xử lí lỗi của mọi lần gọi API: máy chủ báo chưa đăng nhập (401, vd phiên hết hạn) thì coi như đã đăng xuất.
+ * Khung ứng dụng thấy phiên null sẽ chuyển về trang Đăng nhập, nhớ trang đang mở để quay lại sau khi đăng nhập.
+ * @param queryClient  nơi lưu tạm kết quả gọi API
+ * @param error        lỗi vừa xảy ra
+ */
+export function handleUnauthorized(queryClient: QueryClient, error: unknown): void {
+  if (!(error instanceof ApiError) || error.status !== 401) return;
+
+  // Đánh dấu chưa đăng nhập, rồi bỏ dữ liệu của phiên cũ (đăng nhập lại có thể là người khác)
+  queryClient.setQueryData(SESSION_KEY, null);
+  queryClient.removeQueries({ predicate: (query) => query.queryKey[0] !== SESSION_KEY[0] });
 }
 
 /* JUST FOR DEMO: START · đăng nhập thử theo vai trò, chỉ có ở API giả. Bản thật: Google OAuth. */

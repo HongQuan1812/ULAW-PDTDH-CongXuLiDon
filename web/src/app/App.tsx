@@ -1,11 +1,15 @@
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { MutationCache, QueryCache, QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { RouterProvider } from 'react-router';
+import { handleUnauthorized } from '../api/auth';
 import { ToastProvider } from '../components/Toast';
 import { router } from './router';
 
 /* Nơi TanStack Query lưu tạm kết quả gọi API.
-   Lỗi thì không tự gọi lại; quay lại tab cũng không tự tải lại. */
-const queryClient = new QueryClient({
+   Lỗi thì không tự gọi lại; quay lại tab cũng không tự tải lại.
+   API nào báo chưa đăng nhập (401) thì chuyển về trang Đăng nhập. */
+const queryClient: QueryClient = new QueryClient({
+  queryCache: new QueryCache({ onError: (error) => handleUnauthorized(queryClient, error) }),
+  mutationCache: new MutationCache({ onError: (error) => handleUnauthorized(queryClient, error) }),
   defaultOptions: {
     queries: { retry: false, refetchOnWindowFocus: false },
   },
