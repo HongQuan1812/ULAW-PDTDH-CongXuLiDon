@@ -24,6 +24,9 @@
 /* nội dung đơn; khung Thông tin đơn đang nằm bên phải thì chia 2 cột */
 .grid{display:grid;grid-template-columns:minmax(0,1fr);gap:24px;align-items:start}
 .withSide{grid-template-columns:minmax(0,1fr) 320px}
+/* khung Thông tin đơn dính thấp xuống thêm cỡ chiều cao đầu trang (đầu trang cũng dính), để không bị đầu trang che */
+.withSide>aside{top:calc(var(--nav-h) + 80px + env(safe-area-inset-top,0px))}
+.withSide>aside>section{max-height:calc(100vh - var(--nav-h) - 104px - env(safe-area-inset-top,0px))}
 /* cột nội dung đơn: các phần câu hỏi rồi hàng nút ở dưới */
 .main{display:grid;grid-template-columns:minmax(0,1fr);gap:18px;min-width:0}
 
