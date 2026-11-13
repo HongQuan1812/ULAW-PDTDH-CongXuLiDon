@@ -120,7 +120,7 @@ Có lí do của Phòng Đào tạo thì hiện thêm dòng "Phòng Đào tạo:
 
 - Tệp lưu ở ổ đĩa máy chủ, tải lên cùng lúc nộp / sửa đơn.
 - Xem được tệp: người nộp đơn có tệp đó, hoặc cán bộ có quyền `viewAll`. Không có tệp hoặc không được xem đều trả 404.
-- Xem trước: ảnh (JPG, PNG), PDF, Word (.docx); tệp khác (vd .doc cũ, Excel) thì tải về (`shared/src/validators/files.ts`).
+- Xem trước: ảnh (JPG, PNG), PDF, Word (.docx), Excel (.xlsx, hiện chữ từng sheet, tối đa 500 dòng × 40 cột); tệp khác (vd .doc, .xls cũ) thì tải về (`shared/src/validators/files.ts`).
 
 ## Xuất file theo mẫu
 
