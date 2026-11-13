@@ -286,6 +286,20 @@ export class ExportsService {
   }
 
   /**
+   * So mã trong một mẫu xuất file đơn với các câu hỏi của lá đơn (bản chụp lúc nộp).
+   * @param code        mã đơn
+   * @param templateId  id mẫu
+   * @param viewer      người đang đăng nhập
+   * @returns           kết quả kiểm tra: mã nào đơn này không có (sẽ để trống), mã cột đặt ngoài vòng lặp, lỗi cú pháp
+   * @throws            404 không có đơn / không được xem, mẫu không phải mẫu đơn của loại đơn này
+   */
+  async checkTemplateForForm(code: string, templateId: string, viewer: User): Promise<ExportTemplateCheck> {
+    const form = await this.formService.loadViewable(code, viewer);
+    const template = await this.loadTemplate(form.formTypeId, templateId, 'form');
+    return checkDocxTemplate(template.content, (form.formTypeSnapshot as unknown as FormType).sections);
+  }
+
+  /**
    * Điền mọi lá đơn của loại đơn (mọi phiên bản, mọi trạng thái, theo thứ tự nộp) vào một mẫu xuất file thống kê.
    * @param formTypeId  mã loại đơn (đã biết là có)
    * @param templateId  id mẫu

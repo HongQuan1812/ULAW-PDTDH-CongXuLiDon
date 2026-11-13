@@ -7,6 +7,7 @@ import {
   ENDPOINTS,
   exportTemplatePath,
   exportTemplatesPath,
+  formExportCheckPath,
   formExportPath,
   type ExportDraftRequest,
   type ExportFormRequest,
@@ -123,6 +124,16 @@ export function fetchExportTemplateFile(formTypeId: string, templateId: string):
  */
 export function checkExportTemplate(formTypeId: string, templateId: string, draft: ExportDraftRequest): Promise<ExportTemplateCheck> {
   return apiFetch<ExportTemplateCheck>(exportTemplatePath(formTypeId, templateId, 'check'), { method: 'POST', body: JSON.stringify(draft) });
+}
+
+/**
+ * So mã trong một mẫu xuất file đơn với các câu hỏi của lá đơn (bản chụp lúc nộp).
+ * @param code     mã đơn
+ * @param request  mẫu cần kiểm tra
+ * @returns        kết quả kiểm tra
+ */
+export function checkFormExport(code: string, request: ExportFormRequest): Promise<ExportTemplateCheck> {
+  return apiFetch<ExportTemplateCheck>(formExportCheckPath(code), { method: 'POST', body: JSON.stringify(request) });
 }
 
 /**

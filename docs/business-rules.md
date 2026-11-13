@@ -131,7 +131,8 @@ Mỗi loại đơn có hai nhóm mẫu, lưu ở máy chủ theo loại đơn, d
 ### Mẫu xuất file đơn (Word)
 
 - Cán bộ soạn mẫu bằng Word, gõ **mã trường** trong ngoặc nhọn vào chỗ cần điền (vd `{ho_ten}`, `{mssv}`), rồi tải file `.docx` lên ở khung "Mẫu xuất file đơn" của trình soạn loại đơn.
-- Ở trang chi tiết đơn, **Xuất file** điền dữ liệu đơn vào mẫu (máy chủ dùng docxtemplater), xem trước rồi tải file Word. Định dạng của mẫu giữ nguyên.
+- Ở trang chi tiết đơn, **Xuất file** mở hộp "Chọn mẫu xuất file": mỗi mẫu một dòng, hệ thống tự **đối chiếu mã trong mẫu với các câu hỏi của lá đơn này** (bản chụp lúc nộp). Mã nào đơn không có thì báo đỏ như khi kiểm tra ở trình soạn ("sẽ để trống khi xuất file"); khớp hết thì báo xanh. Người xem đơn bấm **Xuất** ở mẫu muốn dùng, kể cả khi mẫu còn mã không khớp.
+- Xuất file điền dữ liệu đơn vào mẫu (máy chủ dùng docxtemplater), xem trước rồi tải file Word. Định dạng của mẫu giữ nguyên.
   Chỉ ra file Word; muốn ra PDF cần máy chủ chuyển đổi.
 - Các loại mã (`shared/src/business-rules/exports--tags.ts`):
   - **Mã chung**: thông tin người nộp đơn và thông tin đơn; ngày nộp tách thêm `{ngay}` `{thang}` `{nam}`.

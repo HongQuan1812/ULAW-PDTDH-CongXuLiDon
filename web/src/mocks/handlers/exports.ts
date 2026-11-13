@@ -251,6 +251,20 @@ export const exportHandlers = [
     }
   }),
 
+  // Kiểm tra mã của mẫu theo một lá đơn (bản chụp lúc nộp): xem được đơn thì kiểm được
+  http.post(api(ENDPOINTS.exports.formExportCheck), async ({ params, request }) => {
+    await delay(MOCK_DELAY_MS);
+    const session = await readSession();
+    if (!session) return apiError(401, EXPORT_MESSAGES[401]);
+    const body = await readBody(request, ExportFormRequestSchema);
+    if (!body) return apiError(422, EXPORT_MESSAGES.invalidRequest);
+    const exportable = getExportSource(String(params.code), { id: session.user.id, role: session.role });
+    if (!exportable) return apiError(404, EXPORT_MESSAGES.formNotFound);
+    const stored = findExportTemplate(exportable.formTypeId, body.templateId);
+    if (!stored || stored.template.purpose !== 'form') return apiError(404, EXPORT_MESSAGES.templateNotFound);
+    return HttpResponse.json<ExportTemplateCheck>(await checkTemplate(stored.bytes, 'form', exportable.source.sections));
+  }),
+
   // Xuất file thống kê: mọi lá đơn của loại đơn (cũ trước) vào một mẫu thống kê, mỗi đơn một hàng
   http.post(api(ENDPOINTS.exports.statsExport), async ({ params }) => {
     await delay(MOCK_DELAY_MS);

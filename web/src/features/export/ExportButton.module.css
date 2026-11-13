@@ -1,8 +1,10 @@
-/* Nút Xuất file và danh sách "Chọn mẫu". */
-.wrap{position:relative}
-.menu{position:absolute;top:calc(100% + 8px);right:0;z-index:25;width:min(300px,calc(100vw - 32px));display:grid;gap:2px;padding:6px;
-  background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);box-shadow:var(--shadow-lg)}
-.menuTitle{padding:8px 12px 4px;font-size:12.5px;font-weight:500;color:var(--muted)}
-.option{display:grid;gap:2px;text-align:left;font:inherit;color:var(--fg);border:0;background:none;padding:10px 12px;border-radius:10px;cursor:pointer}
-.option:hover,.option:focus-visible{background:var(--hover)}
-.option span{font-size:12.5px;color:var(--muted);overflow-wrap:anywhere}
+/* Hộp "Chọn mẫu xuất file": mỗi mẫu một dòng kèm kết quả đối chiếu mã. */
+.dialog{width:min(560px,calc(100vw - 32px))}
+.dialogHint{color:var(--muted);font-size:14px;margin-bottom:12px}
+.templateList{list-style:none;margin:0;padding:0;display:grid;gap:10px}
+.templateRow{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:12px 14px;border:1px solid var(--line);border-radius:var(--r-lg)}
+.templateInfo{display:grid;gap:2px;min-width:0}
+.templateInfo span{font-size:12.5px;color:var(--muted);overflow-wrap:anywhere}
+.result{margin:6px 0 0;font-size:13px;white-space:pre-line;color:var(--muted)}
+.good{color:var(--ok)}
+.bad{color:var(--danger)}

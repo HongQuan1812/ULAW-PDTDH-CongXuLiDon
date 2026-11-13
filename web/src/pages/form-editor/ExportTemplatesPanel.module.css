@@ -57,6 +57,7 @@
 .actions{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
 .result{flex-basis:100%;font-size:13px;white-space:pre-line;color:var(--muted)}
 .bad{color:var(--danger)}
+.good{color:var(--ok)}
 
 /* Cách tạo một mẫu */
 .guide{border-radius:var(--r-lg);background:var(--surface-2)}

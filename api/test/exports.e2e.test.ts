@@ -18,6 +18,7 @@ import {
   XLSX_CONTENT_TYPE,
   exportTemplatePath,
   exportTemplatesPath,
+  formExportCheckPath,
   formExportPath,
   type ExportDraftRequest,
   type RoleId,
@@ -261,6 +262,29 @@ describe('exports', () => {
 
     const invalid = await request(server()).post(`/api${formExportPath(OTHER_FORM_CODE)}`).set('Cookie', staff).send({}).expect(422);
     expect(messageOf(invalid)).toBe(EXPORT_MESSAGES.invalidRequest);
+  });
+
+  it('kiểm tra mã của mẫu theo đơn: người xem đơn được kiểm, đơn người khác 404, mẫu không có 404', async () => {
+    const checkOther = (cookie: string, templateId: string = SEED_EXPORT_TEMPLATE.id) =>
+      request(server()).post(`/api${formExportCheckPath(OTHER_FORM_CODE)}`).set('Cookie', cookie).send({ templateId });
+    const student = await loginAs('nguoiNopDon');
+
+    // Đơn của mình: kiểm tra được kể cả khi không có quyền quản lí loại đơn; kết quả đúng dạng ExportTemplateCheck
+    const own = await request(server())
+      .post(`/api${formExportCheckPath(OWN_FORM_CODE)}`)
+      .set('Cookie', student)
+      .send({ templateId: SEED_EXPORT_TEMPLATE.id })
+      .expect(200);
+    const check = ExportTemplateCheckSchema.parse(own.body);
+    expect(check.found.length).toBeGreaterThan(0);
+
+    // Đơn người khác thì 404 với người nộp đơn, cán bộ thì kiểm được; mẫu không có thì 404; body sai thì 422
+    expect(messageOf(await checkOther(student).expect(404))).toBe(EXPORT_MESSAGES.formNotFound);
+    const staff = await loginAs('nguoiXuLiDon');
+    await checkOther(staff).expect(200);
+    expect(messageOf(await checkOther(staff, 'khong-co').expect(404))).toBe(EXPORT_MESSAGES.templateNotFound);
+    await request(server()).post(`/api${formExportCheckPath(OTHER_FORM_CODE)}`).set('Cookie', staff).send({}).expect(422);
+    await request(server()).post(`/api${formExportCheckPath(OWN_FORM_CODE)}`).send({ templateId: SEED_EXPORT_TEMPLATE.id }).expect(401);
   });
 
   it('mẫu thống kê: lưu file .xlsx, kiểm tra mã, xuất mọi đơn của loại đơn mỗi đơn một hàng', async () => {

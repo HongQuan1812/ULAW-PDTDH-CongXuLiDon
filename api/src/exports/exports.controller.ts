@@ -204,6 +204,20 @@ export class ExportsController {
   }
 
   /**
+   * So mã trong một mẫu xuất file đơn với các câu hỏi của lá đơn này (hiện trong hộp "Chọn mẫu" của nút Xuất file).
+   * @returns  kết quả kiểm tra
+   * @throws   404 không có đơn / không được xem, không có mẫu · 422 body sai dạng
+   */
+  @Post(EXPORT_ENDPOINTS.formExportCheck)
+  @HttpCode(200)
+  @RequireLogin()
+  @ApiOkResponse({ schema: openApiSchemaOf(ExportTemplateCheckSchema) })
+  async checkFormExport(@CurrentUser() viewer: User, @Param('code') code: string, @Body() requestBody: unknown): Promise<ExportTemplateCheck> {
+    const { templateId } = parseOrReject(requestBody, ExportFormRequestSchema);
+    return this.exportsService.checkTemplateForForm(code, templateId, viewer);
+  }
+
+  /**
    * Điền mọi lá đơn của loại đơn vào một mẫu xuất file thống kê (nút Xuất ở khung Mẫu xuất file thống kê).
    * @returns  nội dung file .xlsx đã điền
    * @throws   404 không có loại đơn, không có mẫu thống kê · 422 không đọc được mẫu

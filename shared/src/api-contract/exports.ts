@@ -36,6 +36,9 @@ export const EXPORT_ENDPOINTS = {
   /** POST ExportFormRequest → file .docx: điền dữ liệu của lá đơn vào một mẫu xuất file đơn của loại đơn đó (nút Xuất file).
       Xem được đơn thì xuất được (người nộp đơn, hoặc cán bộ có quyền viewAll); không có đơn / không được xem thì 404 */
   formExport: '/forms/:code/export',
+  /** POST ExportFormRequest → ExportTemplateCheck: so mã trong một mẫu xuất file đơn với các câu hỏi của lá đơn này (bản chụp lúc nộp),
+      để người xuất file thấy mã nào đơn không có (sẽ để trống) trước khi xuất. Xem được đơn thì kiểm được, như formExport */
+  formExportCheck: '/forms/:code/export-check',
   /** POST → file .xlsx: điền mọi lá đơn của loại đơn (mọi phiên bản, mọi trạng thái, theo thứ tự nộp) vào một mẫu
       xuất file thống kê (nút Xuất ở khung Mẫu xuất file thống kê). Cần quyền manageFormTypes; mẫu không phải mẫu thống kê thì 404 */
   statsExport: '/form-types/:formTypeId/export-templates/:templateId/export',
@@ -68,6 +71,15 @@ export function exportTemplatePath(formTypeId: string, templateId: string, actio
  */
 export function formExportPath(code: string): string {
   return EXPORT_ENDPOINTS.formExport.replace(':code', encodeURIComponent(code));
+}
+
+/**
+ * Đường dẫn API kiểm tra mã của mẫu theo một lá đơn.
+ * @param code  mã đơn
+ * @returns     vd '/forms/XMM-2026-001-00001/export-check'
+ */
+export function formExportCheckPath(code: string): string {
+  return EXPORT_ENDPOINTS.formExportCheck.replace(':code', encodeURIComponent(code));
 }
 
 /* ---------- Dữ liệu gửi / nhận ---------- */

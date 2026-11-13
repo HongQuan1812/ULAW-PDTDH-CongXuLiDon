@@ -15,7 +15,6 @@ import {
   hasTemplateExtension,
   questionExportTags,
   type ExportDraftRequest,
-  type ExportTemplateCheck,
   type ExportTemplatePurpose,
 } from '@ulaw/shared';
 import {
@@ -30,6 +29,7 @@ import { LoadError, loadErrorMessage } from '../../components/LoadError';
 import { RefreshButton } from '../../components/RefreshButton';
 import { useToast } from '../../components/Toast';
 import { FilePreview, type PreviewFile } from '../../features/file-preview/FilePreview';
+import { checkFailureOf, checkResultOf, type TemplateResult } from '../../features/export/checkResult';
 import { EditorIconButton } from './EditorIconButton';
 import { ExportHowTo, ExportTagGuide } from './ExportTagGuide';
 import { removeRow, renameRow, stageTemplate, templateRows, type ExportTemplateChanges, type TemplateRow } from './exportTemplateChanges';
@@ -51,12 +51,6 @@ export const PANEL_TEXT: Record<ExportTemplatePurpose, { title: string; intro: s
     dropHint: 'Chỉ nhận file Excel .xlsx — bấm Lưu để tải lên',
   },
 };
-
-/** Kết quả kiểm tra mã một mẫu. */
-interface TemplateResult {
-  tone: 'good' | 'bad';
-  text: string;
-}
 
 export interface ExportTemplatesPanelProps {
   /** Khung mẫu xuất file đơn (Word) hay thống kê (Excel) */
@@ -88,28 +82,6 @@ function useSettledValue<Value>(value: Value, delayMs: number): Value {
     return () => clearTimeout(timer);
   }, [value, delayMs]);
   return settled;
-}
-
-/**
- * Câu kết quả của Kiểm tra mã.
- * @param check      kết quả từ máy chủ
- * @param tableTags  mã các câu hỏi dạng bảng, để chỉ chỗ đặt mã cột
- * @returns          câu báo và sắc thái (tốt / có vấn đề)
- */
-function checkResultOf(check: ExportTemplateCheck, tableTags: string[]): TemplateResult {
-  const codes = (tags: string[]) => tags.map((tag) => `{${tag}}`).join(' ');
-  if (check.error) return { tone: 'bad', text: `Mẫu có lỗi: ${check.error}` };
-  if (!check.found.length) return { tone: 'bad', text: 'Không thấy mã trường nào trong mẫu. Gõ mã trong ngoặc nhọn, vd {ho_ten}.' };
-  const problems: string[] = [];
-  if (check.unknown.length) {
-    problems.push(`Có ${check.unknown.length} mã không có trong loại đơn này: ${codes(check.unknown)} — sẽ để trống khi xuất file.`);
-  }
-  if (check.outside.length) {
-    const loops = tableTags.map((tag) => `{#${tag}} … {/${tag}}`).join(' hoặc ');
-    problems.push(`Mã cột ${codes(check.outside)} nằm ngoài vòng lặp — sẽ để trống. Đặt chúng giữa ${loops}.`);
-  }
-  if (problems.length) return { tone: 'bad', text: problems.join('\n') };
-  return { tone: 'good', text: `Mẫu hợp lệ: ${check.found.length} mã trường đều dùng được.` };
 }
 
 /**
@@ -181,7 +153,7 @@ export function ExportTemplatesPanel({
  * Mục "Các mẫu": Cách tạo một mẫu, khung chọn file, danh sách mẫu (đã lưu và chưa lưu), mỗi mẫu có Xem, Đổi tên, Xóa.
  * Thêm, đổi tên, xóa chỉ ghi nhận (lưu khi bấm Lưu của trình soạn); Xem chạy ngay, mẫu chưa lưu thì mở thẳng file trong trình duyệt.
  * Mã trong mỗi mẫu tự được kiểm tra khi mẫu vừa thêm / vừa mở khung, và mỗi khi câu hỏi đổi (sau lúc ngừng gõ);
- * có vấn đề thì hiện cảnh báo ngay dưới mẫu, hợp lệ thì không hiện gì.
+ * hiện kết quả ngay dưới mẫu: đỏ khi có vấn đề, xanh khi mọi mã đều khớp với phiên bản đang xem.
  * @param props  xem ExportTemplatesPanelProps; templatesQuery: danh sách mẫu ở máy chủ;
  *               checkRound: lượt kiểm tra (nút ↻ tăng lên thì kiểm tra lại mọi mẫu); onRefresh: bấm nút ↻; checkDraft: bản soạn đã ngừng gõ, dùng để kiểm tra mã
  * @returns      mục các mẫu, và trình xem mẫu gốc
@@ -208,7 +180,7 @@ function TemplateList({
   checkDraft: ExportDraftRequest;
 }) {
   const toast = useToast();
-  const [warnings, setWarnings] = useState<Record<string, string>>({});
+  const [checkResults, setCheckResults] = useState<Record<string, TemplateResult>>({});
   const [busyRowId, setBusyRowId] = useState<string | null>(null);
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [previewedFile, setPreviewedFile] = useState<PreviewFile | null>(null);
@@ -240,11 +212,11 @@ function TemplateList({
           ? checkExportTemplate(formTypeId!, row.id, checkDraft)
           : checkExportTemplateFile(row.staged.file, checkDraft);
       void checking
-        .then((check): TemplateResult => checkResultOf(check, tableTags))
-        .catch((error: unknown): TemplateResult => ({ tone: 'bad', text: error instanceof Error ? error.message : EXPORT_MESSAGES.unreadable }))
+        .then((check): TemplateResult => checkResultOf(check, tableTags, 'phiên bản này'))
+        .catch((error: unknown): TemplateResult => checkFailureOf(error))
         .then((result) => {
           if (checkedDrafts.current.get(row.id) !== checkDraft) return;
-          setWarnings((current) => ({ ...current, [row.id]: result.tone === 'bad' ? result.text : '' }));
+          setCheckResults((current) => ({ ...current, [row.id]: result }));
         });
     });
   }, [rows, checkDraft, formTypeId, checkRound]);
@@ -377,10 +349,10 @@ function TemplateList({
                     onClick={() => onChangesChange(removeRow(changes, row))}
                   />
                 </div>
-                {/* cảnh báo của lần tự kiểm tra mã; mẫu hợp lệ thì không hiện */}
-                {warnings[row.id] && (
-                  <p className={`${styles.result} ${styles.bad}`} role="status">
-                    {warnings[row.id]}
+                {/* kết quả của lần tự kiểm tra mã: đỏ khi có vấn đề, xanh khi khớp hết */}
+                {checkResults[row.id] && (
+                  <p className={`${styles.result} ${checkResults[row.id]!.tone === 'bad' ? styles.bad : styles.good}`} role="status">
+                    {checkResults[row.id]!.text}
                   </p>
                 )}
               </div>
