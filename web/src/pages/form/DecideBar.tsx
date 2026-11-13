@@ -7,6 +7,7 @@ import { Button } from '../../components/Button';
 import { Field } from '../../components/Field';
 import { Modal } from '../../components/Modal';
 import { useToast } from '../../components/Toast';
+import { useUndoable } from '../../features/undo/UndoProvider';
 import pageStyles from './FormPage.module.css';
 import styles from './DecideBar.module.css';
 
@@ -15,6 +16,9 @@ const DECIDE_FAILED_TEXT = 'Chưa ra được quyết định. Kiểm tra kết 
 
 /** Quyết định cần ghi lí do, tức mọi quyết định trừ Duyệt. */
 type DecisionWithNote = Exclude<FormDecision, 'duyet'>;
+
+/** Tên hành động của từng quyết định, dùng trong thanh đếm ngược. */
+const DECISION_LABELS: Record<FormDecision, string> = { duyet: 'Duyệt', bs: 'Yêu cầu bổ sung', tc: 'Từ chối' };
 
 /* Chữ trong hộp thoại lí do của từng quyết định. */
 const NOTE_DIALOGS: Record<DecisionWithNote, { title: string; subtitle: string; confirmLabel: string; confirmClassName: string | undefined }> = {
@@ -40,27 +44,31 @@ const NOTE_DIALOGS: Record<DecisionWithNote, { title: string; subtitle: string; 
 export function DecideBar({ form }: { form: FormDetail }) {
   const toast = useToast();
   const decideForm = useDecideForm(form.code);
+  const undoable = useUndoable();
+  const isBusy = decideForm.isPending || undoable.isPending(form.code);
   // Quyết định đang chờ ghi lí do (hộp thoại mở); null = hộp thoại đóng
   const [pendingDecision, setPendingDecision] = useState<DecisionWithNote | null>(null);
   const [note, setNote] = useState('');
   const noteDialog = pendingDecision ? NOTE_DIALOGS[pendingDecision] : null;
 
   /**
-   * Gửi quyết định lên máy chủ; xong thì đóng hộp thoại và báo kết quả, lỗi thì báo câu máy chủ gửi.
+   * Hẹn giờ gửi quyết định (10 giây, hoàn tác được); hộp thoại đóng ngay. Hết giờ thì gửi lên máy chủ,
+   * xong thì báo kết quả, lỗi thì báo câu máy chủ gửi.
    * @param decision  quyết định
    * @param noteText  lí do ("" nếu không ghi, hoặc Duyệt)
    */
-  const decide = (decision: FormDecision, noteText: string) =>
-    decideForm.mutate(
-      { decision, note: noteText },
-      {
-        onSuccess: (decidedForm) => {
-          setPendingDecision(null);
-          toast(FORM_MESSAGES.decided[decision](decidedForm.code), 'success');
-        },
-        onError: (error) => toast(error.message || DECIDE_FAILED_TEXT, 'error'),
-      },
-    );
+  const decide = (decision: FormDecision, noteText: string) => {
+    setPendingDecision(null);
+    undoable.run({
+      key: form.code,
+      message: `${DECISION_LABELS[decision]} đơn ${form.code}`,
+      perform: () =>
+        decideForm
+          .mutateAsync({ decision, note: noteText })
+          .then((decidedForm) => toast(FORM_MESSAGES.decided[decision](decidedForm.code), 'success'))
+          .catch((error: Error) => toast(error.message || DECIDE_FAILED_TEXT, 'error')),
+    });
+  };
 
   /** Mở hộp thoại ghi lí do cho Yêu cầu bổ sung hoặc Từ chối, ô lí do để trống. */
   const askForNote = (decision: DecisionWithNote) => {
@@ -68,10 +76,8 @@ export function DecideBar({ form }: { form: FormDetail }) {
     setPendingDecision(decision);
   };
 
-  /** Đóng hộp thoại (đang gửi thì bỏ qua để không mất kết quả). */
-  const closeDialog = () => {
-    if (!decideForm.isPending) setPendingDecision(null);
-  };
+  /** Đóng hộp thoại, không ra quyết định. */
+  const closeDialog = () => setPendingDecision(null);
 
   // Hộp thoại đặt NGOÀI thanh nút: thanh nút có backdrop-filter nên sẽ giữ luôn vị trí của phần tử position:fixed nằm trong nó
   return (
@@ -79,14 +85,14 @@ export function DecideBar({ form }: { form: FormDetail }) {
       {/* data-avoid-floating-button: các nút tròn nổi (Ghi chú nội bộ…) không che thanh này (đứng lên trên khi chồng nhau) */}
       <div className={pageStyles.submitRow} data-avoid-floating-button>
         <div className={pageStyles.buttons}>
-          <Button className={styles.needSupplement} onClick={() => askForNote('bs')} disabled={decideForm.isPending}>
+          <Button className={styles.needSupplement} onClick={() => askForNote('bs')} disabled={isBusy}>
             Yêu cầu bổ sung
           </Button>
-          <Button className={styles.reject} onClick={() => askForNote('tc')} disabled={decideForm.isPending}>
+          <Button className={styles.reject} onClick={() => askForNote('tc')} disabled={isBusy}>
             Từ chối
           </Button>
-          <Button className={styles.approve} onClick={() => decide('duyet', '')} disabled={decideForm.isPending}>
-            {decideForm.isPending && !pendingDecision ? 'Đang duyệt…' : 'Duyệt'}
+          <Button className={styles.approve} onClick={() => decide('duyet', '')} disabled={isBusy}>
+            {decideForm.isPending ? 'Đang duyệt…' : 'Duyệt'}
           </Button>
         </div>
       </div>
@@ -97,16 +103,15 @@ export function DecideBar({ form }: { form: FormDetail }) {
           <textarea rows={4} placeholder="Nhập lí do (có thể bỏ trống)" value={note} onChange={(event) => setNote(event.target.value)} />
         </Field>
         <div className={styles.dialogButtons}>
-          <Button variant="ghost" onClick={closeDialog} disabled={decideForm.isPending}>
+          <Button variant="ghost" onClick={closeDialog}>
             Hủy
           </Button>
           <Button
             variant="primary"
             className={noteDialog?.confirmClassName}
             onClick={() => pendingDecision && decide(pendingDecision, note.trim())}
-            disabled={decideForm.isPending}
           >
-            {decideForm.isPending ? 'Đang gửi…' : noteDialog?.confirmLabel}
+            {noteDialog?.confirmLabel}
           </Button>
         </div>
       </Modal>

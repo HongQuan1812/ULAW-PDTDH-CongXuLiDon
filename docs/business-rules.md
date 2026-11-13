@@ -78,6 +78,10 @@ nop Đã nộp ──Tiếp nhận──▶ xet Đang xét ──▶ duyet Đã 
 
 - Người tiếp nhận trở thành người xử lí của đơn. Chuyển giao đổi người xử lí.
 - **Lí do** khi Yêu cầu bổ sung hoặc Từ chối là không bắt buộc. Lí do bị xóa khi đơn được tiếp nhận lại và khi Duyệt.
+- **Hoàn tác trong 10 giây** (để tránh bấm nhầm): Yêu cầu bổ sung, Duyệt, Từ chối không gửi lên máy chủ ngay mà chờ **10 giây**;
+  trong lúc chờ có thanh "có hiệu lực sau N giây · Hoàn tác" ở góc trái dưới. Bấm Hoàn tác thì không có gì được gửi đi (đơn, thư gửi người nộp đều không đổi); bấm Ngay và luôn thì làm liền, không chờ hết giờ. Nền hộp rút dần theo số giây còn lại.
+  Hết 10 giây mới gửi, trạng thái đổi và thư tự động mới đi. Mỗi đơn chỉ chờ một thao tác một lúc. Việc chờ nằm ở trình duyệt (`web/src/lib/undoScheduler.ts`),
+  máy chủ không đổi; đóng hẳn trang trong lúc chờ thì thao tác mất (trình duyệt hỏi lại trước khi đóng). Tiếp nhận, Chuyển giao, Nộp đơn, sửa đơn của người nộp không chờ.
 - Mọi bước chuyển trạng thái đi qua **một chỗ duy nhất** ở máy chủ (`forms/workflow.service.ts`).
 - **Mã đơn** `<TIỀN TỐ>-<NĂM>-<PHIÊN BẢN>-<STT>`, vd `XMM-2026-001-00001` (`shared/src/business-rules/forms--codes.ts`).
   Số thứ tự tăng theo từng tiền tố và từng năm, đếm tiếp qua các phiên bản. Máy chủ sinh mã trong transaction.

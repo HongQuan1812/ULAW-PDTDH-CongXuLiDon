@@ -2,6 +2,7 @@ import { MutationCache, QueryCache, QueryClient, QueryClientProvider } from '@ta
 import { RouterProvider } from 'react-router';
 import { handleUnauthorized } from '../api/auth';
 import { ToastProvider } from '../components/Toast';
+import { UndoProvider } from '../features/undo/UndoProvider';
 import { router } from './router';
 
 /* Nơi TanStack Query lưu tạm kết quả gọi API.
@@ -23,7 +24,9 @@ export function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <ToastProvider>
-        <RouterProvider router={router} />
+        <UndoProvider>
+          <RouterProvider router={router} />
+        </UndoProvider>
       </ToastProvider>
     </QueryClientProvider>
   );

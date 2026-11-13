@@ -1,0 +1,20 @@
+/* Hộp đếm ngược "sẽ có hiệu lực sau N giây · Hoàn tác": hình chữ nhật bo góc, nền tối, góc trái dưới màn hình.
+   Một lớp màu chạy từ đầy tới hết trong 10 giây (cùng nhịp với số đếm): hết dần = sắp gửi. */
+.stack{position:fixed;left:16px;bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:80;display:grid;gap:8px;width:min(340px,calc(100vw - 32px))}
+.row{position:relative;isolation:isolate;overflow:hidden;display:grid;gap:6px;padding:16px;border-radius:12px;background:var(--fg);color:var(--surface);font-size:14px;line-height:1.5;box-shadow:var(--shadow-lg),var(--shadow);animation:rowIn .18s ease-out}
+/* lớp màu: đầy hộp lúc đầu, rút dần về bên trái; màu chuyển từ xanh sang cam khi sắp hết giờ */
+.row::before{content:"";position:absolute;inset:0;z-index:-1;transform-origin:left;background:var(--accent);opacity:.55;
+  animation:drain var(--undo-window) linear var(--undo-elapsed) forwards,warn var(--undo-window) linear var(--undo-elapsed) forwards}
+@keyframes drain{to{transform:scaleX(0)}}
+@keyframes warn{0%,60%{background:var(--accent)}100%{background:var(--s-bs-fg)}}
+.title{margin:0;font-weight:600}
+.text{margin:0;opacity:.9}
+.text b{font-variant-numeric:tabular-nums}
+.actions{display:flex;justify-content:flex-end;gap:8px;margin-top:6px}
+.undo{border:1px solid color-mix(in srgb,var(--surface) 35%,transparent);border-radius:8px;padding:6px 14px;background:transparent;color:var(--surface);font:inherit;font-weight:600;cursor:pointer}
+.undo:hover{background:color-mix(in srgb,var(--surface) 14%,transparent)}
+/* nút Ngay và luôn: bên trái nút Hoàn tác, nền đặc; gửi liền, không chờ hết giờ */
+.sendNow{display:inline-flex;align-items:center;gap:6px;border:1px solid transparent;border-radius:8px;padding:6px 14px;background:var(--surface);color:var(--fg);font:inherit;font-weight:600;cursor:pointer}
+.sendNow:hover{background:color-mix(in srgb,var(--surface) 85%,var(--accent))}
+.undo:focus-visible,.sendNow:focus-visible{outline:3px solid color-mix(in srgb,var(--focus) 60%,transparent);outline-offset:2px}
+@keyframes rowIn{from{opacity:0;transform:translateY(8px)}}
