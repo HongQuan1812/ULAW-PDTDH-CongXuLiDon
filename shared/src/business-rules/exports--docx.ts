@@ -1,8 +1,13 @@
-/* API giả: đọc, kiểm tra, điền mẫu xuất file Word bằng docxtemplater + PizZip.
-   Backend thật làm đúng việc này ở máy chủ (api/src/exports). */
+/* Đọc, kiểm tra, điền mẫu xuất file Word bằng docxtemplater + PizZip.
+   Backend (api/src/exports) và API giả (web/src/mocks/handlers/exports.ts) cùng dùng. */
 import Docxtemplater from 'docxtemplater';
 import PizZip from 'pizzip';
-import { columnTagOwners, knownExportTags, type ExportData, type ExportTemplateCheck, type FormSection } from '@ulaw/shared';
+import type { ExportTemplateCheck } from '../api-contract/exports';
+import type { FormSection } from '../aux-schema/form-types--sections';
+import { columnTagOwners, knownExportTags, type ExportData } from './exports--tags';
+
+/** Nội dung file: ArrayBuffer (trình duyệt) hoặc Buffer / Uint8Array (Node). */
+export type DocxBytes = ArrayBuffer | Uint8Array;
 
 /** Tùy chọn điền mẫu: vòng lặp theo đoạn văn, giữ xuống dòng, mã không có dữ liệu thì để trống. */
 const RENDER_OPTIONS = { paragraphLoop: true, linebreaks: true, nullGetter: () => '' } as const;
@@ -53,7 +58,7 @@ export function explainDocxError(error: unknown): string {
  * @param bytes  nội dung file
  * @returns      file đã mở, hoặc null
  */
-export function openDocx(bytes: ArrayBuffer): PizZip | null {
+export function openDocx(bytes: DocxBytes): PizZip | null {
   try {
     const zip = new PizZip(bytes);
     return zip.file('word/document.xml') ? zip : null;
@@ -68,7 +73,7 @@ export function openDocx(bytes: ArrayBuffer): PizZip | null {
  * @param sections  các phần của loại đơn (bản soạn hiện tại)
  * @returns         kết quả kiểm tra
  */
-export function checkDocxTemplate(bytes: ArrayBuffer, sections: readonly FormSection[]): ExportTemplateCheck {
+export function checkDocxTemplate(bytes: DocxBytes, sections: readonly FormSection[]): ExportTemplateCheck {
   const zip = new PizZip(bytes);
   const known = knownExportTags(sections);
   const owners = columnTagOwners(sections);
@@ -105,7 +110,7 @@ export function checkDocxTemplate(bytes: ArrayBuffer, sections: readonly FormSec
  * @param exportData  giá trị theo mã
  * @returns           nội dung file Word đã điền; mẫu sai cú pháp thì ném lỗi (đổi thành câu báo bằng explainDocxError)
  */
-export function renderDocxTemplate(bytes: ArrayBuffer, exportData: ExportData): ArrayBuffer {
+export function renderDocxTemplate(bytes: DocxBytes, exportData: ExportData): ArrayBuffer {
   const document = new Docxtemplater(new PizZip(bytes), RENDER_OPTIONS);
   document.render(exportData);
   // Nén lại như file Word thường (mặc định PizZip không nén, file nặng gấp nhiều lần)

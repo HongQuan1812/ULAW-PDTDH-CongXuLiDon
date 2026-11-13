@@ -1,8 +1,7 @@
 import PizZip from 'pizzip';
 import { beforeEach, describe, expect, test } from 'vitest';
-import { buildExportData, type FormSection } from '@ulaw/shared';
+import { buildExportData, checkDocxTemplate, openDocx, renderDocxTemplate, type FormSection } from '@ulaw/shared';
 import { findExportTemplate, getExportSource, getFormType, resetMockDb } from './db';
-import { checkDocxTemplate, openDocx, renderDocxTemplate } from './docxTemplates';
 
 /**
  * Chữ trơn trong thân file Word.

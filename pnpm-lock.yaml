@@ -31,6 +31,12 @@ importers:
       '@ulaw/shared':
         specifier: workspace:*
         version: link:../shared
+      docxtemplater:
+        specifier: 3.58.4
+        version: 3.58.4
+      pizzip:
+        specifier: 3.1.8
+        version: 3.1.8
       reflect-metadata:
         specifier: ^0.2.2
         version: 0.2.2
@@ -74,6 +80,12 @@ importers:
 
   shared:
     dependencies:
+      docxtemplater:
+        specifier: 3.58.4
+        version: 3.58.4
+      pizzip:
+        specifier: 3.1.8
+        version: 3.1.8
       zod:
         specifier: 4.6.7
         version: 4.6.7

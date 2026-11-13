@@ -11,6 +11,10 @@ import {
   SaveExportTemplatesRequestSchema,
   buildExportData,
   can,
+  checkDocxTemplate,
+  explainDocxError,
+  openDocx,
+  renderDocxTemplate,
   textToTag,
   type ExportDraftRequest,
   type ExportTemplateCheck,
@@ -28,7 +32,6 @@ import {
   renameExportTemplate,
   vietnamToday,
 } from '../db';
-import { checkDocxTemplate, explainDocxError, openDocx, renderDocxTemplate } from '../docxTemplates';
 import { MOCK_DELAY_MS, api, apiError } from '../http';
 
 /**

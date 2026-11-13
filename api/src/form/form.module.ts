@@ -5,5 +5,5 @@ import { FormController } from './form.controller';
 import { FormService } from './form.service';
 import { WorkflowService } from './workflow.service';
 
-@Module({ imports: [FilesModule, FormTypesModule], controllers: [FormController], providers: [FormService, WorkflowService] })
+@Module({ imports: [FilesModule, FormTypesModule], controllers: [FormController], providers: [FormService, WorkflowService], exports: [FormService] })
 export class FormModule {}
