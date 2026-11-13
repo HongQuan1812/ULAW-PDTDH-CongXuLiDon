@@ -50,7 +50,7 @@ Làm từng nhóm API. Xong nhóm nào thì chuyển nhóm đó sang API thật,
 | 8 | Danh sách đơn, thống kê | `backend-danh-sach-don` | nhóm `forms`: đơn của tôi, đơn tôi xử lí, Quản lí đơn, thống kê, CCCD theo trang | ✓ |
 | 9 | Nộp, sửa đơn | `backend-nop-don` | nhóm `form`: chi tiết, nộp, sửa · sinh mã đơn trong transaction · lưu bản chụp cấu trúc loại đơn | ✓ |
 | 10 | Xử lí đơn | `backend-xu-li-don` | `workflow.service.ts`: tiếp nhận, yêu cầu bổ sung, duyệt, từ chối, chuyển giao | ✓ |
-| 11 | Xuất Word | `backend-xuat-file` | nhóm `exports`: mẫu Word theo loại đơn, kiểm tra mã `{...}`, docxtemplater | |
+| 11 | Xuất Word | `backend-xuat-file` | nhóm `exports`: mẫu Word theo loại đơn, kiểm tra mã `{...}`, docxtemplater | ✓ |
 | 12 | Thư điện tử | `backend-email` | nhóm `email`: lưu cấu hình, gửi thư thử | |
 
 Chưa làm, chờ thông tin từ bên ngoài:
