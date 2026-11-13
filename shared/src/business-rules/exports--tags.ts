@@ -108,6 +108,18 @@ export const COMMON_EXPORT_TAGS: ReadonlySet<string> = new Set([
   ...Object.keys(LEGACY_EXPORT_TAGS),
 ]);
 
+/* ---------- Mã riêng của mẫu xuất file thống kê (Excel) ---------- */
+
+/** Mã số lá đơn có trong file thống kê. */
+export const FORM_COUNT_TAG = 'so_don';
+
+/** Mã chung của cả file thống kê: đặt ở hàng không có mã của đơn (vd tiêu đề, dòng tổng) thì chỉ điền một lần. */
+export const STATS_SUMMARY_TAGS: readonly ExportTagInfo[] = [
+  { tag: FORM_COUNT_TAG, label: 'Số đơn trong file' },
+  { tag: 'loai_don', label: 'Tên loại đơn' },
+  { tag: 'ngay_xuat', label: 'Ngày xuất file' },
+];
+
 /* ---------- Mã theo câu hỏi của loại đơn ---------- */
 
 /** Mã của một câu hỏi cần trả lời; câu hỏi dạng bảng có thêm mã các cột. */

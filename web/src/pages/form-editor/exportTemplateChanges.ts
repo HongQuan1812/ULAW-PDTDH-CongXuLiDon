@@ -1,12 +1,15 @@
 /* Thay đổi chưa lưu về mẫu xuất file của một loại đơn (như tệp người nộp đơn vừa chọn, xem form-renderer/localFiles.ts):
    thêm (file giữ trong trình duyệt), đổi tên, xóa chỉ ghi nhận ở đây; bấm Lưu ở trình soạn mới gửi lên máy chủ trong một lần.
-   Mẫu thuộc loại đơn (mọi phiên bản), nên thay đổi này không theo phiên bản đang soạn. */
-import type { ExportTemplate, SaveExportTemplatesRequest } from '@ulaw/shared';
+   Mẫu thuộc loại đơn (mọi phiên bản), nên thay đổi này không theo phiên bản đang soạn.
+   Mẫu xuất file đơn và mẫu xuất file thống kê dùng chung một bộ thay đổi; mỗi khung chỉ hiện các mẫu cùng mục đích. */
+import { EXPORT_TEMPLATE_FILE, type ExportTemplate, type ExportTemplatePurpose, type SaveExportTemplatesRequest } from '@ulaw/shared';
 
 /** Mẫu mới chọn từ máy, chưa tải lên. */
 export interface StagedTemplate {
   /** Id tạm, dạng 'local-…'; cũng là tên trường multipart chứa file khi lưu */
   tempId: string;
+  /** Mẫu xuất file đơn (Word) hay thống kê (Excel) */
+  purpose: ExportTemplatePurpose;
   /** Tên mẫu, mặc định là tên file bỏ đuôi */
   name: string;
   file: File;
@@ -39,26 +42,32 @@ export function hasTemplateChanges(changes: ExportTemplateChanges): boolean {
 
 /**
  * Giữ một file vừa chọn làm mẫu mới.
- * @param file  file .docx (đã kiểm tra đuôi)
- * @returns     mẫu mới, tên mẫu = tên file bỏ đuôi
+ * @param file     file .docx / .xlsx (đã kiểm tra đuôi)
+ * @param purpose  mẫu xuất file đơn hay thống kê
+ * @returns        mẫu mới, tên mẫu = tên file bỏ đuôi
  */
-export function stageTemplate(file: File): StagedTemplate {
-  return { tempId: `local-${crypto.randomUUID()}`, name: file.name.replace(/\.docx$/i, ''), file };
+export function stageTemplate(file: File, purpose: ExportTemplatePurpose): StagedTemplate {
+  const extension = EXPORT_TEMPLATE_FILE[purpose].extension;
+  const name = file.name.toLowerCase().endsWith(extension) ? file.name.slice(0, -extension.length) : file.name;
+  return { tempId: `local-${crypto.randomUUID()}`, purpose, name, file };
 }
 
 /**
- * Danh sách mẫu đang hiện: mẫu đã lưu (bỏ mẫu sắp xóa, tên theo tên mới), rồi mẫu mới chưa lưu.
- * @param savedTemplates  mẫu ở máy chủ
+ * Danh sách mẫu đang hiện của một mục đích: mẫu đã lưu (bỏ mẫu sắp xóa, tên theo tên mới), rồi mẫu mới chưa lưu.
+ * @param savedTemplates  mẫu ở máy chủ (mọi mục đích)
  * @param changes         các thay đổi chưa lưu
+ * @param purpose         chỉ lấy mẫu xuất file đơn hay thống kê
  * @returns               các dòng theo thứ tự hiện
  */
-export function templateRows(savedTemplates: readonly ExportTemplate[], changes: ExportTemplateChanges): TemplateRow[] {
+export function templateRows(savedTemplates: readonly ExportTemplate[], changes: ExportTemplateChanges, purpose: ExportTemplatePurpose): TemplateRow[] {
   const removed = new Set(changes.removed);
   return [
     ...savedTemplates
-      .filter((template) => !removed.has(template.id))
+      .filter((template) => template.purpose === purpose && !removed.has(template.id))
       .map((template): TemplateRow => ({ kind: 'saved', id: template.id, name: changes.renamed[template.id] ?? template.name, template })),
-    ...changes.added.map((staged): TemplateRow => ({ kind: 'staged', id: staged.tempId, name: staged.name, staged })),
+    ...changes.added
+      .filter((staged) => staged.purpose === purpose)
+      .map((staged): TemplateRow => ({ kind: 'staged', id: staged.tempId, name: staged.name, staged })),
   ];
 }
 
@@ -99,7 +108,7 @@ export function toSaveTemplatesRequest(changes: ExportTemplateChanges): { change
     changes: {
       removed: changes.removed,
       renamed: Object.entries(changes.renamed).map(([templateId, name]) => ({ templateId, name })),
-      added: changes.added.map(({ tempId, name }) => ({ tempId, name })),
+      added: changes.added.map(({ tempId, name, purpose }) => ({ tempId, name, purpose })),
     },
     filesByTempId: new Map(changes.added.map((staged) => [staged.tempId, staged.file])),
   };

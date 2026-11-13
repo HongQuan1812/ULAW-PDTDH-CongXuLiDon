@@ -1,6 +1,6 @@
-/* Nhóm API exports: mẫu xuất file Word của loại đơn và xuất file một lá đơn.
-   Xem danh sách mẫu, xuất file chỉ cần đăng nhập; mọi lệnh quản lí mẫu cần quyền manageFormTypes.
-   Các lệnh trả file (mẫu gốc, xuất file) trả nội dung .docx, tên file trong Content-Disposition. */
+/* Nhóm API exports: mẫu xuất file của loại đơn, xuất file một lá đơn (Word) và xuất file thống kê (Excel).
+   Xem danh sách mẫu, xuất file một lá đơn chỉ cần đăng nhập; mọi lệnh quản lí mẫu và xuất thống kê cần quyền manageFormTypes.
+   Các lệnh trả file (mẫu gốc, xuất file) trả nội dung .docx / .xlsx, tên file trong Content-Disposition. */
 import { Body, Controller, Get, HttpCode, Param, Post, Put, Req, Res, StreamableFile, UploadedFiles, UseInterceptors } from '@nestjs/common';
 import { AnyFilesInterceptor } from '@nestjs/platform-express';
 import { ApiOkResponse, ApiTags } from '@nestjs/swagger';
@@ -14,6 +14,7 @@ import {
   ExportTemplateCheckSchema,
   ExportTemplatesResponseSchema,
   SaveExportTemplatesRequestSchema,
+  XLSX_CONTENT_TYPE,
   type ExportTemplateCheck,
   type ExportTemplatesResponse,
 } from '@ulaw/shared';
@@ -23,7 +24,7 @@ import { CurrentUser, RequireLogin, RequirePermission } from '../auth/require-pe
 import { ApiException } from '../common/api-exception';
 import { openApiSchemaOf } from '../common/swagger';
 import type { User } from '../generated/prisma/client';
-import { ExportsService, type DocxFile, type UploadedDocx } from './exports.service';
+import { ExportsService, type DownloadFile, type UploadedTemplateFile } from './exports.service';
 
 /** File multer đưa vào bộ nhớ (chỉ các trường dùng tới; tránh phụ thuộc @types/multer). */
 interface MulterFile {
@@ -35,8 +36,15 @@ interface MulterFile {
 /** Dung lượng tối đa của một file mẫu. */
 const MAX_TEMPLATE_BYTES = 20 * 1024 * 1024;
 
-/** Mô tả Swagger cho các lệnh trả file Word. */
-const DOCX_RESPONSE = { description: 'File Word .docx', content: { [DOCX_CONTENT_TYPE]: { schema: { type: 'string', format: 'binary' } } } } as const;
+/**
+ * Mô tả Swagger cho các lệnh trả file.
+ * @param description  mô tả, vd 'File Word .docx'
+ * @param contentTypes  các kiểu nội dung có thể trả
+ * @returns             tùy chọn của ApiOkResponse
+ */
+function fileResponse(description: string, contentTypes: string[]) {
+  return { description, content: Object.fromEntries(contentTypes.map((contentType) => [contentType, { schema: { type: 'string', format: 'binary' } }])) };
+}
 
 /**
  * Kiểm tra dữ liệu theo schema.
@@ -73,20 +81,20 @@ function jsonFieldOf(request: Request, fieldName: string): unknown {
  * @param files  các file multer đã nhận
  * @returns      file theo tên trường
  */
-function uploadsByField(files: readonly MulterFile[]): Map<string, UploadedDocx> {
+function uploadsByField(files: readonly MulterFile[]): Map<string, UploadedTemplateFile> {
   return new Map(files.map((file) => [file.fieldname, { fileName: Buffer.from(file.originalname, 'latin1').toString('utf8'), content: file.buffer }]));
 }
 
 /**
- * Đặt header tải về và trả nội dung file Word.
- * @param docxFile  tên file và nội dung
- * @param response  để đặt Content-Type và Content-Disposition
- * @returns         nội dung để NestJS gửi đi
+ * Đặt header tải về và trả nội dung file.
+ * @param downloadFile  tên file, kiểu nội dung, nội dung
+ * @param response      để đặt Content-Type và Content-Disposition
+ * @returns             nội dung để NestJS gửi đi
  */
-function sendDocx(docxFile: DocxFile, response: Response): StreamableFile {
-  response.setHeader('Content-Type', DOCX_CONTENT_TYPE);
-  response.setHeader('Content-Disposition', `attachment; filename*=UTF-8''${encodeURIComponent(docxFile.fileName)}`);
-  return new StreamableFile(docxFile.content);
+function sendFile(downloadFile: DownloadFile, response: Response): StreamableFile {
+  response.setHeader('Content-Type', downloadFile.contentType);
+  response.setHeader('Content-Disposition', `attachment; filename*=UTF-8''${encodeURIComponent(downloadFile.fileName)}`);
+  return new StreamableFile(downloadFile.content);
 }
 
 @ApiTags('exports')
@@ -95,7 +103,7 @@ export class ExportsController {
   /** @param exportsService  đọc, lưu, kiểm tra, điền mẫu */
   constructor(private readonly exportsService: ExportsService) {}
 
-  /** @returns  các mẫu của loại đơn (nút Xuất file ở trang chi tiết đơn, khung Mẫu xuất file) */
+  /** @returns  các mẫu của loại đơn (nút Xuất file ở trang chi tiết đơn, các khung mẫu xuất file) */
   @Get(EXPORT_ENDPOINTS.templates)
   @RequireLogin()
   @ApiOkResponse({ schema: openApiSchemaOf(ExportTemplatesResponseSchema) })
@@ -106,7 +114,7 @@ export class ExportsController {
   /**
    * Lưu các thay đổi về mẫu (multipart/form-data: trường changes là chuỗi JSON, mỗi file mới một trường tên bằng id tạm).
    * @returns  các mẫu sau khi lưu
-   * @throws   404 không có loại đơn, mẫu không còn · 422 sai dạng, thiếu file, không phải .docx đọc được
+   * @throws   404 không có loại đơn, mẫu không còn · 422 sai dạng, thiếu file, sai loại file, không đọc được
    */
   @Put(EXPORT_ENDPOINTS.templates)
   @RequirePermission('manageFormTypes', EXPORT_MESSAGES[403])
@@ -125,19 +133,19 @@ export class ExportsController {
 
   /**
    * Mẫu gốc còn nguyên các mã (nút Xem mẫu).
-   * @returns  nội dung file .docx
+   * @returns  nội dung file .docx / .xlsx
    * @throws   404 không có loại đơn, mẫu
    */
   @Get(EXPORT_ENDPOINTS.templateFile)
   @RequirePermission('manageFormTypes', EXPORT_MESSAGES[403])
-  @ApiOkResponse(DOCX_RESPONSE)
+  @ApiOkResponse(fileResponse('File Word .docx hoặc Excel .xlsx', [DOCX_CONTENT_TYPE, XLSX_CONTENT_TYPE]))
   async templateFile(
     @Param('formTypeId') formTypeId: string,
     @Param('templateId') templateId: string,
     @Res({ passthrough: true }) response: Response,
   ): Promise<StreamableFile> {
     await this.exportsService.assertFormTypeExists(formTypeId);
-    return sendDocx(await this.exportsService.findTemplateFile(formTypeId, templateId), response);
+    return sendFile(await this.exportsService.findTemplateFile(formTypeId, templateId), response);
   }
 
   /**
@@ -162,14 +170,14 @@ export class ExportsController {
   /**
    * Kiểm tra mã trong file mẫu chưa lưu (multipart/form-data: file ở trường file, bản soạn dạng chuỗi JSON ở trường draft).
    * @returns  kết quả kiểm tra; file không được lưu lại
-   * @throws   422 sai dạng, thiếu file, không phải .docx đọc được
+   * @throws   422 sai dạng, thiếu file, không phải .docx / .xlsx đọc được
    */
   @Post(EXPORT_ENDPOINTS.fileCheck)
   @HttpCode(200)
   @RequirePermission('manageFormTypes', EXPORT_MESSAGES[403])
   @UseInterceptors(AnyFilesInterceptor({ limits: { fileSize: MAX_TEMPLATE_BYTES } }))
   @ApiOkResponse({ schema: openApiSchemaOf(ExportTemplateCheckSchema) })
-  checkFile(@Req() request: Request, @UploadedFiles() files: MulterFile[] = []): ExportTemplateCheck {
+  checkFile(@Req() request: Request, @UploadedFiles() files: MulterFile[] = []): Promise<ExportTemplateCheck> {
     const draft = parseOrReject(jsonFieldOf(request, EXPORT_TEMPLATE_FIELDS.draft), ExportDraftRequestSchema);
     const upload = uploadsByField(files).get(EXPORT_TEMPLATE_FIELDS.file);
     if (!upload) throw new ApiException(422, EXPORT_MESSAGES.invalidRequest);
@@ -177,14 +185,14 @@ export class ExportsController {
   }
 
   /**
-   * Điền dữ liệu của lá đơn vào một mẫu của loại đơn đó (nút Xuất file).
+   * Điền dữ liệu của lá đơn vào một mẫu xuất file đơn của loại đơn đó (nút Xuất file).
    * @returns  nội dung file .docx đã điền
    * @throws   404 không có đơn / không được xem, không có mẫu · 422 body sai dạng, mẫu sai cú pháp
    */
   @Post(EXPORT_ENDPOINTS.formExport)
   @HttpCode(200)
   @RequireLogin()
-  @ApiOkResponse(DOCX_RESPONSE)
+  @ApiOkResponse(fileResponse('File Word .docx', [DOCX_CONTENT_TYPE]))
   async exportForm(
     @CurrentUser() viewer: User,
     @Param('code') code: string,
@@ -192,6 +200,24 @@ export class ExportsController {
     @Res({ passthrough: true }) response: Response,
   ): Promise<StreamableFile> {
     const { templateId } = parseOrReject(requestBody, ExportFormRequestSchema);
-    return sendDocx(await this.exportsService.exportForm(code, templateId, viewer), response);
+    return sendFile(await this.exportsService.exportForm(code, templateId, viewer), response);
+  }
+
+  /**
+   * Điền mọi lá đơn của loại đơn vào một mẫu xuất file thống kê (nút Xuất ở khung Mẫu xuất file thống kê).
+   * @returns  nội dung file .xlsx đã điền
+   * @throws   404 không có loại đơn, không có mẫu thống kê · 422 không đọc được mẫu
+   */
+  @Post(EXPORT_ENDPOINTS.statsExport)
+  @HttpCode(200)
+  @RequirePermission('manageFormTypes', EXPORT_MESSAGES[403])
+  @ApiOkResponse(fileResponse('File Excel .xlsx', [XLSX_CONTENT_TYPE]))
+  async exportStats(
+    @Param('formTypeId') formTypeId: string,
+    @Param('templateId') templateId: string,
+    @Res({ passthrough: true }) response: Response,
+  ): Promise<StreamableFile> {
+    await this.exportsService.assertFormTypeExists(formTypeId);
+    return sendFile(await this.exportsService.exportStats(formTypeId, templateId), response);
   }
 }

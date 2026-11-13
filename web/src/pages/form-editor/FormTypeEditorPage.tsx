@@ -1,12 +1,12 @@
 /* Trình soạn loại đơn (#/soan-don/<mã loại đơn>[?phien-ban=<số>], tạo mới: #/soan-don/moi).
-   Gồm: nút quay lại, tiêu đề, tab Soạn / Xem trước, khung Phiên bản bên phải (màn hình hẹp: trượt ra), nhãn "Chưa lưu", khung báo lỗi, câu nhắc về phiên bản,
-   thẻ Thông tin loại đơn, các phần và câu hỏi, nút + Thêm phần, khung Mẫu xuất file, hàng nút cuối (Xóa · Bỏ thay đổi · Lưu; hai nút cuối chỉ hiện khi có thay đổi).
+   Gồm: nút quay lại, tiêu đề, nút Xuất thống kê, tab Soạn / Xem trước, khung Phiên bản bên phải (màn hình hẹp: trượt ra), nhãn "Chưa lưu", khung báo lỗi, câu nhắc về phiên bản,
+   thẻ Thông tin loại đơn, các phần và câu hỏi, nút + Thêm phần, khung Mẫu xuất file đơn và Mẫu xuất file thống kê, hàng nút cuối (Xóa · Bỏ thay đổi · Lưu; hai nút cuối chỉ hiện khi có thay đổi).
 
    Phiên bản (xem shared/src/api-contract/form-types.ts):
    - Phiên bản Nháp sửa được; Lưu ở Nháp để soạn tiếp, hoặc ở Đang mở để mở (nội dung khóa lại).
    - Phiên bản đã khóa (Đang mở / Đã đóng) chỉ đổi được trạng thái. Sửa nội dung của nó thì trình soạn tự chép ra phiên bản mới;
      nếu đang có phiên bản Nháp thì phiên bản đã khóa chỉ xem được.
-   Mẫu xuất file thuộc loại đơn (mọi phiên bản): thêm, đổi tên, xóa mẫu cũng là thay đổi chưa lưu, bấm Lưu thì gửi lên
+   Mẫu xuất file (đơn và thống kê) thuộc loại đơn (mọi phiên bản): thêm, đổi tên, xóa mẫu cũng là thay đổi chưa lưu, bấm Lưu thì gửi lên
    sau khi lưu loại đơn (kể cả khi đang xem phiên bản đã khóa).
    Thay đổi chưa lưu được giữ lại khi đi trang khác (formTypeDrafts.ts). */
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
@@ -40,6 +40,7 @@ import { Modal } from '../../components/Modal';
 import { RefreshButton } from '../../components/RefreshButton';
 import { useToast } from '../../components/Toast';
 import { DraftIssuesContext } from './draftIssues';
+import { StatsExportButton } from '../../features/export/StatsExportButton';
 import { ExportTemplatesPanel } from './ExportTemplatesPanel';
 import { NO_TEMPLATE_CHANGES, hasTemplateChanges, toSaveTemplatesRequest } from './exportTemplateChanges';
 import { FormTypeInfoCard } from './FormTypeInfoCard';
@@ -578,6 +579,8 @@ function FormTypeEditor({ managed, requestedVersion }: FormTypeEditorProps) {
       <div className={styles.head}>
         <h1 className={styles.title}>{isNew ? 'Tạo loại đơn' : `Soạn loại đơn ${versions[0]!.name}`}</h1>
         <div className={styles.headActions}>
+          {/* Xuất thống kê theo mẫu thống kê đã lưu (loại đơn mới chưa lưu thì chưa có) */}
+          {managed && <StatsExportButton formTypeId={managed.id} />}
           {showsVersionPanel && <FormInfoPanelToggle panel={versionPanel} label={`${VERSION_PANEL_TITLE} ${selectedVersion}`} />}
           <div className={styles.tabs} role="tablist" aria-label="Chế độ">
             {EDITOR_MODES.map(([mode, label]) => (
@@ -647,14 +650,19 @@ function FormTypeEditor({ managed, requestedVersion }: FormTypeEditorProps) {
               </div>
             </fieldset>
 
-            {/* Mẫu xuất file: thuộc loại đơn (mọi phiên bản) nên không bị khóa theo phiên bản; thay đổi chờ bấm Lưu */}
-            <ExportTemplatesPanel
-              formTypeId={managed?.id ?? null}
-              draft={exportDraft}
-              changes={templateChanges}
-              onChangesChange={setTemplateChanges}
-              saving={isSaving}
-            />
+            {/* Mẫu xuất file đơn (Word) và thống kê (Excel): thuộc loại đơn (mọi phiên bản) nên không bị khóa theo phiên bản;
+                hai khung dùng chung một bộ thay đổi, chờ bấm Lưu */}
+            {(['form', 'stats'] as const).map((purpose) => (
+              <ExportTemplatesPanel
+                key={purpose}
+                purpose={purpose}
+                formTypeId={managed?.id ?? null}
+                draft={exportDraft}
+                changes={templateChanges}
+                onChangesChange={setTemplateChanges}
+                saving={isSaving}
+              />
+            ))}
 
             <div className={styles.bottom}>
               <span className={styles.spacer} />

@@ -1,13 +1,14 @@
 /* Nút "Xuất file" ở trang chi tiết đơn:
-   hiện khi loại đơn có mẫu xuất file. Một mẫu thì bấm là xuất; nhiều mẫu thì mở danh sách "Chọn mẫu".
+   hiện khi loại đơn có mẫu xuất file đơn (Word; mẫu thống kê không dùng ở đây). Một mẫu thì bấm là xuất; nhiều mẫu thì mở danh sách "Chọn mẫu".
    Máy chủ điền dữ liệu của đơn vào mẫu; file Word nhận về mở trong trình xem, có nút "Tải file Word" trên thanh xem. */
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import type { ExportTemplate, FormDetail } from '@ulaw/shared';
 import { exportForm, useExportTemplates } from '../../api/exports';
 import { Button } from '../../components/Button';
 import { useToast } from '../../components/Toast';
 import { FilePreview, type PreviewFile } from '../file-preview/FilePreview';
 import styles from './ExportButton.module.css';
+import { useTemplateMenu } from './useTemplateMenu';
 
 /** Ghi chú trên thanh xem: bản xem trong trình duyệt chỉ gần đúng với Word (font thay thế, ngắt trang). */
 export const DOCX_PREVIEW_NOTE = 'Xem trước gần đúng';
@@ -21,31 +22,10 @@ export const DOCX_PREVIEW_NOTE = 'Xem trước gần đúng';
 export function ExportButton({ form, className }: { form: FormDetail; className?: string }) {
   const toast = useToast();
   const templatesQuery = useExportTemplates(form.formTypeId);
-  const templates = templatesQuery.data ?? [];
-  const [menuOpen, setMenuOpen] = useState(false);
+  const templates = (templatesQuery.data ?? []).filter((template) => template.purpose === 'form');
+  const { menuOpen, setMenuOpen, wrapRef, buttonRef } = useTemplateMenu();
   const [exporting, setExporting] = useState(false);
   const [exportedFile, setExportedFile] = useState<PreviewFile | null>(null);
-  const wrapRef = useRef<HTMLDivElement>(null);
-  const buttonRef = useRef<HTMLButtonElement>(null);
-
-  // Danh sách đang mở: nhấn chuột ra ngoài thì đóng; Esc thì đóng và trả con trỏ về nút
-  useEffect(() => {
-    if (!menuOpen) return;
-    const closeOnOutsidePress = (event: PointerEvent) => {
-      if (!wrapRef.current?.contains(event.target as Node)) setMenuOpen(false);
-    };
-    const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key !== 'Escape') return;
-      setMenuOpen(false);
-      buttonRef.current?.focus();
-    };
-    document.addEventListener('pointerdown', closeOnOutsidePress);
-    document.addEventListener('keydown', closeOnEscape);
-    return () => {
-      document.removeEventListener('pointerdown', closeOnOutsidePress);
-      document.removeEventListener('keydown', closeOnEscape);
-    };
-  }, [menuOpen]);
 
   if (!templates.length) return null;
 

@@ -3,6 +3,7 @@ export * from './accounts--permissions';
 export * from './email--tags';
 export * from './exports--docx';
 export * from './exports--tags';
+export * from './exports--xlsx';
 export * from './forms--codes';
 export * from './forms--statuses';
 export * from './lists--display-text';

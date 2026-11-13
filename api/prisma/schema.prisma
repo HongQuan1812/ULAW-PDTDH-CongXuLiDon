@@ -185,11 +185,18 @@ model FileObject {
   @@index([formCode])
 }
 
-// Mẫu Word xuất file theo loại đơn
+// Mẫu xuất file của một lá đơn (Word) hoặc thống kê mọi lá đơn (Excel)
+enum ExportTemplatePurpose {
+  form
+  stats
+}
+
+// Mẫu xuất file theo loại đơn
 model ExportTemplate {
-  id           String   @id
+  id           String                @id
   formTypeId   String
-  formType     FormType @relation(fields: [formTypeId], references: [id], onDelete: Cascade)
+  formType     FormType              @relation(fields: [formTypeId], references: [id], onDelete: Cascade)
+  purpose      ExportTemplatePurpose @default(form)
   name         String
   fileName     String
   sizeBytes    Int

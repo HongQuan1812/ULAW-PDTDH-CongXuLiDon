@@ -2,7 +2,7 @@
    Trình soạn dùng để báo lỗi và tô đỏ ô sai; API giả và backend dùng lại để kiểm tra lần cuối, nên câu báo giống nhau. */
 import type { FormSection } from '../aux-schema/form-types--sections';
 import type { FormTypeStatus } from '../aux-schema/form-types--statuses';
-import { COMMON_EXPORT_TAGS, EXPORT_TAG_PATTERN, ROW_NUMBER_TAG, columnTag, questionTag } from '../business-rules/exports--tags';
+import { COMMON_EXPORT_TAGS, EXPORT_TAG_PATTERN, FORM_COUNT_TAG, ROW_NUMBER_TAG, columnTag, questionTag } from '../business-rules/exports--tags';
 
 /** Câu báo lỗi của bản soạn loại đơn. "Phần 1, câu 2" đếm như trình soạn: câu hỏi đếm cả khối thông báo. */
 export const FORM_TYPE_DRAFT_MESSAGES = {
@@ -129,7 +129,7 @@ export function validateFormTypeDraft(draft: FormTypeDraftInput, otherPrefixes: 
       tags.forEach((tag, i) => {
         if (tag === null) return;
         const usedAt = tagUsedAt.get(tag);
-        if (COMMON_EXPORT_TAGS.has(tag) || tag === ROW_NUMBER_TAG) add(target, FORM_TYPE_DRAFT_MESSAGES.tagReserved(sectionNumber, questionNumber, tag));
+        if (COMMON_EXPORT_TAGS.has(tag) || tag === ROW_NUMBER_TAG || tag === FORM_COUNT_TAG) add(target, FORM_TYPE_DRAFT_MESSAGES.tagReserved(sectionNumber, questionNumber, tag));
         else if (usedAt) add(target, FORM_TYPE_DRAFT_MESSAGES.tagTaken(sectionNumber, questionNumber, tag, usedAt, i > 0));
         else tagUsedAt.set(tag, `phần ${sectionNumber}, câu ${questionNumber}`);
       });

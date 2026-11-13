@@ -122,10 +122,15 @@ Có lí do của Phòng Đào tạo thì hiện thêm dòng "Phòng Đào tạo:
 - Xem được tệp: người nộp đơn có tệp đó, hoặc cán bộ có quyền `viewAll`. Không có tệp hoặc không được xem đều trả 404.
 - Xem trước: ảnh (JPG, PNG), PDF, Word (.docx); tệp khác (vd .doc cũ, Excel) thì tải về (`shared/src/validators/files.ts`).
 
-## Xuất file theo mẫu Word
+## Xuất file theo mẫu
 
-- Cán bộ soạn mẫu bằng Word, gõ **mã trường** trong ngoặc nhọn vào chỗ cần điền (vd `{ho_ten}`, `{mssv}`), rồi tải file `.docx` lên trong trình soạn loại đơn.
-  Mẫu lưu ở máy chủ theo loại đơn, dùng chung mọi phiên bản.
+Mỗi loại đơn có hai nhóm mẫu, lưu ở máy chủ theo loại đơn, dùng chung mọi phiên bản, cùng một bộ mã trường:
+- **Mẫu xuất file đơn** (Word `.docx`): điền dữ liệu của một lá đơn.
+- **Mẫu xuất file thống kê** (Excel `.xlsx`): điền mọi lá đơn của loại đơn, mỗi đơn một hàng.
+
+### Mẫu xuất file đơn (Word)
+
+- Cán bộ soạn mẫu bằng Word, gõ **mã trường** trong ngoặc nhọn vào chỗ cần điền (vd `{ho_ten}`, `{mssv}`), rồi tải file `.docx` lên ở khung "Mẫu xuất file đơn" của trình soạn loại đơn.
 - Ở trang chi tiết đơn, **Xuất file** điền dữ liệu đơn vào mẫu (máy chủ dùng docxtemplater), xem trước rồi tải file Word. Định dạng của mẫu giữ nguyên.
   Chỉ ra file Word; muốn ra PDF cần máy chủ chuyển đổi.
 - Các loại mã (`shared/src/business-rules/exports--tags.ts`):
@@ -135,6 +140,20 @@ Có lí do của Phòng Đào tạo thì hiện thêm dòng "Phòng Đào tạo:
   - **Câu hỏi dạng bảng**: vòng lặp `{#mã bảng}` … `{/mã bảng}`, bên trong có `{stt}` và mã từng cột (theo tên cột);
     ngoài vòng lặp có `{so_<mã bảng>}` (số dòng) và `{tong_<mã cột>}` (tổng cột). Mã cột đặt ngoài vòng lặp sẽ để trống.
 - **Kiểm tra** mẫu báo mã không có trong loại đơn và lỗi ngoặc. **Xuất thử** điền bằng một đơn của loại đơn, chưa có đơn thì bằng dữ liệu giả.
+
+### Mẫu xuất file thống kê (Excel)
+
+- Cán bộ soạn mẫu bằng Excel, dùng cùng các mã như mẫu Word, rồi tải file `.xlsx` lên ở khung "Mẫu xuất file thống kê" của trình soạn loại đơn.
+  Ở mẫu đã lưu, bấm **Xuất** để tải về file Excel (máy chủ dùng ExcelJS, `shared/src/business-rules/exports--xlsx.ts`). Cần quyền `manageFormTypes`.
+- File xuất ra gồm mọi lá đơn của loại đơn: mọi phiên bản, mọi trạng thái, theo thứ tự nộp. Muốn lọc thì lọc trong Excel.
+- **Hàng có mã của đơn** (vd `{ma_don}`, `{ho_ten}`) là hàng mẫu: hàng đó nhân lên, mỗi đơn một hàng, giữ định dạng của hàng mẫu.
+  `{stt}` là số thứ tự của đơn trong file. Không có đơn nào thì bỏ hàng mẫu.
+- **Hàng chỉ có mã của cả file** (`{so_don}` số đơn, `{loai_don}`, `{ngay_xuat}`) điền một lần, vd tiêu đề, dòng tổng.
+  `so_don` cũng là mã dành riêng, không đặt làm mã câu hỏi được.
+- Câu hỏi dạng bảng điền vào một ô, mỗi dòng của bảng một dòng trong ô; có `{so_<mã bảng>}`, `{tong_<mã cột>}` như mẫu Word.
+  Không có vòng lặp, nên mã cột của bảng không dùng được (Kiểm tra báo là mã không có).
+- Ô chỉ có một mã mà giá trị là số (vd `{stt}`, `{tong_so_tin_chi}`) được điền thành số, để Excel tính toán được.
+- Công thức trong mẫu không tự giãn theo số hàng chèn thêm; nên đặt dòng tổng bằng mã `{so_don}` hoặc tự viết công thức sau khi xuất.
 
 ## Thống kê ở trang Quản lí đơn
 

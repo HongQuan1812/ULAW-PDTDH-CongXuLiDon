@@ -16,6 +16,7 @@
   },
   "dependencies": {
     "docxtemplater": "3.58.4",
+    "exceljs": "4.4.0",
     "pizzip": "3.1.8",
     "zod": "4.6.7"
   }

@@ -1,24 +1,33 @@
-/* API giả: mẫu xuất file Word của loại đơn (danh sách, lưu các thay đổi, xem mẫu gốc, kiểm tra mã
-   kể cả với file chưa lưu, dữ liệu ví dụ) và xuất file một lá đơn. Điền mẫu bằng docxtemplater như máy chủ thật. */
+/* API giả: mẫu xuất file của loại đơn (danh sách, lưu các thay đổi, xem mẫu gốc, kiểm tra mã
+   kể cả với file chưa lưu), xuất file một lá đơn (Word, docxtemplater) và xuất file thống kê (Excel, ExcelJS) như máy chủ thật. */
 import { delay, http, HttpResponse } from 'msw';
 import {
   DOCX_CONTENT_TYPE,
   ENDPOINTS,
   EXPORT_MESSAGES,
   EXPORT_TEMPLATE_FIELDS,
+  EXPORT_TEMPLATE_FILE,
   ExportDraftRequestSchema,
   ExportFormRequestSchema,
+  FORM_COUNT_TAG,
   SaveExportTemplatesRequestSchema,
+  TEMPLATE_FILE_MESSAGES,
   buildExportData,
   can,
   checkDocxTemplate,
+  checkXlsxTemplate,
   explainDocxError,
-  openDocx,
+  hasTemplateExtension,
+  isReadableTemplateFile,
   renderDocxTemplate,
+  renderXlsxTemplate,
+  templatePurposeOfFile,
   textToTag,
   type ExportDraftRequest,
   type ExportTemplateCheck,
+  type ExportTemplatePurpose,
   type ExportTemplatesResponse,
+  type FormSection,
   type Session,
 } from '@ulaw/shared';
 import {
@@ -28,6 +37,7 @@ import {
   formTypeExists,
   getExportSource,
   getExportTemplates,
+  getStatsExportSources,
   readSession,
   renameExportTemplate,
   vietnamToday,
@@ -48,15 +58,16 @@ async function templateManager(formTypeId: string): Promise<{ session: Session; 
 }
 
 /**
- * Trả nội dung file Word.
- * @param bytes     nội dung
- * @param fileName  tên file khi tải về
- * @returns         câu trả HTTP
+ * Trả nội dung một file.
+ * @param bytes        nội dung
+ * @param fileName     tên file khi tải về
+ * @param contentType  kiểu nội dung (Word / Excel)
+ * @returns            câu trả HTTP
  */
-function docxResponse(bytes: ArrayBuffer, fileName: string): Response {
+function fileResponse(bytes: ArrayBuffer, fileName: string, contentType: string): Response {
   return new HttpResponse(bytes, {
     headers: {
-      'Content-Type': DOCX_CONTENT_TYPE,
+      'Content-Type': contentType,
       'Content-Disposition': `attachment; filename*=UTF-8''${encodeURIComponent(fileName)}`,
     },
   });
@@ -64,12 +75,24 @@ function docxResponse(bytes: ArrayBuffer, fileName: string): Response {
 
 /**
  * Tên file xuất ra, không dấu (một số trình duyệt đổi tên file có dấu thành "download").
- * @param prefix        phần đầu, vd mã đơn
+ * @param prefix        phần đầu, vd mã đơn, tiền tố mã đơn
  * @param templateName  tên mẫu
+ * @param purpose       quyết định đuôi file
  * @returns             vd 'XMM-2026-001-00001_don-gui-phong-dao-tao.docx'
  */
-function exportFileName(prefix: string, templateName: string): string {
-  return `${prefix}_${textToTag(templateName).replace(/_/g, '-')}.docx`;
+function exportFileName(prefix: string, templateName: string, purpose: ExportTemplatePurpose): string {
+  return `${prefix}_${textToTag(templateName).replace(/_/g, '-')}${EXPORT_TEMPLATE_FILE[purpose].extension}`;
+}
+
+/**
+ * Kiểm tra mã một mẫu theo mục đích: mẫu đơn theo docxtemplater, mẫu thống kê theo ExcelJS.
+ * @param bytes     nội dung file mẫu
+ * @param purpose   mục đích của mẫu
+ * @param sections  các phần của bản soạn
+ * @returns         kết quả kiểm tra
+ */
+function checkTemplate(bytes: ArrayBuffer, purpose: ExportTemplatePurpose, sections: readonly FormSection[]): Promise<ExportTemplateCheck> {
+  return purpose === 'form' ? Promise.resolve(checkDocxTemplate(bytes, sections)) : checkXlsxTemplate(bytes, sections);
 }
 
 /**
@@ -98,27 +121,31 @@ function parseJsonField(field: FormDataEntryValue | null | undefined): unknown {
 }
 
 /**
- * Đọc yêu cầu kiểm tra mã file mẫu chưa lưu: quyền, file .docx đọc được, bản soạn.
+ * Đọc yêu cầu kiểm tra mã file mẫu chưa lưu: quyền, file .docx / .xlsx đọc được, bản soạn.
  * @param request  yêu cầu multipart
- * @returns        upload: nội dung file, bản soạn · errorResponse: 401, 403, 422
+ * @returns        upload: nội dung file, mục đích theo đuôi file, bản soạn · errorResponse: 401, 403, 422
  */
 async function readDraftFile(
   request: Request,
-): Promise<{ upload: { bytes: ArrayBuffer; draft: ExportDraftRequest }; errorResponse?: undefined } | { upload?: undefined; errorResponse: Response }> {
+): Promise<
+  | { upload: { bytes: ArrayBuffer; purpose: ExportTemplatePurpose; draft: ExportDraftRequest }; errorResponse?: undefined }
+  | { upload?: undefined; errorResponse: Response }
+> {
   // Quyền quản lí mẫu
   const session = await readSession();
   if (!session) return { errorResponse: apiError(401, EXPORT_MESSAGES[401]) };
   if (!can(session.role, 'manageFormTypes')) return { errorResponse: apiError(403, EXPORT_MESSAGES[403]) };
 
-  // Bản soạn và file
+  // Bản soạn và file; mục đích theo đuôi file
   const formData = await request.formData().catch(() => null);
   const parsed = ExportDraftRequestSchema.safeParse(parseJsonField(formData?.get(EXPORT_TEMPLATE_FIELDS.draft)));
   const file = formData?.get(EXPORT_TEMPLATE_FIELDS.file);
   if (!parsed.success || !(file instanceof File)) return { errorResponse: apiError(422, EXPORT_MESSAGES.invalidRequest) };
-  if (!/\.docx$/i.test(file.name)) return { errorResponse: apiError(422, EXPORT_MESSAGES.notDocx) };
+  const purpose = templatePurposeOfFile(file.name);
+  if (!purpose) return { errorResponse: apiError(422, EXPORT_MESSAGES.notTemplateFile) };
   const bytes = await file.arrayBuffer();
-  if (!openDocx(bytes)) return { errorResponse: apiError(422, EXPORT_MESSAGES.unreadable) };
-  return { upload: { bytes, draft: parsed.data } };
+  if (!(await isReadableTemplateFile(bytes, purpose))) return { errorResponse: apiError(422, TEMPLATE_FILE_MESSAGES[purpose].unreadable) };
+  return { upload: { bytes, purpose, draft: parsed.data } };
 }
 
 export const exportHandlers = [
@@ -148,15 +175,16 @@ export const exportHandlers = [
       return apiError(404, EXPORT_MESSAGES.templateNotFound);
     }
 
-    // Mỗi mẫu mới phải có file .docx đọc được
-    const uploads: { name: string; fileName: string; bytes: ArrayBuffer }[] = [];
+    // Mỗi mẫu mới phải có file đúng loại (.docx cho mẫu đơn, .xlsx cho mẫu thống kê) và đọc được
+    const uploads: { purpose: ExportTemplatePurpose; name: string; fileName: string; bytes: ArrayBuffer }[] = [];
     for (const added of changes.added) {
       const file = formData.get(added.tempId);
       if (!(file instanceof File)) return apiError(422, EXPORT_MESSAGES.fileMissing(added.name));
-      if (!/\.docx$/i.test(file.name)) return apiError(422, EXPORT_MESSAGES.notDocx);
+      const messages = TEMPLATE_FILE_MESSAGES[added.purpose];
+      if (!hasTemplateExtension(file.name, added.purpose)) return apiError(422, messages.wrongType);
       const bytes = await file.arrayBuffer();
-      if (!openDocx(bytes)) return apiError(422, `${file.name}: ${EXPORT_MESSAGES.unreadable}`);
-      uploads.push({ name: added.name.trim(), fileName: file.name, bytes });
+      if (!(await isReadableTemplateFile(bytes, added.purpose))) return apiError(422, `${file.name}: ${messages.unreadable}`);
+      uploads.push({ purpose: added.purpose, name: added.name.trim(), fileName: file.name, bytes });
     }
 
     // Lưu theo thứ tự: xóa, đổi tên, thêm
@@ -174,7 +202,7 @@ export const exportHandlers = [
     if (!session) return errorResponse;
     const stored = findExportTemplate(formTypeId, String(params.templateId));
     if (!stored) return apiError(404, EXPORT_MESSAGES.templateNotFound);
-    return docxResponse(stored.bytes, stored.template.fileName);
+    return fileResponse(stored.bytes, stored.template.fileName, EXPORT_TEMPLATE_FILE[stored.template.purpose].contentType);
   }),
 
   // Kiểm tra mã trong mẫu theo bản soạn hiện tại
@@ -187,7 +215,7 @@ export const exportHandlers = [
     if (!draft) return apiError(422, EXPORT_MESSAGES.invalidRequest);
     const stored = findExportTemplate(formTypeId, String(params.templateId));
     if (!stored) return apiError(404, EXPORT_MESSAGES.templateNotFound);
-    return HttpResponse.json<ExportTemplateCheck>(checkDocxTemplate(stored.bytes, draft.sections));
+    return HttpResponse.json<ExportTemplateCheck>(await checkTemplate(stored.bytes, stored.template.purpose, draft.sections));
   }),
 
   // Kiểm tra mã trong file mẫu chưa lưu (gửi kèm, không lưu lại)
@@ -195,7 +223,7 @@ export const exportHandlers = [
     await delay(MOCK_DELAY_MS);
     const { upload, errorResponse } = await readDraftFile(request);
     if (!upload) return errorResponse;
-    return HttpResponse.json<ExportTemplateCheck>(checkDocxTemplate(upload.bytes, upload.draft.sections));
+    return HttpResponse.json<ExportTemplateCheck>(await checkTemplate(upload.bytes, upload.purpose, upload.draft.sections));
   }),
 
   // Xuất file một lá đơn: xem được đơn thì xuất được
@@ -211,15 +239,39 @@ export const exportHandlers = [
     const exportable = getExportSource(code, { id: session.user.id, role: session.role });
     if (!exportable) return apiError(404, EXPORT_MESSAGES.formNotFound);
 
-    // Mẫu phải thuộc loại đơn của đơn này
+    // Mẫu phải là mẫu xuất file đơn của loại đơn này
     const stored = findExportTemplate(exportable.formTypeId, body.templateId);
-    if (!stored) return apiError(404, EXPORT_MESSAGES.templateNotFound);
+    if (!stored || stored.template.purpose !== 'form') return apiError(404, EXPORT_MESSAGES.templateNotFound);
 
     try {
       const filled = renderDocxTemplate(stored.bytes, buildExportData(exportable.source, vietnamToday()));
-      return docxResponse(filled, exportFileName(code, stored.template.name));
+      return fileResponse(filled, exportFileName(code, stored.template.name, 'form'), DOCX_CONTENT_TYPE);
     } catch (docxError) {
       return apiError(422, EXPORT_MESSAGES.renderFailed(explainDocxError(docxError)));
+    }
+  }),
+
+  // Xuất file thống kê: mọi lá đơn của loại đơn (cũ trước) vào một mẫu thống kê, mỗi đơn một hàng
+  http.post(api(ENDPOINTS.exports.statsExport), async ({ params }) => {
+    await delay(MOCK_DELAY_MS);
+    const formTypeId = String(params.formTypeId);
+    const { session, errorResponse } = await templateManager(formTypeId);
+    if (!session) return errorResponse;
+
+    // Mẫu phải là mẫu thống kê của loại đơn này
+    const stored = findExportTemplate(formTypeId, String(params.templateId));
+    if (!stored || stored.template.purpose !== 'stats') return apiError(404, EXPORT_MESSAGES.templateNotFound);
+
+    // Dữ liệu từng đơn và mã chung của file
+    const exportedOn = vietnamToday();
+    const { sources, formTypeName, prefix } = getStatsExportSources(formTypeId);
+    const summaryData = { [FORM_COUNT_TAG]: sources.length, loai_don: formTypeName, ngay_xuat: exportedOn.split('-').reverse().join('/') };
+
+    try {
+      const filled = await renderXlsxTemplate(stored.bytes, sources.map((source) => buildExportData(source, exportedOn)), summaryData);
+      return fileResponse(filled, exportFileName(prefix, stored.template.name, 'stats'), EXPORT_TEMPLATE_FILE.stats.contentType);
+    } catch (xlsxError) {
+      return apiError(422, EXPORT_MESSAGES.renderFailed(xlsxError instanceof Error ? xlsxError.message : String(xlsxError)));
     }
   }),
 ];

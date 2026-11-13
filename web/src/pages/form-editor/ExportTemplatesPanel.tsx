@@ -1,21 +1,26 @@
-/* Khung "Mẫu xuất file" trong trình soạn loại đơn.
+/* Khung "Mẫu xuất file đơn" (Word) và "Mẫu xuất file thống kê" (Excel) trong trình soạn loại đơn: cùng một khung, khác mục đích.
    Mẫu thuộc loại đơn (dùng chung mọi phiên bản). Chọn file (bấm hoặc kéo thả, như câu hỏi tải tệp của lá đơn), đổi tên, xóa
    chỉ ghi nhận trong trình duyệt và trình soạn hiện "Chưa lưu"; bấm Lưu mới gửi lên máy chủ (exportTemplateChanges.ts).
    Mã trong mỗi mẫu tự được kiểm tra (không cần bấm nút), theo bản soạn đang hiện
-   (kể cả thay đổi chưa lưu, kể cả mẫu chưa lưu). Muốn xem mẫu điền dữ liệu thật thì Xuất file ở trang chi tiết một lá đơn.
+   (kể cả thay đổi chưa lưu, kể cả mẫu chưa lưu). Muốn xem mẫu điền dữ liệu thật: mẫu đơn thì Xuất file ở trang chi tiết
+   một lá đơn; mẫu thống kê đã lưu thì bấm Xuất ngay tại dòng mẫu (tải về file Excel điền mọi lá đơn của loại đơn).
    Mỗi lần mở trình soạn, khung và các mục thu gọn bên trong đều đóng. */
 import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import {
-  DOCX_CONTENT_TYPE,
   EXPORT_MESSAGES,
+  EXPORT_TEMPLATE_FILE,
+  TEMPLATE_FILE_MESSAGES,
   formatFileSize,
+  hasTemplateExtension,
   questionExportTags,
   type ExportDraftRequest,
   type ExportTemplateCheck,
+  type ExportTemplatePurpose,
 } from '@ulaw/shared';
 import {
   checkExportTemplate,
   checkExportTemplateFile,
+  exportStats,
   fetchExportTemplateFile,
   useExportTemplates,
 } from '../../api/exports';
@@ -25,6 +30,7 @@ import { LoadError, loadErrorMessage } from '../../components/LoadError';
 import { RefreshButton } from '../../components/RefreshButton';
 import { useToast } from '../../components/Toast';
 import { FilePreview, type PreviewFile } from '../../features/file-preview/FilePreview';
+import { saveToDevice } from '../../lib/saveToDevice';
 import { EditorIconButton } from './EditorIconButton';
 import { ExportTagGuide } from './ExportTagGuide';
 import { removeRow, renameRow, stageTemplate, templateRows, type ExportTemplateChanges, type TemplateRow } from './exportTemplateChanges';
@@ -33,8 +39,19 @@ import styles from './ExportTemplatesPanel.module.css';
 /** Chờ người dùng ngừng gõ bao lâu (ms) rồi mới kiểm tra lại mã các mẫu theo bản soạn mới. */
 const CHECK_REFRESH_DELAY_MS = 800;
 
-/** Hộp chọn file chỉ hiện file Word .docx. */
-const DOCX_ACCEPT = `.docx,${DOCX_CONTENT_TYPE}`;
+/** Chữ trên khung theo mục đích: tiêu đề, lời giới thiệu, gợi ý ở ô chọn file. */
+const PANEL_TEXT: Record<ExportTemplatePurpose, { title: string; intro: string; dropHint: string }> = {
+  form: {
+    title: 'Mẫu xuất file đơn',
+    intro: 'File Word có chèn mã. Khi bấm “Xuất file” ở chi tiết đơn, các mã được thay bằng dữ liệu của đơn.',
+    dropHint: 'Chỉ nhận file Word .docx — bấm Lưu để tải lên',
+  },
+  stats: {
+    title: 'Mẫu xuất file thống kê',
+    intro: 'File Excel có chèn mã. Bấm “Xuất” ở một mẫu để nhận file Excel có mọi đơn của loại đơn này, mỗi đơn một hàng.',
+    dropHint: 'Chỉ nhận file Excel .xlsx — bấm Lưu để tải lên',
+  },
+};
 
 /** Kết quả kiểm tra mã một mẫu. */
 interface TemplateResult {
@@ -43,6 +60,8 @@ interface TemplateResult {
 }
 
 interface ExportTemplatesPanelProps {
+  /** Khung mẫu xuất file đơn (Word) hay thống kê (Excel) */
+  purpose: ExportTemplatePurpose;
   /** Mã loại đơn; null = loại đơn mới chưa lưu (chưa có mẫu nào ở máy chủ) */
   formTypeId: string | null;
   /** Bản soạn đang hiện: tên, mã đơn, các phần */
@@ -93,11 +112,12 @@ function checkResultOf(check: ExportTemplateCheck, tableTags: string[]): Templat
 }
 
 /**
- * Khung Mẫu xuất file.
+ * Khung Mẫu xuất file đơn / Mẫu xuất file thống kê.
  * @param props  xem ExportTemplatesPanelProps
  * @returns      thẻ có nút thu gọn; mở ra thì có các mẫu, Cách tạo một mẫu, Bảng mã
  */
-export function ExportTemplatesPanel({ formTypeId, draft, changes, onChangesChange, saving }: ExportTemplatesPanelProps) {
+export function ExportTemplatesPanel({ purpose, formTypeId, draft, changes, onChangesChange, saving }: ExportTemplatesPanelProps) {
+  const text = PANEL_TEXT[purpose];
   const [open, setOpen] = useState(false);
   const bodyId = useId();
   const questionTags = useMemo(() => questionExportTags(draft.sections), [draft.sections]);
@@ -117,13 +137,13 @@ export function ExportTemplatesPanel({ formTypeId, draft, changes, onChangesChan
     <section className={styles.card} aria-labelledby={`${bodyId}-title`}>
       {/* Đầu khung: bấm cả hàng để thu / mở (nút mũi tên cho bàn phím) */}
       <div className={styles.cardHead} onClick={toggle}>
-        <h2 id={`${bodyId}-title`}>Mẫu xuất file</h2>
+        <h2 id={`${bodyId}-title`}>{text.title}</h2>
         <button
           type="button"
           className={styles.toggle}
           aria-expanded={open}
           aria-controls={bodyId}
-          aria-label={open ? 'Thu gọn Mẫu xuất file' : 'Mở Mẫu xuất file'}
+          aria-label={open ? `Thu gọn ${text.title}` : `Mở ${text.title}`}
           onClick={(event) => {
             event.stopPropagation();
             toggle();
@@ -134,11 +154,12 @@ export function ExportTemplatesPanel({ formTypeId, draft, changes, onChangesChan
           </svg>
         </button>
       </div>
-      <p className={styles.intro}>File Word có chèn mã. Khi bấm “Xuất file” ở chi tiết đơn, các mã được thay bằng dữ liệu của đơn.</p>
+      <p className={styles.intro}>{text.intro}</p>
 
       {open && (
         <div id={bodyId} className={styles.body}>
           <TemplateList
+            purpose={purpose}
             formTypeId={formTypeId}
             templatesQuery={templatesQuery}
             checkRound={checkRound}
@@ -148,7 +169,7 @@ export function ExportTemplatesPanel({ formTypeId, draft, changes, onChangesChan
             onChangesChange={onChangesChange}
             saving={saving}
           />
-          <ExportTagGuide questionTags={questionTags} />
+          <ExportTagGuide purpose={purpose} questionTags={questionTags} />
         </div>
       )}
     </section>
@@ -156,7 +177,8 @@ export function ExportTemplatesPanel({ formTypeId, draft, changes, onChangesChan
 }
 
 /**
- * Mục "Các mẫu": khung chọn file Word, danh sách mẫu (đã lưu và chưa lưu), mỗi mẫu có Xem, Đổi tên, Xóa.
+ * Mục "Các mẫu": khung chọn file, danh sách mẫu (đã lưu và chưa lưu), mỗi mẫu có Xem, Đổi tên, Xóa;
+ * mẫu thống kê đã lưu có thêm Xuất (tải về file Excel điền mọi lá đơn).
  * Thêm, đổi tên, xóa chỉ ghi nhận (lưu khi bấm Lưu của trình soạn); Xem chạy ngay, mẫu chưa lưu thì mở thẳng file trong trình duyệt.
  * Mã trong mỗi mẫu tự được kiểm tra khi mẫu vừa thêm / vừa mở khung, và mỗi khi câu hỏi đổi (sau lúc ngừng gõ);
  * có vấn đề thì hiện cảnh báo ngay dưới mẫu, hợp lệ thì không hiện gì.
@@ -165,6 +187,7 @@ export function ExportTemplatesPanel({ formTypeId, draft, changes, onChangesChan
  * @returns      mục các mẫu, và trình xem mẫu gốc
  */
 function TemplateList({
+  purpose,
   formTypeId,
   templatesQuery,
   checkRound,
@@ -191,8 +214,11 @@ function TemplateList({
   const checkedDrafts = useRef(new Map<string, ExportDraftRequest>());
   const lastCheckRound = useRef(checkRound);
   const savedTemplates = templatesQuery.data;
-  const rows = useMemo(() => templateRows(savedTemplates ?? [], changes), [savedTemplates, changes]);
+  const rows = useMemo(() => templateRows(savedTemplates ?? [], changes, purpose), [savedTemplates, changes, purpose]);
   const listLoading = formTypeId !== null && templatesQuery.isPending;
+  const fileInfo = EXPORT_TEMPLATE_FILE[purpose];
+  // Mẫu đã lưu cùng mục đích đang chờ xóa (hai khung dùng chung một bộ thay đổi)
+  const removedIds = changes.removed.filter((templateId) => savedTemplates?.some((template) => template.id === templateId && template.purpose === purpose));
 
   // Tự kiểm tra mã: mẫu chưa kiểm tra theo bản soạn hiện tại thì kiểm tra; chỉ giữ cảnh báo của lần kiểm tra mới nhất.
   // Bấm ↻ (lượt kiểm tra mới) thì quên các lần trước, kiểm tra lại mọi mẫu
@@ -222,17 +248,17 @@ function TemplateList({
   }, [rows, checkDraft, formTypeId, checkRound]);
 
   /**
-   * Thêm các file vừa chọn / kéo thả làm mẫu mới (chưa lưu): bỏ file không phải .docx
-   * và file trùng tên với mẫu đang chờ lưu (ghi lí do).
+   * Thêm các file vừa chọn / kéo thả làm mẫu mới (chưa lưu): bỏ file sai loại (khung mẫu đơn nhận .docx, khung thống kê nhận .xlsx)
+   * và file trùng tên với mẫu cùng khung đang chờ lưu (ghi lí do).
    * @param chosenFiles  file từ hộp chọn file hoặc kéo thả
    */
   const addFiles = (chosenFiles: FileList) => {
     const messages: string[] = [];
     const added = [...changes.added];
     Array.from(chosenFiles).forEach((file) => {
-      if (!/\.docx$/i.test(file.name)) messages.push(`${file.name}: ${EXPORT_MESSAGES.notDocx}`);
-      else if (added.some((staged) => staged.file.name === file.name)) messages.push(EXPORT_MESSAGES.duplicateFile(file.name));
-      else added.push(stageTemplate(file));
+      if (!hasTemplateExtension(file.name, purpose)) messages.push(`${file.name}: ${TEMPLATE_FILE_MESSAGES[purpose].wrongType}`);
+      else if (added.some((staged) => staged.purpose === purpose && staged.file.name === file.name)) messages.push(EXPORT_MESSAGES.duplicateFile(file.name));
+      else added.push(stageTemplate(file, purpose));
     });
     setRejectedMessages(messages);
     if (added.length > changes.added.length) onChangesChange({ ...changes, added });
@@ -259,10 +285,26 @@ function TemplateList({
     }
     setBusyRowId(row.id);
     try {
-      const docx = await fetchExportTemplateFile(formTypeId!, row.id);
-      showFile(row.template.fileName, docx.content, 'Mẫu gốc');
+      const templateFile = await fetchExportTemplateFile(formTypeId!, row.id);
+      showFile(row.template.fileName, templateFile.content, 'Mẫu gốc');
     } catch (error) {
       toast(error instanceof Error ? error.message : EXPORT_MESSAGES.templateNotFound, 'error');
+    } finally {
+      setBusyRowId(null);
+    }
+  };
+
+  /**
+   * Xuất file thống kê theo một mẫu đã lưu: máy chủ điền mọi lá đơn của loại đơn, file Excel tải thẳng về máy.
+   * @param templateId  id mẫu thống kê đã lưu
+   */
+  const exportWith = async (templateId: string) => {
+    setBusyRowId(templateId);
+    try {
+      const exported = await exportStats(formTypeId!, templateId);
+      saveToDevice(exported.content, exported.fileName);
+    } catch (error) {
+      toast(error instanceof Error ? error.message : String(error), 'error');
     } finally {
       setBusyRowId(null);
     }
@@ -288,11 +330,11 @@ function TemplateList({
         {!listLoading && <span className={styles.count}>{rows.length} mẫu</span>}
       </div>
 
-      {/* Chọn file Word: bấm hoặc kéo thả, như câu hỏi tải tệp của lá đơn; bấm Lưu mới tải lên */}
+      {/* Chọn file: bấm hoặc kéo thả, như câu hỏi tải tệp của lá đơn; bấm Lưu mới tải lên */}
       {!saving && (
         <FileDropZone
-          accept={DOCX_ACCEPT}
-          hint="Chỉ nhận file Word .docx — bấm Lưu để tải lên"
+          accept={`${fileInfo.extension},${fileInfo.contentType}`}
+          hint={PANEL_TEXT[purpose].dropHint}
           describedBy={rejectedMessages.length ? rejectedId : undefined}
           onFiles={addFiles}
         />
@@ -317,7 +359,7 @@ function TemplateList({
             const sizeBytes = row.kind === 'staged' ? row.staged.file.size : row.template.sizeBytes;
             return (
               <div key={row.id} className={styles.template}>
-                <span className={styles.fileType}>DOCX</span>
+                <span className={styles.fileType}>{fileInfo.typeLabel}</span>
                 {renamingId === row.id ? (
                   <RenameInput name={row.name} onDone={(name) => saveName(row, name)} onCancel={() => setRenamingId(null)} />
                 ) : (
@@ -330,13 +372,25 @@ function TemplateList({
                   </button>
                 )}
                 <div className={styles.actions}>
+                  {/* Mẫu thống kê đã lưu: xuất ngay (mẫu chưa lưu thì bấm Lưu trước) */}
+                  {purpose === 'stats' && row.kind === 'saved' && (
+                    <Button
+                      variant="primary"
+                      className={styles.smallButton}
+                      disabled={busy}
+                      title="Tải về file Excel có mọi đơn của loại đơn này"
+                      onClick={() => void exportWith(row.id)}
+                    >
+                      {busy ? 'Đang xuất…' : 'Xuất'}
+                    </Button>
+                  )}
                   <Button className={styles.smallButton} disabled={busy} onClick={() => void viewTemplate(row)}>
                     Xem
                   </Button>
                   <Button
                     className={styles.smallButton}
                     disabled={busy || saving}
-                    title="Tên này hiện khi chọn mẫu lúc Xuất file"
+                    title={purpose === 'form' ? 'Tên này hiện khi chọn mẫu lúc Xuất file' : 'Tên này cũng là phần sau của tên file xuất ra'}
                     onClick={() => setRenamingId(row.id)}
                   >
                     Đổi tên
@@ -361,11 +415,15 @@ function TemplateList({
       ) : null}
 
       {/* Mẫu đã lưu vừa bấm xóa: chỉ xóa thật khi bấm Lưu; Hoàn tác để giữ lại */}
-      {changes.removed.length > 0 && (
+      {removedIds.length > 0 && (
         <p className={styles.removedNote}>
-          Sẽ xóa {changes.removed.length} mẫu khi bấm Lưu.{' '}
+          Sẽ xóa {removedIds.length} mẫu khi bấm Lưu.{' '}
           {!saving && (
-            <button type="button" className={styles.undo} onClick={() => onChangesChange({ ...changes, removed: [] })}>
+            <button
+              type="button"
+              className={styles.undo}
+              onClick={() => onChangesChange({ ...changes, removed: changes.removed.filter((templateId) => !removedIds.includes(templateId)) })}
+            >
               Hoàn tác
             </button>
           )}

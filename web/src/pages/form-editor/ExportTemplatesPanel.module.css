@@ -67,6 +67,10 @@
 .demo .demoItalic{font-style:italic}
 .demo .demoLarge{font-size:20px}
 .arrow{color:var(--faint);font-size:18px}
+/* ví dụ của mẫu Excel: bảng file mẫu → bảng file xuất ra; khung hẹp thì xếp chồng, mũi tên quay xuống */
+.sheetExamples{display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:14px 16px;border-radius:var(--r-lg);background:var(--surface);border:1px solid var(--line)}
+.sheetExample{display:grid;gap:6px;min-width:0;max-width:100%}
+@media (max-width:720px){.sheetExamples{flex-direction:column;align-items:stretch}.sheetExamples>.arrow{transform:rotate(90deg);align-self:center}}
 .code{color:var(--accent);font-family:ui-monospace,Menlo,Consolas,monospace;font-weight:500}
 
 /* Bảng mã: các nhóm thu gọn được */

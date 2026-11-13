@@ -1,8 +1,7 @@
-/* Hook gọi API xuất file theo mẫu Word: mẫu của loại đơn (danh sách, lưu các thay đổi, xem mẫu gốc,
-   kiểm tra mã kể cả với file chưa lưu, ví dụ cho Bảng mã) và xuất file một lá đơn. */
+/* Hook gọi API xuất file theo mẫu: mẫu của loại đơn (danh sách, lưu các thay đổi, xem mẫu gốc,
+   kiểm tra mã kể cả với file chưa lưu), xuất file một lá đơn (Word) và xuất file thống kê (Excel). */
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
-  DOCX_CONTENT_TYPE,
   EXPORT_MESSAGES,
   EXPORT_TEMPLATE_FIELDS,
   ENDPOINTS,
@@ -17,8 +16,8 @@ import {
 } from '@ulaw/shared';
 import { ApiError, apiFetch } from './client';
 
-/** File Word nhận từ máy chủ. */
-export interface DocxFile {
+/** File (Word / Excel) nhận từ máy chủ. */
+export interface DownloadedFile {
   content: Blob;
   /** Tên file trong Content-Disposition */
   fileName: string;
@@ -32,12 +31,12 @@ export interface DocxFile {
 const exportTemplatesKey = (formTypeId: string) => ['exportTemplates', formTypeId] as const;
 
 /**
- * Gọi một API trả file Word.
+ * Gọi một API trả file.
  * @param path  đường dẫn sau /api
  * @param init  tùy chọn của fetch (method, body JSON…)
- * @returns     nội dung, tên file; lỗi HTTP thì ném ApiError kèm câu báo của máy chủ
+ * @returns     nội dung (kiểu theo Content-Type), tên file; lỗi HTTP thì ném ApiError kèm câu báo của máy chủ
  */
-async function fetchDocx(path: string, init?: RequestInit): Promise<DocxFile> {
+async function fetchFile(path: string, init?: RequestInit): Promise<DownloadedFile> {
   const response = await fetch(`/api${path}`, {
     credentials: 'include',
     ...init,
@@ -51,8 +50,8 @@ async function fetchDocx(path: string, init?: RequestInit): Promise<DocxFile> {
   // Tên file trong Content-Disposition: filename*=UTF-8''<tên đã mã hóa>
   const disposition = response.headers.get('Content-Disposition') ?? '';
   const encodedName = /filename\*=UTF-8''([^;]+)/i.exec(disposition)?.[1];
-  const fileName = encodedName ? decodeURIComponent(encodedName) : 'xuat-file.docx';
-  const content = new Blob([await response.arrayBuffer()], { type: DOCX_CONTENT_TYPE });
+  const fileName = encodedName ? decodeURIComponent(encodedName) : 'xuat-file';
+  const content = new Blob([await response.arrayBuffer()], { type: response.headers.get('Content-Type') ?? '' });
   return { content, fileName };
 }
 
@@ -109,10 +108,10 @@ export function checkExportTemplateFile(file: File, draft: ExportDraftRequest): 
  * Tải mẫu gốc (còn nguyên các mã) để xem.
  * @param formTypeId  mã loại đơn
  * @param templateId  id mẫu
- * @returns           file Word
+ * @returns           file Word / Excel
  */
-export function fetchExportTemplateFile(formTypeId: string, templateId: string): Promise<DocxFile> {
-  return fetchDocx(exportTemplatePath(formTypeId, templateId, 'file'));
+export function fetchExportTemplateFile(formTypeId: string, templateId: string): Promise<DownloadedFile> {
+  return fetchFile(exportTemplatePath(formTypeId, templateId, 'file'));
 }
 
 /**
@@ -132,8 +131,25 @@ export function checkExportTemplate(formTypeId: string, templateId: string, draf
  * @param request  mẫu dùng để điền
  * @returns        file Word đã điền; lỗi thì ném ApiError (câu báo theo EXPORT_MESSAGES)
  */
-export function exportForm(code: string, request: ExportFormRequest): Promise<DocxFile> {
-  return fetchDocx(formExportPath(code), { method: 'POST', body: JSON.stringify(request) }).catch((error: unknown) => {
-    throw error instanceof ApiError ? error : new ApiError(0, EXPORT_MESSAGES.renderFailed('kiểm tra kết nối mạng rồi thử lại.'));
-  });
+export function exportForm(code: string, request: ExportFormRequest): Promise<DownloadedFile> {
+  return fetchFile(formExportPath(code), { method: 'POST', body: JSON.stringify(request) }).catch(toExportError);
+}
+
+/**
+ * Xuất file thống kê mọi lá đơn của loại đơn theo một mẫu thống kê.
+ * @param formTypeId  mã loại đơn
+ * @param templateId  id mẫu thống kê
+ * @returns           file Excel đã điền; lỗi thì ném ApiError (câu báo theo EXPORT_MESSAGES)
+ */
+export function exportStats(formTypeId: string, templateId: string): Promise<DownloadedFile> {
+  return fetchFile(exportTemplatePath(formTypeId, templateId, 'export'), { method: 'POST' }).catch(toExportError);
+}
+
+/**
+ * Lỗi khi xuất file: lỗi của máy chủ giữ nguyên; mất mạng thì đổi thành câu dễ hiểu.
+ * @param error  lỗi bắt được
+ * @returns      không trả về, luôn ném ApiError
+ */
+function toExportError(error: unknown): never {
+  throw error instanceof ApiError ? error : new ApiError(0, EXPORT_MESSAGES.renderFailed('kiểm tra kết nối mạng rồi thử lại.'));
 }

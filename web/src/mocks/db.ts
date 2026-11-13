@@ -954,6 +954,7 @@ function seedExportTemplates(): Map<string, MockExportTemplate[]> {
   const bytes = Uint8Array.from(binary, (character) => character.charCodeAt(0)).buffer;
   const template: ExportTemplate = {
     id: SEED_EXPORT_TEMPLATE.id,
+    purpose: 'form',
     name: SEED_EXPORT_TEMPLATE.name,
     fileName: SEED_EXPORT_TEMPLATE.fileName,
     sizeBytes: bytes.byteLength,
@@ -996,15 +997,20 @@ export function findExportTemplate(formTypeId: string, templateId: string): { te
 }
 
 /**
- * Thêm mẫu xuất file (đã kiểm tra là .docx đọc được).
+ * Thêm mẫu xuất file (đã kiểm tra là .docx / .xlsx đọc được theo mục đích).
  * @param formTypeId  mã loại đơn
- * @param upload      tên mẫu, tên file, nội dung file
+ * @param upload      mục đích, tên mẫu, tên file, nội dung file
  * @param staffId     cán bộ tải lên
  * @returns           thông tin mẫu mới
  */
-export function addExportTemplate(formTypeId: string, upload: { name: string; fileName: string; bytes: ArrayBuffer }, staffId: string): ExportTemplate {
+export function addExportTemplate(
+  formTypeId: string,
+  upload: { purpose: ExportTemplate['purpose']; name: string; fileName: string; bytes: ArrayBuffer },
+  staffId: string,
+): ExportTemplate {
   const template: ExportTemplate = {
     id: `tpl-${crypto.randomUUID()}`,
+    purpose: upload.purpose,
     name: upload.name,
     fileName: upload.fileName,
     sizeBytes: upload.bytes.byteLength,
@@ -1052,6 +1058,19 @@ export function getExportSource(code: string, viewer?: { id: string; role: RoleI
   const form = FORMS.find((candidate) => candidate.code === code);
   if (!form || (viewer && form.ownerId !== viewer.id && !can(viewer.role, 'viewAll'))) return null;
   return { source: toExportSource(form), formTypeId: form.formTypeId };
+}
+
+/**
+ * Thông tin điền mẫu thống kê của một loại đơn: mọi lá đơn (cũ trước), tên loại đơn mới nhất, tiền tố mã đơn.
+ * @param formTypeId  mã loại đơn (đã biết là có)
+ * @returns           sources: thông tin từng đơn · formTypeName, prefix: của phiên bản mới nhất
+ */
+export function getStatsExportSources(formTypeId: string): { sources: ExportSource[]; formTypeName: string; prefix: string } {
+  const forms = FORMS.filter((form) => form.formTypeId === formTypeId).sort(
+    (first, second) => first.submittedAt.localeCompare(second.submittedAt) || first.code.localeCompare(second.code),
+  );
+  const formType = findFormType(formTypeId);
+  return { sources: forms.map(toExportSource), formTypeName: formType?.versions.at(-1)?.name ?? '', prefix: formType?.prefix ?? formTypeId };
 }
 
 /**
