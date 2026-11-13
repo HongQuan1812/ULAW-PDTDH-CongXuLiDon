@@ -39,6 +39,7 @@ import {
   FORM_TYPE_MESSAGES,
   can,
   formDetailPath,
+  formTypeStatusOf,
   isAnswerable,
   maskCccd,
   nextFormCode,
@@ -631,11 +632,11 @@ export function getFormStats(): FormStats {
     byStatus[form.status] += 1;
     countByType.set(form.formTypeId, (countByType.get(form.formTypeId) ?? 0) + 1);
   }
-  // Tên, trạng thái theo phiên bản mới nhất, như dòng của bảng Quản lí loại đơn
+  // Tên theo phiên bản mới nhất; trạng thái: có phiên bản nào đang mở thì cả loại đơn là Đang mở
   const byType = FORM_TYPES.map((formType) => ({
     formTypeId: formType.id,
     formTypeName: latestVersion(formType).name,
-    formTypeStatus: latestVersion(formType).status,
+    formTypeStatus: formTypeStatusOf(formType.versions.map((version) => version.status)),
     count: countByType.get(formType.id) ?? 0,
   })).sort((a, b) => b.count - a.count || a.formTypeName.localeCompare(b.formTypeName, 'vi'));
   return { total: FORMS.length, byStatus, byType };

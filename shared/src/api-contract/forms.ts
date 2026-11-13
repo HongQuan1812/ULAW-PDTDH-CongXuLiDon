@@ -84,7 +84,7 @@ export type FormCccdsResponse = z.infer<typeof FormCccdsResponseSchema>;
 export const FormTypeCountSchema = z.object({
   formTypeId: z.string(),
   formTypeName: z.string(),
-  /** Nháp / Đang mở / Đã đóng, để biểu đồ ghi chú loại không còn nhận đơn */
+  /** Đang mở nếu có phiên bản nào đang mở; không thì theo phiên bản mới nhất (formTypeStatusOf). Biểu đồ tô đậm loại còn nhận đơn */
   formTypeStatus: z.enum(FORM_TYPE_STATUSES),
   count: z.number().int().min(0),
 });

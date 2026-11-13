@@ -19,6 +19,7 @@ import {
   type ManagedFormSummary,
   type ManagedFormsResponse,
   type MyFormsResponse,
+  formTypeStatusOf,
 } from '@ulaw/shared';
 import { PrismaService } from '../common/prisma.service';
 import { toVietnamTime } from '../common/vietnam-time';
@@ -139,7 +140,7 @@ export class FormsService {
     const [statusGroups, typeGroups, formTypes] = await Promise.all([
       this.prisma.form.groupBy({ by: ['status'], _count: { _all: true } }),
       this.prisma.form.groupBy({ by: ['formTypeId'], _count: { _all: true } }),
-      this.prisma.formType.findMany({ include: { versions: { orderBy: { version: 'desc' }, take: 1 } } }),
+      this.prisma.formType.findMany({ include: { versions: { orderBy: { version: 'asc' } } } }),
     ]);
 
     const byStatus = Object.fromEntries(FORM_STATUSES.map((status) => [status, 0])) as FormStats['byStatus'];
@@ -148,8 +149,11 @@ export class FormsService {
 
     const byType = formTypes
       .flatMap((formType) => {
-        const latest = formType.versions[0];
-        return latest ? [{ formTypeId: formType.id, formTypeName: latest.name, formTypeStatus: latest.status, count: countByType.get(formType.id) ?? 0 }] : [];
+        // Tên theo phiên bản mới nhất; trạng thái: có phiên bản nào đang mở thì cả loại đơn là Đang mở
+        const latest = formType.versions[formType.versions.length - 1];
+        if (!latest) return [];
+        const formTypeStatus = formTypeStatusOf(formType.versions.map((version) => version.status));
+        return [{ formTypeId: formType.id, formTypeName: latest.name, formTypeStatus, count: countByType.get(formType.id) ?? 0 }];
       })
       .sort((a, b) => b.count - a.count || a.formTypeName.localeCompare(b.formTypeName, 'vi'));
     return { total: Object.values(byStatus).reduce((sum, count) => sum + count, 0), byStatus, byType };
