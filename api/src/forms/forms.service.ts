@@ -24,8 +24,14 @@ import { PrismaService } from '../common/prisma.service';
 import { toVietnamTime } from '../common/vietnam-time';
 import type { Form, User } from '../generated/prisma/client';
 
-/** Đơn kèm hai cán bộ liên quan, đủ để dựng dòng "Đơn phụ trách". */
-type FormWithStaff = Form & { receiver: User | null; handler: User | null };
+/** Đếm ghi chú nội bộ kèm mỗi đơn (cột Ghi chú). */
+const NOTE_COUNT = { _count: { select: { notes: true } } } as const;
+
+/** Số ghi chú Prisma đếm kèm đơn. */
+type WithNoteCount = { _count: { notes: number } };
+
+/** Đơn kèm hai cán bộ liên quan và số ghi chú, đủ để dựng dòng "Đơn phụ trách". */
+type FormWithStaff = Form & WithNoteCount & { receiver: User | null; handler: User | null };
 
 @Injectable()
 export class FormsService {
@@ -49,25 +55,26 @@ export class FormsService {
   }
 
   /**
-   * Dựng dòng "Đơn phụ trách": tóm tắt kèm người tiếp nhận, người xử lí.
-   * @param form  đơn kèm hai cán bộ
+   * Dựng dòng "Đơn phụ trách": tóm tắt kèm người tiếp nhận, người xử lí, số ghi chú.
+   * @param form  đơn kèm hai cán bộ và số ghi chú
    * @returns     dòng theo HandledFormSummarySchema
    */
   private toHandledSummary(form: FormWithStaff): HandledFormSummary {
     const toStaff = (staff: User | null) => (staff ? { id: staff.id, name: staff.name, email: staff.email } : null);
-    return { ...this.toSummary(form), receiver: toStaff(form.receiver), handler: toStaff(form.handler) };
+    return { ...this.toSummary(form), receiver: toStaff(form.receiver), handler: toStaff(form.handler), noteCount: form._count.notes };
   }
 
   /**
-   * Dựng dòng bảng Quản lí đơn: tóm tắt kèm lúc tiếp nhận và người nộp (CCCD che).
-   * @param form  đơn kèm người nộp
+   * Dựng dòng bảng Quản lí đơn: tóm tắt kèm lúc tiếp nhận, số ghi chú và người nộp (CCCD che).
+   * @param form  đơn kèm người nộp và số ghi chú
    * @returns     dòng theo ManagedFormSummarySchema
    */
-  private toManagedSummary(form: Form & { owner: User }): ManagedFormSummary {
+  private toManagedSummary(form: Form & WithNoteCount & { owner: User }): ManagedFormSummary {
     const { owner } = form;
     return {
       ...this.toSummary(form),
       receivedAt: form.receivedAt ? toVietnamTime(form.receivedAt) : null,
+      noteCount: form._count.notes,
       applicant: { id: owner.id, name: owner.name, email: owner.email, phone: owner.phone, maskedCccd: maskCccd(owner.cccd) },
     };
   }
@@ -93,7 +100,7 @@ export class FormsService {
   async findFormsHandledBy(staffId: string, listQuery: ListQuery): Promise<HandledFormsResponse> {
     const forms = await this.prisma.form.findMany({
       where: { OR: [{ receiverId: staffId }, { handlerId: staffId }] },
-      include: { receiver: true, handler: true },
+      include: { receiver: true, handler: true, ...NOTE_COUNT },
     });
     const { rows, ...pageMeta } = applyListQuery(
       forms.map((form) => this.toHandledSummary(form)),
@@ -111,7 +118,7 @@ export class FormsService {
    * @returns               theo ManagedFormsResponseSchema
    */
   async findManaged(listQuery: ListQuery, canSearchCccd: boolean): Promise<ManagedFormsResponse> {
-    const forms = await this.prisma.form.findMany({ include: { owner: true } });
+    const forms = await this.prisma.form.findMany({ include: { owner: true, ...NOTE_COUNT } });
     const fullCccdByFormCode = new Map(forms.map((form) => [form.code, form.owner.cccd ?? '']));
     const { rows, ...pageMeta } = applyListQuery(
       forms.map((form) => this.toManagedSummary(form)),

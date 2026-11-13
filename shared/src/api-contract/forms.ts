@@ -41,6 +41,8 @@ export const HandledFormSummarySchema = FormSummarySchema.extend({
   receiver: StaffRefSchema.nullable(),
   /** Cán bộ đang xử lí (khác người tiếp nhận nếu đơn đã được chuyển giao); null = chưa tiếp nhận */
   handler: StaffRefSchema.nullable(),
+  /** Số ghi chú nội bộ của đơn (cột Ghi chú) */
+  noteCount: z.number().int().nonnegative(),
 });
 export type HandledFormSummary = z.infer<typeof HandledFormSummarySchema>;
 
@@ -64,6 +66,8 @@ export type ManagedApplicant = z.infer<typeof ManagedApplicantSchema>;
 export const ManagedFormSummarySchema = FormSummarySchema.extend({
   /** Lúc tiếp nhận gần nhất, giờ Việt Nam 'YYYY-MM-DDTHH:mm'; null = chưa tiếp nhận */
   receivedAt: z.string().nullable(),
+  /** Số ghi chú nội bộ của đơn (cột Ghi chú) */
+  noteCount: z.number().int().nonnegative(),
   applicant: ManagedApplicantSchema,
 });
 export type ManagedFormSummary = z.infer<typeof ManagedFormSummarySchema>;
@@ -118,9 +122,21 @@ export const FORM_LIST_FIELDS: TableField<FormSummary>[] = [
   },
 ];
 
-/** Bảng "Đơn phụ trách": thông tin đơn, rồi Người tiếp nhận, Người xử lí (lựa chọn lọc theo tên cán bộ có trong dữ liệu). */
+/** Tên cột Ghi chú (số ghi chú nội bộ) của bảng Đơn phụ trách và Quản lí đơn; chỉ hiện với người có quyền internalNotes. */
+export const NOTE_COUNT_FIELD_KEY = 'noteCount';
+
+/**
+ * Cột Ghi chú: số ghi chú nội bộ của đơn, sắp xếp và lọc như cột số.
+ * @returns  khai báo cột cho bảng có noteCount
+ */
+function noteCountField<Row extends { noteCount: number }>(): TableField<Row> {
+  return { key: NOTE_COUNT_FIELD_KEY, label: 'Ghi chú', type: 'number', getValue: (form) => form.noteCount };
+}
+
+/** Bảng "Đơn phụ trách": thông tin đơn, Ghi chú, rồi Người tiếp nhận, Người xử lí (lựa chọn lọc theo tên cán bộ có trong dữ liệu). */
 export const HANDLED_FORM_LIST_FIELDS: TableField<HandledFormSummary>[] = [
   ...FORM_LIST_FIELDS,
+  noteCountField(),
   {
     key: 'receiver',
     label: 'Người tiếp nhận',
@@ -137,10 +153,11 @@ export const HANDLED_FORM_LIST_FIELDS: TableField<HandledFormSummary>[] = [
   },
 ];
 
-/** Bảng Quản lí đơn: thông tin đơn, lúc tiếp nhận, rồi thông tin người nộp. */
+/** Bảng Quản lí đơn: thông tin đơn, lúc tiếp nhận, Ghi chú, rồi thông tin người nộp. */
 export const MANAGED_FORM_LIST_FIELDS: TableField<ManagedFormSummary>[] = [
   ...FORM_LIST_FIELDS,
   { key: 'receivedAt', label: 'Thời gian tiếp nhận', type: 'datetime', getValue: (form) => form.receivedAt },
+  noteCountField(),
   { key: 'name', label: 'Họ và tên', type: 'text', getValue: (form) => form.applicant.name },
   { key: 'cccd', label: 'Số CCCD', type: 'text', getValue: (form) => form.applicant.maskedCccd },
   { key: 'phone', label: 'Số điện thoại', type: 'text', getValue: (form) => form.applicant.phone },

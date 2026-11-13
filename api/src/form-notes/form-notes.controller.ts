@@ -1,17 +1,14 @@
-/* Nhóm API form-notes: ghi chú nội bộ của cán bộ trên lá đơn (xem, thêm, sửa, xóa, đếm). Mọi lệnh cần quyền internalNotes. */
-import { Body, Controller, Delete, Get, HttpCode, Param, Patch, Post, Query } from '@nestjs/common';
+/* Nhóm API form-notes: ghi chú nội bộ của cán bộ trên lá đơn (xem, thêm, sửa, xóa). Mọi lệnh cần quyền internalNotes.
+   Số ghi chú của mỗi đơn đi kèm các bảng đơn (forms.service). */
+import { Body, Controller, Delete, Get, HttpCode, Param, Patch, Post } from '@nestjs/common';
 import { ApiCreatedResponse, ApiNoContentResponse, ApiOkResponse, ApiTags } from '@nestjs/swagger';
 import {
-  FORM_NOTE_COUNTS_PARAM,
   FORM_NOTE_ENDPOINTS,
   FORM_NOTE_MESSAGES,
-  FormNoteCountsResponseSchema,
   FormNoteSchema,
   FormNotesResponseSchema,
   SaveFormNoteRequestSchema,
-  parseFormNoteCountsParam,
   type FormNote,
-  type FormNoteCountsResponse,
   type FormNotesResponse,
   type SaveFormNoteRequest,
 } from '@ulaw/shared';
@@ -40,16 +37,6 @@ function readNoteBody(requestBody: unknown): SaveFormNoteRequest {
 export class FormNotesController {
   /** @param formNotesService  đọc, ghi ghi chú */
   constructor(private readonly formNotesService: FormNotesService) {}
-
-  /**
-   * Số ghi chú của nhiều đơn (?codes=<mã>,<mã>…).
-   * @returns  số ghi chú theo mã đơn, đủ mọi mã đã hỏi
-   */
-  @Get(FORM_NOTE_ENDPOINTS.counts)
-  @ApiOkResponse({ schema: openApiSchemaOf(FormNoteCountsResponseSchema) })
-  async counts(@Query(FORM_NOTE_COUNTS_PARAM) codesParam?: string): Promise<FormNoteCountsResponse> {
-    return { counts: await this.formNotesService.countNotes(parseFormNoteCountsParam(codesParam ?? null)) };
-  }
 
   /**
    * Các ghi chú của lá đơn, cũ trước mới sau.

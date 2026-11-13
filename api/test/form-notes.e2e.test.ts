@@ -1,4 +1,4 @@
-/* Test nhóm API form-notes: ghi chú nội bộ trên lá đơn (xem, thêm, sửa, xóa, đếm).
+/* Test nhóm API form-notes: ghi chú nội bộ trên lá đơn (xem, thêm, sửa, xóa) và số ghi chú kèm các bảng đơn.
    Cần database đã migrate và seed. Test ghi lại id các ghi chú đã thêm rồi xóa sạch khi xong. */
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { INestApplication } from '@nestjs/common';
@@ -8,10 +8,10 @@ import {
   DEMO_USER_IDS,
   EMPTY_RICH_TEXT_DOC,
   FORM_NOTE_MESSAGES,
-  FormNoteCountsResponseSchema,
   FormNoteSchema,
   FormNotesResponseSchema,
-  formNoteCountsPath,
+  HandledFormsResponseSchema,
+  ManagedFormsResponseSchema,
   formNotePath,
   formNotesPath,
   plainTextToRichText,
@@ -66,7 +66,6 @@ describe('form-notes', () => {
   it('chưa đăng nhập: 401', async () => {
     const response = await request(server()).get(`/api${formNotesPath(FORM_CODE)}`).expect(401);
     expect(messageOf(response)).toBe(FORM_NOTE_MESSAGES[401]);
-    await request(server()).get(`/api${formNoteCountsPath([FORM_CODE])}`).expect(401);
   });
 
   it('người nộp đơn (không có quyền internalNotes): 403, kể cả với đơn của mình', async () => {
@@ -74,7 +73,6 @@ describe('form-notes', () => {
     const listResponse = await request(server()).get(`/api${formNotesPath(FORM_CODE)}`).set('Cookie', cookie).expect(403);
     expect(messageOf(listResponse)).toBe(FORM_NOTE_MESSAGES[403]);
     await request(server()).post(`/api${formNotesPath(FORM_CODE)}`).set('Cookie', cookie).send({ content: plainTextToRichText('x') }).expect(403);
-    await request(server()).get(`/api${formNoteCountsPath([FORM_CODE])}`).set('Cookie', cookie).expect(403);
   });
 
   it('không có đơn: 404', async () => {
@@ -134,16 +132,30 @@ describe('form-notes', () => {
     await request(server()).delete(`/api${formNotePath(FORM_CODE, note.id)}`).set('Cookie', handlerCookie).expect(404);
   });
 
-  it('đếm: đủ mọi mã đã hỏi, mã không có thì 0', async () => {
+  it('số ghi chú kèm dòng của bảng Quản lí đơn, Đơn phụ trách; thêm, xóa thì số đổi theo', async () => {
     const cookie = await loginAs('nguoiXuLiDon');
-    await addNote(cookie, 'Ghi chú để đếm', OTHER_FORM_CODE);
-    const expectedCount = await prisma.formNote.count({ where: { formCode: OTHER_FORM_CODE } });
 
-    const response = await request(server()).get(`/api${formNoteCountsPath([OTHER_FORM_CODE, MISSING_FORM_CODE])}`).set('Cookie', cookie).expect(200);
-    expect(FormNoteCountsResponseSchema.parse(response.body).counts).toEqual({ [OTHER_FORM_CODE]: expectedCount, [MISSING_FORM_CODE]: 0 });
+    /** Số ghi chú của một đơn trong một bảng (tìm theo mã đơn để chắc chắn đơn nằm trên trang). */
+    const noteCountIn = async (listPath: string, code: string) => {
+      const response = await request(server()).get(`/api${listPath}`).query({ search: code }).set('Cookie', cookie).expect(200);
+      const forms = (listPath === '/forms' ? ManagedFormsResponseSchema : HandledFormsResponseSchema).parse(response.body).forms;
+      return forms.find((form) => form.code === code)?.noteCount;
+    };
+    const before = await prisma.formNote.count({ where: { formCode: OTHER_FORM_CODE } });
+    expect(await noteCountIn('/forms', OTHER_FORM_CODE)).toBe(before);
 
-    // Không hỏi mã nào thì rỗng
-    const emptyResponse = await request(server()).get(`/api${formNoteCountsPath([])}`).set('Cookie', cookie).expect(200);
-    expect(emptyResponse.body).toEqual({ counts: {} });
+    // Thêm một ghi chú: bảng Quản lí đơn tăng một
+    const note = await addNote(cookie, 'Ghi chú để đếm', OTHER_FORM_CODE);
+    expect(await noteCountIn('/forms', OTHER_FORM_CODE)).toBe(before + 1);
+
+    // Đơn phụ trách của cán bộ cb-1 (nếu đơn có trong đó) cũng có số
+    const handledForm = await prisma.form.findFirst({ where: { OR: [{ receiverId: DEMO_USER_IDS.nguoiXuLiDon }, { handlerId: DEMO_USER_IDS.nguoiXuLiDon }] }, select: { code: true } });
+    if (handledForm) {
+      expect(await noteCountIn('/forms/handled', handledForm.code)).toBe(await prisma.formNote.count({ where: { formCode: handledForm.code } }));
+    }
+
+    // Xóa lại: về như cũ
+    await request(server()).delete(`/api${formNotePath(OTHER_FORM_CODE, note.id)}`).set('Cookie', cookie).expect(204);
+    expect(await noteCountIn('/forms', OTHER_FORM_CODE)).toBe(before);
   });
 });

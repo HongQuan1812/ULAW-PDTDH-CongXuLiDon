@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'vitest';
-import { FORMS_ENDPOINTS, FormCccdsResponseSchema, FormStatsSchema, ManagedFormsResponseSchema } from './forms';
+import { applyListQuery } from '../business-rules/lists--query';
+import { FORMS_ENDPOINTS, FORM_LIST_DEFAULT_SORTING, FormCccdsResponseSchema, FormStatsSchema, MANAGED_FORM_LIST_FIELDS, ManagedFormsResponseSchema, type ManagedFormSummary } from './forms';
 
 describe('danh sách mọi đơn (Quản lí đơn)', () => {
   const managedForm = {
@@ -9,6 +10,7 @@ describe('danh sách mọi đơn (Quản lí đơn)', () => {
     submittedAt: '2026-11-01T08:30',
     status: 'nop',
     receivedAt: null,
+    noteCount: 0,
     applicant: { id: 'sv-2', name: 'Trần Thị Bảo Ngọc', email: 'baongoc.tran@hcmulaw.edu.vn', phone: null, maskedCccd: null },
   };
   /** Phần chung của một trang: tổng số đơn khớp, trang trả về, lựa chọn lọc. */
@@ -27,6 +29,14 @@ describe('danh sách mọi đơn (Quản lí đơn)', () => {
     const { applicant: _applicant, ...withoutApplicant } = managedForm;
     expect(ManagedFormsResponseSchema.safeParse({ ...pageMeta, forms: [withoutApplicant] }).success).toBe(false);
     expect(ManagedFormsResponseSchema.safeParse({ forms: [managedForm] }).success).toBe(false);
+  });
+
+  test('cột Ghi chú là cột số: sắp xếp theo số ghi chú, lọc theo khoảng', () => {
+    const forms = [3, 0, 12].map((noteCount, index) => ({ ...managedForm, code: `XMM-2026-001-0000${index + 1}`, noteCount }) as ManagedFormSummary);
+    const sorted = applyListQuery(forms, MANAGED_FORM_LIST_FIELDS, { page: 1, pageSize: 10, search: '', sort: [{ id: 'noteCount', desc: true }], filters: [] }, FORM_LIST_DEFAULT_SORTING);
+    expect(sorted.rows.map((form) => form.noteCount)).toEqual([12, 3, 0]);
+    const filtered = applyListQuery(forms, MANAGED_FORM_LIST_FIELDS, { page: 1, pageSize: 10, search: '', sort: [], filters: [{ fieldKey: 'noteCount', operator: 'range', value: '', from: '1', to: '' }] }, FORM_LIST_DEFAULT_SORTING);
+    expect(filtered.rows.map((form) => form.noteCount).sort((a, b) => a - b)).toEqual([3, 12]);
   });
 
   test('CCCD đầy đủ trả theo id người nộp', () => {

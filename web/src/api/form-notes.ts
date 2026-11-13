@@ -1,15 +1,8 @@
 /* Hook gọi API Ghi chú nội bộ trên lá đơn (chỉ vai trò có quyền internalNotes). */
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import {
-  formNoteCountsPath,
-  formNotePath,
-  formNotesPath,
-  type FormNote,
-  type FormNoteCountsResponse,
-  type FormNotesResponse,
-  type RichTextDoc,
-} from '@ulaw/shared';
+import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
+import { formNotePath, formNotesPath, type FormNote, type FormNotesResponse, type RichTextDoc } from '@ulaw/shared';
 import { apiFetch } from './client';
+import { ALL_FORMS_KEY, HANDLED_FORMS_KEY } from './forms';
 
 /**
  * Khóa lưu tạm các ghi chú của một lá đơn.
@@ -18,22 +11,17 @@ import { apiFetch } from './client';
  */
 const formNotesKey = (code: string) => ['formNotes', code] as const;
 
-/** Gốc khóa lưu tạm số ghi chú của các bảng đơn; thêm / xóa ghi chú thì tải lại mọi khóa bắt đầu bằng gốc này. */
-const FORM_NOTE_COUNTS_KEY = ['formNoteCounts'] as const;
+/** Đoạn khóa của bảng Đơn phụ trách ở trang hồ sơ một người, vd ['profile', 'person', 'cb-1', 'handled-forms']. */
+const PERSON_HANDLED_FORMS_SEGMENT = 'handled-forms';
 
 /**
- * Số ghi chú của các đơn đang hiện trên một trang của bảng đơn.
- * @param codes    các mã đơn của trang
- * @param enabled  false thì không tải (người xem không có quyền internalNotes)
- * @returns        kết quả useQuery; data = số ghi chú theo mã đơn
+ * Tải lại các bảng đơn có cột Ghi chú (số ghi chú vừa đổi): Quản lí đơn, Đơn phụ trách của mình và ở trang hồ sơ người khác.
+ * @param queryClient  cache của TanStack Query
  */
-export function useFormNoteCounts(codes: readonly string[], enabled: boolean) {
-  return useQuery({
-    queryKey: [...FORM_NOTE_COUNTS_KEY, ...codes],
-    queryFn: () => apiFetch<FormNoteCountsResponse>(formNoteCountsPath(codes)),
-    select: (response) => response.counts,
-    enabled: enabled && codes.length > 0,
-  });
+function refreshNoteCountTables(queryClient: QueryClient): void {
+  void queryClient.invalidateQueries({ queryKey: ALL_FORMS_KEY });
+  void queryClient.invalidateQueries({ queryKey: HANDLED_FORMS_KEY });
+  void queryClient.invalidateQueries({ predicate: (query) => query.queryKey[0] === 'profile' && query.queryKey.includes(PERSON_HANDLED_FORMS_SEGMENT) });
 }
 
 /**
@@ -68,7 +56,7 @@ export function useFormNoteActions(code: string) {
     mutationFn: (content: RichTextDoc) => apiFetch<FormNote>(formNotesPath(code), { method: 'POST', body: JSON.stringify({ content }) }),
     onSuccess: (addedNote) => {
       updateCachedNotes((notes) => [...notes, addedNote]);
-      void queryClient.invalidateQueries({ queryKey: FORM_NOTE_COUNTS_KEY });
+      refreshNoteCountTables(queryClient);
     },
   });
 
@@ -82,7 +70,7 @@ export function useFormNoteActions(code: string) {
     mutationFn: (noteId: string) => apiFetch<void>(formNotePath(code, noteId), { method: 'DELETE' }),
     onSuccess: (_response, noteId) => {
       updateCachedNotes((notes) => notes.filter((note) => note.id !== noteId));
-      void queryClient.invalidateQueries({ queryKey: FORM_NOTE_COUNTS_KEY });
+      refreshNoteCountTables(queryClient);
     },
   });
 

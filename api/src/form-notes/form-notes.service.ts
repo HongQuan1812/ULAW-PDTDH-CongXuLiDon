@@ -1,4 +1,4 @@
-/* Ghi chú nội bộ trên lá đơn: đọc, thêm, sửa, xóa, đếm. Quyền internalNotes đã được guard kiểm tra ở controller;
+/* Ghi chú nội bộ trên lá đơn: đọc, thêm, sửa, xóa. Quyền internalNotes đã được guard kiểm tra ở controller;
    ở đây kiểm tra đơn có tồn tại và người sửa, xóa là người viết (canEditFormNote). */
 import { randomUUID } from 'node:crypto';
 import { Injectable } from '@nestjs/common';
@@ -116,21 +116,5 @@ export class FormNotesService {
   async deleteNote(code: string, noteId: string, editor: User): Promise<void> {
     await this.assertEditable(code, noteId, editor);
     await this.prisma.formNote.delete({ where: { id: noteId } });
-  }
-
-  /**
-   * Đếm ghi chú của nhiều lá đơn (cột Ghi chú của bảng đơn).
-   * @param codes  các mã đơn
-   * @returns      số ghi chú theo mã đơn, đủ mọi mã đã hỏi (mã không có, hoặc chưa có ghi chú thì 0)
-   */
-  async countNotes(codes: readonly string[]): Promise<Record<string, number>> {
-    // Đếm theo đơn trong một câu truy vấn
-    const groups = codes.length
-      ? await this.prisma.formNote.groupBy({ by: ['formCode'], where: { formCode: { in: [...codes] } }, _count: { _all: true } })
-      : [];
-    const countByCode = new Map(groups.map((group) => [group.formCode, group._count._all]));
-
-    // Đủ mọi mã đã hỏi
-    return Object.fromEntries(codes.map((code) => [code, countByCode.get(code) ?? 0]));
   }
 }

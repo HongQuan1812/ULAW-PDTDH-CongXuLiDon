@@ -2,10 +2,9 @@
    cùng các cột thông tin đơn, tìm kiếm / Sắp xếp / Lọc,
    phân trang ở máy chủ (trạng thái do useServerTable giữ); bấm một dòng để mở trang chi tiết đơn.
    Nút › đầu dòng (và nút mở / đóng tất cả ở tiêu đề) sổ xuống phần xem nhanh ngay trong bảng (QuickView). */
-import { Fragment, useState, type KeyboardEvent, type ReactElement, type ReactNode } from 'react';
+import { Fragment, useMemo, useState, type KeyboardEvent, type ReactElement, type ReactNode } from 'react';
 import { useNavigate } from 'react-router';
-import { can, type FormSummary } from '@ulaw/shared';
-import { useFormNoteCounts } from '../../api/form-notes';
+import { NOTE_COUNT_FIELD_KEY, can, type FormSummary } from '@ulaw/shared';
 import { formPath, PAGE_LABEL, type FormPageState } from '../../app/paths';
 import { StatusPill } from '../../components/StatusPill';
 import { LoadError } from '../../components/LoadError';
@@ -28,7 +27,8 @@ export const FORM_PAGE_SIZE = 8;
 interface FormTableProps<Row extends FormSummary> {
   /** Trạng thái và dữ liệu của bảng, từ useServerTable */
   table: ServerTable<Row>;
-  /** Các cột: FORM_LIST_FIELDS, hoặc bảng cột có thêm cột phía sau (vd Người tiếp nhận). Khai báo ngoài component */
+  /** Các cột: FORM_LIST_FIELDS, hoặc bảng cột có thêm cột phía sau (vd Người tiếp nhận). Khai báo ngoài component.
+      Cột Ghi chú (NOTE_COUNT_FIELD_KEY) chỉ hiện khi người xem có quyền internalNotes */
   fields: readonly TableField<Row>[];
   /** Tùy chọn: các đơn cần vẽ thay cho table.rows (vd đã thay CCCD che bằng số đầy đủ) */
   rows?: readonly Row[];
@@ -46,8 +46,6 @@ interface FormTableProps<Row extends FormSummary> {
   renderCell?: (field: TableField<Row>, form: Row, query: string) => ReactElement | undefined;
   /** Tùy chọn: các nút thêm trên thanh công cụ, ngay sau nút Lọc (vd Hiện CCCD) */
   extraButtons?: ReactNode;
-  /** true: có cột Ghi chú (số ghi chú nội bộ, bấm thì mở đơn kèm khung ghi chú); chỉ hiện khi người xem có quyền internalNotes */
-  showNotes?: boolean;
 }
 
 /**
@@ -58,7 +56,7 @@ interface FormTableProps<Row extends FormSummary> {
  */
 export function FormTable<Row extends FormSummary>({
   table,
-  fields,
+  fields: allFields,
   rows,
   searchPlaceholder,
   searchLabel,
@@ -67,7 +65,6 @@ export function FormTable<Row extends FormSummary>({
   pageLabel = PAGE_LABEL.profile,
   renderCell: renderCustomCell,
   extraButtons,
-  showNotes = false,
 }: FormTableProps<Row>) {
   const navigate = useNavigate();
   const { role } = useAuth();
@@ -75,18 +72,10 @@ export function FormTable<Row extends FormSummary>({
   const { searchText: query, sorting, filterRules, hasCriteria, isPageLoading } = table;
   const pageRows = rows ?? table.rows;
 
-  // Cột Ghi chú: số ghi chú của các đơn trên trang đang xem
-  const notesShown = showNotes && can(role, 'internalNotes');
-  const noteCountsQuery = useFormNoteCounts(
-    pageRows.map((form) => form.code),
-    notesShown,
-  );
-  const columnCount = fields.length + (notesShown ? 3 : 2);
-  // Cột Ghi chú thuộc nhóm thông tin đơn: đứng cuối nhóm, ngay trước nhóm cột bên phải (người tiếp nhận / người nộp…)
-  const groupStartIndex = fields.findIndex((field) => field.key === groupStartKey);
-  const noteColumnIndex = groupStartIndex === -1 ? fields.length : groupStartIndex;
-  const formFields = fields.slice(0, noteColumnIndex);
-  const groupFields = fields.slice(noteColumnIndex);
+  // Cột Ghi chú (số ghi chú nội bộ) chỉ dành cho người có quyền internalNotes: không có quyền thì bỏ khỏi bảng, Sắp xếp, Lọc
+  const notesAllowed = can(role, 'internalNotes');
+  const fields = useMemo(() => (notesAllowed ? allFields : allFields.filter((field) => field.key !== NOTE_COUNT_FIELD_KEY)), [allFields, notesAllowed]);
+  const columnCount = fields.length + 2;
 
   // Các đơn đang mở xem nhanh (theo mã đơn)
   const [openCodes, setOpenCodes] = useState<ReadonlySet<string>>(new Set());
@@ -113,7 +102,13 @@ export function FormTable<Row extends FormSummary>({
    * @returns      thẻ <th>
    */
   const renderHeaderCell = (field: TableField<Row>) => (
-    <HeaderCell key={field.key} field={field} sorting={sorting} filterRules={filterRules} className={groupClass(field.key)} />
+    <HeaderCell
+      key={field.key}
+      field={field}
+      sorting={sorting}
+      filterRules={filterRules}
+      className={`${groupClass(field.key)} ${field.key === NOTE_COUNT_FIELD_KEY ? tableStyles.noteHead : ''}`}
+    />
   );
 
   // Bấm dòng hoặc nhấn Enter khi dòng đang được chọn: mở trang chi tiết đơn (trang đó có nút "‹ Quay lại <pageLabel>")
@@ -134,6 +129,13 @@ export function FormTable<Row extends FormSummary>({
   const renderCell = (field: TableField<Row>, form: Row) => {
     const customCell = renderCustomCell?.(field, form, query);
     if (customCell) return customCell;
+    if (field.key === NOTE_COUNT_FIELD_KEY) {
+      return (
+        <td key={field.key} className={tableStyles.noteCell}>
+          <NoteCountButton code={form.code} count={Number(field.getValue(form))} onOpen={() => openForm(form.code, true)} />
+        </td>
+      );
+    }
     if (field.key === 'code') {
       return (
         <td key={field.key} className={tableStyles.codeCell}>
@@ -204,9 +206,7 @@ export function FormTable<Row extends FormSummary>({
                   ›
                 </button>
               </th>
-              {formFields.map(renderHeaderCell)}
-              {notesShown && <th className={tableStyles.noteHead}>Ghi chú</th>}
-              {groupFields.map(renderHeaderCell)}
+              {fields.map(renderHeaderCell)}
               <th>
                 <span className="sr-only">Mở đơn</span>
               </th>
@@ -251,13 +251,7 @@ export function FormTable<Row extends FormSummary>({
                           ›
                         </button>
                       </td>
-                      {formFields.map((field) => renderCell(field, form))}
-                      {notesShown && (
-                        <td className={tableStyles.noteCell}>
-                          <NoteCountButton code={form.code} count={noteCountsQuery.data?.[form.code]} onOpen={() => openForm(form.code, true)} />
-                        </td>
-                      )}
-                      {groupFields.map((field) => renderCell(field, form))}
+                      {fields.map((field) => renderCell(field, form))}
                       <td className={tableStyles.goCell}>
                         <span className={tableStyles.goLabel}>Chi tiết ›</span>
                       </td>

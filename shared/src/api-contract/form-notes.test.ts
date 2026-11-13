@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { EMPTY_RICH_TEXT_DOC, plainTextToRichText } from '../aux-schema/rich-text';
-import { FORM_NOTE_MESSAGES, SaveFormNoteRequestSchema, formNoteCountsPath, formNotePath, formNotesPath, parseFormNoteCountsParam } from './form-notes';
+import { FORM_NOTE_MESSAGES, SaveFormNoteRequestSchema, formNotePath, formNotesPath } from './form-notes';
 
 describe('SaveFormNoteRequestSchema', () => {
   it('nhận ghi chú có chữ', () => {
@@ -25,18 +25,5 @@ describe('đường dẫn ghi chú', () => {
   it('mã đơn và id ghi chú được mã hóa', () => {
     expect(formNotesPath('XMM-2026-001-00001')).toBe('/forms/XMM-2026-001-00001/notes');
     expect(formNotePath('XMM-2026-001-00001', 'note 1')).toBe('/forms/XMM-2026-001-00001/notes/note%201');
-  });
-});
-
-describe('đếm ghi chú nhiều đơn', () => {
-  it('ghép các mã đơn vào một tham số, đọc lại được', () => {
-    const path = formNoteCountsPath(['XMM-2026-001-00001', 'XMM-2026-001-00002']);
-    expect(path).toBe('/form-notes/counts?codes=XMM-2026-001-00001%2CXMM-2026-001-00002');
-    expect(parseFormNoteCountsParam(new URLSearchParams(path.split('?')[1]).get('codes'))).toEqual(['XMM-2026-001-00001', 'XMM-2026-001-00002']);
-  });
-
-  it('bỏ chỗ trống, mã trùng; không có tham số thì danh sách rỗng', () => {
-    expect(parseFormNoteCountsParam('A, ,B,A')).toEqual(['A', 'B']);
-    expect(parseFormNoteCountsParam(null)).toEqual([]);
   });
 });

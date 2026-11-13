@@ -592,19 +592,20 @@ export function getFormsOf(userId: string): FormSummary[] {
 /**
  * Lấy các đơn một cán bộ đã tiếp nhận hoặc đang xử lí.
  * @param staffId  id tài khoản cán bộ
- * @returns        các đơn kèm người tiếp nhận, người xử lí; không có thì []
+ * @returns        các đơn kèm người tiếp nhận, người xử lí, số ghi chú; không có thì []
  */
 export function getFormsHandledBy(staffId: string): HandledFormSummary[] {
   return FORMS.filter((form) => form.receiverId === staffId || form.handlerId === staffId).map((form) => ({
     ...toSummary(form),
     receiver: staffOf(form.receiverId),
     handler: staffOf(form.handlerId),
+    noteCount: countFormNotes(form.code),
   }));
 }
 
 /**
  * Lấy mọi đơn của mọi người nộp, cho bảng Quản lí đơn.
- * @returns  các đơn kèm lúc tiếp nhận và người nộp (SĐT, CCCD che; chưa có thì null)
+ * @returns  các đơn kèm lúc tiếp nhận, số ghi chú và người nộp (SĐT, CCCD che; chưa có thì null)
  */
 export function getAllForms(): ManagedFormSummary[] {
   return FORMS.map((form) => {
@@ -613,6 +614,7 @@ export function getAllForms(): ManagedFormSummary[] {
     return {
       ...toSummary(form),
       receivedAt: form.receivedAt,
+      noteCount: countFormNotes(form.code),
       applicant: { ...applicant, phone: person?.phone ?? null, maskedCccd: maskCccd(person?.cccd ?? null) },
     };
   });
@@ -1236,12 +1238,12 @@ export function getFormNotes(code: string): FormNote[] {
 }
 
 /**
- * Đếm ghi chú của nhiều lá đơn.
- * @param codes  các mã đơn
- * @returns      số ghi chú theo mã đơn, đủ mọi mã đã hỏi (chưa có ghi chú thì 0)
+ * Đếm ghi chú của một lá đơn (cột Ghi chú của bảng đơn).
+ * @param code  mã đơn
+ * @returns     số ghi chú; chưa có thì 0
  */
-export function countFormNotes(codes: readonly string[]): Record<string, number> {
-  return Object.fromEntries(codes.map((code) => [code, FORM_NOTES.get(code)?.length ?? 0]));
+function countFormNotes(code: string): number {
+  return FORM_NOTES.get(code)?.length ?? 0;
 }
 
 /**
