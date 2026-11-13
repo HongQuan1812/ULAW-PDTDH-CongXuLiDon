@@ -10,8 +10,8 @@
 .bad{color:var(--danger)}
 
 /* Điều kiện của hộp "Xuất thống kê": phiên bản và khoảng ngày nộp */
-.filters{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+.filters{display:grid;gap:12px;margin-bottom:12px}
 .filterField{display:grid;gap:4px;font-size:13px;color:var(--muted);min-width:0}
 .filterField select{height:36px;padding:0 10px;border:1px solid var(--line);border-radius:var(--r-md,8px);background:var(--surface,#fff);color:var(--text,inherit);font:inherit}
 .dayRange{display:flex;align-items:center;gap:6px}
-@media (max-width:520px){.filters{grid-template-columns:1fr}}
+.dayRange>span:not([aria-hidden]){flex:1;min-width:0}
