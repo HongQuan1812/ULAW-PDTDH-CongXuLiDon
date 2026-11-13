@@ -3,6 +3,7 @@
    còn lại là tệp đã lưu, tải nội dung từ máy chủ.
    Loại tệp chưa xem trước được (vd .doc cũ) thì có nút tải về. Esc, nút × hoặc bấm nền để đóng. */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { formatFileSize, previewKindOf, type FileRef } from '@ulaw/shared';
 import { useFileContent } from '../../api/files';
 import { LoadError } from '../../components/LoadError';
@@ -28,12 +29,14 @@ export interface PreviewFile extends FileRef {
 
 /**
  * Trình xem tệp; không có tệp thì không vẽ gì.
+ * Vẽ thẳng ra document.body (portal): đặt trong khối có backdrop-filter / transform (vd thanh đầu trình soạn) thì
+ * position: fixed bị nhốt theo khối đó, khung xem không còn phủ toàn màn hình.
  * @param file     tệp đang xem; null = đang đóng
  * @param onClose  gọi khi người dùng muốn đóng
  * @returns        lớp phủ toàn màn hình, hoặc không gì cả
  */
 export function FilePreview({ file, onClose }: { file: PreviewFile | null; onClose: () => void }) {
-  return file ? <OpenFilePreview key={file.id} file={file} onClose={onClose} /> : null;
+  return file ? createPortal(<OpenFilePreview key={file.id} file={file} onClose={onClose} />, document.body) : null;
 }
 
 /**
