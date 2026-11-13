@@ -20,6 +20,7 @@
     "@tiptap/starter-kit": "^3.33.1",
     "@ulaw/shared": "workspace:*",
     "docx-preview": "^0.4.1",
+    "exceljs": "4.4.0",
     "pdfjs-dist": "^6.5.438",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",

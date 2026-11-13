@@ -8,10 +8,11 @@ describe('previewKindOf', () => {
     expect(previewKindOf('scan.jpeg')).toBe('image');
     expect(previewKindOf('scan.png')).toBe('image');
     expect(previewKindOf('mau.docx')).toBe('word');
+    expect(previewKindOf('thong-ke.xlsx')).toBe('excel');
+    expect(previewKindOf('THONG-KE.XLSX')).toBe('excel');
   });
 
-  test('Excel, .doc cũ và đuôi lạ chưa xem trước được (chỉ tải về)', () => {
-    expect(previewKindOf('so-lieu.xlsx')).toBe('none');
+  test('Excel .xls cũ, .doc cũ và đuôi lạ chưa xem trước được (chỉ tải về)', () => {
     expect(previewKindOf('so-lieu.xls')).toBe('none');
     expect(previewKindOf('cu.doc')).toBe('none');
     expect(previewKindOf('ghi-chu.txt')).toBe('none');

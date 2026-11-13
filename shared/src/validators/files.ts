@@ -1,7 +1,7 @@
 /* Phân loại tệp để xem trước (theo đuôi tệp). Dùng chung giao diện và máy chủ. */
 
-/** Cách xem trước một tệp: ảnh · PDF · Word (.docx) · none = chưa xem trước được (cho tải về). */
-export type PreviewKind = 'image' | 'pdf' | 'word' | 'none';
+/** Cách xem trước một tệp: ảnh · PDF · Word (.docx) · Excel (.xlsx) · none = chưa xem trước được (cho tải về). */
+export type PreviewKind = 'image' | 'pdf' | 'word' | 'excel' | 'none';
 
 const PREVIEW_KIND_BY_EXTENSION: Record<string, PreviewKind> = {
   jpg: 'image',
@@ -9,6 +9,7 @@ const PREVIEW_KIND_BY_EXTENSION: Record<string, PreviewKind> = {
   png: 'image',
   pdf: 'pdf',
   docx: 'word',
+  xlsx: 'excel',
 };
 
 /**

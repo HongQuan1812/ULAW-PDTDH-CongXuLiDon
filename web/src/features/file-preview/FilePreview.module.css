@@ -17,3 +17,15 @@
 .word{width:100%;display:flex;justify-content:center}
 .word :global(.docx-wrapper){background:transparent!important;padding:0!important}
 .word :global(section.docx){box-shadow:0 8px 30px rgba(0,0,0,.4);margin-bottom:16px!important}
+
+/* Excel */
+.excel{width:100%;display:flex;flex-direction:column;gap:10px;min-height:0}
+.sheetTabs{display:flex;gap:6px;flex-wrap:wrap}
+.sheetTab{min-height:32px;padding:0 14px;border-radius:999px;border:1px solid rgba(255,255,255,.2);background:transparent;color:#C6CFCB;font:inherit;font-size:13.5px;cursor:pointer}
+.sheetTab:hover{background:rgba(255,255,255,.08)}
+.sheetTab[aria-selected="true"]{background:#EEF3F1;color:#151B18;border-color:#EEF3F1;font-weight:500}
+.sheetTab:focus-visible{outline:2px solid #5CBDF3;outline-offset:2px}
+.sheetScroll{overflow:auto;max-height:100%;background:#fff;box-shadow:0 8px 30px rgba(0,0,0,.4)}
+.sheetTable{border-collapse:collapse;color:#1b1f1d;font-size:13px}
+.sheetTable td{border:1px solid #D5DBD8;padding:4px 10px;white-space:pre-wrap;vertical-align:top;min-width:56px;max-width:360px}
+.sheetNote{margin:0;font-size:12.5px;color:#9AA6A1}

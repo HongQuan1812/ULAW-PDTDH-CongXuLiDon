@@ -1,4 +1,4 @@
-/* Trình xem tệp toàn màn hình: ảnh, PDF, Word.
+/* Trình xem tệp toàn màn hình: ảnh, PDF, Word, Excel.
    Có sẵn nội dung (content) thì xem thẳng, vd file Word vừa xuất từ mẫu; tệp người nộp vừa chọn (id 'local-…') xem từ trình duyệt;
    còn lại là tệp đã lưu, tải nội dung từ máy chủ.
    Loại tệp chưa xem trước được (vd .doc cũ) thì có nút tải về. Esc, nút × hoặc bấm nền để đóng. */
@@ -7,6 +7,7 @@ import { formatFileSize, previewKindOf, type FileRef } from '@ulaw/shared';
 import { useFileContent } from '../../api/files';
 import { LoadError } from '../../components/LoadError';
 import { LOCAL_FILE_ID_PREFIX, readLocalFile } from '../form-renderer/localFiles';
+import { ExcelView } from './ExcelView';
 import { ImageView } from './ImageView';
 import { PdfView } from './PdfView';
 import { PreviewMessage } from './PreviewMessage';
@@ -91,6 +92,7 @@ function OpenFilePreview({ file, onClose }: { file: PreviewFile; onClose: () => 
     if (kind === 'image') return <ImageView blob={content} fileName={file.name} />;
     if (kind === 'pdf') return <PdfView blob={content} onMeta={showExtraMeta} />;
     if (kind === 'word') return <WordView blob={content} />;
+    if (kind === 'excel') return <ExcelView blob={content} />;
     return <PreviewMessage title="Chưa xem trước được loại tệp này">Tải tệp về máy để mở.</PreviewMessage>;
   };
 
