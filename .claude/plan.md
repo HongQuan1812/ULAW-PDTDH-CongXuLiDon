@@ -56,7 +56,7 @@ Làm từng nhóm API. Xong nhóm nào thì chuyển nhóm đó sang API thật,
 Chưa làm, chờ thông tin từ bên ngoài:
 - Đăng nhập Google OAuth: cần tạo OAuth client và xác nhận tên miền email thật.
 - `student-directory` bản thật: cần cách kết nối database sinh viên của trường.
-- Máy chủ gửi thư (SMTP) thật, triển khai lên máy chủ (bỏ quyền `CREATEDB` của user dự án, dùng `prisma migrate deploy`).
+- Triển khai lên máy chủ (bỏ quyền `CREATEDB` của user dự án, dùng `prisma migrate deploy`; nhập cấu hình gửi thư của hộp thư chính thức nếu không dùng Gmail đang thử).
 
 ### Làm một nhóm API
 
