@@ -16,10 +16,13 @@ import {
   hasTemplateExtension,
   isReadableTemplateFile,
   renderDocxTemplate,
-  renderXlsxTemplate,
+  renderXlsxByVersion,
+  selectStatsForms,
+  statsSheetName,
   templatePurposeOfFile,
   textToTag,
   type ExportSource,
+  type ExportStatsRequest,
   type ExportTemplate,
   type ExportTemplateCheck,
   type ExportTemplatePurpose,
@@ -300,35 +303,47 @@ export class ExportsService {
   }
 
   /**
-   * Điền mọi lá đơn của loại đơn (mọi phiên bản, mọi trạng thái, theo thứ tự nộp) vào một mẫu xuất file thống kê.
+   * Điền các lá đơn của loại đơn vào một mẫu xuất file thống kê: mỗi phiên bản một sheet (bản sao cấu trúc của mẫu).
    * @param formTypeId  mã loại đơn (đã biết là có)
    * @param templateId  id mẫu
+   * @param filter      phiên bản (số hoặc 'all') và khoảng ngày nộp
    * @returns           file Excel đã điền
-   * @throws            404 mẫu không phải mẫu thống kê của loại đơn này · 422 không đọc được mẫu
+   * @throws            404 mẫu không phải mẫu thống kê của loại đơn này, phiên bản không có · 422 không đọc được mẫu
    */
-  async exportStats(formTypeId: string, templateId: string): Promise<DownloadFile> {
+  async exportStats(formTypeId: string, templateId: string, filter: ExportStatsRequest): Promise<DownloadFile> {
     const template = await this.loadTemplate(formTypeId, templateId, 'stats');
 
-    // Mọi lá đơn của loại đơn, cũ trước; tên loại đơn theo phiên bản mới nhất, tiền tố mã đơn để đặt tên file
-    const forms = await this.prisma.form.findMany({ where: { formTypeId }, include: WITH_PEOPLE, orderBy: [{ submittedAt: 'asc' }, { code: 'asc' }] });
-    const formType = await this.prisma.formType.findUnique({
-      where: { id: formTypeId },
-      select: { prefix: true, versions: { orderBy: { version: 'desc' }, take: 1, select: { name: true } } },
+    // Các phiên bản đã từng mở (bản nháp chưa có đơn nào); chọn một phiên bản thì phải có
+    const versions = await this.prisma.formTypeVersion.findMany({
+      where: { formTypeId, status: { not: 'draft' } },
+      orderBy: { version: 'asc' },
+      select: { version: true, name: true },
     });
+    const chosenVersions = filter.version === 'all' ? versions : versions.filter(({ version }) => version === filter.version);
+    if (!chosenVersions.length) throw new ApiException(404, EXPORT_MESSAGES.versionNotFound);
 
-    // Dữ liệu từng đơn và mã chung của file
+    // Đơn của loại đơn, cũ trước, lọc theo điều kiện; tiền tố mã đơn để đặt tên file
+    const allForms = await this.prisma.form.findMany({ where: { formTypeId }, include: WITH_PEOPLE, orderBy: [{ submittedAt: 'asc' }, { code: 'asc' }] });
+    const selectedForms = selectStatsForms(
+      allForms.map((form) => ({ form, version: form.formTypeVersion, submittedAt: toVietnamTime(form.submittedAt) })),
+      filter,
+    );
+    const formType = await this.prisma.formType.findUnique({ where: { id: formTypeId }, select: { prefix: true } });
+
+    // Mỗi phiên bản một nhóm: dữ liệu từng đơn và mã chung (tên loại đơn là tên của phiên bản đó)
     const exportedOn = toVietnamTime(new Date()).slice(0, 10);
-    const formsData = [];
-    for (const form of forms) formsData.push(buildExportData(await this.exportSourceOf(form), exportedOn));
-    const summaryData = {
-      [FORM_COUNT_TAG]: forms.length,
-      loai_don: formType?.versions[0]?.name ?? '',
-      ngay_xuat: exportedOn.split('-').reverse().join('/'),
-    };
+    const groups = [];
+    for (const { version, name } of chosenVersions) {
+      const versionForms = selectedForms.filter((selected) => selected.version === version);
+      const formsData = [];
+      for (const { form } of versionForms) formsData.push(buildExportData(await this.exportSourceOf(form), exportedOn));
+      const summaryData = { [FORM_COUNT_TAG]: versionForms.length, loai_don: name, ngay_xuat: exportedOn.split('-').reverse().join('/') };
+      groups.push({ sheetName: statsSheetName(version), formsData, summaryData });
+    }
 
     // Điền mẫu; không đọc được thì báo lí do
     try {
-      const filled = await renderXlsxTemplate(template.content, formsData, summaryData);
+      const filled = await renderXlsxByVersion(template.content, groups);
       return {
         fileName: exportFileName(formType?.prefix ?? formTypeId, template.name, 'stats'),
         contentType: EXPORT_TEMPLATE_FILE.stats.contentType,

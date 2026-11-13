@@ -306,6 +306,25 @@ function fillSheet(sheet: Worksheet, forms: readonly FormFill[], summaryData: Sh
 }
 
 /**
+ * Dữ liệu điền của các đơn: mỗi đơn có stt theo thứ tự trong file.
+ * @param formsData  dữ liệu từng lá đơn theo thứ tự (buildExportData)
+ * @returns          các đơn sẵn sàng điền
+ */
+function formFillsOf(formsData: readonly ExportData[]): FormFill[] {
+  return formsData.map((formData, index): FormFill => ({ sheetData: { ...toSheetData(formData), [ROW_NUMBER_TAG]: index + 1 }, tables: tablesOf(formData) }));
+}
+
+/**
+ * Ghi sổ tính ra nội dung file. Node trả Buffer, trình duyệt trả ArrayBuffer: đổi về một ArrayBuffer riêng.
+ * @param workbook  sổ tính đã điền
+ * @returns         nội dung file .xlsx
+ */
+async function writeWorkbook(workbook: Workbook): Promise<ArrayBuffer> {
+  const written = await workbook.xlsx.writeBuffer();
+  return new Uint8Array(written as ArrayBuffer).slice().buffer;
+}
+
+/**
  * Điền mẫu thống kê.
  * @param bytes        nội dung file mẫu
  * @param formsData    dữ liệu từng lá đơn theo thứ tự (buildExportData)
@@ -317,13 +336,84 @@ export async function renderXlsxTemplate(bytes: XlsxBytes, formsData: readonly E
   if (!workbook) throw new Error(EXPORT_MESSAGES.unreadableXlsx);
 
   // Mỗi đơn có stt theo thứ tự trong file
-  const forms = formsData.map((formData, index): FormFill => ({ sheetData: { ...toSheetData(formData), [ROW_NUMBER_TAG]: index + 1 }, tables: tablesOf(formData) }));
+  const forms = formFillsOf(formsData);
   const summary = toSheetData(summaryData);
   workbook.worksheets.forEach((sheet) => fillSheet(sheet, forms, summary));
+  return writeWorkbook(workbook);
+}
 
-  // Node trả Buffer, trình duyệt trả ArrayBuffer: đổi về một ArrayBuffer riêng
-  const written = await workbook.xlsx.writeBuffer();
-  return new Uint8Array(written as ArrayBuffer).slice().buffer;
+/** Các đơn và mã chung của một phiên bản, điền vào sheet có tên sheetName. */
+export interface VersionSheetGroup {
+  /** Tên sheet của phiên bản (vd "Phiên bản 2"); mẫu nhiều sheet thì ghép sau tên sheet mẫu */
+  sheetName: string;
+  formsData: readonly ExportData[];
+  summaryData: ExportData;
+}
+
+/** Excel giới hạn tên sheet 31 ký tự. */
+const MAX_SHEET_NAME_LENGTH = 31;
+
+/**
+ * Sao chép một trang tính sang trang tính trống: giá trị, kiểu, chiều cao hàng, độ rộng cột, ô gộp, cách hiện (khung nhìn, in).
+ * (Không gán `model` vì ExcelJS làm mất ô gộp có sẵn.)
+ * @param source  trang tính mẫu
+ * @param target  trang tính trống nhận bản sao
+ */
+function cloneSheet(source: Worksheet, target: Worksheet): void {
+  // Độ rộng, ẩn của cột
+  source.columns.forEach((column, index) => {
+    const targetColumn = target.getColumn(index + 1);
+    targetColumn.width = column.width;
+    targetColumn.hidden = Boolean(column.hidden);
+  });
+
+  // Từng hàng, từng ô (ô trong vùng gộp chỉ chép kiểu; giá trị đi theo ô đầu của vùng gộp)
+  source.eachRow({ includeEmpty: true }, (row, rowNumber) => {
+    const targetRow = target.getRow(rowNumber);
+    if (row.height) targetRow.height = row.height;
+    targetRow.hidden = Boolean(row.hidden);
+    row.eachCell({ includeEmpty: true }, (cell, columnNumber) => {
+      const targetCell = targetRow.getCell(columnNumber);
+      if (!cell.isMerged || cell.address === cell.master.address) targetCell.value = cell.value;
+      targetCell.style = structuredClone(cell.style);
+    });
+  });
+
+  // Ô gộp, khung nhìn (cố định hàng / cột đầu), cỡ giấy khi in
+  source.model.merges.forEach((range) => target.mergeCells(range));
+  target.views = structuredClone(source.views);
+  target.properties = { ...target.properties, ...structuredClone(source.properties) };
+  target.pageSetup = structuredClone(source.pageSetup);
+}
+
+/**
+ * Điền mẫu thống kê cho nhiều phiên bản: mỗi phiên bản một bản sao y hệt cấu trúc của mẫu, chỉ điền đơn của phiên bản đó.
+ * Mẫu có nhiều sheet thì mỗi sheet được sao chép cho từng phiên bản.
+ * @param bytes   nội dung file mẫu
+ * @param groups  các phiên bản theo thứ tự sheet (không có đơn nào vẫn có sheet)
+ * @returns       nội dung file Excel đã điền; không đọc được mẫu thì ném lỗi
+ */
+export async function renderXlsxByVersion(bytes: XlsxBytes, groups: readonly VersionSheetGroup[]): Promise<ArrayBuffer> {
+  const workbook = await openWorkbook(bytes);
+  if (!workbook) throw new Error(EXPORT_MESSAGES.unreadableXlsx);
+  if (!groups.length) return writeWorkbook(workbook);
+
+  // Với từng phiên bản: sao chép mọi sheet mẫu rồi điền bản sao
+  const templateSheets = [...workbook.worksheets];
+  for (const group of groups) {
+    const forms = formFillsOf(group.formsData);
+    const summary = toSheetData(group.summaryData);
+    for (const templateSheet of templateSheets) {
+      const sheetName = templateSheets.length > 1 ? `${templateSheet.name} - ${group.sheetName}` : group.sheetName;
+      const copy = workbook.addWorksheet(sheetName.slice(0, MAX_SHEET_NAME_LENGTH));
+      cloneSheet(templateSheet, copy);
+      fillSheet(copy, forms, summary);
+    }
+  }
+
+  // Bỏ các sheet mẫu gốc
+  templateSheets.forEach((templateSheet) => workbook.removeWorksheet(templateSheet.id));
+  return writeWorkbook(workbook);
 }
 
 /**

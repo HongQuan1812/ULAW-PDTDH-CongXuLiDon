@@ -126,7 +126,7 @@ Có lí do của Phòng Đào tạo thì hiện thêm dòng "Phòng Đào tạo:
 
 Mỗi loại đơn có hai nhóm mẫu, lưu ở máy chủ theo loại đơn, dùng chung mọi phiên bản, cùng một bộ mã trường:
 - **Mẫu xuất file đơn** (Word `.docx`): điền dữ liệu của một lá đơn.
-- **Mẫu xuất file thống kê** (Excel `.xlsx`): điền mọi lá đơn của loại đơn, mỗi đơn một hàng.
+- **Mẫu xuất file thống kê** (Excel `.xlsx`): điền các lá đơn của loại đơn theo phiên bản và ngày nộp, mỗi đơn một hàng.
 
 ### Mẫu xuất file đơn (Word)
 
@@ -145,8 +145,14 @@ Mỗi loại đơn có hai nhóm mẫu, lưu ở máy chủ theo loại đơn, d
 ### Mẫu xuất file thống kê (Excel)
 
 - Cán bộ soạn mẫu bằng Excel, dùng cùng các mã như mẫu Word, rồi tải file `.xlsx` lên ở khung "Mẫu xuất file thống kê" của trình soạn loại đơn.
-  Ở mẫu đã lưu, bấm **Xuất** (hoặc **Xuất thống kê** ở đầu trình soạn) để mở trình xem file Excel đã điền, rồi bấm **Tải file Excel** (máy chủ dùng ExcelJS, `shared/src/business-rules/exports--xlsx.ts`). Cần quyền `manageFormTypes`.
-- File xuất ra gồm mọi lá đơn của loại đơn: mọi phiên bản, mọi trạng thái, theo thứ tự nộp. Muốn lọc thì lọc trong Excel.
+  **Xuất thống kê** ở đầu trình soạn mở hộp "Xuất thống kê" (máy chủ dùng ExcelJS, `shared/src/business-rules/exports--xlsx.ts`). Cần quyền `manageFormTypes`.
+- Hộp có hai điều kiện, rồi danh sách mẫu thống kê đã lưu:
+  - **Phiên bản**: một phiên bản (mặc định là phiên bản đang xem ở trình soạn) hoặc **Tất cả**. Bản nháp chưa có đơn nên không có trong danh sách.
+  - **Ngày nộp**: từ ngày nào đến ngày nào, tính cả hai đầu, theo giờ Việt Nam; bỏ trống = không giới hạn.
+  Mỗi mẫu tự **đối chiếu mã với câu hỏi của phiên bản được chọn** (chọn Tất cả thì báo theo từng phiên bản): mã nào phiên bản đó không có thì báo đỏ "sẽ để trống", khớp hết thì báo xanh. Bấm **Xuất** ở mẫu muốn dùng để mở trình xem file Excel đã điền, rồi **Tải file Excel**.
+- **Mỗi phiên bản một sheet**: chọn một phiên bản thì file có một sheet; chọn Tất cả thì mỗi phiên bản (đã từng mở) một sheet tên "Phiên bản N", kể cả phiên bản không có đơn nào.
+  Các sheet đều là **bản sao cấu trúc của mẫu** (mẫu nhiều sheet thì mỗi sheet được sao cho từng phiên bản), mỗi sheet chỉ chứa đơn của phiên bản đó, theo thứ tự nộp, mọi trạng thái.
+  Mã nào phiên bản đó không có câu hỏi thì ô để trống, cột vẫn còn. `{loai_don}` là tên của phiên bản trong sheet đó, `{so_don}` là số đơn của sheet đó.
 - **Hàng có mã của đơn** (vd `{ma_don}`, `{ho_ten}`) là hàng mẫu: hàng đó nhân lên, mỗi đơn một hàng, giữ định dạng của hàng mẫu.
   `{stt}` là số thứ tự của đơn trong file. Không có đơn nào thì bỏ hàng mẫu.
 - **Hàng chỉ có mã của cả file** (`{so_don}` số đơn, `{loai_don}`, `{ngay_xuat}`) điền một lần, vd tiêu đề, dòng tổng.

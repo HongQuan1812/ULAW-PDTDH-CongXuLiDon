@@ -2,6 +2,7 @@
 export * from './accounts--permissions';
 export * from './email--tags';
 export * from './exports--docx';
+export * from './exports--stats';
 export * from './exports--tags';
 export * from './exports--xlsx';
 export * from './forms--codes';

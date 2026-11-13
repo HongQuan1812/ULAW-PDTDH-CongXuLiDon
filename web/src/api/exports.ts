@@ -11,6 +11,7 @@ import {
   formExportPath,
   type ExportDraftRequest,
   type ExportFormRequest,
+  type ExportStatsRequest,
   type ExportTemplateCheck,
   type ExportTemplatesResponse,
   type SaveExportTemplatesRequest,
@@ -147,13 +148,14 @@ export function exportForm(code: string, request: ExportFormRequest): Promise<Do
 }
 
 /**
- * Xuất file thống kê mọi lá đơn của loại đơn theo một mẫu thống kê.
+ * Xuất file thống kê các lá đơn của loại đơn theo một mẫu thống kê.
  * @param formTypeId  mã loại đơn
  * @param templateId  id mẫu thống kê
+ * @param request     phiên bản (số hoặc 'all': mỗi phiên bản một sheet) và khoảng ngày nộp
  * @returns           file Excel đã điền; lỗi thì ném ApiError (câu báo theo EXPORT_MESSAGES)
  */
-export function exportStats(formTypeId: string, templateId: string): Promise<DownloadedFile> {
-  return fetchFile(exportTemplatePath(formTypeId, templateId, 'export'), { method: 'POST' }).catch(toExportError);
+export function exportStats(formTypeId: string, templateId: string, request: ExportStatsRequest): Promise<DownloadedFile> {
+  return fetchFile(exportTemplatePath(formTypeId, templateId, 'export'), { method: 'POST', body: JSON.stringify(request) }).catch(toExportError);
 }
 
 /**

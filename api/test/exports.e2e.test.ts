@@ -314,25 +314,41 @@ describe('exports', () => {
     );
     expect(check).toMatchObject({ unknown: [], error: '' });
 
-    // Xuất: mỗi đơn của xmm một hàng, theo thứ tự nộp
-    const response = await request(server())
-      .post(`/api${exportTemplatePath('xmm', statsTemplate.id, 'export')}`)
-      .set('Cookie', cookie)
-      .buffer(true)
-      .parse(binaryParser)
-      .expect(200);
-    expect(response.headers['content-type']).toContain(XLSX_CONTENT_TYPE);
-    const forms = await prisma.form.findMany({ where: { formTypeId: 'xmm' }, orderBy: [{ submittedAt: 'asc' }, { code: 'asc' }], select: { code: true } });
-    const exported = new ExcelJS.Workbook();
-    await exported.xlsx.load(new Uint8Array(response.body as Buffer).buffer);
-    const exportedSheet = exported.worksheets[0]!;
-    expect(String(exportedSheet.getCell('A1').value)).toContain(`${forms.length} đơn`);
-    expect(exportedSheet.getCell('A2').value).toBe(1);
-    expect(exportedSheet.getCell('B2').value).toBe(forms[0]!.code);
-    expect(exportedSheet.getCell(`B${forms.length + 1}`).value).toBe(forms.at(-1)!.code);
+    // Xuất mọi phiên bản: mỗi phiên bản một sheet, mỗi đơn một hàng theo thứ tự nộp
+    const exportStats = (body: unknown) =>
+      request(server()).post(`/api${exportTemplatePath('xmm', statsTemplate.id, 'export')}`).set('Cookie', cookie).send(body as object).buffer(true).parse(binaryParser);
+    const openWorkbook = async (response: Response) => {
+      const opened = new ExcelJS.Workbook();
+      await opened.xlsx.load(new Uint8Array(response.body as Buffer).buffer);
+      return opened;
+    };
+    const everything = await exportStats({ version: 'all', submittedFrom: null, submittedTo: null }).expect(200);
+    expect(everything.headers['content-type']).toContain(XLSX_CONTENT_TYPE);
+    const forms = await prisma.form.findMany({ where: { formTypeId: 'xmm' }, orderBy: [{ submittedAt: 'asc' }, { code: 'asc' }], select: { code: true, formTypeVersion: true, submittedAt: true } });
+    const versions = (await prisma.formTypeVersion.findMany({ where: { formTypeId: 'xmm', status: { not: 'draft' } }, orderBy: { version: 'asc' } })).map((version) => version.version);
+    const everythingBook = await openWorkbook(everything);
+    expect(everythingBook.worksheets.map((worksheet) => worksheet.name)).toEqual(versions.map((version) => `Phiên bản ${version}`));
+    const firstVersionForms = forms.filter((form) => form.formTypeVersion === versions[0]);
+    const firstSheet = everythingBook.worksheets[0]!;
+    expect(String(firstSheet.getCell('A1').value)).toContain(`${firstVersionForms.length} đơn`);
+    expect(firstSheet.getCell('A2').value).toBe(1);
+    expect(firstSheet.getCell('B2').value).toBe(firstVersionForms[0]!.code);
+    expect(firstSheet.getCell(`B${firstVersionForms.length + 1}`).value).toBe(firstVersionForms.at(-1)!.code);
+
+    // Chọn một phiên bản: một sheet; lọc theo ngày nộp
+    const single = await openWorkbook(await exportStats({ version: versions[0], submittedFrom: null, submittedTo: null }).expect(200));
+    expect(single.worksheets.map((worksheet) => worksheet.name)).toEqual([`Phiên bản ${versions[0]}`]);
+    const ranged = await openWorkbook(await exportStats({ version: 'all', submittedFrom: '2999-01-01', submittedTo: null }).expect(200));
+    expect(String(ranged.worksheets[0]!.getCell('A1').value)).toContain('0 đơn');
+
+    // Sai điều kiện: phiên bản không có 404; body thiếu hoặc sai 422
+    const exportStatsJson = (body: object) => request(server()).post(`/api${exportTemplatePath('xmm', statsTemplate.id, 'export')}`).set('Cookie', cookie).send(body);
+    expect(messageOf(await exportStatsJson({ version: 999, submittedFrom: null, submittedTo: null }).expect(404))).toBe(EXPORT_MESSAGES.versionNotFound);
+    await exportStatsJson({}).expect(422);
+    await exportStatsJson({ version: 'all', submittedFrom: '2026-03-01', submittedTo: '2026-02-01' }).expect(422);
 
     // Mẫu thống kê không dùng để xuất file một lá đơn, và ngược lại
     await request(server()).post(`/api${formExportPath(OTHER_FORM_CODE)}`).set('Cookie', cookie).send({ templateId: statsTemplate.id }).expect(404);
-    await request(server()).post(`/api${exportTemplatePath('xmm', SEED_EXPORT_TEMPLATE.id, 'export')}`).set('Cookie', cookie).expect(404);
+    await request(server()).post(`/api${exportTemplatePath('xmm', SEED_EXPORT_TEMPLATE.id, 'export')}`).set('Cookie', cookie).send({ version: 'all', submittedFrom: null, submittedTo: null }).expect(404);
   });
 });

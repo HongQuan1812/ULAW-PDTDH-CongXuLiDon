@@ -1061,16 +1061,24 @@ export function getExportSource(code: string, viewer?: { id: string; role: RoleI
 }
 
 /**
- * Thông tin điền mẫu thống kê của một loại đơn: mọi lá đơn (cũ trước), tên loại đơn mới nhất, tiền tố mã đơn.
+ * Thông tin điền mẫu thống kê của một loại đơn: mọi lá đơn (cũ trước, kèm phiên bản lúc nộp), các phiên bản đã từng mở, tiền tố mã đơn.
  * @param formTypeId  mã loại đơn (đã biết là có)
- * @returns           sources: thông tin từng đơn · formTypeName, prefix: của phiên bản mới nhất
+ * @returns           forms: thông tin từng đơn + phiên bản · versions: số và tên các phiên bản không phải bản nháp, cũ trước · prefix: tiền tố mã đơn
  */
-export function getStatsExportSources(formTypeId: string): { sources: ExportSource[]; formTypeName: string; prefix: string } {
+export function getStatsExportSources(formTypeId: string): {
+  forms: Array<{ source: ExportSource; version: number }>;
+  versions: Array<{ version: number; name: string }>;
+  prefix: string;
+} {
   const forms = FORMS.filter((form) => form.formTypeId === formTypeId).sort(
     (first, second) => first.submittedAt.localeCompare(second.submittedAt) || first.code.localeCompare(second.code),
   );
   const formType = findFormType(formTypeId);
-  return { sources: forms.map(toExportSource), formTypeName: formType?.versions.at(-1)?.name ?? '', prefix: formType?.prefix ?? formTypeId };
+  return {
+    forms: forms.map((form) => ({ source: toExportSource(form), version: form.formTypeSnapshot.version })),
+    versions: (formType?.versions ?? []).filter((version) => version.status !== 'draft').map(({ version, name }) => ({ version, name })),
+    prefix: formType?.prefix ?? formTypeId,
+  };
 }
 
 /**

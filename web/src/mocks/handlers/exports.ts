@@ -20,7 +20,10 @@ import {
   hasTemplateExtension,
   isReadableTemplateFile,
   renderDocxTemplate,
-  renderXlsxTemplate,
+  renderXlsxByVersion,
+  selectStatsForms,
+  statsSheetName,
+  ExportStatsRequestSchema,
   templatePurposeOfFile,
   textToTag,
   type ExportDraftRequest,
@@ -265,24 +268,39 @@ export const exportHandlers = [
     return HttpResponse.json<ExportTemplateCheck>(await checkTemplate(stored.bytes, 'form', exportable.source.sections));
   }),
 
-  // Xuất file thống kê: mọi lá đơn của loại đơn (cũ trước) vào một mẫu thống kê, mỗi đơn một hàng
-  http.post(api(ENDPOINTS.exports.statsExport), async ({ params }) => {
+  // Xuất file thống kê: các lá đơn của loại đơn (cũ trước) theo phiên bản và ngày nộp; mỗi phiên bản một sheet, mỗi đơn một hàng
+  http.post(api(ENDPOINTS.exports.statsExport), async ({ params, request }) => {
     await delay(MOCK_DELAY_MS);
     const formTypeId = String(params.formTypeId);
     const { session, errorResponse } = await templateManager(formTypeId);
     if (!session) return errorResponse;
 
-    // Mẫu phải là mẫu thống kê của loại đơn này
+    // Mẫu phải là mẫu thống kê của loại đơn này; điều kiện chọn đơn phải đúng dạng
     const stored = findExportTemplate(formTypeId, String(params.templateId));
     if (!stored || stored.template.purpose !== 'stats') return apiError(404, EXPORT_MESSAGES.templateNotFound);
+    const parsedFilter = ExportStatsRequestSchema.safeParse(await request.json().catch(() => null));
+    if (!parsedFilter.success) return apiError(422, EXPORT_MESSAGES.invalidRequest);
+    const filter = parsedFilter.data;
 
-    // Dữ liệu từng đơn và mã chung của file
+    // Phiên bản chọn phải có
+    const { forms, versions, prefix } = getStatsExportSources(formTypeId);
+    const chosenVersions = filter.version === 'all' ? versions : versions.filter(({ version }) => version === filter.version);
+    if (!chosenVersions.length) return apiError(404, EXPORT_MESSAGES.versionNotFound);
+
+    // Mỗi phiên bản một nhóm: dữ liệu từng đơn và mã chung (tên loại đơn là tên của phiên bản đó)
     const exportedOn = vietnamToday();
-    const { sources, formTypeName, prefix } = getStatsExportSources(formTypeId);
-    const summaryData = { [FORM_COUNT_TAG]: sources.length, loai_don: formTypeName, ngay_xuat: exportedOn.split('-').reverse().join('/') };
+    const selectedForms = selectStatsForms(forms.map((form) => ({ ...form, submittedAt: form.source.submittedAt })), filter);
+    const groups = chosenVersions.map(({ version, name }) => {
+      const versionForms = selectedForms.filter((selected) => selected.version === version);
+      return {
+        sheetName: statsSheetName(version),
+        formsData: versionForms.map(({ source }) => buildExportData(source, exportedOn)),
+        summaryData: { [FORM_COUNT_TAG]: versionForms.length, loai_don: name, ngay_xuat: exportedOn.split('-').reverse().join('/') },
+      };
+    });
 
     try {
-      const filled = await renderXlsxTemplate(stored.bytes, sources.map((source) => buildExportData(source, exportedOn)), summaryData);
+      const filled = await renderXlsxByVersion(stored.bytes, groups);
       return fileResponse(filled, exportFileName(prefix, stored.template.name, 'stats'), EXPORT_TEMPLATE_FILE.stats.contentType);
     } catch (xlsxError) {
       return apiError(422, EXPORT_MESSAGES.renderFailed(xlsxError instanceof Error ? xlsxError.message : String(xlsxError)));

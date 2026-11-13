@@ -11,6 +11,7 @@ import {
   EXPORT_TEMPLATE_FIELDS,
   ExportDraftRequestSchema,
   ExportFormRequestSchema,
+  ExportStatsRequestSchema,
   ExportTemplateCheckSchema,
   ExportTemplatesResponseSchema,
   SaveExportTemplatesRequestSchema,
@@ -218,9 +219,9 @@ export class ExportsController {
   }
 
   /**
-   * Điền mọi lá đơn của loại đơn vào một mẫu xuất file thống kê (nút Xuất ở khung Mẫu xuất file thống kê).
+   * Điền các lá đơn của loại đơn vào một mẫu xuất file thống kê, theo phiên bản và ngày nộp (nút Xuất thống kê).
    * @returns  nội dung file .xlsx đã điền
-   * @throws   404 không có loại đơn, không có mẫu thống kê · 422 không đọc được mẫu
+   * @throws   404 không có loại đơn, mẫu thống kê, phiên bản · 422 body sai dạng, không đọc được mẫu
    */
   @Post(EXPORT_ENDPOINTS.statsExport)
   @HttpCode(200)
@@ -229,9 +230,11 @@ export class ExportsController {
   async exportStats(
     @Param('formTypeId') formTypeId: string,
     @Param('templateId') templateId: string,
+    @Body() requestBody: unknown,
     @Res({ passthrough: true }) response: Response,
   ): Promise<StreamableFile> {
     await this.exportsService.assertFormTypeExists(formTypeId);
-    return sendFile(await this.exportsService.exportStats(formTypeId, templateId), response);
+    const filter = parseOrReject(requestBody, ExportStatsRequestSchema);
+    return sendFile(await this.exportsService.exportStats(formTypeId, templateId, filter), response);
   }
 }

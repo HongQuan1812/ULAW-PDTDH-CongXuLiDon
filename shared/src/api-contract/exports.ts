@@ -39,8 +39,10 @@ export const EXPORT_ENDPOINTS = {
   /** POST ExportFormRequest → ExportTemplateCheck: so mã trong một mẫu xuất file đơn với các câu hỏi của lá đơn này (bản chụp lúc nộp),
       để người xuất file thấy mã nào đơn không có (sẽ để trống) trước khi xuất. Xem được đơn thì kiểm được, như formExport */
   formExportCheck: '/forms/:code/export-check',
-  /** POST → file .xlsx: điền mọi lá đơn của loại đơn (mọi phiên bản, mọi trạng thái, theo thứ tự nộp) vào một mẫu
-      xuất file thống kê (nút Xuất ở khung Mẫu xuất file thống kê). Cần quyền manageFormTypes; mẫu không phải mẫu thống kê thì 404 */
+  /** POST ExportStatsRequest → file .xlsx: điền các lá đơn của loại đơn (mọi trạng thái, theo thứ tự nộp) vào một mẫu
+      xuất file thống kê (nút Xuất thống kê ở trình soạn loại đơn). Chọn một phiên bản thì file có một sheet; chọn "all" thì
+      mỗi phiên bản một sheet, đều là bản sao cấu trúc của mẫu. Có thể giới hạn theo ngày nộp.
+      Cần quyền manageFormTypes; mẫu không phải mẫu thống kê thì 404; phiên bản không có thì 404 */
   statsExport: '/form-types/:formTypeId/export-templates/:templateId/export',
 } as const;
 
@@ -175,6 +177,25 @@ export type ExportTemplateCheck = z.infer<typeof ExportTemplateCheckSchema>;
 export const ExportFormRequestSchema = z.object({ templateId: z.string().min(1) });
 export type ExportFormRequest = z.infer<typeof ExportFormRequestSchema>;
 
+/** Ngày dạng 'YYYY-MM-DD'. */
+const DaySchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Ngày phải có dạng YYYY-MM-DD.');
+
+/** Body của POST /form-types/:formTypeId/export-templates/:templateId/export: điều kiện chọn đơn của popup Xuất thống kê. */
+export const ExportStatsRequestSchema = z
+  .object({
+    /** Số phiên bản, hoặc 'all' = mọi phiên bản (mỗi phiên bản một sheet) */
+    version: z.union([z.number().int().positive(), z.literal('all')]),
+    /** Từ ngày nộp (tính cả ngày này); null = không giới hạn */
+    submittedFrom: DaySchema.nullable(),
+    /** Đến ngày nộp (tính cả ngày này); null = không giới hạn */
+    submittedTo: DaySchema.nullable(),
+  })
+  .refine((filter) => !filter.submittedFrom || !filter.submittedTo || filter.submittedFrom <= filter.submittedTo, {
+    message: 'Ngày bắt đầu phải trước hoặc bằng ngày kết thúc.',
+    path: ['submittedTo'],
+  });
+export type ExportStatsRequest = z.infer<typeof ExportStatsRequestSchema>;
+
 /* ---------- Câu thông báo ---------- */
 
 export const EXPORT_MESSAGES = {
@@ -186,6 +207,8 @@ export const EXPORT_MESSAGES = {
   formTypeNotFound: 'Loại đơn này không còn. Có thể ai đó vừa xóa.',
   /** Mẫu không có (404) */
   templateNotFound: 'Mẫu xuất file này không còn. Có thể ai đó vừa xóa.',
+  /** Xuất thống kê phiên bản không có (404) */
+  versionNotFound: 'Phiên bản này không còn. Có thể ai đó vừa xóa.',
   /** Xuất file đơn không có, hoặc không được xem (404) */
   formNotFound: 'Không có đơn này, hoặc bạn không có quyền xem.',
   /** Tải lên mẫu xuất file đơn không phải .docx (422) */

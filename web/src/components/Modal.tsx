@@ -1,5 +1,6 @@
 /* Hộp thoại giữa màn hình, có nền mờ phía sau. */
 import { useEffect, useId, useRef, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import styles from './Modal.module.css';
 
 /**
@@ -56,7 +57,8 @@ export function Modal({
 
   if (!open) return null;
 
-  return (
+  // Vẽ thẳng vào <body>: đặt trong thanh có backdrop-filter / transform thì khung `fixed` bị cắt theo thanh đó
+  return createPortal(
     <div
       className={styles.backdrop}
       onMouseDown={(event) => (pressedOnBackdropRef.current = event.target === event.currentTarget)}
@@ -85,6 +87,7 @@ export function Modal({
         )}
         {children}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

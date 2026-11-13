@@ -580,7 +580,7 @@ function FormTypeEditor({ managed, requestedVersion }: FormTypeEditorProps) {
         <h1 className={styles.title}>{isNew ? 'Tạo loại đơn' : `Soạn loại đơn ${versions[0]!.name}`}</h1>
         <div className={styles.headActions}>
           {/* Xuất thống kê theo mẫu thống kê đã lưu (loại đơn mới chưa lưu thì chưa có) */}
-          {managed && <StatsExportButton formTypeId={managed.id} />}
+          {managed && <StatsExportButton formTypeId={managed.id} prefix={managed.prefix} versions={managed.versions} viewedVersion={selectedVersion} />}
           {showsVersionPanel && <FormInfoPanelToggle panel={versionPanel} label={`${VERSION_PANEL_TITLE} ${selectedVersion}`} />}
           <div className={styles.tabs} role="tablist" aria-label="Chế độ">
             {EDITOR_MODES.map(([mode, label]) => (
