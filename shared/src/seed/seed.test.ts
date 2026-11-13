@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'vitest';
 import { FormTypeSchema } from '../api-contract';
 import { SEED_ACCOUNTS } from './accounts';
-import { validateFormTypeDraft } from '../validators';
+import { validateAnswers, validateFile, validateFormTypeDraft } from '../validators';
 import { seedFormTypes } from './form-types';
 import { seedForms } from './forms';
 import { STUDENT_DIRECTORY } from './students';
@@ -61,6 +61,29 @@ describe('dữ liệu mẫu', () => {
 
         expect({ id: formType.id, version: version.version, issues }).toEqual({ id: formType.id, version: version.version, issues: [] });
       }
+    }
+  });
+
+  test('câu trả lời của mọi đơn mẫu hợp lệ theo bản chụp loại đơn, tệp đúng định dạng và dung lượng', () => {
+    for (const form of seedForms()) {
+      const { questionErrors } = validateAnswers(form.formTypeSnapshot.sections, form.answers);
+      const fileErrors = form.formTypeSnapshot.sections
+        .flatMap((section) => section.questions)
+        .flatMap((question) =>
+          question.type === 'file' ? ((form.answers[question.id] as { name: string; sizeBytes: number }[]) ?? []).map((file) => validateFile(question, file.name, file.sizeBytes)) : [],
+        )
+        .filter(Boolean);
+
+      expect({ code: form.code, questionErrors, fileErrors }).toEqual({ code: form.code, questionErrors: {}, fileErrors: [] });
+    }
+  });
+
+  test('mã đơn mẫu đúng dạng <TIỀN TỐ>-<NĂM>-<PHIÊN BẢN>-<STT>, tiền tố khớp loại đơn', () => {
+    const prefixById = new Map(seedFormTypes().map((formType) => [formType.id, formType.prefix]));
+
+    for (const form of seedForms()) {
+      expect(form.code).toMatch(/^[A-Z]{2,5}-\d{4}-\d{3}-\d{5}$/);
+      expect(form.code.startsWith(`${prefixById.get(form.formTypeId)}-`)).toBe(true);
     }
   });
 });
