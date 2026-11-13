@@ -1,6 +1,7 @@
 /* MÃ CHÈN VÀO EMAIL báo cho người nộp đơn.
    Admin gõ mã trong ngoặc nhọn vào tiêu đề và nội dung thư, vd {ho_ten}; lúc gửi, máy chủ thay mã bằng dữ liệu của đơn.
    Trang Cấu hình email (xem trước), API giả và backend (gửi thư thật, gửi thư thử) cùng dùng file này. */
+import { formatDate } from './lists--display-text';
 
 /** Các mã dùng được, theo thứ tự hiện trên trang. */
 export const EMAIL_TAGS = ['ho_ten', 'ma_don', 'loai_don', 'ngay_nop', 'nguoi_xu_li', 'ly_do', 'link_don', 'chu_ki'] as const;
@@ -92,4 +93,47 @@ export function fillEmailTemplate(template: string, values: EmailTagValues): str
   return splitEmailTemplate(template, values)
     .map((part) => part.text)
     .join('');
+}
+
+/** Dữ liệu của một lá đơn dùng để điền mã vào thư báo cho người nộp đơn. */
+export interface FormEmailSource {
+  applicantName: string;
+  code: string;
+  formTypeName: string;
+  /** lúc nộp, giờ Việt Nam 'YYYY-MM-DDTHH:mm' */
+  submittedAt: string;
+  /** người xử lí đơn; chưa tiếp nhận thì null */
+  handlerName: string | null;
+  /** lí do người xử lí ghi khi Yêu cầu bổ sung / Từ chối; "" = không có */
+  note: string;
+}
+
+/**
+ * Đường dẫn tới trang chi tiết đơn trên cổng (giao diện dùng đường dẫn dạng #/don/<mã đơn>).
+ * @param webBaseUrl  địa chỉ gốc của cổng, vd 'https://dichvu.hcmulaw.edu.vn'
+ * @param code        mã đơn
+ * @returns           vd 'https://dichvu.hcmulaw.edu.vn/#/don/XMM-2026-001-00001'
+ */
+export function formLink(webBaseUrl: string, code: string): string {
+  return `${webBaseUrl.replace(/\/+$/, '')}/#/don/${code}`;
+}
+
+/**
+ * Giá trị thay cho từng mã của thư báo về một lá đơn.
+ * @param form        dữ liệu của lá đơn
+ * @param signature   chữ kí cuối thư (cấu hình người gửi)
+ * @param webBaseUrl  địa chỉ gốc của cổng, để dựng {link_don}
+ * @returns           giá trị của mọi mã; chưa có người xử lí, lí do thì chữ trống
+ */
+export function formEmailTagValues(form: FormEmailSource, signature: string, webBaseUrl: string): EmailTagValues {
+  return {
+    ho_ten: form.applicantName,
+    ma_don: form.code,
+    loai_don: form.formTypeName,
+    ngay_nop: formatDate(form.submittedAt),
+    nguoi_xu_li: form.handlerName ?? '',
+    ly_do: form.note,
+    link_don: formLink(webBaseUrl, form.code),
+    chu_ki: signature,
+  };
 }

@@ -23,6 +23,7 @@ import {
 import { ApiException } from '../common/api-exception';
 import { PrismaService } from '../common/prisma.service';
 import { toVietnamTime } from '../common/vietnam-time';
+import { FormEmailService } from '../email/form-email.service';
 import { FileStorageService } from '../files/file-storage.service';
 import { FormTypesService } from '../form-types/form-types.service';
 import type { Prisma, Form, User } from '../generated/prisma/client';
@@ -58,11 +59,13 @@ export class FormService {
    * @param prisma      kết nối database
    * @param storage     lưu tệp trên ổ đĩa
    * @param formTypes   lấy cấu trúc loại đơn đang mở
+   * @param formEmail   gửi thư báo đã nhận đơn cho người nộp đơn
    */
   constructor(
     private readonly prisma: PrismaService,
     private readonly storage: FileStorageService,
     private readonly formTypes: FormTypesService,
+    private readonly formEmail: FormEmailService,
   ) {}
 
   /**
@@ -174,7 +177,7 @@ export class FormService {
 
   /**
    * Nộp đơn mới: kiểm tra hết, rồi sinh mã đơn, lưu đơn, bản chụp cấu trúc loại đơn và tệp trong một transaction.
-   * Sai một chỗ thì không lưu gì (kể cả tệp trên ổ đĩa).
+   * Sai một chỗ thì không lưu gì (kể cả tệp trên ổ đĩa). Lưu xong thì gửi thư báo đã nhận đơn (không chờ).
    * @param submitter  người đang đăng nhập (cần quyền submit; nộp thay cần submitForApplicant)
    * @param readSubmission  đọc phần chữ và tệp của body (gọi sau khi kiểm tra quyền)
    * @returns          dòng tóm tắt của đơn mới
@@ -198,8 +201,9 @@ export class FormService {
 
     // Đúng hết: ghi tệp lên ổ đĩa, rồi lưu đơn (lỗi thì dọn tệp)
     const { refs, storagePaths, rows } = await this.storeUploads(uploads);
+    let summary: FormSummary;
     try {
-      return await this.prisma.$transaction(async (transaction) => {
+      summary = await this.prisma.$transaction(async (transaction) => {
         const submittedAt = new Date();
         const code = await this.nextFormCode(transaction, formType.prefix, yearOf(submittedAt), formType.version);
         const form = await transaction.form.create({
@@ -222,6 +226,10 @@ export class FormService {
       await this.removeStored(storagePaths);
       throw error;
     }
+
+    // Đơn đã lưu: báo cho người nộp đơn
+    this.formEmail.notifyStatusChange(summary.code, 'nop');
+    return summary;
   }
 
   /**

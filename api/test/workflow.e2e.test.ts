@@ -3,7 +3,7 @@
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import type { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import {
@@ -15,6 +15,7 @@ import {
   type RoleId,
 } from '@ulaw/shared';
 import { PrismaService } from '../src/common/prisma.service';
+import { FormEmailService } from '../src/email/form-email.service';
 import { createTestApp } from './create-test-app';
 
 describe('workflow (tiếp nhận, quyết định, chuyển giao)', () => {
@@ -67,6 +68,22 @@ describe('workflow (tiếp nhận, quyết định, chuyển giao)', () => {
     await app.close();
     await rm(uploadDir, { recursive: true, force: true });
     delete process.env['UPLOAD_DIR'];
+  });
+
+  it('thư báo người nộp đơn: gửi khi nộp và khi ra quyết định; tiếp nhận thì không', async () => {
+    const notifySpy = vi.spyOn(app.get(FormEmailService), 'notifyStatusChange').mockImplementation(() => undefined);
+    try {
+      const code = await submitNewForm(await loginAs('nguoiNopDon'));
+      const staff = await loginAs('nguoiXuLiDon');
+      await post(staff, `${code}/receive`).expect(200);
+      await post(staff, `${code}/decision`, { decision: 'tc', note: 'Không đủ điều kiện' }).expect(200);
+      expect(notifySpy.mock.calls).toEqual([
+        [code, 'nop'],
+        [code, 'tc'],
+      ]);
+    } finally {
+      notifySpy.mockRestore();
+    }
   });
 
   it('chưa đăng nhập: 401', async () => {

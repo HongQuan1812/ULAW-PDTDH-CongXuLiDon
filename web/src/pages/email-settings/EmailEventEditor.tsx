@@ -6,6 +6,7 @@ import {
   EMAIL_SAMPLE_RECIPIENT,
   EMAIL_SAMPLE_VALUES,
   SendTestEmailRequestSchema,
+  formLink,
   splitEmailTemplate,
   type EmailEventSetting,
   type EmailSender,
@@ -50,7 +51,12 @@ export function EmailEventEditor({ event, eventIndex, sender, senderAddress, fie
 
   const subjectError = fieldErrors[`events.${eventIndex}.subject`];
   const bodyError = fieldErrors[`events.${eventIndex}.body`];
-  const sampleValues: EmailTagValues = { ...EMAIL_SAMPLE_VALUES, chu_ki: sender.signature };
+  // Dữ liệu mẫu; đường dẫn tới đơn theo địa chỉ trang đang mở (dev: localhost, bản thật: địa chỉ cổng), giống thư gửi đi
+  const sampleValues: EmailTagValues = {
+    ...EMAIL_SAMPLE_VALUES,
+    link_don: formLink(window.location.origin, EMAIL_SAMPLE_VALUES.ma_don),
+    chu_ki: sender.signature,
+  };
   // Lúc gửi đang tắt: làm mờ phần soạn, xem trước (kèm inert để không bấm, không gõ được)
   const dimmedClass = event.enabled ? '' : styles.dimmed;
 

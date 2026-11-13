@@ -4,6 +4,7 @@ import { Injectable } from '@nestjs/common';
 import {
   EMAIL_MESSAGES,
   EMAIL_SAMPLE_VALUES,
+  formLink,
   TEST_EMAIL_SUBJECT_PREFIX,
   type EmailSettings,
   type EmailSettingsResponse,
@@ -13,12 +14,13 @@ import {
 import { ApiException } from '../common/api-exception';
 import { PrismaService } from '../common/prisma.service';
 import { toVietnamTime } from '../common/vietnam-time';
+import { AppConfig } from '../config/app-config';
 import type { Prisma, User } from '../generated/prisma/client';
 import { buildEmailContent } from './email-content';
 import { MailSenderService } from './mail-sender.service';
 
-/** Id dòng cấu hình duy nhất. */
-const SETTINGS_ROW_ID = 1;
+/** Id dòng cấu hình email duy nhất. */
+export const SETTINGS_ROW_ID = 1;
 
 /** Lấy kèm cán bộ lưu lần gần nhất. */
 const WITH_UPDATED_BY = { updatedBy: { select: { id: true, name: true, email: true } } } as const;
@@ -31,10 +33,12 @@ export class EmailSettingsService {
   /**
    * @param prisma      truy cập database
    * @param mailSender  gửi thư, cho biết địa chỉ gửi và máy chủ thư đã kết nối chưa
+   * @param config      địa chỉ gốc của cổng, để dựng đường dẫn tới đơn trong thư thử
    */
   constructor(
     private readonly prisma: PrismaService,
     private readonly mailSender: MailSenderService,
+    private readonly config: AppConfig,
   ) {}
 
   /**
@@ -81,14 +85,16 @@ export class EmailSettingsService {
 
   /**
    * Gửi một thư thử theo bản đang soạn, điền dữ liệu mẫu; tiêu đề có thêm chữ [Thử] ở đầu.
+   * Đường dẫn tới đơn dựng theo địa chỉ cổng của môi trường (như thư thật), để bấm thử mở được cổng đang chạy.
    * @param testRequest  địa chỉ nhận, người gửi, tiêu đề, nội dung (đã kiểm tra bằng SendTestEmailRequestSchema)
    * @returns            câu báo đã gửi
    * @throws             503 chưa kết nối được máy chủ thư, hoặc máy chủ thư không nhận thư
    */
   async sendTestEmail(testRequest: SendTestEmailRequest): Promise<SendTestEmailResponse> {
-    // Dựng thư bằng dữ liệu mẫu, chữ kí theo bản đang soạn
+    // Dựng thư bằng dữ liệu mẫu, đường dẫn theo địa chỉ cổng, chữ kí theo bản đang soạn
     const content = buildEmailContent(TEST_EMAIL_SUBJECT_PREFIX + testRequest.subject, testRequest.body, {
       ...EMAIL_SAMPLE_VALUES,
+      link_don: formLink(this.config.webBaseUrl, EMAIL_SAMPLE_VALUES.ma_don),
       chu_ki: testRequest.sender.signature,
     });
 

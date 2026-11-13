@@ -22,6 +22,11 @@ const AppEnvSchema = z.object({
   SMTP_USER: z.email().default('daotao@hcmulaw.edu.vn'),
   // Mật khẩu ứng dụng của tài khoản SMTP
   SMTP_PASSWORD: z.string().default(''),
+  // Địa chỉ gốc của cổng (giao diện), để dựng đường dẫn tới đơn trong thư ({link_don}): APP_ENV=dev dùng bản dev, còn lại dùng bản production
+  WEB_BASE_URL_DEV: z.url().default('https://localhost:5173'),
+  WEB_BASE_URL_PRODUCTION: z.url().default('https://dichvu.hcmulaw.edu.vn'),
+  // Chỉ dùng khi APP_ENV=dev: thư tự động gửi về địa chỉ này thay vì người nộp đơn; bỏ trống thì chỉ in ra console
+  DEV_EMAIL_REDIRECT_TO: z.union([z.literal(''), z.email()]).default(''),
 });
 
 /** Kết nối tới máy chủ gửi thư. */
@@ -55,6 +60,10 @@ export class AppConfig {
   readonly uploadDir: string;
   /** Máy chủ gửi thư. */
   readonly smtp: SmtpConfig;
+  /** Địa chỉ gốc của cổng theo môi trường: dev thì WEB_BASE_URL_DEV, còn lại WEB_BASE_URL_PRODUCTION. */
+  readonly webBaseUrl: string;
+  /** Chỉ dùng khi APP_ENV=dev: địa chỉ nhận thay mọi thư tự động; null thì thư tự động chỉ in ra console. */
+  readonly devEmailRedirectTo: string | null;
 
   /**
    * Đọc và kiểm tra biến môi trường.
@@ -70,6 +79,8 @@ export class AppConfig {
     this.port = parsed.data.API_PORT;
     this.databaseUrl = parsed.data.DATABASE_URL;
     this.uploadDir = parsed.data.UPLOAD_DIR;
+    this.webBaseUrl = this.isDev ? parsed.data.WEB_BASE_URL_DEV : parsed.data.WEB_BASE_URL_PRODUCTION;
+    this.devEmailRedirectTo = parsed.data.DEV_EMAIL_REDIRECT_TO || null;
     this.smtp = { host: parsed.data.SMTP_HOST, port: parsed.data.SMTP_PORT, user: parsed.data.SMTP_USER, password: parsed.data.SMTP_PASSWORD };
   }
 }

@@ -20,6 +20,7 @@ import {
 } from '@ulaw/shared';
 import { ApiException } from '../common/api-exception';
 import { PrismaService } from '../common/prisma.service';
+import { FormEmailService } from '../email/form-email.service';
 import type { User } from '../generated/prisma/client';
 import { FormService } from './form.service';
 
@@ -32,10 +33,12 @@ export class WorkflowService {
   /**
    * @param prisma       kết nối database
    * @param formService  đọc đơn, dựng FormDetail
+   * @param formEmail    gửi thư báo quyết định cho người nộp đơn
    */
   constructor(
     private readonly prisma: PrismaService,
     private readonly formService: FormService,
+    private readonly formEmail: FormEmailService,
   ) {}
 
   /**
@@ -62,7 +65,7 @@ export class WorkflowService {
 
   /**
    * Ra quyết định về đơn Đang xét: Cần bổ sung / Đã duyệt / Từ chối.
-   * Duyệt thì xóa lí do. Không đổi người xử lí và lần lưu gần nhất.
+   * Duyệt thì xóa lí do. Không đổi người xử lí và lần lưu gần nhất. Lưu xong thì gửi thư báo quyết định (không chờ).
    * @param actor         cán bộ đang đăng nhập
    * @param code          mã đơn
    * @param readDecision  cách đọc body (đọc sau khi đã xem được đơn, để 404 đứng trước 422)
@@ -85,6 +88,9 @@ export class WorkflowService {
       data: { status: decision, note: decision === 'duyet' ? '' : note, ...(decision === 'bs' ? {} : { decidedAt: new Date() }) },
     });
     if (count === 0) throw new ApiException(409, FORM_MESSAGES.notDecidable);
+
+    // Đã lưu: báo cho người nộp đơn
+    this.formEmail.notifyStatusChange(code, decision);
     return this.formService.findDetail(code, actor);
   }
 

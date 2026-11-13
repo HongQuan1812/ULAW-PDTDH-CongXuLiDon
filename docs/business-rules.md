@@ -148,6 +148,10 @@ Có lí do của Phòng Đào tạo thì hiện thêm dòng "Phòng Đào tạo:
 - **Bốn lúc gửi** (`shared/src/aux-schema/email--events.ts`): Đã nộp, Cần bổ sung, Từ chối, Đã duyệt. Mỗi lúc bật / tắt riêng, có tiêu đề và nội dung riêng.
 - Mã chèn vào thư (`shared/src/business-rules/email--tags.ts`): `{ho_ten}`, `{ma_don}`, `{loai_don}`, `{ngay_nop}`, `{nguoi_xu_li}`, `{ly_do}`, `{link_don}`, `{chu_ki}`.
 - Có xem trước bằng dữ liệu mẫu và gửi thư thử.
+- **Thư tự động**: nộp đơn xong (Đã nộp) và ra quyết định xong (Cần bổ sung, Từ chối, Đã duyệt) thì gửi thư tới email của người nộp đơn,
+  theo tiêu đề, nội dung của lúc gửi đó; đang tắt thì không gửi. Tiếp nhận, chuyển giao, sửa đơn không gửi thư.
+  Thư gửi sau khi đơn đã lưu; gửi lỗi chỉ ghi log, không làm hỏng việc nộp đơn, ra quyết định. `{link_don}` dựng từ `WEB_BASE_URL_DEV` khi `APP_ENV=dev`, còn lại `WEB_BASE_URL_PRODUCTION` (`api/.env`); thư thử cũng vậy.
+  Khi `APP_ENV=dev`, thư tự động gửi về `DEV_EMAIL_REDIRECT_TO` thay vì người nộp đơn (bỏ trống thì chỉ in ra console), để không gửi nhầm tới email của người dùng mẫu.
 - Backend: bảng `EmailSettings` (một dòng), module `api/src/email/`. Máy chủ thư đặt ở `api/.env` (`SMTP_HOST`, `SMTP_PORT`, `SMTP_USER` là địa chỉ gửi, `SMTP_PASSWORD`).
   Chưa đặt `SMTP_HOST` thì chưa gửi được thư; riêng `APP_ENV=dev` thì thư in ra console thay vì gửi đi.
 
