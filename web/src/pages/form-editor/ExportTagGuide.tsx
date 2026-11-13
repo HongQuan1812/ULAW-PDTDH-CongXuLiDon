@@ -1,14 +1,24 @@
 /* Hai mục hướng dẫn trong khung "Mẫu xuất file đơn" / "Mẫu xuất file thống kê":
-   - "Cách tạo một mẫu" (ExportHowTo, ngay trên khung chọn file): 3 bước và ví dụ trước / sau;
+   - "Cách tạo một mẫu" (ExportHowTo, ngay trên khung chọn file, thu gọn được): 3 bước và ví dụ trước / sau;
    - "Bảng mã" (ExportTagGuide, dưới danh sách mẫu): mã câu trả lời của từng câu hỏi và mã chung, mỗi mã một dòng (Gõ vào file Word / Excel · Sẽ được điền bằng).
    Bấm vào mã để sao chép.
-   Mẫu Word: câu hỏi dạng bảng có bảng mẫu một dòng (vòng lặp) và nút sao chép để dán vào Word thành bảng thật.
-   Mẫu Excel: không có vòng lặp; hàng có mã của đơn tự nhân lên mỗi đơn một hàng, câu hỏi dạng bảng gộp vào một ô;
-   có thêm nhóm mã của cả file và nút sao chép một hàng mẫu (đầu cột + mã) để dán vào Excel. */
-import { Fragment, type ReactNode } from 'react';
-import { COMMON_EXPORT_TAG_GROUPS, ROW_NUMBER_TAG, STATS_SUMMARY_TAGS, type ExportTemplatePurpose, type QuestionExportTag } from '@ulaw/shared';
+   Mẫu Word: ví dụ theo kiểu định dạng; câu hỏi dạng bảng có bảng mẫu một dòng (vòng lặp) và nút sao chép để dán vào Word thành bảng thật.
+   Mẫu Excel: có nút "Tải file mẫu có sẵn" (đã có đầu cột, mã mọi câu hỏi). Không có vòng lặp: hàng có mã của đơn (hàng mẫu) nhân lên
+   mỗi đơn một hàng, câu hỏi dạng bảng gộp vào một ô; mã tiêu đề file chỉ điền một lần. */
+import { Fragment, useState, type ReactNode } from 'react';
+import {
+  COMMON_EXPORT_TAG_GROUPS,
+  ROW_NUMBER_TAG,
+  STATS_SUMMARY_TAGS,
+  XLSX_CONTENT_TYPE,
+  createStatsStarterXlsx,
+  type ExportTemplatePurpose,
+  type FormSection,
+  type QuestionExportTag,
+} from '@ulaw/shared';
 import { Button } from '../../components/Button';
 import { useToast } from '../../components/Toast';
+import { saveToDevice } from '../../lib/saveToDevice';
 import styles from './ExportTemplatesPanel.module.css';
 
 /** Giá trị điền theo loại câu hỏi, ghi thêm sau "Câu trả lời". */
@@ -42,32 +52,6 @@ async function copyLoopTable(question: QuestionExportTag, toast: ReturnType<type
   const cells = [`{#${question.tag}}{${ROW_NUMBER_TAG}}`, ...columns.map((column, i) => `{${column.tag}}${i === columns.length - 1 ? `{/${question.tag}}` : ''}`)];
   const headers = ['STT', ...columns.map((column) => column.label)];
   await copyTable(headers, cells, 'Word', toast);
-}
-
-/** Các cột của hàng mẫu sao chép sẵn cho mẫu Excel: mã chung hay dùng, sau đó là từng câu hỏi. */
-const STATS_ROW_COLUMNS = [
-  { header: 'STT', tag: ROW_NUMBER_TAG },
-  { header: 'Mã đơn', tag: 'ma_don' },
-  { header: 'Họ và tên', tag: 'ho_ten' },
-  { header: 'MSSV', tag: 'mssv' },
-  { header: 'Lớp', tag: 'lop' },
-  { header: 'Ngày nộp', tag: 'ngay_nop' },
-  { header: 'Trạng thái', tag: 'trang_thai' },
-];
-
-/**
- * Sao chép một hàng mẫu cho Excel: hàng đầu cột và hàng mã (mã chung hay dùng, rồi mã từng câu hỏi).
- * @param questionTags  mã các câu hỏi đang soạn
- * @param toast         hàm báo
- */
-async function copyStatsRow(questionTags: readonly QuestionExportTag[], toast: ReturnType<typeof useToast>) {
-  const columns = [...STATS_ROW_COLUMNS, ...questionTags.map((question) => ({ header: question.label, tag: question.tag }))];
-  await copyTable(
-    columns.map((column) => column.header),
-    columns.map((column) => `{${column.tag}}`),
-    'Excel',
-    toast,
-  );
 }
 
 /**
@@ -288,36 +272,41 @@ const FORMAT_EXAMPLES = [
   { format: 'Cỡ chữ lớn', lead: '', tag: 'loai_don', value: 'Xét miễn môn', className: styles.demoLarge },
 ];
 
-/** Ví dụ của "Cách tạo một mẫu" ở mẫu Excel: các cột và vài đơn minh họa. Chỉ để minh họa. */
+/** Ví dụ của "Cách tạo một mẫu" ở mẫu Excel: tiêu đề, các cột và vài đơn minh họa (mã đơn nhảy cóc để thấy STT khác mã đơn). */
 const STATS_EXAMPLE = {
+  title: { template: 'Danh sách đơn {loai_don} · {so_don} đơn', filled: 'Danh sách đơn Xét miễn môn · 3 đơn' },
   columns: [
     { header: 'STT', tag: ROW_NUMBER_TAG },
     { header: 'Mã đơn', tag: 'ma_don' },
     { header: 'Họ và tên', tag: 'ho_ten' },
-    { header: 'Trạng thái', tag: 'trang_thai' },
   ],
   forms: [
-    ['1', 'XMM-2026-001-00001', 'Nguyễn Văn A', 'Đã duyệt'],
-    ['2', 'XMM-2026-001-00002', 'Trần Thị B', 'Đang xét'],
-    ['3', 'XMM-2026-001-00003', 'Lê Văn C', 'Đã nộp'],
+    ['1', 'XMM-2026-001-00007', 'Nguyễn Văn A'],
+    ['2', 'XMM-2026-001-00012', 'Trần Thị B'],
+    ['3', 'XMM-2026-001-00015', 'Lê Văn C'],
   ],
 };
 
 /**
- * Một bảng nhỏ trông như trang tính Excel, cho ví dụ của mẫu thống kê.
- * @param title  tên ghi nhỏ phía trên, vd "Trong file mẫu"
- * @param rows   các hàng (hàng đầu là đầu cột); hàng cuối có thể là dòng tổng chiếm cả bề ngang
- * @param total  chữ của dòng tổng
+ * Một bảng nhỏ trông như trang tính Excel, cho ví dụ của mẫu thống kê: dòng tiêu đề chiếm cả bề ngang, đầu cột, các hàng.
+ * @param label  tên ghi nhỏ phía trên, vd "File mẫu cậu soạn"
+ * @param title  chữ của dòng tiêu đề
+ * @param rows   các hàng (hàng đầu là đầu cột)
  * @returns      khối có tên và bảng
  */
-function SheetExample({ title, rows, total }: { title: string; rows: string[][]; total: string }) {
+function SheetExample({ label, title, rows }: { label: string; title: string; rows: string[][] }) {
   const [headers = [], ...bodyRows] = rows;
   return (
     <div className={styles.sheetExample}>
-      <span className={styles.demoLabel}>{title}</span>
+      <span className={styles.demoLabel}>{label}</span>
       <div className={styles.wordTableScroll}>
         <table className={styles.wordTable}>
           <tbody>
+            <tr>
+              <td colSpan={headers.length} className={styles.sheetTitle}>
+                {title}
+              </td>
+            </tr>
             <tr>
               {headers.map((header) => (
                 <th key={header}>{header}</th>
@@ -330,9 +319,6 @@ function SheetExample({ title, rows, total }: { title: string; rows: string[][];
                 ))}
               </tr>
             ))}
-            <tr>
-              <td colSpan={headers.length}>{total}</td>
-            </tr>
           </tbody>
         </table>
       </div>
@@ -341,19 +327,45 @@ function SheetExample({ title, rows, total }: { title: string; rows: string[][];
 }
 
 /**
- * Nội dung "Cách tạo một mẫu" của mẫu Excel: 3 bước, ví dụ hàng mẫu → các hàng xuất ra, nút sao chép hàng mẫu.
- * @param questionTags  mã các câu hỏi đang soạn (cho nút sao chép hàng mẫu)
+ * Tên file mẫu dựng sẵn, theo tên loại đơn; bỏ các kí tự không dùng được trong tên file.
+ * @param formTypeName  tên loại đơn đang soạn
+ * @returns             tên file .xlsx
+ */
+function starterFileName(formTypeName: string): string {
+  const safeName = formTypeName.replace(/[\\/:*?"<>|]/g, '').trim();
+  return `Mẫu thống kê${safeName ? ` - ${safeName}` : ''}.xlsx`;
+}
+
+/**
+ * Nội dung "Cách tạo một mẫu" của mẫu Excel (luôn hiện): nút tải file mẫu có sẵn, 3 dòng hướng dẫn, ví dụ file mẫu → file xuất ra.
+ * @param sections      các phần của loại đơn đang soạn (để dựng file mẫu có sẵn)
+ * @param formTypeName  tên loại đơn (đặt tên file)
  * @returns             nội dung mục
  */
-function StatsHowTo({ questionTags }: { questionTags: readonly QuestionExportTag[] }) {
+function StatsHowTo({ sections, formTypeName }: { sections: readonly FormSection[]; formTypeName: string }) {
   const toast = useToast();
+  const [creating, setCreating] = useState(false);
   const headers = STATS_EXAMPLE.columns.map((column) => column.header);
+
+  /** Dựng file mẫu có sẵn theo bản soạn hiện tại rồi tải về máy. */
+  const downloadStarter = async () => {
+    setCreating(true);
+    try {
+      const content = await createStatsStarterXlsx(sections);
+      saveToDevice(new Blob([content], { type: XLSX_CONTENT_TYPE }), starterFileName(formTypeName));
+    } catch {
+      toast('Không tạo được file mẫu, hãy thử lại.', 'error');
+    } finally {
+      setCreating(false);
+    }
+  };
+
   return (
     <div className={styles.guideBody}>
       <ol className={styles.steps}>
         <li>
           <b>Soạn file Excel</b>
-          <span>Gõ đầu cột, rồi một hàng mẫu có mã của đơn. Lấy mã ở Bảng mã bên dưới.</span>
+          <span>Bấm “Tải file mẫu có sẵn” bên dưới, mở bằng Excel. Xóa cột không cần, đổi màu, cỡ chữ tùy ý.</span>
         </li>
         <li>
           <b>Tải lên</b>
@@ -361,27 +373,25 @@ function StatsHowTo({ questionTags }: { questionTags: readonly QuestionExportTag
         </li>
         <li>
           <b>Xuất file</b>
-          <span>Bấm “Xuất” ở mẫu đã lưu để tải về file Excel có mọi đơn của loại đơn này.</span>
+          <span>Bấm “Xuất thống kê” ở đầu trang để nhận file Excel có mọi đơn của loại đơn này.</span>
         </li>
       </ol>
-      {/* Ví dụ: hàng mẫu trong file mẫu → mỗi đơn một hàng trong file xuất ra; dòng tổng chỉ điền một lần */}
+
+      {/* Ví dụ: tiêu đề điền một lần; hàng mẫu nhân lên mỗi đơn một hàng */}
       <div className={styles.sheetExamples} aria-label="Ví dụ">
-        <SheetExample
-          title="Trong file mẫu"
-          rows={[headers, STATS_EXAMPLE.columns.map((column) => `{${column.tag}}`)]}
-          total="Tổng: {so_don} đơn"
-        />
+        <SheetExample label="File mẫu" title={STATS_EXAMPLE.title.template} rows={[headers, STATS_EXAMPLE.columns.map((column) => `{${column.tag}}`)]} />
         <span className={styles.arrow} aria-hidden="true">
           →
         </span>
-        <SheetExample title="Trong file xuất ra" rows={[headers, ...STATS_EXAMPLE.forms]} total={`Tổng: ${STATS_EXAMPLE.forms.length} đơn`} />
+        <SheetExample label="File xuất ra" title={STATS_EXAMPLE.title.filled} rows={[headers, ...STATS_EXAMPLE.forms]} />
       </div>
       <p className={styles.hint}>
-        Hàng có mã của đơn tự nhân lên, mỗi đơn một hàng, giữ màu, viền, cỡ chữ của hàng mẫu. Hàng chỉ có mã của cả file (vd {'{so_don}'},{' '}
-        {'{ngay_xuat}'}) điền một lần. Ô chỉ có một mã số (vd {'{stt}'}) được điền thành số để Excel tính toán được.
+        Hàng có mã của đơn là <b>hàng mẫu</b>: nhân lên mỗi đơn một hàng. Tiêu đề chỉ có mã của cả file nên điền một lần. {'{stt}'} là số đếm
+        1, 2, 3… của hàng, không phải mã đơn.
       </p>
-      <Button className={styles.smallButton} onClick={() => void copyStatsRow(questionTags, toast)}>
-        Sao chép hàng mẫu để dán vào Excel
+      {/* File mẫu dựng sẵn: đầu cột và mã mọi câu hỏi của loại đơn đang soạn */}
+      <Button className={styles.smallButton} disabled={creating} onClick={() => void downloadStarter()}>
+        {creating ? 'Đang tạo…' : 'Tải file mẫu có sẵn'}
       </Button>
     </div>
   );
@@ -459,64 +469,78 @@ function TagGroup({ title, purpose, children }: { title: string; purpose: Export
 
 /**
  * Mục "Cách tạo một mẫu" (thu gọn được, mặc định đóng); đặt ngay trên khung chọn file.
- * @param props  xem ExportTagGuideProps
- * @returns      mục thu gọn
+ * @param purpose       mẫu xuất file đơn hay thống kê
+ * @param sections      các phần của loại đơn đang soạn (mẫu Excel dựng file mẫu có sẵn)
+ * @param formTypeName  tên loại đơn đang soạn (tên file mẫu có sẵn)
+ * @returns             mục thu gọn
  */
-export function ExportHowTo({ purpose, questionTags }: ExportTagGuideProps) {
+export function ExportHowTo({ purpose, sections, formTypeName }: { purpose: ExportTemplatePurpose; sections: readonly FormSection[]; formTypeName: string }) {
   return (
     <details className={styles.guide}>
       <summary>Cách tạo một mẫu</summary>
-      {purpose === 'form' ? <FormHowTo /> : <StatsHowTo questionTags={questionTags} />}
+      {purpose === 'form' ? <FormHowTo /> : <StatsHowTo sections={sections} formTypeName={formTypeName} />}
     </details>
   );
 }
 
 /**
+ * Các nhóm mã của Bảng mã.
+ * Mẫu Excel có thêm nhóm "Tiêu đề file" (mã chỉ điền một lần) và {stt} (số đếm của hàng) ở nhóm Thông tin đơn; câu hỏi dạng bảng gộp vào một ô.
+ * @param props  xem ExportTagGuideProps
+ * @returns      các nhóm mã thu gọn được
+ */
+function TagGroups({ purpose, questionTags }: ExportTagGuideProps) {
+  return (
+    <div className={styles.tagGroups}>
+      {/* Mẫu Excel: mã chỉ điền một lần cho cả file */}
+      {purpose === 'stats' && (
+        <TagGroup title="Tiêu đề file (điền một lần, không lặp theo đơn)" purpose={purpose}>
+          {STATS_SUMMARY_TAGS.map(({ tag, label }) => (
+            <TagRow key={tag} tag={tag} meaning={label} />
+          ))}
+        </TagGroup>
+      )}
+      {questionTags.length ? (
+        <TagGroup title="Câu trả lời trong đơn" purpose={purpose}>
+          {/* khóa theo vị trí: lúc đang soạn hai câu có thể trùng mã (báo lỗi khi Lưu) */}
+          {questionTags.map((question, index) =>
+            purpose === 'form' ? <QuestionTagRows key={index} question={question} /> : <StatsQuestionTagRows key={index} question={question} />,
+          )}
+        </TagGroup>
+      ) : (
+        <details className={styles.tagGroup}>
+          <summary>Câu trả lời trong đơn</summary>
+          <p className={styles.hint}>Loại đơn chưa có câu hỏi.</p>
+        </details>
+      )}
+      {COMMON_EXPORT_TAG_GROUPS.map((group) => (
+        <TagGroup key={group.title} title={group.title} purpose={purpose}>
+          {/* Mẫu Excel: {stt} đứng đầu nhóm có mã đơn */}
+          {purpose === 'stats' && group.tags.some(({ tag }) => tag === 'ma_don') && (
+            <TagRow tag={ROW_NUMBER_TAG} meaning="Số thứ tự hàng (1, 2, 3…), không phải mã đơn" />
+          )}
+          {group.tags.map(({ tag, label }) => (
+            <TagRow key={tag} tag={tag} meaning={label} />
+          ))}
+        </TagGroup>
+      ))}
+    </div>
+  );
+}
+
+/**
  * Mục "Bảng mã" (các nhóm mã thu gọn được, mặc định đóng).
- * Mẫu Excel có thêm nhóm "Cả file" (mã chỉ điền một lần, {stt} là thứ tự của đơn); câu hỏi dạng bảng gộp vào một ô.
  * @param props  xem ExportTagGuideProps
  * @returns      mục Bảng mã
  */
 export function ExportTagGuide({ purpose, questionTags }: ExportTagGuideProps) {
   return (
-    <>
-      <div className={styles.block}>
-        <div className={styles.blockHead}>
-          <h3>Bảng mã</h3>
-        </div>
-        <p className={styles.hint}>Bấm vào mã để sao chép, rồi dán vào file {APP_NAME[purpose]}.</p>
-        <div className={styles.tagGroups}>
-          {/* Mẫu Excel: mã của cả file và số thứ tự đơn */}
-          {purpose === 'stats' && (
-            <TagGroup title="Cả file" purpose={purpose}>
-              <TagRow tag={ROW_NUMBER_TAG} meaning="Số thứ tự của đơn trong file (đặt ở hàng mẫu)" />
-              {STATS_SUMMARY_TAGS.map(({ tag, label }) => (
-                <TagRow key={tag} tag={tag} meaning={label} />
-              ))}
-            </TagGroup>
-          )}
-          {questionTags.length ? (
-            <TagGroup title="Câu trả lời trong đơn" purpose={purpose}>
-              {/* khóa theo vị trí: lúc đang soạn hai câu có thể trùng mã (báo lỗi khi Lưu) */}
-              {questionTags.map((question, index) =>
-                purpose === 'form' ? <QuestionTagRows key={index} question={question} /> : <StatsQuestionTagRows key={index} question={question} />,
-              )}
-            </TagGroup>
-          ) : (
-            <details className={styles.tagGroup}>
-              <summary>Câu trả lời trong đơn</summary>
-              <p className={styles.hint}>Loại đơn chưa có câu hỏi.</p>
-            </details>
-          )}
-          {COMMON_EXPORT_TAG_GROUPS.map((group) => (
-            <TagGroup key={group.title} title={group.title} purpose={purpose}>
-              {group.tags.map(({ tag, label }) => (
-                <TagRow key={tag} tag={tag} meaning={label} />
-              ))}
-            </TagGroup>
-          ))}
-        </div>
+    <div className={styles.block}>
+      <div className={styles.blockHead}>
+        <h3>Bảng mã</h3>
       </div>
-    </>
+      <p className={styles.hint}>Bấm vào mã để sao chép, rồi dán vào file {APP_NAME[purpose]}.</p>
+      <TagGroups purpose={purpose} questionTags={questionTags} />
+    </div>
   );
 }

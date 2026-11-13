@@ -10,7 +10,7 @@ import type { Cell, Row, Workbook, Worksheet } from 'exceljs';
 import { EXPORT_MESSAGES, type ExportTemplateCheck, type ExportTemplatePurpose } from '../api-contract/exports';
 import type { FormSection } from '../aux-schema/form-types--sections';
 import { openDocx } from './exports--docx';
-import { FORM_COUNT_TAG, ROW_NUMBER_TAG, STATS_SUMMARY_TAGS, columnTagOwners, knownExportTags, type ExportData } from './exports--tags';
+import { FORM_COUNT_TAG, ROW_NUMBER_TAG, STATS_SUMMARY_TAGS, columnTagOwners, knownExportTags, questionExportTags, type ExportData } from './exports--tags';
 
 /** Nội dung file: ArrayBuffer (trình duyệt) hoặc Buffer / Uint8Array (Node). */
 export type XlsxBytes = ArrayBuffer | Uint8Array;
@@ -230,6 +230,81 @@ export function knownStatsTags(sections: readonly FormSection[]): Set<string> {
   known.add(ROW_NUMBER_TAG);
   known.add(FORM_COUNT_TAG);
   return known;
+}
+
+/** Một cột của file mẫu dựng sẵn: chữ ở đầu cột và mã ở hàng mẫu. */
+export interface StatsStarterColumn {
+  header: string;
+  tag: string;
+}
+
+/** Các cột chung đứng đầu file mẫu dựng sẵn; sau đó là từng câu hỏi của loại đơn. */
+export const STATS_STARTER_COMMON_COLUMNS: readonly StatsStarterColumn[] = [
+  { header: 'STT', tag: ROW_NUMBER_TAG },
+  { header: 'Mã đơn', tag: 'ma_don' },
+  { header: 'Họ và tên', tag: 'ho_ten' },
+  { header: 'MSSV', tag: 'mssv' },
+  { header: 'Lớp', tag: 'lop' },
+  { header: 'Ngày nộp', tag: 'ngay_nop' },
+  { header: 'Trạng thái', tag: 'trang_thai' },
+];
+
+/**
+ * Các cột của file mẫu dựng sẵn: cột chung, rồi mỗi câu hỏi một cột; câu dạng bảng có thêm cột tổng của các cột tính tổng.
+ * @param sections  các phần của loại đơn
+ * @returns         các cột theo thứ tự
+ */
+export function statsStarterColumns(sections: readonly FormSection[]): StatsStarterColumn[] {
+  const questionColumns = questionExportTags(sections).flatMap((question) => [
+    { header: question.label, tag: question.tag },
+    ...(question.columns ?? []).filter((column) => column.sum).map((column) => ({ header: `Tổng ${column.label.toLowerCase()}`, tag: `tong_${column.tag}` })),
+  ]);
+  return [...STATS_STARTER_COMMON_COLUMNS, ...questionColumns];
+}
+
+/**
+ * Dựng sẵn một file mẫu thống kê để người soạn tải về rồi sửa:
+ * hàng 1–2 tiêu đề (mã của cả file, điền một lần), hàng 4 đầu cột, hàng 5 hàng mẫu (mã của đơn, nhân lên mỗi đơn một hàng).
+ * @param sections  các phần của loại đơn
+ * @returns         nội dung file .xlsx
+ */
+export async function createStatsStarterXlsx(sections: readonly FormSection[]): Promise<ArrayBuffer> {
+  const ExcelJS = await loadExcelJs();
+  const workbook = new ExcelJS.Workbook();
+  const sheet = workbook.addWorksheet('Thống kê', { views: [{ state: 'frozen', ySplit: 4 }] });
+  const columns = statsStarterColumns(sections);
+  const border = { style: 'thin', color: { argb: 'FFBFBFBF' } } as const;
+  const cellBorder = { top: border, left: border, bottom: border, right: border };
+
+  // Tiêu đề: chỉ có mã của cả file nên điền một lần
+  sheet.getCell('A1').value = 'Danh sách đơn {loai_don}';
+  sheet.getCell('A1').font = { bold: true, size: 14 };
+  sheet.getCell('A2').value = 'Ngày xuất: {ngay_xuat} · Số đơn: {so_don}';
+  sheet.getCell('A2').font = { italic: true, color: { argb: 'FF666666' } };
+
+  // Hàng 4 đầu cột, hàng 5 hàng mẫu
+  const headerRow = sheet.getRow(4);
+  const templateRow = sheet.getRow(5);
+  columns.forEach((column, index) => {
+    const headerCell = headerRow.getCell(index + 1);
+    headerCell.value = column.header;
+    headerCell.font = { bold: true };
+    headerCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE8EEF7' } };
+    headerCell.border = cellBorder;
+    headerCell.alignment = { vertical: 'middle', wrapText: true };
+    const templateCell = templateRow.getCell(index + 1);
+    templateCell.value = `{${column.tag}}`;
+    templateCell.border = cellBorder;
+    templateCell.alignment = { vertical: 'top', wrapText: true };
+  });
+
+  // Độ rộng cột theo chữ ở đầu cột và mã, trong khoảng 6–40
+  columns.forEach((column, index) => {
+    sheet.getColumn(index + 1).width = Math.min(40, Math.max(6, column.header.length, column.tag.length + 2) + 2);
+  });
+
+  const written = await workbook.xlsx.writeBuffer();
+  return new Uint8Array(written as ArrayBuffer).slice().buffer;
 }
 
 /**

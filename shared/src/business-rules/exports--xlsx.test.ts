@@ -1,7 +1,7 @@
 import ExcelJS from 'exceljs';
 import { describe, expect, test } from 'vitest';
 import { FormSectionSchema } from '../aux-schema/form-types--sections';
-import { checkXlsxTemplate, isReadableXlsx, renderXlsxTemplate } from './exports--xlsx';
+import { checkXlsxTemplate, createStatsStarterXlsx, isReadableXlsx, renderXlsxTemplate } from './exports--xlsx';
 
 /** Loại đơn thử: một câu chữ, một bảng có cột tính tổng. */
 const sections = [
@@ -70,6 +70,24 @@ describe('renderXlsxTemplate', () => {
   test('không có đơn nào thì bỏ hàng mẫu', async () => {
     const sheet = await readSheet(await renderXlsxTemplate(await makeTemplate(['{ma_don}']), [], { so_don: 0 }));
     expect(sheet.getCell('A3').value).toBe('Tổng: 0 đơn');
+  });
+});
+
+describe('createStatsStarterXlsx', () => {
+  test('file mẫu dựng sẵn có tiêu đề, đầu cột, hàng mẫu đủ câu hỏi; kiểm tra không có mã sai; xuất được', async () => {
+    const starter = await createStatsStarterXlsx(sections);
+    const sheet = await readSheet(starter);
+    expect(sheet.getCell('A1').value).toBe('Danh sách đơn {loai_don}');
+    expect(sheet.getRow(4).values).toEqual([undefined, 'STT', 'Mã đơn', 'Họ và tên', 'MSSV', 'Lớp', 'Ngày nộp', 'Trạng thái', 'Lý do', 'Môn', 'Tổng số tín chỉ']);
+    expect(sheet.getCell('J5').value).toBe('{tong_so_tin_chi}');
+
+    const check = await checkXlsxTemplate(starter, sections);
+    expect(check.unknown).toEqual([]);
+    expect(check.error).toBe('');
+
+    const filled = await readSheet(await renderXlsxTemplate(starter, [{ ma_don: 'A-1' }, { ma_don: 'A-2' }], { so_don: 2, loai_don: 'X', ngay_xuat: '13/11/2026' }));
+    expect(filled.getCell('A2').value).toBe('Ngày xuất: 13/11/2026 · Số đơn: 2');
+    expect([filled.getCell('B5').value, filled.getCell('B6').value]).toEqual(['A-1', 'A-2']);
   });
 });
 

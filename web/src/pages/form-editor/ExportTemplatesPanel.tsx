@@ -49,7 +49,7 @@ export const PANEL_TEXT: Record<ExportTemplatePurpose, { title: string; intro: s
   },
   stats: {
     title: 'Mẫu xuất file thống kê',
-    intro: 'File Excel có chèn mã. Bấm “Xuất” ở một mẫu để nhận file Excel có mọi đơn của loại đơn này, mỗi đơn một hàng.',
+    intro: 'File Excel có một hàng mẫu chứa mã. Khi xuất, hàng mẫu nhân lên thành mỗi đơn một hàng.',
     dropHint: 'Chỉ nhận file Excel .xlsx — bấm Lưu để tải lên',
   },
 };
@@ -167,7 +167,7 @@ export function ExportTemplatesPanel({
           changes={changes}
           onChangesChange={onChangesChange}
           saving={saving}
-          howTo={<ExportHowTo purpose={purpose} questionTags={questionTags} />}
+          howTo={<ExportHowTo purpose={purpose} sections={draft.sections} formTypeName={draft.name} />}
         />
         <ExportTagGuide purpose={purpose} questionTags={questionTags} />
       </div>
