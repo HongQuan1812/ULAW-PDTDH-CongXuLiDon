@@ -4,7 +4,7 @@ import Docxtemplater from 'docxtemplater';
 import PizZip from 'pizzip';
 import type { ExportTemplateCheck } from '../api-contract/exports';
 import type { FormSection } from '../aux-schema/form-types--sections';
-import { columnTagOwners, knownExportTags, type ExportData } from './exports--tags';
+import { ROW_NUMBER_TAG, columnTagOwners, knownExportTags, questionExportTags, type ExportData, type QuestionExportTag } from './exports--tags';
 
 /** Nội dung file: ArrayBuffer (trình duyệt) hoặc Buffer / Uint8Array (Node). */
 export type DocxBytes = ArrayBuffer | Uint8Array;
@@ -115,4 +115,78 @@ export function renderDocxTemplate(bytes: DocxBytes, exportData: ExportData): Ar
   document.render(exportData);
   // Nén lại như file Word thường (mặc định PizZip không nén, file nặng gấp nhiều lần)
   return document.getZip().generate({ type: 'arraybuffer', compression: 'DEFLATE' });
+}
+
+/* ---------- File mẫu dựng sẵn ---------- */
+
+/** Chữ thoát kí tự đặc biệt của XML. */
+function escapeXml(text: string): string {
+  return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+/**
+ * Một đoạn văn của file Word; mã {...} luôn nằm trong một đoạn chữ để Word không tách mã.
+ * @param runs  các đoạn chữ: chữ và có in đậm hay không
+ * @param size  cỡ chữ theo nửa điểm (28 = 14pt); bỏ trống = cỡ mặc định
+ * @returns     XML đoạn văn
+ */
+function paragraphXml(runs: ReadonlyArray<{ text: string; bold?: boolean }>, size?: number): string {
+  const runsXml = runs
+    .map(({ text, bold }) => `<w:r><w:rPr>${bold ? '<w:b/>' : ''}${size ? `<w:sz w:val="${size}"/>` : ''}</w:rPr><w:t xml:space="preserve">${escapeXml(text)}</w:t></w:r>`)
+    .join('');
+  return `<w:p>${runsXml}</w:p>`;
+}
+
+/**
+ * Bảng có viền: một hàng đầu cột và một hàng mã; hàng mã mở vòng lặp ở ô đầu và đóng ở ô cuối nên nhân lên mỗi dòng của câu trả lời.
+ * @param question  câu hỏi dạng bảng
+ * @returns         XML bảng
+ */
+function loopTableXml(question: QuestionExportTag): string {
+  const columns = question.columns ?? [];
+  const cell = (text: string, bold = false) => `<w:tc><w:tcPr><w:tcW w:w="0" w:type="auto"/></w:tcPr>${paragraphXml([{ text, bold }])}</w:tc>`;
+  const headerRow = `<w:tr>${['STT', ...columns.map((column) => column.label)].map((label) => cell(label, true)).join('')}</w:tr>`;
+  const loopCells = [`{#${question.tag}}{${ROW_NUMBER_TAG}}`, ...columns.map((column, index) => `{${column.tag}}${index === columns.length - 1 ? `{/${question.tag}}` : ''}`)];
+  const loopRow = `<w:tr>${loopCells.map((text) => cell(text)).join('')}</w:tr>`;
+  const border = (side: string) => `<w:${side} w:val="single" w:sz="4" w:space="0" w:color="808080"/>`;
+  const borders = `<w:tblBorders>${['top', 'left', 'bottom', 'right', 'insideH', 'insideV'].map(border).join('')}</w:tblBorders>`;
+  return `<w:tbl><w:tblPr><w:tblW w:w="5000" w:type="pct"/>${borders}</w:tblPr>${headerRow}${loopRow}</w:tbl>`;
+}
+
+/**
+ * Dựng sẵn một file Word mẫu để người soạn tải về rồi sửa: tiêu đề, thông tin người nộp, thông tin đơn,
+ * rồi mỗi câu hỏi một dòng "tên câu hỏi: {mã}"; câu hỏi dạng bảng là bảng có vòng lặp.
+ * @param sections  các phần của loại đơn
+ * @returns         nội dung file .docx
+ */
+export function createFormStarterDocx(sections: readonly FormSection[]): ArrayBuffer {
+  const labelLine = (label: string, tag: string) => paragraphXml([{ text: `${label}: `, bold: true }, { text: `{${tag}}` }]);
+  const body = [
+    paragraphXml([{ text: '{loai_don}', bold: true }], 32),
+    paragraphXml([{ text: 'Mã đơn: {ma_don} · Ngày nộp: {ngay_nop}' }]),
+    labelLine('Họ và tên', 'ho_ten'),
+    labelLine('MSSV', 'mssv'),
+    labelLine('Lớp', 'lop'),
+    ...questionExportTags(sections).flatMap((question) =>
+      question.columns
+        ? [paragraphXml([{ text: `${question.label}:`, bold: true }]), loopTableXml(question), paragraphXml([])]
+        : [labelLine(question.label, question.tag)],
+    ),
+  ].join('');
+  const documentXml =
+    '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+    `<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>${body}<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1134" w:right="1134" w:bottom="1134" w:left="1134" w:header="708" w:footer="708" w:gutter="0"/></w:sectPr></w:body></w:document>`;
+
+  // Ba phần tối thiểu của một file .docx
+  const zip = new PizZip();
+  zip.file(
+    '[Content_Types].xml',
+    '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>',
+  );
+  zip.file(
+    '_rels/.rels',
+    '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>',
+  );
+  zip.file('word/document.xml', documentXml);
+  return zip.generate({ type: 'arraybuffer', compression: 'DEFLATE' });
 }

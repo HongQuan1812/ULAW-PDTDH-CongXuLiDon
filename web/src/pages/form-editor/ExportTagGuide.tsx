@@ -10,7 +10,9 @@ import {
   COMMON_EXPORT_TAG_GROUPS,
   ROW_NUMBER_TAG,
   STATS_SUMMARY_TAGS,
+  DOCX_CONTENT_TYPE,
   XLSX_CONTENT_TYPE,
+  createFormStarterDocx,
   createStatsStarterXlsx,
   type ExportTemplatePurpose,
   type FormSection,
@@ -329,11 +331,13 @@ function SheetExample({ label, title, rows }: { label: string; title: string; ro
 /**
  * Tên file mẫu dựng sẵn, theo tên loại đơn; bỏ các kí tự không dùng được trong tên file.
  * @param formTypeName  tên loại đơn đang soạn
- * @returns             tên file .xlsx
+ * @param prefix        phần đầu tên file, vd "Mẫu thống kê"
+ * @param extension     đuôi file
+ * @returns             tên file
  */
-function starterFileName(formTypeName: string): string {
+function starterFileName(formTypeName: string, prefix: string, extension: 'xlsx' | 'docx'): string {
   const safeName = formTypeName.replace(/[\\/:*?"<>|]/g, '').trim();
-  return `Mẫu thống kê${safeName ? ` - ${safeName}` : ''}.xlsx`;
+  return `${prefix}${safeName ? ` - ${safeName}` : ''}.${extension}`;
 }
 
 /**
@@ -352,7 +356,7 @@ function StatsHowTo({ sections, formTypeName }: { sections: readonly FormSection
     setCreating(true);
     try {
       const content = await createStatsStarterXlsx(sections);
-      saveToDevice(new Blob([content], { type: XLSX_CONTENT_TYPE }), starterFileName(formTypeName));
+      saveToDevice(new Blob([content], { type: XLSX_CONTENT_TYPE }), starterFileName(formTypeName, 'Mẫu thống kê', 'xlsx'));
     } catch {
       toast('Không tạo được file mẫu, hãy thử lại.', 'error');
     } finally {
@@ -401,13 +405,24 @@ function StatsHowTo({ sections, formTypeName }: { sections: readonly FormSection
  * Nội dung "Cách tạo một mẫu" của mẫu Word: 3 bước, ví dụ trước / sau theo kiểu định dạng.
  * @returns  nội dung mục
  */
-function FormHowTo() {
+function FormHowTo({ sections, formTypeName }: { sections: readonly FormSection[]; formTypeName: string }) {
+  const toast = useToast();
+
+  /** Dựng file Word mẫu có sẵn theo bản soạn hiện tại rồi tải về máy. */
+  const downloadStarter = () => {
+    try {
+      saveToDevice(new Blob([createFormStarterDocx(sections)], { type: DOCX_CONTENT_TYPE }), starterFileName(formTypeName, 'Mẫu đơn', 'docx'));
+    } catch {
+      toast('Không tạo được file mẫu, hãy thử lại.', 'error');
+    }
+  };
+
   return (
     <div className={styles.guideBody}>
       <ol className={styles.steps}>
         <li>
           <b>Soạn file Word</b>
-          <span>Gõ mã vào chỗ cần điền, lấy mã ở Bảng mã bên dưới.</span>
+          <span>Bấm “Tải file mẫu có sẵn” bên dưới rồi sửa tùy ý, hoặc tự gõ mã vào chỗ cần điền (lấy mã ở Bảng mã).</span>
         </li>
         <li>
           <b>Tải lên</b>
@@ -442,6 +457,10 @@ function FormHowTo() {
       </div>
       {/* giá trị điền vào lấy định dạng của chỗ gõ mã, không tự in đậm */}
       <p className={styles.hint}>Chữ điền vào giữ đúng định dạng của mã trong file mẫu: mã in đậm thì chữ điền vào in đậm, mã cỡ 13 thì chữ cỡ 13.</p>
+      {/* File mẫu dựng sẵn: thông tin người nộp, mã mọi câu hỏi của loại đơn đang soạn */}
+      <Button className={styles.smallButton} onClick={downloadStarter}>
+        Tải file mẫu có sẵn
+      </Button>
     </div>
   );
 }
@@ -478,7 +497,7 @@ export function ExportHowTo({ purpose, sections, formTypeName }: { purpose: Expo
   return (
     <details className={styles.guide}>
       <summary>Cách tạo một mẫu</summary>
-      {purpose === 'form' ? <FormHowTo /> : <StatsHowTo sections={sections} formTypeName={formTypeName} />}
+      {purpose === 'form' ? <FormHowTo sections={sections} formTypeName={formTypeName} /> : <StatsHowTo sections={sections} formTypeName={formTypeName} />}
     </details>
   );
 }
