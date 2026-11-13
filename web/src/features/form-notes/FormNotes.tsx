@@ -10,6 +10,7 @@ import { LoadError, loadErrorMessage } from '../../components/LoadError';
 import { RefreshButton } from '../../components/RefreshButton';
 import { RichTextEditor } from '../../components/rich-text/RichTextEditor';
 import { RichTextView } from '../../components/rich-text/RichTextView';
+import { useToast } from '../../components/Toast';
 import { useAuth } from '../auth/useAuth';
 import { formatDateTime } from '../../lib/format';
 import { NoteIcon } from './NoteIcon';
@@ -317,6 +318,7 @@ function NoteItem({ code, note }: { code: string; note: FormNote }) {
   const { editNote, deleteNote } = useFormNoteActions(code);
   const [mode, setMode] = useState<'view' | 'edit' | 'confirmDelete'>('view');
   const [draft, setDraft] = useState<RichTextDoc>(note.content);
+  const toast = useToast();
   const [errorText, setErrorText] = useState<string | null>(null);
   const editable = canEditFormNote({ id: user.id, role }, note);
 
@@ -336,13 +338,13 @@ function NoteItem({ code, note }: { code: string; note: FormNote }) {
     }
     editNote.mutate(
       { noteId: note.id, content: draft },
-      { onSuccess: () => setMode('view'), onError: (error) => setErrorText(error.message || SEND_FAILED_TEXT) },
+      { onSuccess: () => setMode('view'), onError: (error) => toast(error.message || SEND_FAILED_TEXT, 'error') },
     );
   };
 
   /** Xóa sau khi đã hỏi lại. */
   const confirmDelete = () =>
-    deleteNote.mutate(note.id, { onError: (error) => setErrorText(error.message || SEND_FAILED_TEXT) });
+    deleteNote.mutate(note.id, { onError: (error) => toast(error.message || SEND_FAILED_TEXT, 'error') });
 
   return (
     <article className={styles.note}>
@@ -403,23 +405,21 @@ function NoteItem({ code, note }: { code: string; note: FormNote }) {
 function NoteComposer({ code }: { code: string }) {
   const { addNote } = useFormNoteActions(code);
   const [draft, setDraft] = useState<RichTextDoc>(EMPTY_RICH_TEXT_DOC);
-  const [errorText, setErrorText] = useState<string | null>(null);
+  const toast = useToast();
   const empty = isRichTextEmpty(draft);
 
   /** Gửi ghi chú (trống hoặc đang gửi thì bỏ qua). */
   const send = () => {
     if (empty || addNote.isPending) return;
-    setErrorText(null);
     addNote.mutate(draft, {
       onSuccess: () => setDraft(EMPTY_RICH_TEXT_DOC),
-      onError: (error) => setErrorText(error.message || SEND_FAILED_TEXT),
+      onError: (error) => toast(error.message || SEND_FAILED_TEXT, 'error'),
     });
   };
 
   return (
     <div className={styles.composer} onKeyDownCapture={onModEnter(send)}>
       <RichTextEditor value={draft} onChange={setDraft} label="Ghi chú mới" placeholder="Viết ghi chú…" />
-      {errorText && <p className={styles.error} role="alert">{errorText}</p>}
       <div className={styles.composerFoot}>
         <span className={styles.hint}>Ctrl+Enter để gửi</span>
         <Button variant="primary" onClick={send} disabled={empty || addNote.isPending}>

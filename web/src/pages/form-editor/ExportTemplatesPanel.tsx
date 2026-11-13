@@ -208,11 +208,9 @@ function TemplateList({
   checkDraft: ExportDraftRequest;
 }) {
   const toast = useToast();
-  const rejectedId = useId();
   const [warnings, setWarnings] = useState<Record<string, string>>({});
   const [busyRowId, setBusyRowId] = useState<string | null>(null);
   const [renamingId, setRenamingId] = useState<string | null>(null);
-  const [rejectedMessages, setRejectedMessages] = useState<string[]>([]);
   const [previewedFile, setPreviewedFile] = useState<PreviewFile | null>(null);
   // Bản soạn đã dùng để kiểm tra mã mỗi mẫu, để không kiểm tra lại khi chưa có gì đổi; lượt kiểm tra đã chạy
   const checkedDrafts = useRef(new Map<string, ExportDraftRequest>());
@@ -253,7 +251,7 @@ function TemplateList({
 
   /**
    * Thêm các file vừa chọn / kéo thả làm mẫu mới (chưa lưu): bỏ file sai loại (khung mẫu đơn nhận .docx, khung thống kê nhận .xlsx)
-   * và file trùng tên với mẫu cùng khung đang chờ lưu (ghi lí do).
+   * và file trùng tên với mẫu cùng khung đang chờ lưu (báo lí do bằng toast).
    * @param chosenFiles  file từ hộp chọn file hoặc kéo thả
    */
   const addFiles = (chosenFiles: FileList) => {
@@ -264,7 +262,7 @@ function TemplateList({
       else if (added.some((staged) => staged.purpose === purpose && staged.file.name === file.name)) messages.push(EXPORT_MESSAGES.duplicateFile(file.name));
       else added.push(stageTemplate(file, purpose));
     });
-    setRejectedMessages(messages);
+    messages.forEach((message) => toast(message, 'error'));
     if (added.length > changes.added.length) onChangesChange({ ...changes, added });
   };
 
@@ -332,16 +330,8 @@ function TemplateList({
               Mã trong file được kiểm theo <b className={styles.versionEmphasis}>Phiên bản {version}</b>
             </>
           }
-          describedBy={rejectedMessages.length ? rejectedId : undefined}
           onFiles={addFiles}
         />
-      )}
-      {rejectedMessages.length > 0 && (
-        <p id={rejectedId} className={styles.rejected} role="alert">
-          {rejectedMessages.map((message) => (
-            <span key={message}>{message}</span>
-          ))}
-        </p>
       )}
 
       {listLoading ? (

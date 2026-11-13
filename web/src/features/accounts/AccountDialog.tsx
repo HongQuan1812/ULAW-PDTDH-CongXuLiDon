@@ -171,7 +171,7 @@ function AccountForm({
       }
       onClose();
     } catch (error) {
-      // Email / CCCD đã có tài khoản (409): báo ngay dưới ô đó; lỗi khác: báo chung phía trên nút
+      // Email / CCCD đã có tài khoản (409): báo ngay dưới ô đó; lỗi khác: hiện toast
       const message = error instanceof Error ? error.message : ACCOUNT_MESSAGES[422];
       if (error instanceof ApiError && error.status === 409) {
         const field = message === ACCOUNT_MESSAGES.emailTaken ? 'email' : 'cccd';
@@ -179,7 +179,7 @@ function AccountForm({
         setFocus(field);
         return;
       }
-      setError('root', { message });
+      toast(message, 'error');
     }
   });
 
@@ -257,12 +257,6 @@ function AccountForm({
           ))}
           {roleLocked && <p className={styles.roleHint}>Bạn không thể tự đổi vai trò của chính mình.</p>}
         </fieldset>
-      )}
-
-      {errors.root?.message && (
-        <p className={styles.formError} role="alert">
-          {errors.root.message}
-        </p>
       )}
 
       {/* Góc dưới bên phải: chưa nhập / chưa sửa thì nút Đóng; đã nhập thì thay bằng Bỏ thay đổi · Tạo tài khoản / Lưu thay đổi */}

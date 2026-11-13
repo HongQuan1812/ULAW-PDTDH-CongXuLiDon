@@ -115,7 +115,6 @@ function EmailSettingsEditor({
   const [selectedStatus, setSelectedStatus] = useState<EmailEventStatus>(EMAIL_EVENT_STATUSES[0]);
   // Chỉ báo lỗi từng ô sau lần bấm Lưu đầu tiên; từ đó lỗi cập nhật ngay khi sửa
   const [showErrors, setShowErrors] = useState(false);
-  const [saveError, setSaveError] = useState<string | null>(null);
 
   const dirty = JSON.stringify(draft) !== JSON.stringify(saved);
   const fieldErrors = showErrors ? validateSettings(draft) : {};
@@ -129,9 +128,8 @@ function EmailSettingsEditor({
       events: current.events.map((event, index) => (index === selectedIndex ? { ...event, ...changes } : event)),
     }));
 
-  // Lưu: còn lỗi thì báo dưới từng ô (và mở tab lúc gửi đầu tiên có lỗi nếu Người gửi không lỗi); lỗi máy chủ báo ở đầu trang
+  // Lưu: còn lỗi thì báo dưới từng ô (và mở tab lúc gửi đầu tiên có lỗi nếu Người gửi không lỗi); lỗi máy chủ hiện toast
   const save = async () => {
-    setSaveError(null);
     const errors = validateSettings(draft);
     if (Object.keys(errors).length > 0) {
       setShowErrors(true);
@@ -146,7 +144,7 @@ function EmailSettingsEditor({
       setShowErrors(false);
       toast(EMAIL_MESSAGES.saved, 'success');
     } catch (error) {
-      setSaveError(error instanceof Error ? error.message : EMAIL_MESSAGES[422]);
+      toast(error instanceof Error ? error.message : EMAIL_MESSAGES[422], 'error');
     }
   };
 
@@ -154,7 +152,6 @@ function EmailSettingsEditor({
   const discardChanges = () => {
     setDraft(saved);
     setShowErrors(false);
-    setSaveError(null);
   };
 
   // Phím ← → trên hàng tab: chuyển sang lúc gửi bên cạnh (vòng lại đầu / cuối)
@@ -271,12 +268,6 @@ function EmailSettingsEditor({
           />
         </div>
       </section>
-
-      {saveError && (
-        <p className={styles.saveError} role="alert">
-          {saveError}
-        </p>
-      )}
 
       {/* Cuối trang: Bỏ thay đổi · Lưu, chỉ hiện khi có thay đổi */}
       {dirty && (

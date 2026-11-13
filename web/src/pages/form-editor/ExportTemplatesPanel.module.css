@@ -41,7 +41,6 @@
 .hint{color:var(--muted);font-size:13px}
 
 /* file bị bỏ khi chọn (không phải .docx, trùng tên), mỗi lí do một dòng */
-.rejected{display:grid;gap:2px;color:var(--danger);font-size:13px}
 /* mẫu đã lưu vừa bấm xóa, chờ Lưu */
 .removedNote{font-size:13px;color:var(--muted)}
 .undo{border:0;background:none;padding:0;font:inherit;color:var(--accent);cursor:pointer;text-decoration:underline}

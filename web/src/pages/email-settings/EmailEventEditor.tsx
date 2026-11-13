@@ -3,6 +3,7 @@
    Lúc gửi đang tắt: phần soạn và xem trước mờ đi và không bấm được, công tắc vẫn bấm được. */
 import { useState, type ReactNode } from 'react';
 import {
+  EMAIL_MESSAGES,
   EMAIL_SAMPLE_RECIPIENT,
   EMAIL_SAMPLE_VALUES,
   SendTestEmailRequestSchema,
@@ -60,7 +61,7 @@ export function EmailEventEditor({ event, eventIndex, sender, senderAddress, fie
   // Lúc gửi đang tắt: làm mờ phần soạn, xem trước (kèm inert để không bấm, không gõ được)
   const dimmedClass = event.enabled ? '' : styles.dimmed;
 
-  /** Gửi thư thử theo bản đang soạn; địa chỉ sai hoặc máy chủ báo lỗi thì báo ngay dưới ô địa chỉ. */
+  /** Gửi thư thử theo bản đang soạn; địa chỉ sai thì báo ngay dưới ô địa chỉ; máy chủ báo lỗi thì hiện toast. */
   const sendTest = async () => {
     setTestError(null);
     const parsed = SendTestEmailRequestSchema.safeParse({ to: testRecipient, sender, subject: event.subject, body: event.body });
@@ -72,7 +73,7 @@ export function EmailEventEditor({ event, eventIndex, sender, senderAddress, fie
       const response = await sendTestEmail.mutateAsync(parsed.data);
       toast(response.message, 'success');
     } catch (error) {
-      setTestError(error instanceof Error ? error.message : null);
+      toast(error instanceof Error ? error.message : EMAIL_MESSAGES[422], 'error');
     }
   };
 

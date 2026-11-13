@@ -60,13 +60,13 @@ function OnboardingForm({ session }: { session: Session }) {
       await updateProfile.mutateAsync(profileInput);
       toast(PROFILE_MESSAGES[200], 'success');
     } catch (error) {
-      // CCCD trùng: báo ngay dưới ô CCCD; lỗi khác: báo chung phía trên nút
+      // CCCD trùng: báo ngay dưới ô CCCD; lỗi khác: hiện toast
       if (error instanceof ApiError && error.status === 409) {
         setError('cccd', { message: error.message });
         setFocus('cccd');
         return;
       }
-      setError('root', { message: error instanceof Error ? error.message : PROFILE_MESSAGES[422] });
+      toast(error instanceof Error ? error.message : PROFILE_MESSAGES[422], 'error');
     }
   });
 
@@ -125,12 +125,6 @@ function OnboardingForm({ session }: { session: Session }) {
               />
             </Field>
           </div>
-
-          {errors.root?.message && (
-            <p className={styles.formError} role="alert">
-              {errors.root.message}
-            </p>
-          )}
 
           <div className={styles.actions}>
             <Button variant="ghost" disabled={logout.isPending} onClick={logout.logOut}>
