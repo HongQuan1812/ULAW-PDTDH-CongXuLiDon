@@ -1,0 +1,15 @@
+# Những thứ không gửi vào lúc build image (docker-compose.prod.yml build từ thư mục gốc).
+# Bỏ node_modules, dist: image tự cài, tự build. Bỏ .env: bí mật không được nằm trong image.
+**/node_modules
+**/dist
+**/coverage
+**/.env
+**/.env.*
+!**/.env.example
+.git
+.claude
+artifact
+docs
+api/uploads
+api/src/generated
+docker/nginx/certs

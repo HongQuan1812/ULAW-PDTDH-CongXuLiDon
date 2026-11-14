@@ -16,6 +16,9 @@ coverage/
 # Uploads (ổ đĩa máy chủ)
 api/uploads/
 
+# Chứng chỉ HTTPS cho nginx (docker-compose.prod.yml): khóa riêng không lên git
+docker/nginx/certs/
+
 # Test
 playwright-report/
 test-results/
