@@ -57,7 +57,7 @@ Làm từng nhóm API. Xong nhóm nào thì chuyển nhóm đó sang API thật,
 Chưa làm, chờ thông tin từ bên ngoài:
 - OAuth client thật cho máy chủ: tạo ở Google Cloud Console bằng tài khoản của trường, khai báo tên miền thật (cách tạo: README.md).
 - `student-directory` bản thật: cần cách kết nối database sinh viên của trường. Đã có trong `DEMO_APIS`: bản giả `dev-student-directory` đọc bảng mẫu, bản thật hiện `throw realApiNotBuilt(...)` (501); làm xong thì thay dòng đó bằng kết nối database trường.
-- Triển khai lên máy chủ (bỏ quyền `CREATEDB` của user dự án, dùng `prisma migrate deploy`; nhập cấu hình gửi thư của hộp thư chính thức nếu không dùng Gmail đang thử).
+- Triển khai lên máy chủ (bỏ quyền `CREATEDB` của user dự án, dùng `prisma migrate deploy`; `prisma db seed` với `APP_ENV` trống chỉ thêm Admin ban đầu (`INITIAL_ADMINS` trong `shared/src/seed/accounts.ts`) và cấu hình email mặc định, không xóa dữ liệu; nhập cấu hình gửi thư của hộp thư chính thức nếu không dùng Gmail đang thử).
 
 ### Làm một nhóm API
 

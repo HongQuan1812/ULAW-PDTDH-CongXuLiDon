@@ -24,6 +24,12 @@ export const seedAccount = (name: string, email: string, role: RoleId): SeedAcco
   mainStudentId: null,
 });
 
+/** Admin có sẵn khi bắt đầu chạy thật (người thật): seed bản thật chỉ nạp các tài khoản này, để có người phân quyền cho người khác.
+    Seed dev không có. Thêm Admin ban đầu thì thêm vào đây, id đặt riêng cho dễ nhận ra (tài khoản do Google tạo có id tk-<ngẫu nhiên>). */
+export const INITIAL_ADMINS: readonly { id: string; name: string; email: string }[] = [
+  { id: 'the-owner', name: 'Lê Hồng Quân', email: 'lhquan@hcmulaw.edu.vn' },
+];
+
 /* Tài khoản ban đầu, khóa theo id. Họ tên, email, số liệu tổng hợp, không phải người thật.
    - sv-1, cb-1, cb-3: tài khoản đăng nhập thử của 3 vai trò (DEMO_USER_IDS). sv-1 chưa bổ sung thông tin (để thấy màn Bổ sung thông tin
      lần đầu); cb-1, cb-3 có sẵn CCCD (để thử báo trùng CCCD).

@@ -1,10 +1,13 @@
-/* Dữ liệu mẫu cho database: cùng nguồn với API giả (shared/src/seed), nên cùng id người dùng, cùng mã đơn.
-   Chạy: pnpm --filter api prisma db seed. Xóa sạch dữ liệu cũ rồi nạp lại, chỉ dùng khi phát triển. */
+/* Nạp dữ liệu ban đầu cho database. Chạy: pnpm --filter api exec prisma db seed. Nạp gì tùy APP_ENV (api/.env):
+   - dev: xóa sạch dữ liệu cũ rồi nạp dữ liệu mẫu, cùng nguồn với API giả (shared/src/seed), nên cùng id người dùng, cùng mã đơn.
+   - bỏ trống (bản thật): không xóa gì; chỉ thêm Admin ban đầu (INITIAL_ADMINS) và cấu hình email mặc định nếu chưa có.
+     Chạy lại bao nhiêu lần cũng được. */
 import { existsSync } from 'node:fs';
 import { PrismaPg } from '@prisma/adapter-pg';
 import {
   EMAIL_SETTINGS_SEED,
   EMAIL_SETTINGS_SEED_UPDATE,
+  INITIAL_ADMINS,
   SAMPLE_EXPORT_TEMPLATE_BASE64,
   SEED_ACCOUNTS,
   SEED_EXPORT_TEMPLATE,
@@ -151,13 +154,45 @@ async function seedAll(prisma: PrismaClient): Promise<void> {
   });
 }
 
+/**
+ * Bản thật: không xóa gì. Admin ban đầu: chưa có thì tạo với id trong INITIAL_ADMINS; đã có (vd đã đăng nhập Google trước) thì nâng lên Admin,
+ * giữ id cũ.
+ * Cấu hình email: chưa có thì tạo bản mặc định (trang Cấu hình email cần có sẵn), đã có thì giữ nguyên.
+ * @param prisma  Prisma Client
+ */
+async function seedProduction(prisma: PrismaClient): Promise<void> {
+  const adminIds: string[] = [];
+  for (const admin of INITIAL_ADMINS) {
+    const user = await prisma.user.upsert({
+      where: { email: admin.email },
+      update: { role: 'admin' },
+      create: { id: admin.id, email: admin.email, name: admin.name, role: 'admin', completed: true },
+    });
+    adminIds.push(user.id);
+    console.log(`Admin: ${admin.email} (id ${user.id})`);
+  }
+
+  const emailSettings = await prisma.emailSettings.findUnique({ where: { id: 1 } });
+  if (!emailSettings) {
+    await prisma.emailSettings.create({
+      data: { id: 1, settings: EMAIL_SETTINGS_SEED as unknown as Prisma.InputJsonValue, updatedAt: new Date(), updatedById: adminIds[0]! },
+    });
+    console.log('Đã tạo cấu hình email mặc định.');
+  }
+}
+
 const prisma = new PrismaClient({ adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL }) });
 try {
-  // Dữ liệu mẫu phải thỏa mọi luật mới được nạp; kiểm tra trước khi xóa dữ liệu cũ để không mất dữ liệu vô ích
-  assertSeedValid();
-  await clearAll(prisma);
-  await seedAll(prisma);
-  console.log('Đã nạp dữ liệu mẫu.');
+  if (process.env.APP_ENV === 'dev') {
+    // Dữ liệu mẫu phải thỏa mọi luật mới được nạp; kiểm tra trước khi xóa dữ liệu cũ để không mất dữ liệu vô ích
+    assertSeedValid();
+    await clearAll(prisma);
+    await seedAll(prisma);
+    console.log('Đã nạp dữ liệu mẫu (APP_ENV=dev).');
+  } else {
+    await seedProduction(prisma);
+    console.log('Đã nạp dữ liệu ban đầu của bản thật (không xóa dữ liệu cũ).');
+  }
 } finally {
   await prisma.$disconnect();
 }
