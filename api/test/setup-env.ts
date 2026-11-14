@@ -5,6 +5,7 @@ import { loadApiEnvFile } from '../src/config/app-config';
 
 loadApiEnvFile();
 process.env['SMTP_HOST'] = '';
-// Mặc định dùng bản giả (đăng nhập thử); test đăng nhập Google tự tắt
+// Mặc định dùng bản giả (đăng nhập thử), không phụ thuộc api/.env của máy đang chạy; test đăng nhập Google tự tắt
 process.env['ENABLE_DEMO_APIS'] = 'true';
+process.env['ALWAYS_REAL_APIS'] = '';
 process.env['DEV_EMAIL_REDIRECT_TO'] = '';

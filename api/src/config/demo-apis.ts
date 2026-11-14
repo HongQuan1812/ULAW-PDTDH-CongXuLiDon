@@ -1,6 +1,7 @@
 /* API giả của backend. Quy ước: tên có tiền tố "dev-" là bản giả, vd dev-login, dev-student-directory
    (TypeScript báo lỗi nếu tên trong DEMO_APIS thiếu "dev-"). Code của bản giả bọc trong JUST FOR DEMO.
-   ENABLE_DEMO_APIS=true thì dùng bản giả, trừ các API trong ALWAYS_REAL_APIS; ENABLE_DEMO_APIS=false thì mọi API dùng bản thật.
+   ENABLE_DEMO_APIS=true thì dùng bản giả, trừ các API trong ALWAYS_REAL_APIS; ENABLE_DEMO_APIS=false thì mọi API dùng bản thật
+   (cả hai biến nằm trong api/.env, mỗi máy đặt riêng).
    Bản thật chưa được phát triển thì request gọi tới báo lỗi 501 (realApiNotBuilt); backend vẫn chạy bình thường. */
 import { COMMON_MESSAGES } from '@ulaw/shared';
 import { ApiException } from '../common/api-exception';
@@ -14,17 +15,14 @@ export const DEMO_APIS = [
 ] as const satisfies readonly `dev-${string}`[];
 export type DemoApi = (typeof DEMO_APIS)[number];
 
-/** Các API giả không dùng, thay bằng bản thật, kể cả khi ENABLE_DEMO_APIS=true. Vd ['dev-login'] để thử Google thật mà các API khác vẫn giả. */
-export const ALWAYS_REAL_APIS: ReadonlySet<DemoApi> = new Set<DemoApi>([]);
-
 /**
  * Một API dùng bản giả hay bản thật.
  * @param demoApisEnabled  ENABLE_DEMO_APIS = "true"
  * @param api              tên API giả, vd 'dev-login'
- * @param alwaysRealApis   các API luôn dùng bản thật (mặc định ALWAYS_REAL_APIS)
+ * @param alwaysRealApis   ALWAYS_REAL_APIS: các API luôn dùng bản thật, kể cả khi bật bản giả
  * @returns                true: dùng bản giả · false: dùng bản thật
  */
-export function usesDemoApi(demoApisEnabled: boolean, api: DemoApi, alwaysRealApis: ReadonlySet<DemoApi> = ALWAYS_REAL_APIS): boolean {
+export function usesDemoApi(demoApisEnabled: boolean, api: DemoApi, alwaysRealApis: ReadonlySet<DemoApi>): boolean {
   return demoApisEnabled && !alwaysRealApis.has(api);
 }
 

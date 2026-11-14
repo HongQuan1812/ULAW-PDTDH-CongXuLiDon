@@ -27,10 +27,10 @@ Mỗi bước làm trên một nhánh riêng. Xong thì tạo Pull Request vào 
 ### API giả (backend giả, MSW)
 
 - Frontend gọi `fetch('/api/...')` như thật. MSW chặn lại và trả dữ liệu giả, nên trang không biết mình đang dùng API giả.
-- Bật / tắt bằng `VITE_USE_MOCK_BACKEND` trong `web/.env.development`. Biến này chỉ chọn backend giả hay thật; chức năng thử nghiệm do `VITE_APP_ENV` / `APP_ENV` quản (README, mục Biến môi trường).
+- Bật / tắt bằng `VITE_USE_MOCK_BACKEND` trong `web/.env`. Biến này chỉ chọn backend giả hay thật; chức năng thử nghiệm do `VITE_APP_ENV` / `APP_ENV` quản (README, mục Biến môi trường).
 - API giả làm đúng luật nghiệp vụ (chuyển trạng thái, kiểm tra quyền, sinh mã đơn) và trả lỗi như thật (401, 403, 404, 409, 422).
 - Dữ liệu giả nằm trong `web/src/mocks/db.ts`, giữ trong bộ nhớ. Tải lại trang là về ban đầu.
-- Nút Đăng nhập gọi `POST /api/auth/login`; backend quyết định: `ENABLE_DEMO_APIS=true` (và `'dev-login'` không nằm trong `ALWAYS_REAL_APIS`) thì đăng nhập thử theo vai trò gửi kèm (phát cookie phiên thật), còn lại trả đường dẫn sang Google. Backend giả luôn đăng nhập thử. Ô đổi vai trò trong menu cũng gọi `POST /api/auth/login` kèm vai trò. Frontend không biết tên `dev-login`, tên này chỉ có ở backend.
+- Nút Đăng nhập gọi `POST /api/auth/login`; backend quyết định: `ENABLE_DEMO_APIS=true` (và `ALWAYS_REAL_APIS` không có `dev-login`) thì đăng nhập thử theo vai trò gửi kèm (phát cookie phiên thật), còn lại trả đường dẫn sang Google. Backend giả luôn đăng nhập thử. Ô đổi vai trò trong menu cũng gọi `POST /api/auth/login` kèm vai trò. Frontend không biết tên `dev-login`, tên này chỉ có ở backend.
 
 ## Giai đoạn 2: Backend (đang làm)
 
@@ -70,7 +70,7 @@ Chưa làm, chờ thông tin từ bên ngoài:
 
 ### Chạy giả và thật cùng lúc
 
-- `REAL_BACKEND_GROUPS` trong `web/src/mocks/realBackendGroups.ts` là danh sách các nhóm tới backend thật khi đang bật backend giả, vd `['health', 'auth', 'profile']`. MSW bỏ qua các nhóm này, Vite chuyển request sang backend.
+- `VITE_REAL_BACKEND_GROUPS` trong `web/.env` là danh sách các nhóm tới backend thật khi đang bật backend giả, vd `health,auth,profile`. MSW bỏ qua các nhóm này, Vite chuyển request sang backend.
 - Backend seed từ cùng dữ liệu mẫu với API giả (cùng id người dùng, cùng mã đơn), nên nhóm giả và nhóm thật nói về cùng một người, cùng một lá đơn.
 - Khi nhóm `auth` đã thật: API giả lấy người đang đăng nhập từ API thật, không tự giữ phiên riêng.
 - Lỗi ngẫu nhiên (`VITE_MOCK_BACKEND_FAILURE_RATE`) chỉ áp dụng cho các nhóm còn giả.

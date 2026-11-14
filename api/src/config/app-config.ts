@@ -2,7 +2,7 @@
 import { existsSync } from 'node:fs';
 import { Injectable } from '@nestjs/common';
 import { z } from 'zod';
-import { usesDemoApi, type DemoApi } from './demo-apis';
+import { DEMO_APIS, usesDemoApi, type DemoApi } from './demo-apis';
 
 /** Tệp biến môi trường của backend: api/.env (các lệnh pnpm --filter api chạy trong thư mục api/). */
 const API_ENV_FILE = '.env';
@@ -12,8 +12,14 @@ const AppEnvSchema = z.object({
   // Môi trường: dev (Swagger, thư in ra console, WEB_BASE_URL_DEV, cookie không secure) · bỏ trống: bản thật
   APP_ENV: z.enum(['dev', '']).default(''),
   // Bản giả của API (không liên quan APP_ENV): true: API nào có bản giả thì dùng bản giả (đăng nhập thử theo vai trò, dev-login),
-  // trừ các API trong ALWAYS_REAL_APIS (config/demo-apis.ts) · false / bỏ trống: dùng bản thật (đăng nhập Google)
+  // trừ các API trong ALWAYS_REAL_APIS · false / bỏ trống: dùng bản thật (đăng nhập Google)
   ENABLE_DEMO_APIS: z.enum(['true', 'false', '']).default(''),
+  // Khi bật bản giả: các API vẫn dùng bản thật, cách nhau bằng dấu phẩy, vd dev-login · tên phải có trong DEMO_APIS (config/demo-apis.ts)
+  ALWAYS_REAL_APIS: z
+    .string()
+    .default('')
+    .transform((value) => value.split(',').map((name) => name.trim()).filter(Boolean))
+    .pipe(z.array(z.enum(DEMO_APIS, `chỉ nhận tên trong DEMO_APIS: ${DEMO_APIS.join(', ')}`))),
   API_PORT: z.coerce.number().int().min(1).max(65535).default(3000),
   DATABASE_URL: z.string().startsWith('postgresql://'),
   // Thư mục lưu tệp tải lên trên ổ đĩa máy chủ (tương đối với thư mục chạy backend, hoặc đường dẫn tuyệt đối)
@@ -72,6 +78,8 @@ export class AppConfig {
   readonly isDev: boolean;
   /** true khi ENABLE_DEMO_APIS = "true": API nào có bản giả thì dùng bản giả, trừ ALWAYS_REAL_APIS. Hỏi từng API bằng usesDemoApi(). */
   readonly demoApisEnabled: boolean;
+  /** ALWAYS_REAL_APIS: các API luôn dùng bản thật, kể cả khi bật bản giả. */
+  readonly alwaysRealApis: ReadonlySet<DemoApi>;
   /** Cổng backend nghe, vd 3000. */
   readonly port: number;
   /** Chuỗi kết nối PostgreSQL bằng user của dự án. */
@@ -99,6 +107,7 @@ export class AppConfig {
     }
     this.isDev = parsed.data.APP_ENV === 'dev';
     this.demoApisEnabled = parsed.data.ENABLE_DEMO_APIS === 'true';
+    this.alwaysRealApis = new Set(parsed.data.ALWAYS_REAL_APIS);
     this.port = parsed.data.API_PORT;
     this.databaseUrl = parsed.data.DATABASE_URL;
     this.uploadDir = parsed.data.UPLOAD_DIR;
@@ -121,6 +130,6 @@ export class AppConfig {
    * @returns    true: bản giả (ENABLE_DEMO_APIS=true và API không nằm trong ALWAYS_REAL_APIS) · false: bản thật
    */
   usesDemoApi(api: DemoApi): boolean {
-    return usesDemoApi(this.demoApisEnabled, api);
+    return usesDemoApi(this.demoApisEnabled, api, this.alwaysRealApis);
   }
 }
