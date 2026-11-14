@@ -1,9 +1,9 @@
-/* API giả: làm các API còn giả thỉnh thoảng lỗi 500 (tỉ lệ MOCK_FAILURE_RATE), để thấy giao diện báo lỗi.
+/* API giả: làm các API còn giả thỉnh thoảng lỗi 500 (tỉ lệ MOCK_BACKEND_FAILURE_RATE), để thấy giao diện báo lỗi.
    Đặt đầu danh sách handler: lần nào không lỗi thì không trả gì, MSW chuyển tiếp cho handler thật của API đó.
    Nhóm đã dùng API thật thì không bao giờ bị làm lỗi giả. */
 import { delay, http, type RequestHandler } from 'msw';
 import { COMMON_MESSAGES } from '@ulaw/shared';
-import { MOCK_DELAY_MS, MOCK_FAILURE_RATE, api, apiError } from '../http';
+import { MOCK_DELAY_MS, MOCK_BACKEND_FAILURE_RATE, api, apiError } from '../http';
 
 /**
  * Tìm handler đầu tiên khớp request, theo đúng thứ tự MSW xét.
@@ -33,7 +33,7 @@ export function createRandomFailureHandler(
 ): RequestHandler {
   // Mọi đường dẫn /api/..., mọi phương thức
   return http.all(api('/*'), async ({ request }) => {
-    if (Math.random() >= MOCK_FAILURE_RATE) return undefined;
+    if (Math.random() >= MOCK_BACKEND_FAILURE_RATE) return undefined;
 
     // Chỉ làm lỗi khi request rơi vào một nhóm còn giả
     const matchedHandler = await firstMatchingHandler(orderedHandlers, request);

@@ -60,6 +60,7 @@ Như vậy luật nghiệp vụ chỉ viết một lần.
 
 - **Docker Compose** cho môi trường phát triển: `postgres`.
 - Biến môi trường: `.env` ở thư mục gốc cho Docker, `api/.env` cho backend (mỗi tệp có `.env.example`). Không commit `.env`.
+- Mỗi biến một việc: `VITE_USE_MOCK_BACKEND` (+ `REAL_BACKEND_GROUPS`) chỉ chọn backend giả hay thật; `APP_ENV` / `VITE_APP_ENV` chỉ bật chức năng thử nghiệm. Xem README, mục Biến môi trường.
 
 ### Nguyên tắc thiết kế
 
@@ -131,7 +132,7 @@ Cổng xử lí đơn/
 
 ```bash
 pnpm install
-pnpm --filter web dev                   # chỉ chạy frontend + API giả
+pnpm --filter web dev                   # chỉ chạy frontend: đặt VITE_USE_MOCK_BACKEND=true (backend giả)
 
 # khi đã có backend
 docker compose up -d                    # postgres

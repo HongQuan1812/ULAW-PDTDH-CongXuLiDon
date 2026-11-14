@@ -24,13 +24,13 @@ Mỗi bước làm trên một nhánh riêng. Xong thì tạo Pull Request vào 
 3. Viết hook gọi API trong `web/src/api/`.
 4. Làm giao diện, đối chiếu với `docs/business-rules.md`.
 
-### API giả (MSW)
+### API giả (backend giả, MSW)
 
 - Frontend gọi `fetch('/api/...')` như thật. MSW chặn lại và trả dữ liệu giả, nên trang không biết mình đang dùng API giả.
-- Bật / tắt bằng `VITE_USE_MOCKS` trong `web/.env.development`.
+- Bật / tắt bằng `VITE_USE_MOCK_BACKEND` trong `web/.env.development`. Biến này chỉ chọn backend giả hay thật; chức năng thử nghiệm do `VITE_APP_ENV` / `APP_ENV` quản (README, mục Biến môi trường).
 - API giả làm đúng luật nghiệp vụ (chuyển trạng thái, kiểm tra quyền, sinh mã đơn) và trả lỗi như thật (401, 403, 404, 409, 422).
 - Dữ liệu giả nằm trong `web/src/mocks/db.ts`, giữ trong bộ nhớ. Tải lại trang là về ban đầu.
-- Đăng nhập giả: `POST /api/auth/dev-login` với vai trò chọn sẵn. Backend thật cũng có, nhưng chỉ bật khi `APP_ENV=dev`.
+- Đăng nhập thử: `POST /api/auth/dev-login` với vai trò chọn sẵn. Backend giả có một bản; backend thật cũng có (phát cookie phiên thật), chỉ bật khi `APP_ENV=dev`.
 
 ## Giai đoạn 2: Backend (đang làm)
 
@@ -70,8 +70,8 @@ Chưa làm, chờ thông tin từ bên ngoài:
 
 ### Chạy giả và thật cùng lúc
 
-- `REAL_API_GROUPS` trong `web/src/mocks/realApiGroups.ts` là danh sách các nhóm dùng API thật, vd `['health', 'auth', 'profile']`. MSW bỏ qua các nhóm này, Vite chuyển request sang backend.
+- `REAL_BACKEND_GROUPS` trong `web/src/mocks/realBackendGroups.ts` là danh sách các nhóm tới backend thật khi đang bật backend giả, vd `['health', 'auth', 'profile']`. MSW bỏ qua các nhóm này, Vite chuyển request sang backend.
 - Backend seed từ cùng dữ liệu mẫu với API giả (cùng id người dùng, cùng mã đơn), nên nhóm giả và nhóm thật nói về cùng một người, cùng một lá đơn.
 - Khi nhóm `auth` đã thật: API giả lấy người đang đăng nhập từ API thật, không tự giữ phiên riêng.
-- Lỗi ngẫu nhiên (`VITE_MOCK_FAILURE_RATE`) chỉ áp dụng cho các nhóm còn giả.
+- Lỗi ngẫu nhiên (`VITE_MOCK_BACKEND_FAILURE_RATE`) chỉ áp dụng cho các nhóm còn giả.
 - Bảng danh sách: làm trước bằng hàm `applyListQuery` của `shared/` (đọc rồi lọc trong bộ nhớ), giống API giả. Khi dữ liệu nhiều, đo thấy chậm thì chuyển sang câu truy vấn SQL.

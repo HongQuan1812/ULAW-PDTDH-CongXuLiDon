@@ -28,7 +28,7 @@ export default defineConfig(({ mode }) => {
       port: webPort,
       // Nghe trên mọi địa chỉ của máy: máy khác cùng mạng LAN mở được bằng https://<IP máy này>:<WEB_PORT>
       host: true,
-      // Request /api (khi tắt API giả, hoặc nhóm trong REAL_API_GROUPS khi bật) được chuyển sang backend
+      // Request /api tới backend thật (tắt backend giả, hoặc nhóm trong REAL_BACKEND_GROUPS khi bật) được chuyển sang đây
       proxy: { '/api': apiProxyTarget },
     },
   };

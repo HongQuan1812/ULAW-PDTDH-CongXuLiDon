@@ -28,34 +28,22 @@ pnpm --filter web dev           # frontend, cổng 5173 · http://localhost:5173
 
 Backend và frontend mỗi cái chạy ở một terminal riêng.
 
-Nhóm API nào đã làm xong ở backend thì ghi tên nhóm vào `REAL_API_GROUPS` (`web/src/mocks/realApiGroups.ts`).
-Các nhóm còn lại dùng API giả (MSW) ngay trong trình duyệt, nên chỉ chạy frontend vẫn bấm thử được.
-
 Tắt PostgreSQL:
 
 ```bash
 docker compose down
 ```
 
-## Đăng nhập Google
+## Biến môi trường: hai việc, không lẫn nhau
 
-Chưa điền `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` trong `api/.env` thì nút Đăng nhập bằng Google báo "chưa bật";
-khi `APP_ENV=dev` vẫn đăng nhập thử theo vai trò được (phần "Bản thử nghiệm" ở trang Đăng nhập).
+| Việc | Biến | Giá trị |
+|---|---|---|
+| Request `/api` đi tới **backend nào** | `VITE_USE_MOCK_BACKEND` (`web/.env.development`) | `false`: backend thật (`api/`) · `true`: backend giả (MSW, chạy trong trình duyệt) |
+| | `REAL_BACKEND_GROUPS` (`web/src/mocks/realBackendGroups.ts`) | Khi bật backend giả: các nhóm vẫn tới backend thật |
+| Có **chức năng thử nghiệm** hay không | `VITE_APP_ENV` (`web/.env.development`) | `dev`: hiện phần `JUST FOR DEMO` (khung đăng nhập thử, đổi vai trò trong menu) · trống: ẩn |
+| | `APP_ENV` (`api/.env`) | `dev`: bật `dev-login`, Swagger, thư in ra console · trống: bản thật |
 
-Tạo OAuth client (làm một lần, ở https://console.cloud.google.com):
-
-1. Tạo project (hoặc chọn project có sẵn).
-2. **Google Auth Platform → Branding**: điền tên ứng dụng, email hỗ trợ.
-   **Audience**: chọn *Internal* nếu project thuộc Google Workspace của trường (chỉ email trường đăng nhập được);
-   không thì *External*, và khi còn ở trạng thái *Testing* phải thêm email người thử vào *Test users*.
-3. **Clients → Create client** → loại *Web application*:
-   - *Authorized JavaScript origins*: `https://localhost:5173`
-   - *Authorized redirect URIs*: `https://localhost:5173/api/auth/google/callback`
-   (lên máy chủ thật thì thêm `https://<tên miền thật>` và `https://<tên miền thật>/api/auth/google/callback`)
-4. Chép *Client ID* và *Client secret* vào `api/.env`, rồi chạy lại backend.
-
-Redirect URI phải trùng từng ký tự với `WEB_BASE_URL_DEV` (khi dev) hoặc `WEB_BASE_URL_PRODUCTION` + `/api/auth/google/callback`.
-Google không nhận địa chỉ IP trong mạng LAN (vd `https://192.168.x.x:5173`), nên thử đăng nhập Google bằng `https://localhost:5173`.
-
-Email nào được vào cổng do `SCHOOL_EMAIL_DOMAINS` (`shared/src/validators/auth.ts`) quyết định, kể cả tên miền con.
-Email trường đăng nhập lần đầu được tạo tài khoản Người nộp đơn; đổi vai trò ở trang Quản lí tài khoản (Admin).
+- Đăng nhập thử (`dev-login`) là chức năng thử nghiệm **của backend thật**: bỏ qua Google nhưng vẫn phát cookie phiên thật. `APP_ENV` quản, không phải `VITE_USE_MOCK_BACKEND`.
+- Backend giả không phát được cookie cho backend thật: nhóm `auth` do backend giả trả lời thì mọi nhóm cần đăng nhập cũng phải giả, không thì bị 401.
+- Chỉ chạy frontend, không bật backend: đặt `VITE_USE_MOCK_BACKEND=true` và để `REAL_BACKEND_GROUPS` rỗng.
+- Lên máy chủ thật: `APP_ENV`, `VITE_APP_ENV` để trống; `VITE_USE_MOCK_BACKEND=false`.

@@ -47,7 +47,7 @@ import {
 } from '@ulaw/shared';
 import { bypass } from 'msw';
 import { buildSamplePdf } from './samplePdf';
-import { REAL_API_GROUPS } from './realApiGroups';
+import { REAL_BACKEND_GROUPS } from './realBackendGroups';
 import type { SeedAccount, SeedForm, SeedFormType, SeedFormTypeVersion } from '@ulaw/shared';
 import {
   EMAIL_SETTINGS_SEED,
@@ -1155,7 +1155,7 @@ const SESSION_KEY = 'mock-session-user';
  * @returns  Promise phiên (người dùng + vai trò); chưa đăng nhập thì null
  */
 export async function readSession(): Promise<Session | null> {
-  if (REAL_API_GROUPS.has('auth')) return readRealSession();
+  if (REAL_BACKEND_GROUPS.has('auth')) return readRealSession();
 
   // Đọc id đã lưu (trình duyệt chặn bộ nhớ thì coi như chưa đăng nhập)
   let userId: string | null = null;
@@ -1247,7 +1247,7 @@ let nextFormNoteNumber = 1;
  * @returns     Promise true nếu có đơn
  */
 export async function formExists(code: string): Promise<boolean> {
-  if (!REAL_API_GROUPS.has('form')) return FORMS.some((form) => form.code === code);
+  if (!REAL_BACKEND_GROUPS.has('form')) return FORMS.some((form) => form.code === code);
   try {
     const response = await fetch(bypass(`/api${formDetailPath(code)}`), { credentials: 'include' });
     return response.ok;

@@ -1,5 +1,5 @@
 import { HttpHandler, passthrough, type RequestHandler } from 'msw';
-import { REAL_API_GROUPS, type ApiGroup } from '../realApiGroups';
+import { REAL_BACKEND_GROUPS, type ApiGroup } from '../realBackendGroups';
 import { accountHandlers } from './accounts';
 import { authHandlers } from './auth';
 import { emailHandlers } from './email';
@@ -44,20 +44,20 @@ function toPassthroughHandler(mockHandler: HttpHandler): HttpHandler {
 
 /**
  * Dựng danh sách handler cho MSW.
- * @param realApiGroups  các nhóm dùng API thật
- * @returns              handler lỗi ngẫu nhiên đứng đầu, sau đó handler từng nhóm (giả, hoặc chuyển sang API thật)
+ * @param realBackendGroups  các nhóm tới backend thật
+ * @returns                  handler lỗi ngẫu nhiên đứng đầu, sau đó handler từng nhóm (giả, hoặc chuyển sang API thật)
  */
-export function buildHandlers(realApiGroups: ReadonlySet<ApiGroup>): RequestHandler[] {
+export function buildHandlers(realBackendGroups: ReadonlySet<ApiGroup>): RequestHandler[] {
   // Nhóm thật: chuyển request đi tiếp · nhóm giả: giữ handler giả
   const orderedHandlers = HANDLER_GROUPS.flatMap(([group, groupHandlers]) =>
-    realApiGroups.has(group) ? groupHandlers.map(toPassthroughHandler) : groupHandlers,
+    realBackendGroups.has(group) ? groupHandlers.map(toPassthroughHandler) : groupHandlers,
   );
   const mockedHandlers = new Set<RequestHandler>(
-    HANDLER_GROUPS.flatMap(([group, groupHandlers]) => (realApiGroups.has(group) ? [] : groupHandlers)),
+    HANDLER_GROUPS.flatMap(([group, groupHandlers]) => (realBackendGroups.has(group) ? [] : groupHandlers)),
   );
 
   // Lỗi ngẫu nhiên đứng đầu: được xét trước handler thật của từng API
   return [createRandomFailureHandler(orderedHandlers, mockedHandlers), ...orderedHandlers];
 }
 
-export const handlers = buildHandlers(REAL_API_GROUPS);
+export const handlers = buildHandlers(REAL_BACKEND_GROUPS);

@@ -6,16 +6,16 @@ import { parseListQuery, parseUserIdsParam, type ApiErrorBody, type ListQuery, t
 export const MOCK_DELAY_MS = 1000;
 
 /**
- * Đọc tỉ lệ API giả trả lỗi 500 ngẫu nhiên từ VITE_MOCK_FAILURE_RATE.
+ * Đọc tỉ lệ API giả trả lỗi 500 ngẫu nhiên từ VITE_MOCK_BACKEND_FAILURE_RATE.
  * @returns  số từ 0 đến 1; không đặt hoặc sai định dạng thì 0 (không bao giờ lỗi)
  */
 function readFailureRate(): number {
-  const rate = Number(import.meta.env.VITE_MOCK_FAILURE_RATE ?? 0);
+  const rate = Number(import.meta.env.VITE_MOCK_BACKEND_FAILURE_RATE ?? 0);
   return Number.isFinite(rate) ? Math.min(1, Math.max(0, rate)) : 0;
 }
 
 /** Tỉ lệ mỗi lần gọi API giả bị trả lỗi 500, để thử giao diện khi máy chủ lỗi. */
-export const MOCK_FAILURE_RATE = readFailureRate();
+export const MOCK_BACKEND_FAILURE_RATE = readFailureRate();
 
 /**
  * Ghép đường dẫn trong ENDPOINTS thành đường dẫn đầy đủ mà MSW chặn.
