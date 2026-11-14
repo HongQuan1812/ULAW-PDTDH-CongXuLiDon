@@ -43,7 +43,5 @@ docker compose down
 | Có **chức năng thử nghiệm** hay không | `VITE_APP_ENV` (`web/.env.development`) | `dev`: hiện phần `JUST FOR DEMO` (khung đăng nhập thử, đổi vai trò trong menu) · trống: ẩn |
 | | `APP_ENV` (`api/.env`) | `dev`: bật `dev-login`, Swagger, thư in ra console · trống: bản thật |
 
-- Đăng nhập thử (`dev-login`) là chức năng thử nghiệm **của backend thật**: bỏ qua Google nhưng vẫn phát cookie phiên thật. `APP_ENV` quản, không phải `VITE_USE_MOCK_BACKEND`.
-- Backend giả không phát được cookie cho backend thật: nhóm `auth` do backend giả trả lời thì mọi nhóm cần đăng nhập cũng phải giả, không thì bị 401.
-- Chỉ chạy frontend, không bật backend: đặt `VITE_USE_MOCK_BACKEND=true` và để `REAL_BACKEND_GROUPS` rỗng.
-- Lên máy chủ thật: `APP_ENV`, `VITE_APP_ENV` để trống; `VITE_USE_MOCK_BACKEND=false`.
+**Chức năng thử nghiệm có ở cả hai bên, mỗi bên một biến:** `VITE_APP_ENV` cho giao diện, `APP_ENV` cho backend thật.
+Chức năng thử nghiệm không chỉ nằm trong backend giả (MSW). Ví dụ đăng nhập thử (`dev-login`) có ở cả backend thật, và do `APP_ENV` bật / tắt, không phải `VITE_USE_MOCK_BACKEND`.
