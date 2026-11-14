@@ -30,7 +30,7 @@ Mỗi bước làm trên một nhánh riêng. Xong thì tạo Pull Request vào 
 - Bật / tắt bằng `VITE_USE_MOCK_BACKEND` trong `web/.env.development`. Biến này chỉ chọn backend giả hay thật; chức năng thử nghiệm do `VITE_APP_ENV` / `APP_ENV` quản (README, mục Biến môi trường).
 - API giả làm đúng luật nghiệp vụ (chuyển trạng thái, kiểm tra quyền, sinh mã đơn) và trả lỗi như thật (401, 403, 404, 409, 422).
 - Dữ liệu giả nằm trong `web/src/mocks/db.ts`, giữ trong bộ nhớ. Tải lại trang là về ban đầu.
-- Đăng nhập thử: `POST /api/auth/dev-login` với vai trò chọn sẵn. Backend giả có một bản; backend thật cũng có (phát cookie phiên thật), chỉ bật khi `APP_ENV=dev`.
+- Nút Đăng nhập gọi `POST /api/auth/login`; backend quyết định: `ENABLE_DEMO_APIS=true` (và `'dev-login'` không nằm trong `ALWAYS_REAL_APIS`) thì đăng nhập thử theo vai trò gửi kèm (phát cookie phiên thật), còn lại trả đường dẫn sang Google. Backend giả luôn đăng nhập thử. Ô đổi vai trò trong menu cũng gọi `POST /api/auth/login` kèm vai trò. Frontend không biết tên `dev-login`, tên này chỉ có ở backend.
 
 ## Giai đoạn 2: Backend (đang làm)
 
@@ -42,7 +42,7 @@ Làm từng nhóm API. Xong nhóm nào thì chuyển nhóm đó sang API thật,
 | 0 | Nền móng | `backend-nen-mong` | PostgreSQL bằng Docker ✓ · dựng NestJS, Prisma · đọc `api/.env` · lọc lỗi trả `ApiErrorBody` · kiểm tra request bằng schema Zod của `shared/` · Swagger · nhóm `health` | ✓ |
 | 1 | Chạy giả và thật cùng lúc | `backend-nen-mong` | Vite chuyển `/api` sang backend · chọn nhóm nào dùng API thật · chuyển nhóm `health` sang API thật để thử đường đi | ✓ |
 | 2 | Bảng, dữ liệu mẫu | `backend-bang` | `schema.prisma` đủ các bảng · migration đầu tiên · tách dữ liệu mẫu ra chỗ dùng chung để API giả và seed cùng dùng · seed | ✓ |
-| 3 | Đăng nhập, quyền | `backend-dang-nhap` | `dev-login` (chỉ bật khi `APP_ENV=dev`) · phiên bằng cookie httpOnly · `/auth/me`, đăng xuất · guard quyền `@RequirePermission` · nhóm `auth` | ✓ |
+| 3 | Đăng nhập, quyền | `backend-dang-nhap` | đăng nhập thử theo vai trò (bản giả `dev-login` của `POST /auth/login`) · phiên bằng cookie httpOnly · `/auth/me`, đăng xuất · guard quyền `@RequirePermission` · nhóm `auth` | ✓ |
 | 4 | Hồ sơ | `backend-ho-so` | `student-directory` bản giả (đọc dữ liệu mẫu) · nhóm `profile` · CCCD che / đầy đủ | ✓ |
 | 5 | Tài khoản | `backend-tai-khoan` | nhóm `accounts`: danh sách phân trang, tạo, sửa, phân vai trò | ✓ |
 | 6 | Loại đơn | `backend-loai-don` | nhóm `form-types`: danh sách, phiên bản, nháp / mở / đóng, kiểm tra cấu trúc | ✓ |
@@ -52,11 +52,11 @@ Làm từng nhóm API. Xong nhóm nào thì chuyển nhóm đó sang API thật,
 | 10 | Xử lí đơn | `backend-xu-li-don` | `workflow.service.ts`: tiếp nhận, yêu cầu bổ sung, duyệt, từ chối, chuyển giao | ✓ |
 | 11 | Xuất Word | `backend-xuat-file` | nhóm `exports`: mẫu Word theo loại đơn, kiểm tra mã `{...}`, docxtemplater | ✓ |
 | 12 | Thư điện tử | `backend-email` | nhóm `email`: lưu cấu hình, gửi thư thử · thư tự động khi nộp đơn, ra quyết định | ✓ |
-| 13 | Đăng nhập Google | `backend-google-oauth` | `/auth/google` → Google → `/auth/google/callback`: authorization code + PKCE, kiểm tra state, ID token, email trường · tự tạo tài khoản Người nộp đơn lần đầu · trang Đăng nhập báo lỗi theo `loginError` | ✓ |
+| 13 | Đăng nhập Google | `backend-google-oauth` | `POST /auth/login` (bản thật trả đường dẫn sang Google; `ENABLE_DEMO_APIS=true` thì đăng nhập thử) → Google → `/auth/google/callback`: authorization code + PKCE, kiểm tra state, ID token, email trường · tự tạo tài khoản Người nộp đơn lần đầu · trang Đăng nhập báo lỗi theo `loginError` | ✓ |
 
 Chưa làm, chờ thông tin từ bên ngoài:
 - OAuth client thật cho máy chủ: tạo ở Google Cloud Console bằng tài khoản của trường, khai báo tên miền thật (cách tạo: README.md).
-- `student-directory` bản thật: cần cách kết nối database sinh viên của trường.
+- `student-directory` bản thật: cần cách kết nối database sinh viên của trường. Đã có trong `DEMO_APIS`: bản giả `dev-student-directory` đọc bảng mẫu, bản thật hiện `throw realApiNotBuilt(...)` (501); làm xong thì thay dòng đó bằng kết nối database trường.
 - Triển khai lên máy chủ (bỏ quyền `CREATEDB` của user dự án, dùng `prisma migrate deploy`; nhập cấu hình gửi thư của hộp thư chính thức nếu không dùng Gmail đang thử).
 
 ### Làm một nhóm API

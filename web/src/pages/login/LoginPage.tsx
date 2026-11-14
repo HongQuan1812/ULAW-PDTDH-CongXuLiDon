@@ -12,7 +12,7 @@ import {
   type GoogleLoginError,
   type RoleId,
 } from '@ulaw/shared';
-import { googleLoginUrl, useDevLogin, useSession } from '../../api/auth';
+import { useLogin, useSession } from '../../api/auth';
 import { homePath } from '../../app/paths';
 import { useToast } from '../../components/Toast';
 import { SHOW_DEMO } from '../../lib/env';
@@ -41,17 +41,18 @@ function googleLoginErrorMessage(error: GoogleLoginError, email: string | null):
 }
 
 /**
- * Trang Đăng nhập: nút Đăng nhập bằng Google; khi dev có thêm phần đăng nhập thử theo vai trò.
+ * Trang Đăng nhập: một nút Đăng nhập bằng email trường. Đăng nhập cách nào là do máy chủ quyết định (bản giả hay bản thật):
+ * bản giả thì đăng nhập thử luôn, bản thật thì sang Google.
+ * VITE_APP_ENV = "dev" chỉ hiện thêm khung chọn vai trò (gửi kèm khi bấm nút).
  * @returns  giao diện trang; đã đăng nhập thì chuyển vào ứng dụng
  */
 export function LoginPage() {
   const session = useSession();
-  const login = useDevLogin();
+  const login = useLogin();
   const location = useLocation();
   const toast = useToast();
   const [searchParams, setSearchParams] = useSearchParams();
   const [role, setRole] = useState<RoleId>('nguoiNopDon');
-  const [redirectingToGoogle, setRedirectingToGoogle] = useState(false);
   const googleErrorShown = useRef(false);
 
   // Trang cần mở sau khi đăng nhập (AppLayout gửi kèm khi chuyển về đây)
@@ -67,18 +68,23 @@ export function LoginPage() {
     setSearchParams({}, { replace: true, state: location.state });
   }, [searchParams, setSearchParams, toast, location.state]);
 
-  /** Sang trang chọn tài khoản Google (rời khỏi ứng dụng, máy chủ chuyển về sau khi xong). */
-  const logInWithGoogle = () => {
-    setRedirectingToGoogle(true);
-    window.location.assign(googleLoginUrl(from));
-  };
-
   /**
-   * Đăng nhập thử; không đăng nhập được (vd email ngoài trường, máy chủ lỗi) thì báo bằng toast đỏ.
-   * @param email  email muốn thử; bỏ trống = email trường của vai trò đang chọn
+   * Bấm đăng nhập; không đăng nhập được (vd email ngoài trường, chưa bật Google, máy chủ lỗi) thì báo bằng toast đỏ.
+   * @param email  JUST FOR DEMO: email muốn thử; bỏ trống = email trường của vai trò đang chọn
    */
   const logIn = (email?: string) =>
-    login.mutate(email ? { role, email } : { role }, { onError: (error) => toast(error.message, 'error') });
+    login.mutate(
+      {
+        from,
+        /* JUST FOR DEMO: START · vai trò, email thử chỉ gửi khi hiện khung thử nghiệm; máy chủ chỉ dùng ở bản giả */
+        ...(SHOW_DEMO ? { role, email } : {}),
+        /* JUST FOR DEMO: END */
+      },
+      { onError: (error) => toast(error.message, 'error') },
+    );
+
+  // Đang chuyển sang Google, hoặc đang đăng nhập thử
+  const loggingIn = login.isPending || login.data?.kind === 'redirect';
 
   // Đang kiểm tra phiên: chưa vẽ gì, tránh nháy trang đăng nhập
   if (session.isPending) return null;
@@ -99,11 +105,11 @@ export function LoginPage() {
         <button
           type="button"
           className={styles.googleButton}
-          disabled={redirectingToGoogle || login.isPending}
-          onClick={logInWithGoogle}
+          disabled={loggingIn}
+          onClick={() => logIn()}
         >
           <GoogleIcon />
-          {redirectingToGoogle ? 'Đang chuyển sang Google…' : 'Đăng nhập bằng email trường'}
+          {loggingIn ? 'Đang đăng nhập…' : 'Đăng nhập bằng email trường'}
         </button>
         <p className={styles.hint}>Dùng tài khoản Google do trường cấp (@{SCHOOL_EMAIL_DOMAINS[0]}).</p>
 
@@ -116,11 +122,11 @@ export function LoginPage() {
           ))}
         </ul>
 
-        {/* JUST FOR DEMO: START · chọn vai trò khi đăng nhập, chỉ hiện khi VITE_APP_ENV = "dev".
-            Bản thật: vai trò do máy chủ trả về theo tài khoản. */}
+        {/* JUST FOR DEMO: START · chọn vai trò (mỗi vai trò một tài khoản mẫu) gửi kèm nút Đăng nhập ở trên,
+            chỉ hiện khi VITE_APP_ENV = "dev". Máy chủ chỉ dùng ở bản giả; bản thật thì vai trò theo tài khoản Google. */}
         {SHOW_DEMO && (
           <fieldset className={styles.rolePick}>
-            <legend>Bản thử nghiệm · đăng nhập với vai trò</legend>
+            <legend>Bản thử nghiệm · chọn vai trò rồi bấm Đăng nhập ở trên</legend>
             {ROLE_IDS.map((id) => (
               <label key={id}>
                 <input
@@ -135,16 +141,8 @@ export function LoginPage() {
             ))}
             <button
               type="button"
-              className={styles.demoLoginButton}
-              disabled={login.isPending || redirectingToGoogle}
-              onClick={() => logIn()}
-            >
-              {login.isPending ? 'Đang đăng nhập…' : `Đăng nhập thử: ${ROLES[role].name}`}
-            </button>
-            <button
-              type="button"
               className={styles.personalEmailButton}
-              disabled={login.isPending}
+              disabled={loggingIn}
               onClick={() => logIn(PERSONAL_DEMO_EMAIL)}
             >
               Thử đăng nhập bằng email cá nhân ({PERSONAL_DEMO_EMAIL})

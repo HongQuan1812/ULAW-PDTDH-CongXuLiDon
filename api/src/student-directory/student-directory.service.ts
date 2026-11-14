@@ -1,22 +1,42 @@
-/* Thông tin sinh viên "từ database trường". Bản giả: đọc bảng StudentInfo do seed điền.
-   Bản thật thay phần ruột của service này bằng kết nối database trường, nơi khác không phải sửa. */
+/* Thông tin sinh viên từ database trường (config/demo-apis.ts):
+   bản giả dev-student-directory đọc bảng StudentInfo do seed điền · bản thật đọc database trường (chưa làm: chờ cách kết nối). */
 import { Injectable } from '@nestjs/common';
 import type { StudentInfo, StudentsResponse } from '@ulaw/shared';
 import { PrismaService } from '../common/prisma.service';
+import { AppConfig } from '../config/app-config';
+import { realApiNotBuilt } from '../config/demo-apis';
 
 @Injectable()
 export class StudentDirectoryService {
   /**
-   * @param prisma  kết nối database
+   * @param prisma     kết nối database
+   * @param appConfig  cấu hình, để biết dùng bản giả hay bản thật
    */
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly appConfig: AppConfig,
+  ) {}
 
   /**
    * Lấy các MSSV của một người dùng, MSSV trùng phần trước @ của email đứng đầu.
    * @param userId  id người dùng
    * @returns       các MSSV; không phải sinh viên thì []
+   * @throws        501 khi dùng bản thật (chưa phát triển: chưa kết nối database trường)
    */
   async findStudents(userId: string): Promise<StudentInfo[]> {
+    if (this.appConfig.usesDemoApi('dev-student-directory')) return this.findDevStudents(userId);
+
+    // Bản thật: chưa phát triển (chờ cách kết nối database trường)
+    throw realApiNotBuilt('dev-student-directory');
+  }
+
+  /* JUST FOR DEMO: START · dev-student-directory: bản giả, đọc bảng mẫu. Bản thật: đọc database trường */
+  /**
+   * Lấy các MSSV của một người dùng từ bảng StudentInfo do seed điền.
+   * @param userId  id người dùng
+   * @returns       các MSSV; không phải sinh viên thì []
+   */
+  private async findDevStudents(userId: string): Promise<StudentInfo[]> {
     const rows = await this.prisma.studentInfo.findMany({ where: { userId }, orderBy: { position: 'asc' } });
     return rows.map(({ studentId, className, trainingMode, major, currentCohort, originalCohort }) => ({
       studentId,
@@ -27,6 +47,7 @@ export class StudentDirectoryService {
       originalCohort,
     }));
   }
+  /* JUST FOR DEMO: END */
 
   /**
    * Lấy các MSSV kèm MSSV chính, theo hợp đồng StudentsResponse.

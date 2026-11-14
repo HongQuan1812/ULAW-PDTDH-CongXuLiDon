@@ -21,6 +21,8 @@ export const COMMON_MESSAGES = {
   userIds: 'Danh sách người cần hiện CCCD không hợp lệ.',
   /** Lỗi bất ngờ ở máy chủ (mất kết nối CSDL, lỗi chưa lường trước…) */
   500: 'Máy chủ đang gặp sự cố, chưa làm được việc này. Hãy thử lại sau ít phút.',
+  /** Gọi bản thật của một API giả (ENABLE_DEMO_APIS=false hoặc nằm trong ALWAYS_REAL_APIS) mà bản thật chưa được phát triển (501) */
+  realApiNotBuilt: (demoApi: string) => `API thật thay cho ${demoApi} chưa được phát triển.`,
 } as const;
 
 /* ---------- Bảng danh sách: hỏi một trang ----------

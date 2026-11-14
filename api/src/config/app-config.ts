@@ -2,14 +2,18 @@
 import { existsSync } from 'node:fs';
 import { Injectable } from '@nestjs/common';
 import { z } from 'zod';
+import { usesDemoApi, type DemoApi } from './demo-apis';
 
 /** Tệp biến môi trường của backend: api/.env (các lệnh pnpm --filter api chạy trong thư mục api/). */
 const API_ENV_FILE = '.env';
 
 /** Các biến backend cần. */
 const AppEnvSchema = z.object({
-  // dev: bật các phần chỉ để thử khi phát triển (đăng nhập theo vai trò, Swagger…) · bỏ trống: bản thật
+  // Môi trường: dev (Swagger, thư in ra console, WEB_BASE_URL_DEV, cookie không secure) · bỏ trống: bản thật
   APP_ENV: z.enum(['dev', '']).default(''),
+  // Bản giả của API (không liên quan APP_ENV): true: API nào có bản giả thì dùng bản giả (đăng nhập thử theo vai trò, dev-login),
+  // trừ các API trong ALWAYS_REAL_APIS (config/demo-apis.ts) · false / bỏ trống: dùng bản thật (đăng nhập Google)
+  ENABLE_DEMO_APIS: z.enum(['true', 'false', '']).default(''),
   API_PORT: z.coerce.number().int().min(1).max(65535).default(3000),
   DATABASE_URL: z.string().startsWith('postgresql://'),
   // Thư mục lưu tệp tải lên trên ổ đĩa máy chủ (tương đối với thư mục chạy backend, hoặc đường dẫn tuyệt đối)
@@ -27,7 +31,7 @@ const AppEnvSchema = z.object({
   WEB_BASE_URL_PRODUCTION: z.url().default('https://dichvu.hcmulaw.edu.vn'),
   // Chỉ dùng khi APP_ENV=dev: thư tự động gửi về địa chỉ này thay vì người nộp đơn; bỏ trống thì chỉ in ra console
   DEV_EMAIL_REDIRECT_TO: z.union([z.literal(''), z.email()]).default(''),
-  // OAuth client (loại Web application) tạo ở Google Cloud Console; bỏ trống: chưa bật đăng nhập Google (APP_ENV=dev vẫn đăng nhập thử được)
+  // OAuth client (loại Web application) tạo ở Google Cloud Console; bỏ trống: chưa bật đăng nhập Google (ENABLE_DEMO_APIS=true vẫn đăng nhập thử được)
   GOOGLE_CLIENT_ID: z.string().trim().default(''),
   GOOGLE_CLIENT_SECRET: z.string().trim().default(''),
 });
@@ -64,8 +68,10 @@ export function loadApiEnvFile(): void {
 /** Cấu hình của backend, tiêm vào nơi cần dùng. */
 @Injectable()
 export class AppConfig {
-  /** true khi APP_ENV = "dev": bật các phần JUST FOR DEMO. */
+  /** true khi APP_ENV = "dev": môi trường phát triển (Swagger, thư in ra console, WEB_BASE_URL_DEV, cookie không secure). */
   readonly isDev: boolean;
+  /** true khi ENABLE_DEMO_APIS = "true": API nào có bản giả thì dùng bản giả, trừ ALWAYS_REAL_APIS. Hỏi từng API bằng usesDemoApi(). */
+  readonly demoApisEnabled: boolean;
   /** Cổng backend nghe, vd 3000. */
   readonly port: number;
   /** Chuỗi kết nối PostgreSQL bằng user của dự án. */
@@ -92,6 +98,7 @@ export class AppConfig {
       throw new Error(`Biến môi trường không hợp lệ (xem .env.example): ${problems}`);
     }
     this.isDev = parsed.data.APP_ENV === 'dev';
+    this.demoApisEnabled = parsed.data.ENABLE_DEMO_APIS === 'true';
     this.port = parsed.data.API_PORT;
     this.databaseUrl = parsed.data.DATABASE_URL;
     this.uploadDir = parsed.data.UPLOAD_DIR;
@@ -106,5 +113,14 @@ export class AppConfig {
           }
         : null;
     this.smtp = { host: parsed.data.SMTP_HOST, port: parsed.data.SMTP_PORT, user: parsed.data.SMTP_USER, password: parsed.data.SMTP_PASSWORD };
+  }
+
+  /**
+   * Một API dùng bản giả hay bản thật.
+   * @param api  tên API giả trong DEMO_APIS, vd 'dev-login'
+   * @returns    true: bản giả (ENABLE_DEMO_APIS=true và API không nằm trong ALWAYS_REAL_APIS) · false: bản thật
+   */
+  usesDemoApi(api: DemoApi): boolean {
+    return usesDemoApi(this.demoApisEnabled, api);
   }
 }

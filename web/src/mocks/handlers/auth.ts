@@ -2,9 +2,11 @@
 import { delay, http, HttpResponse } from 'msw';
 import {
   AUTH_MESSAGES,
-  DevLoginRequestSchema,
+  LoginRequestSchema,
   ENDPOINTS,
   isSchoolEmail,
+  type LoginResponse,
+  type RoleId,
   type Session,
 } from '@ulaw/shared';
 import { demoAccountFor, getProfile, readSession, toSession, writeSession } from '../db';
@@ -19,25 +21,14 @@ export const authHandlers = [
     return HttpResponse.json<Session>(session);
   }),
 
-  // Đăng nhập thử theo vai trò
-  http.post(api(ENDPOINTS.auth.devLogin), async ({ request }) => {
+  // Đăng nhập (nút "Đăng nhập bằng email trường", ô đổi vai trò): backend giả luôn đăng nhập thử (không có Google)
+  http.post(api(ENDPOINTS.auth.login), async ({ request }) => {
     await delay(MOCK_DELAY_MS);
-
-    // Kiểm tra body
-    const parsed = DevLoginRequestSchema.safeParse(await request.json().catch(() => null));
+    const parsed = LoginRequestSchema.safeParse(await request.json().catch(() => null));
     if (!parsed.success) return apiError(422, AUTH_MESSAGES[422]);
-
-    // Tài khoản đăng nhập thử của vai trò này (Admin có thể đã đổi vai trò của mọi tài khoản vai trò này thì 404)
-    const userId = demoAccountFor(parsed.data.role);
-    if (!userId) return apiError(404, AUTH_MESSAGES.noDemoAccount);
-
-    // Chỉ cho email trường vào (backend thật cũng kiểm tra lại như vậy); có email thử thì kiểm tra email đó
-    const email = parsed.data.email ?? getProfile(userId).email;
-    if (!isSchoolEmail(email)) return apiError(403, AUTH_MESSAGES[403](email));
-
-    // Lưu phiên và trả về
-    writeSession(userId);
-    return HttpResponse.json<Session>(toSession(userId));
+    const loggedIn = logInDemoAccount(parsed.data.role ?? 'nguoiNopDon', parsed.data.email);
+    if (loggedIn instanceof Response) return loggedIn;
+    return HttpResponse.json<LoginResponse>({ kind: 'session', session: loggedIn });
   }),
 
   // Đăng xuất
@@ -47,3 +38,23 @@ export const authHandlers = [
     return new HttpResponse(null, { status: 204 });
   }),
 ];
+
+/**
+ * Đăng nhập thử vào tài khoản mẫu của một vai trò, lưu phiên.
+ * @param role   vai trò
+ * @param email  email giả làm email Google (không bắt buộc); bỏ trống = email của tài khoản mẫu
+ * @returns      Session; lỗi thì response lỗi (404 hết tài khoản vai trò đó, 403 email ngoài trường)
+ */
+function logInDemoAccount(role: RoleId, email: string | undefined): Session | Response {
+  // Tài khoản đăng nhập thử của vai trò này (Admin có thể đã đổi vai trò của mọi tài khoản vai trò này thì 404)
+  const userId = demoAccountFor(role);
+  if (!userId) return apiError(404, AUTH_MESSAGES.noDemoAccount);
+
+  // Chỉ cho email trường vào (backend thật cũng kiểm tra lại như vậy); có email thử thì kiểm tra email đó
+  const loginEmail = email ?? getProfile(userId).email;
+  if (!isSchoolEmail(loginEmail)) return apiError(403, AUTH_MESSAGES[403](loginEmail));
+
+  // Lưu phiên
+  writeSession(userId);
+  return toSession(userId);
+}

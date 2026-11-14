@@ -2,7 +2,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { Controller, Get, type INestApplication } from '@nestjs/common';
 import request from 'supertest';
-import { ApiErrorBodySchema, AUTH_MESSAGES, SessionSchema, type RoleId } from '@ulaw/shared';
+import { ApiErrorBodySchema, AUTH_MESSAGES, LoginResponseSchema, SessionSchema, type RoleId } from '@ulaw/shared';
 import { RequireLogin, RequirePermission } from '../src/auth/require-permission.decorator';
 import { PrismaService } from '../src/common/prisma.service';
 import { createTestApp } from './create-test-app';
@@ -30,7 +30,7 @@ describe('auth', () => {
 
   /** Đăng nhập thử, trả cookie để gửi kèm các request sau. */
   async function loginAs(role: RoleId): Promise<string> {
-    const response = await request(app.getHttpServer()).post('/api/auth/dev-login').send({ role }).expect(200);
+    const response = await request(app.getHttpServer()).post('/api/auth/login').send({ role }).expect(200);
     return (response.headers['set-cookie'] as unknown as string[]).map((cookie) => cookie.split(';')[0]).join('; ');
   }
 
@@ -47,9 +47,10 @@ describe('auth', () => {
     expect(ApiErrorBodySchema.parse(response.body).message).toBe(AUTH_MESSAGES[401]);
   });
 
-  it('dev-login trả Session đúng hợp đồng và cookie httpOnly', async () => {
-    const response = await request(app.getHttpServer()).post('/api/auth/dev-login').send({ role: 'nguoiXuLiDon' }).expect(200);
-    expect(SessionSchema.parse(response.body)).toMatchObject({ user: { id: 'cb-1' }, role: 'nguoiXuLiDon' });
+  it('đăng nhập thử trả Session đúng hợp đồng và cookie httpOnly', async () => {
+    const response = await request(app.getHttpServer()).post('/api/auth/login').send({ role: 'nguoiXuLiDon' }).expect(200);
+    expect(LoginResponseSchema.parse(response.body)).toMatchObject({ kind: 'session' });
+    expect(SessionSchema.parse(response.body.session)).toMatchObject({ user: { id: 'cb-1' }, role: 'nguoiXuLiDon' });
     const cookie = (response.headers['set-cookie'] as unknown as string[])[0]!;
     expect(cookie).toMatch(/^ulaw_session=[0-9a-f]{64};/);
     expect(cookie).toContain('HttpOnly');
@@ -74,8 +75,8 @@ describe('auth', () => {
 
   it('đăng nhập lại (đổi vai trò) thì phiên cũ hết dùng được', async () => {
     const oldCookie = await loginAs('nguoiNopDon');
-    const response = await request(app.getHttpServer()).post('/api/auth/dev-login').set('Cookie', oldCookie).send({ role: 'admin' }).expect(200);
-    expect(response.body.role).toBe('admin');
+    const response = await request(app.getHttpServer()).post('/api/auth/login').set('Cookie', oldCookie).send({ role: 'admin' }).expect(200);
+    expect(response.body.session.role).toBe('admin');
     await request(app.getHttpServer()).get('/api/auth/me').set('Cookie', oldCookie).expect(401);
   });
 
@@ -92,17 +93,26 @@ describe('auth', () => {
     await request(app.getHttpServer()).post('/api/auth/logout').expect(204);
   });
 
-  it('dev-login với email ngoài trường: 403, không tạo phiên', async () => {
+  it('đăng nhập thử với email ngoài trường: 403, không tạo phiên', async () => {
     const response = await request(app.getHttpServer())
-      .post('/api/auth/dev-login')
+      .post('/api/auth/login')
       .send({ role: 'nguoiNopDon', email: 'an@gmail.com' })
       .expect(403);
     expect(response.body.message).toBe(AUTH_MESSAGES[403]('an@gmail.com'));
     expect(response.headers['set-cookie']).toBeUndefined();
   });
 
-  it('dev-login với vai trò sai: 422', async () => {
-    const response = await request(app.getHttpServer()).post('/api/auth/dev-login').send({ role: 'hacker' }).expect(422);
+  it('POST /auth/login khi ENABLE_DEMO_APIS=true: đăng nhập thử luôn (không qua Google), đúng vai trò; không gửi vai trò thì Người nộp đơn', async () => {
+    const asAdmin = await request(app.getHttpServer()).post('/api/auth/login').send({ role: 'admin' }).expect(200);
+    expect(asAdmin.body.kind).toBe('session');
+    expect(SessionSchema.parse(asAdmin.body.session).role).toBe('admin');
+    expect((asAdmin.headers['set-cookie'] as unknown as string[]).some((cookie) => cookie.startsWith('ulaw_session='))).toBe(true);
+    const noRole = await request(app.getHttpServer()).post('/api/auth/login').send({}).expect(200);
+    expect(noRole.body.session.role).toBe('nguoiNopDon');
+  });
+
+  it('đăng nhập với vai trò sai: 422', async () => {
+    const response = await request(app.getHttpServer()).post('/api/auth/login').send({ role: 'hacker' }).expect(422);
     expect(response.body.message).toBe(AUTH_MESSAGES[422]);
   });
 
@@ -118,20 +128,5 @@ describe('auth', () => {
 
     const adminCookie = await loginAs('admin');
     await request(server).get('/api/test-guard/accounts-only').set('Cookie', adminCookie).expect(200);
-  });
-});
-
-describe('auth khi không ở chế độ dev', () => {
-  it('dev-login không tồn tại: 404', async () => {
-    const previousAppEnv = process.env.APP_ENV;
-    process.env.APP_ENV = '';
-    const app = await createTestApp();
-    try {
-      await request(app.getHttpServer()).post('/api/auth/dev-login').send({ role: 'admin' }).expect(404);
-    } finally {
-      await app.close();
-      if (previousAppEnv === undefined) delete process.env.APP_ENV;
-      else process.env.APP_ENV = previousAppEnv;
-    }
   });
 });

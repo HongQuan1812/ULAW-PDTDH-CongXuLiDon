@@ -1,9 +1,10 @@
-/* Test đăng nhập Google: chuyển sang Google, Google chuyển về (giả lập phản hồi đổi code của Google), lỗi và chưa cấu hình.
+/* Test đăng nhập Google (tắt ENABLE_DEMO_APIS, APP_ENV vẫn dev): POST /auth/login trả đường dẫn sang Google, Google chuyển về
+   (giả lập phản hồi đổi code của Google), lỗi và chưa cấu hình.
    Cần database đã migrate và seed (pnpm --filter api exec prisma db seed). */
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import type { INestApplication } from '@nestjs/common';
 import request from 'supertest';
-import { SessionSchema } from '@ulaw/shared';
+import { AUTH_MESSAGES, SessionSchema } from '@ulaw/shared';
 import { PrismaService } from '../src/common/prisma.service';
 import { createTestApp } from './create-test-app';
 
@@ -25,13 +26,51 @@ function cookiesOf(response: request.Response): string[] {
   return ((response.headers['set-cookie'] as unknown as string[] | undefined) ?? []).map((cookie) => cookie.split(';')[0]!);
 }
 
+/** Biến môi trường test này đổi; trả lại như cũ sau khi xong. */
+const CHANGED_ENV = ['ENABLE_DEMO_APIS', 'GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET'] as const;
+const originalEnv = Object.fromEntries(CHANGED_ENV.map((name) => [name, process.env[name]]));
+
+/**
+ * Dùng bản thật (ENABLE_DEMO_APIS trống) với OAuth client cho trước.
+ * @param clientId      GOOGLE_CLIENT_ID; trống = chưa cấu hình
+ * @param clientSecret  GOOGLE_CLIENT_SECRET
+ */
+function useGoogleLogin(clientId: string, clientSecret: string): void {
+  process.env['ENABLE_DEMO_APIS'] = '';
+  process.env['GOOGLE_CLIENT_ID'] = clientId;
+  process.env['GOOGLE_CLIENT_SECRET'] = clientSecret;
+}
+
+/** Trả biến môi trường về như trước test. */
+function restoreEnv(): void {
+  for (const name of CHANGED_ENV) {
+    if (originalEnv[name] === undefined) delete process.env[name];
+    else process.env[name] = originalEnv[name];
+  }
+}
+
+/**
+ * Bấm "Đăng nhập bằng email trường".
+ * @param app   ứng dụng
+ * @param from  trang cần mở sau khi đăng nhập
+ * @returns     response của POST /auth/login (200)
+ */
+function startLogin(app: INestApplication, from?: string) {
+  return request(app.getHttpServer()).post('/api/auth/login').send(from ? { from } : {}).expect(200);
+}
+
+/** Đường dẫn sang Google trong response của POST /auth/login. */
+function googleUrlOf(response: request.Response): URL {
+  expect(response.body.kind).toBe('redirect');
+  return new URL(response.body.url as string);
+}
+
 describe('đăng nhập Google, đã cấu hình OAuth client', () => {
   let app: INestApplication;
   let prisma: PrismaService;
 
   beforeAll(async () => {
-    process.env['GOOGLE_CLIENT_ID'] = CLIENT_ID;
-    process.env['GOOGLE_CLIENT_SECRET'] = 'test-secret';
+    useGoogleLogin(CLIENT_ID, 'test-secret');
     app = await createTestApp();
     prisma = app.get(PrismaService);
   });
@@ -43,19 +82,18 @@ describe('đăng nhập Google, đã cấu hình OAuth client', () => {
   afterAll(async () => {
     await prisma.user.deleteMany({ where: { email: NEW_SCHOOL_EMAIL } });
     await app.close();
-    delete process.env['GOOGLE_CLIENT_ID'];
-    delete process.env['GOOGLE_CLIENT_SECRET'];
+    restoreEnv();
   });
 
   /**
-   * Đi hết luồng: mở /auth/google, rồi giả làm Google chuyển về kèm code và state.
+   * Đi hết luồng: bấm đăng nhập (POST /auth/login), rồi giả làm Google chuyển về kèm code và state.
    * @param googleResponse  phản hồi giả của Google khi đổi code
    * @param from            trang cần mở sau khi đăng nhập
    * @returns               response của lần Google chuyển về, và yêu cầu đổi code đã gửi Google
    */
   async function loginThroughGoogle(googleResponse: Response, from = '/quan-li-don') {
-    const start = await request(app.getHttpServer()).get('/api/auth/google').query({ from }).expect(302);
-    const state = new URL(start.headers['location'] as string).searchParams.get('state');
+    const start = await startLogin(app, from);
+    const state = googleUrlOf(start).searchParams.get('state');
     const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(googleResponse);
     const callback = await request(app.getHttpServer())
       .get('/api/auth/google/callback')
@@ -65,9 +103,9 @@ describe('đăng nhập Google, đã cấu hình OAuth client', () => {
     return { callback, fetchSpy };
   }
 
-  it('GET /auth/google: chuyển sang Google kèm client, redirect URI, PKCE; đặt cookie state httpOnly', async () => {
-    const response = await request(app.getHttpServer()).get('/api/auth/google').expect(302);
-    const location = new URL(response.headers['location'] as string);
+  it('POST /auth/login: trả đường dẫn sang Google kèm client, redirect URI, PKCE; đặt cookie state httpOnly; bỏ qua vai trò thử', async () => {
+    const response = await request(app.getHttpServer()).post('/api/auth/login').send({ role: 'admin' }).expect(200);
+    const location = googleUrlOf(response);
     expect(location.host).toBe('accounts.google.com');
     expect(location.searchParams.get('client_id')).toBe(CLIENT_ID);
     expect(location.searchParams.get('redirect_uri')).toMatch(/\/api\/auth\/google\/callback$/);
@@ -120,7 +158,7 @@ describe('đăng nhập Google, đã cấu hình OAuth client', () => {
 
   it('state không khớp cookie, hoặc không có cookie (trang khác giả mạo / quá 10 phút): failed, không gọi Google', async () => {
     const fetchSpy = vi.spyOn(globalThis, 'fetch');
-    const start = await request(app.getHttpServer()).get('/api/auth/google').expect(302);
+    const start = await startLogin(app);
     const wrongState = await request(app.getHttpServer())
       .get('/api/auth/google/callback')
       .query({ code: 'ma', state: 'state-khac' })
@@ -133,8 +171,8 @@ describe('đăng nhập Google, đã cấu hình OAuth client', () => {
   });
 
   it('người dùng bấm Hủy ở Google (không có code): failed', async () => {
-    const start = await request(app.getHttpServer()).get('/api/auth/google').expect(302);
-    const state = new URL(start.headers['location'] as string).searchParams.get('state');
+    const start = await startLogin(app);
+    const state = googleUrlOf(start).searchParams.get('state');
     const response = await request(app.getHttpServer())
       .get('/api/auth/google/callback')
       .query({ error: 'access_denied', state })
@@ -153,17 +191,17 @@ describe('đăng nhập Google, chưa cấu hình OAuth client', () => {
   let app: INestApplication;
 
   beforeAll(async () => {
-    process.env['GOOGLE_CLIENT_ID'] = '';
-    process.env['GOOGLE_CLIENT_SECRET'] = '';
+    useGoogleLogin('', '');
     app = await createTestApp();
   });
 
   afterAll(async () => {
     await app.close();
+    restoreEnv();
   });
 
-  it('GET /auth/google: về trang Đăng nhập kèm loginError=notConfigured', async () => {
-    const response = await request(app.getHttpServer()).get('/api/auth/google').expect(302);
-    expect(response.headers['location']).toMatch(/\/#\/dang-nhap\?loginError=notConfigured$/);
+  it('POST /auth/login: 503 kèm câu báo chưa bật đăng nhập Google', async () => {
+    const response = await request(app.getHttpServer()).post('/api/auth/login').send({}).expect(503);
+    expect(response.body.message).toBe(AUTH_MESSAGES.googleNotConfigured);
   });
 });

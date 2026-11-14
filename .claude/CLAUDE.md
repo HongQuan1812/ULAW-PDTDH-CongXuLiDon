@@ -60,7 +60,7 @@ Như vậy luật nghiệp vụ chỉ viết một lần.
 
 - **Docker Compose** cho môi trường phát triển: `postgres`.
 - Biến môi trường: `.env` ở thư mục gốc cho Docker, `api/.env` cho backend (mỗi tệp có `.env.example`). Không commit `.env`.
-- Mỗi biến một việc: `VITE_USE_MOCK_BACKEND` (+ `REAL_BACKEND_GROUPS`) chỉ chọn backend giả hay thật; `APP_ENV` / `VITE_APP_ENV` chỉ bật chức năng thử nghiệm. Xem README, mục Biến môi trường.
+- Mỗi biến một việc: `VITE_USE_MOCK_BACKEND` (+ `REAL_BACKEND_GROUPS`) chỉ chọn backend giả hay thật; `VITE_APP_ENV` chỉ bật phần thử nghiệm của giao diện; `APP_ENV` chỉ chọn môi trường backend (dev / bản thật); `ENABLE_DEMO_APIS` (+ `ALWAYS_REAL_APIS` trong `api/src/config/demo-apis.ts`) chỉ chọn bản giả hay bản thật của API backend (vd đăng nhập thử hay Google). Một cách làm cho mọi API có bản giả: bản giả `dev-<tên>` bọc `JUST FOR DEMO`, bản thật chưa phát triển thì `throw realApiNotBuilt('dev-<tên>')` (501), không chặn backend chạy. Tên `dev-<tên>` chỉ có ở backend: frontend và API giả (MSW) chỉ biết endpoint bình thường (vd `POST /auth/login`), backend tự chọn bản. Xem README, mục Biến môi trường.
 
 ### Nguyên tắc thiết kế
 

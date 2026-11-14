@@ -9,14 +9,11 @@ import { SCHOOL_EMAIL_DOMAINS } from '../validators';
 export const AUTH_ENDPOINTS = {
   /** GET: phiên đăng nhập hiện tại → Session; chưa đăng nhập → 401 */
   me: '/auth/me',
-  /** GET ?from=<trang muốn mở sau khi đăng nhập>: trình duyệt mở thẳng (không phải fetch) → chuyển sang trang chọn tài khoản Google */
-  googleStart: '/auth/google',
+  /** POST LoginRequest → LoginResponse: nút "Đăng nhập bằng email trường", ô đổi vai trò (thử nghiệm) trong menu.
+   *  Máy chủ quyết định đăng nhập cách nào: đăng nhập thử luôn (trả Session), hoặc trả đường dẫn sang Google */
+  login: '/auth/login',
   /** GET: Google chuyển về đây sau khi chọn tài khoản → tạo phiên rồi chuyển về giao diện (lỗi thì về trang Đăng nhập kèm GOOGLE_LOGIN_ERROR_PARAM) */
   googleCallback: '/auth/google/callback',
-  /* JUST FOR DEMO: START · chỉ có ở API giả, backend thật dùng Google OAuth */
-  /** POST DevLoginRequest → Session */
-  devLogin: '/auth/dev-login',
-  /* JUST FOR DEMO: END */
   /** POST: đăng xuất → 204 */
   logout: '/auth/logout',
 } as const;
@@ -31,7 +28,7 @@ export const SessionUserSchema = z.object({
 });
 export type SessionUser = z.infer<typeof SessionUserSchema>;
 
-/** Phiên đăng nhập: ai đang dùng và với vai trò gì. Trả về từ GET /auth/me, POST /auth/dev-login. */
+/** Phiên đăng nhập: ai đang dùng và với vai trò gì. Trả về từ GET /auth/me, POST /auth/login. */
 export const SessionSchema = z.object({
   user: SessionUserSchema,
   role: z.enum(ROLE_IDS),
@@ -40,16 +37,28 @@ export const SessionSchema = z.object({
 });
 export type Session = z.infer<typeof SessionSchema>;
 
-/* JUST FOR DEMO: START · body của POST /auth/dev-login: chọn vai trò để đăng nhập thử.
-   email (không bắt buộc) giả làm email Google trả về, để thử trường hợp đăng nhập bằng email ngoài trường;
-   bỏ trống thì dùng email của tài khoản mẫu theo vai trò. */
-const DEV_LOGIN_INVALID_MESSAGE = 'Vai trò không hợp lệ.';
-export const DevLoginRequestSchema = z.object({
-  role: z.enum(ROLE_IDS, DEV_LOGIN_INVALID_MESSAGE),
-  email: z.email(DEV_LOGIN_INVALID_MESSAGE).optional(),
+/** Câu báo khi body đăng nhập sai (vai trò lạ, email sai dạng). */
+const LOGIN_INVALID_MESSAGE = 'Vai trò không hợp lệ.';
+
+/** Body của POST /auth/login. */
+export const LoginRequestSchema = z.object({
+  /** trang trong giao diện cần mở sau khi đăng nhập Google, vd '/quan-li-don' */
+  from: z.string().optional(),
+  /* JUST FOR DEMO: START · chỉ dùng khi máy chủ đăng nhập thử; đăng nhập Google bỏ qua */
+  /** vai trò của tài khoản mẫu muốn đăng nhập thử; bỏ trống = Người nộp đơn */
+  role: z.enum(ROLE_IDS, LOGIN_INVALID_MESSAGE).optional(),
+  /** email giả làm email Google trả về (thử email ngoài trường) */
+  email: z.email(LOGIN_INVALID_MESSAGE).optional(),
+  /* JUST FOR DEMO: END */
 });
-export type DevLoginRequest = z.infer<typeof DevLoginRequestSchema>;
-/* JUST FOR DEMO: END */
+export type LoginRequest = z.infer<typeof LoginRequestSchema>;
+
+/** Kết quả POST /auth/login: đã đăng nhập luôn (bản giả), hoặc phải chuyển trình duyệt sang Google. */
+export const LoginResponseSchema = z.discriminatedUnion('kind', [
+  z.object({ kind: z.literal('session'), session: SessionSchema }),
+  z.object({ kind: z.literal('redirect'), url: z.string() }),
+]);
+export type LoginResponse = z.infer<typeof LoginResponseSchema>;
 
 /* ---------- Đăng nhập Google: lỗi báo về trang Đăng nhập qua tham số trên đường dẫn ---------- */
 
@@ -72,11 +81,11 @@ export const AUTH_MESSAGES = {
   /** Đăng nhập bằng email không phải email trường */
   403: (email: string) =>
     `Hãy đăng nhập bằng email trường (@${SCHOOL_EMAIL_DOMAINS[0]}). Email ${email} không được dùng cho cổng này.`,
-  /** POST /auth/dev-login với body sai (vai trò không có trong danh sách) */
-  422: DEV_LOGIN_INVALID_MESSAGE,
-  /** POST /auth/dev-login (JUST FOR DEMO) khi Admin đã đổi hết tài khoản của vai trò này sang vai trò khác (404) */
+  /** POST /auth/login với body sai (vai trò không có trong danh sách) */
+  422: LOGIN_INVALID_MESSAGE,
+  /** POST /auth/login khi đăng nhập thử (JUST FOR DEMO) mà Admin đã đổi hết tài khoản của vai trò này sang vai trò khác (404) */
   noDemoAccount: 'Không còn tài khoản nào có vai trò này để đăng nhập thử.',
-  /** Đăng nhập Google khi máy chủ chưa cấu hình GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET */
+  /** Đăng nhập Google khi máy chủ chưa cấu hình GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET (POST /auth/login trả 503) */
   googleNotConfigured: 'Cổng chưa bật đăng nhập bằng Google. Hãy báo quản trị viên.',
   /** Đăng nhập Google không thành công (bấm Hủy, quá lâu mới chọn tài khoản, Google báo lỗi) */
   googleFailed: 'Chưa đăng nhập được bằng Google. Hãy thử lại.',

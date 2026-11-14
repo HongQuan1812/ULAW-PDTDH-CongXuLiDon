@@ -1,6 +1,6 @@
-/* Hook gọi API đăng nhập: phiên hiện tại, đăng nhập Google, đăng nhập thử, đăng xuất. */
+/* Hook gọi API đăng nhập: phiên hiện tại, đăng nhập, đăng xuất. */
 import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
-import { ENDPOINTS, type DevLoginRequest, type Session } from '@ulaw/shared';
+import { ENDPOINTS, type LoginRequest, type LoginResponse, type Session } from '@ulaw/shared';
 import { clearTableStates } from '../components/table/tableStateStore';
 import { ApiError, apiFetch } from './client';
 
@@ -43,35 +43,29 @@ export function handleUnauthorized(queryClient: QueryClient, error: unknown): vo
 }
 
 /**
- * Đường dẫn bắt đầu đăng nhập Google. Trình duyệt mở thẳng đường này (không gọi bằng fetch):
- * máy chủ chuyển sang Google, xong thì chuyển về trang `from`.
- * @param from  trang trong giao diện cần mở sau khi đăng nhập, vd '/quan-li-don'; bỏ trống = trang chính của vai trò
- * @returns     vd '/api/auth/google?from=%2Fquan-li-don'
+ * Đăng nhập: nút "Đăng nhập bằng email trường", ô đổi vai trò (thử nghiệm). Máy chủ quyết định đăng nhập cách nào:
+ * trả phiên luôn (đăng nhập thử) thì lưu phiên; trả đường dẫn thì chuyển trình duyệt sang Google
+ * (rời khỏi ứng dụng, máy chủ chuyển về trang `from` sau khi xong).
+ * @returns  kết quả useMutation; gọi mutate({ from, role, email }) để đăng nhập
  */
-export function googleLoginUrl(from?: string): string {
-  const query = from ? `?${new URLSearchParams({ from }).toString()}` : '';
-  return `/api${ENDPOINTS.auth.googleStart}${query}`;
-}
-
-/* JUST FOR DEMO: START · đăng nhập thử theo vai trò, chỉ có ở API giả. Bản thật: Google OAuth. */
-/**
- * Đăng nhập thử theo vai trò (chỉ có ở API giả).
- * @returns  kết quả useMutation; gọi mutate({ role }) để đăng nhập
- */
-export function useDevLogin() {
+export function useLogin() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (body: DevLoginRequest) =>
-      apiFetch<Session>(ENDPOINTS.auth.devLogin, { method: 'POST', body: JSON.stringify(body) }),
-    // Lưu phiên mới để cả ứng dụng thấy ngay, không cần gọi lại /auth/me;
-    // các bảng bắt đầu lại từ đầu (không tìm, không sắp xếp, không lọc)
-    onSuccess: (session) => {
+    mutationFn: (body: LoginRequest) =>
+      apiFetch<LoginResponse>(ENDPOINTS.auth.login, { method: 'POST', body: JSON.stringify(body) }),
+    onSuccess: (loginResponse) => {
+      // Sang Google
+      if (loginResponse.kind === 'redirect') {
+        window.location.assign(loginResponse.url);
+        return;
+      }
+
+      // Đã đăng nhập: lưu phiên để cả ứng dụng thấy ngay; các bảng bắt đầu lại từ đầu
       clearTableStates();
-      queryClient.setQueryData(SESSION_KEY, session);
+      queryClient.setQueryData(SESSION_KEY, loginResponse.session);
     },
   });
 }
-/* JUST FOR DEMO: END */
 
 /**
  * Đăng xuất.

@@ -41,7 +41,7 @@ describe('form-notes', () => {
 
   /** Đăng nhập thử, trả cookie để gửi kèm các request sau. */
   async function loginAs(role: RoleId): Promise<string> {
-    const response = await request(server()).post('/api/auth/dev-login').send({ role }).expect(200);
+    const response = await request(server()).post('/api/auth/login').send({ role }).expect(200);
     return (response.headers['set-cookie'] as unknown as string[]).map((cookie) => cookie.split(';')[0]).join('; ');
   }
 

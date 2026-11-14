@@ -1,15 +1,18 @@
-/* Nhóm API auth: phiên hiện tại, đăng nhập Google, đăng nhập thử (chỉ dev), đăng xuất. */
-import { Body, Controller, Get, HttpCode, NotFoundException, Post, Query, Req, Res } from '@nestjs/common';
-import { ApiFoundResponse, ApiOkResponse, ApiQuery, ApiTags } from '@nestjs/swagger';
+/* Nhóm API auth: phiên hiện tại, đăng nhập (Google; bản giả: đăng nhập thử), đăng xuất. */
+import { Body, Controller, Get, HttpCode, Post, Query, Req, Res } from '@nestjs/common';
+import { ApiFoundResponse, ApiOkResponse, ApiTags } from '@nestjs/swagger';
 import {
   AUTH_ENDPOINTS,
   AUTH_MESSAGES,
-  DevLoginRequestSchema,
+  LoginRequestSchema,
+  LoginResponseSchema,
   GOOGLE_LOGIN_EMAIL_PARAM,
   GOOGLE_LOGIN_ERROR_PARAM,
   SessionSchema,
   isSchoolEmail,
-  type DevLoginRequest,
+  type LoginRequest,
+  type LoginResponse,
+  type RoleId,
   type GoogleLoginError,
   type Session,
 } from '@ulaw/shared';
@@ -35,6 +38,9 @@ import { SESSION_COOKIE_NAME, readCookie, readSessionToken, sessionCookieOptions
 
 /** Trang Đăng nhập của giao diện (hash router: #/dang-nhap), nơi báo lỗi đăng nhập Google. */
 const WEB_LOGIN_HASH_PATH = '/dang-nhap';
+/* JUST FOR DEMO: START · POST /auth/login dùng bản giả mà không gửi vai trò thì đăng nhập thử vai trò này */
+const DEFAULT_DEMO_ROLE: RoleId = 'nguoiNopDon';
+/* JUST FOR DEMO: END */
 
 @ApiTags('auth')
 @Controller()
@@ -42,7 +48,7 @@ export class AuthController {
   /**
    * @param authService         tạo, tìm, xóa phiên; tìm / tạo tài khoản theo email Google
    * @param googleOAuthService  đổi code Google trả về lấy email
-   * @param appConfig           cấu hình (chế độ dev, OAuth client, địa chỉ giao diện)
+   * @param appConfig           cấu hình (chế độ dev, API bản giả / thật, OAuth client, địa chỉ giao diện)
    */
   constructor(
     private readonly authService: AuthService,
@@ -63,23 +69,38 @@ export class AuthController {
   }
 
   /**
-   * Bắt đầu đăng nhập Google: ghi state vào cookie rồi chuyển trình duyệt sang trang chọn tài khoản Google.
-   * Trình duyệt mở thẳng đường này (không gọi bằng fetch).
-   * @param from      trang trong giao diện cần mở sau khi đăng nhập, vd '/quan-li-don'; không hợp lệ thì về trang chính
-   * @param response  response, để đặt cookie và chuyển trang
+   * Nút "Đăng nhập bằng email trường". Máy chủ quyết định đăng nhập cách nào:
+   * bản giả dev-login (ENABLE_DEMO_APIS=true, không nằm trong ALWAYS_REAL_APIS) thì đăng nhập thử luôn vào tài khoản mẫu
+   * của vai trò được gửi; bản thật thì ghi state vào cookie và trả đường dẫn sang trang chọn tài khoản Google.
+   * @param loginRequest  trang cần mở sau khi đăng nhập; vai trò, email thử (chỉ dùng ở bản giả)
+   * @param request       request, để biết phiên cũ (đăng nhập thử)
+   * @param response      response, để đặt cookie
+   * @returns             { kind: 'session' } đã đăng nhập · { kind: 'redirect', url } sang Google
+   * @throws              422 body sai · 503 chưa cấu hình OAuth client · (đăng nhập thử) 404 hết tài khoản vai trò đó, 403 email ngoài trường
    */
-  @Get(AUTH_ENDPOINTS.googleStart)
-  @ApiQuery({ name: 'from', required: false, description: 'Trang cần mở sau khi đăng nhập, vd /quan-li-don' })
-  @ApiFoundResponse({ description: 'Chuyển sang Google; chưa cấu hình OAuth client thì về trang Đăng nhập kèm loginError=notConfigured' })
-  startGoogleLogin(@Query('from') from: unknown, @Res() response: Response): void {
-    // Chưa có OAuth client: báo về trang Đăng nhập
-    const google = this.appConfig.google;
-    if (!google) return response.redirect(302, this.webLoginErrorUrl('notConfigured'));
+  @Post(AUTH_ENDPOINTS.login)
+  @HttpCode(200)
+  @ApiOkResponse({ schema: openApiSchemaOf(LoginResponseSchema) })
+  async login(
+    @Body(new ZodValidationPipe(LoginRequestSchema, AUTH_MESSAGES[422])) loginRequest: LoginRequest,
+    @Req() request: Request,
+    @Res({ passthrough: true }) response: Response,
+  ): Promise<LoginResponse> {
+    /* JUST FOR DEMO: START · bản giả: đăng nhập thử, không qua Google. Bản thật: luôn sang Google */
+    if (this.appConfig.usesDemoApi('dev-login')) {
+      const session = await this.logInDemoAccount(loginRequest.role ?? DEFAULT_DEMO_ROLE, loginRequest.email, request, response);
+      return { kind: 'session', session };
+    }
+    /* JUST FOR DEMO: END */
 
-    // Nhớ state, mã PKCE, trang cần mở; rồi sang Google
-    const loginState = createGoogleLoginState(toSafeReturnPath(from));
+    // Chưa có OAuth client
+    const google = this.appConfig.google;
+    if (!google) throw new ApiException(503, AUTH_MESSAGES.googleNotConfigured);
+
+    // Nhớ state, mã PKCE, trang cần mở; trả đường dẫn sang Google
+    const loginState = createGoogleLoginState(toSafeReturnPath(loginRequest.from));
     response.cookie(GOOGLE_STATE_COOKIE_NAME, encodeGoogleLoginState(loginState), googleStateCookieOptions(this.appConfig.isDev));
-    response.redirect(302, buildGoogleAuthorizeUrl(google, loginState));
+    return { kind: 'redirect', url: buildGoogleAuthorizeUrl(google, loginState) };
   }
 
   /**
@@ -128,33 +149,24 @@ export class AuthController {
     response.redirect(302, this.webUrl(loginState.returnPath));
   }
 
-  /* JUST FOR DEMO: START · đăng nhập thử theo vai trò, chỉ bật khi APP_ENV=dev; bản thật dùng Google OAuth */
+  /* JUST FOR DEMO: START · bản giả dev-login của đăng nhập (chỉ dùng khi usesDemoApi('dev-login')); bản thật là Google OAuth */
   /**
-   * Đăng nhập thử: chọn vai trò, nhận cookie phiên.
-   * @param devLoginRequest  vai trò, và email giả làm email Google (không bắt buộc)
-   * @param request          request, để biết phiên cũ (đổi vai trò thì phiên cũ bị xóa)
-   * @param response         response, để đặt cookie
-   * @returns                Session của tài khoản được chọn
-   * @throws                 404 khi không ở chế độ dev · 422 body sai · 404 hết tài khoản vai trò đó · 403 email ngoài trường
+   * Đăng nhập thử vào tài khoản mẫu của một vai trò: tạo phiên, đặt cookie.
+   * @param role      vai trò
+   * @param email     email giả làm email Google (không bắt buộc); bỏ trống = email của tài khoản mẫu
+   * @param request   request, để xóa phiên cũ (nếu có)
+   * @param response  response, để đặt cookie
+   * @returns         Session của tài khoản mẫu
+   * @throws          404 hết tài khoản vai trò đó · 403 email ngoài trường
    */
-  @Post(AUTH_ENDPOINTS.devLogin)
-  @HttpCode(200)
-  @ApiOkResponse({ schema: openApiSchemaOf(SessionSchema) })
-  async devLogin(
-    @Body(new ZodValidationPipe(DevLoginRequestSchema, AUTH_MESSAGES[422])) devLoginRequest: DevLoginRequest,
-    @Req() request: Request,
-    @Res({ passthrough: true }) response: Response,
-  ): Promise<Session> {
-    // Bản thật không có đường này
-    if (!this.appConfig.isDev) throw new NotFoundException();
-
+  private async logInDemoAccount(role: RoleId, email: string | undefined, request: Request, response: Response): Promise<Session> {
     // Tài khoản của vai trò này (Admin có thể đã đổi hết sang vai trò khác)
-    const user = await this.authService.findDemoUser(devLoginRequest.role);
+    const user = await this.authService.findDemoUser(role);
     if (!user) throw new ApiException(404, AUTH_MESSAGES.noDemoAccount);
 
     // Chỉ email trường được vào; có email thử thì kiểm tra email đó
-    const email = devLoginRequest.email ?? user.email;
-    if (!isSchoolEmail(email)) throw new ApiException(403, AUTH_MESSAGES[403](email));
+    const loginEmail = email ?? user.email;
+    if (!isSchoolEmail(loginEmail)) throw new ApiException(403, AUTH_MESSAGES[403](loginEmail));
 
     // Xóa phiên cũ (nếu có), tạo phiên mới, đặt cookie
     const previousToken = readSessionToken(request.headers.cookie);

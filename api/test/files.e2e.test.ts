@@ -21,9 +21,9 @@ describe('files', () => {
   let othersFileId: string;
   const server = () => app.getHttpServer();
 
-  /** Đăng nhập thử, trả cookie để gửi kèm các request sau (dev-login luôn vào tài khoản mẫu đầu tiên của vai trò). */
+  /** Đăng nhập thử, trả cookie để gửi kèm các request sau (đăng nhập thử luôn vào tài khoản mẫu đầu tiên của vai trò). */
   async function loginAs(role: RoleId): Promise<string> {
-    const response = await request(server()).post('/api/auth/dev-login').send({ role }).expect(200);
+    const response = await request(server()).post('/api/auth/login').send({ role }).expect(200);
     return (response.headers['set-cookie'] as unknown as string[]).map((cookie) => cookie.split(';')[0]).join('; ');
   }
 
@@ -37,7 +37,7 @@ describe('files', () => {
     prisma = app.get(PrismaService);
     await cleanUp();
 
-    // Người nộp đơn dev-login: lấy một đơn của họ để gắn tệp thử, và một tệp mẫu của người khác
+    // Người nộp đơn đăng nhập thử: lấy một đơn của họ để gắn tệp thử, và một tệp mẫu của người khác
     const me = await request(server()).get('/api/auth/me').set('Cookie', await loginAs('nguoiNopDon')).expect(200);
     const myId = me.body.user.id as string;
     const mine = await prisma.fileObject.findFirstOrThrow({ where: { id: { startsWith: SEED_FILE_ID_PREFIX }, form: { ownerId: myId } } });

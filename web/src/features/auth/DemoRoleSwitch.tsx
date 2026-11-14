@@ -3,7 +3,7 @@
 import { useId } from 'react';
 import { useNavigate } from 'react-router';
 import { AUTH_MESSAGES, ROLES, ROLE_IDS, type RoleId } from '@ulaw/shared';
-import { useDevLogin } from '../../api/auth';
+import { useLogin } from '../../api/auth';
 import { ApiError } from '../../api/client';
 import { useToast } from '../../components/Toast';
 import { homePath } from '../../app/paths';
@@ -19,7 +19,7 @@ import styles from './DemoRoleSwitch.module.css';
 export function DemoRoleSwitch({ onSwitched, stacked = false }: { onSwitched?: () => void; stacked?: boolean }) {
   const { role } = useAuth();
   const selectId = useId(); // có thể có 2 ô cùng lúc (menu trượt, menu tài khoản) nên id phải riêng
-  const login = useDevLogin();
+  const login = useLogin();
   const navigate = useNavigate();
   const toast = useToast();
 
@@ -31,7 +31,8 @@ export function DemoRoleSwitch({ onSwitched, stacked = false }: { onSwitched?: (
     login.mutate(
       { role: next },
       {
-        onSuccess: () => {
+        onSuccess: (loginResponse) => {
+          if (loginResponse.kind === 'redirect') return; // máy chủ không đăng nhập thử: trình duyệt đang sang Google
           navigate(homePath(next));
           onSwitched?.();
         },
