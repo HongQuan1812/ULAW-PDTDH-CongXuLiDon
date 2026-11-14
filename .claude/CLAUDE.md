@@ -49,7 +49,7 @@ Như vậy luật nghiệp vụ chỉ viết một lần.
 | Khung | **NestJS** (Node.js) | Chia module rõ ràng; Guard/Decorator hợp để kiểm tra quyền |
 | CSDL | **PostgreSQL** | Câu trả lời của đơn và cấu trúc loại đơn lưu dạng **JSONB** |
 | ORM | **Prisma** | Migration, seed dữ liệu mẫu |
-| Đăng nhập | Google OAuth (Passport), tham số `hd` + kiểm tra lại tên miền ở máy chủ | Phiên đăng nhập bằng cookie httpOnly |
+| Đăng nhập | Google OAuth (authorization code + PKCE, tự gọi Google bằng `fetch`, không dùng Passport), kiểm tra tên miền ở máy chủ theo `SCHOOL_EMAIL_DOMAINS` | Phiên đăng nhập bằng cookie httpOnly |
 | Tệp tải lên | **Ổ đĩa máy chủ** | |
 | Xuất Word | **docxtemplater** | Điền mã `{...}` vào mẫu .docx |
 | Dữ liệu sinh viên | Module `student-directory` | Đọc từ database trường (cách kết nối chờ xác nhận) |

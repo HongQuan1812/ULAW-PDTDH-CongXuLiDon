@@ -2,7 +2,8 @@
    Backend thật: email Google trả về phải qua isSchoolEmail(), không thì trả 403 (AUTH_MESSAGES[403]) và không tạo phiên. */
 
 /* Chỉ chấp nhận email thuộc các tên miền này (kể cả tên miền con, vd ...@student.hcmulaw.edu.vn).
-   TODO: xác nhận lại tên miền email thật của sinh viên và cán bộ. */
+   Đây là chỗ duy nhất quyết định ai được vào cổng (đăng nhập Google không gửi hd): mở rộng thì thêm tên miền vào đây,
+   vd 'gmail.com' để nhận người ngoài trường. */
 export const SCHOOL_EMAIL_DOMAINS = ['hcmulaw.edu.vn'] as const;
 
 /**

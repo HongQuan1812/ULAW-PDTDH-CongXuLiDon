@@ -1,8 +1,18 @@
 /* Trang Đăng nhập. */
-import { useState } from 'react';
-import { Navigate, useLocation } from 'react-router';
-import { ROLES, ROLE_IDS, SCHOOL_EMAIL_DOMAINS, type RoleId } from '@ulaw/shared';
-import { useDevLogin, useSession } from '../../api/auth';
+import { useEffect, useRef, useState } from 'react';
+import { Navigate, useLocation, useSearchParams } from 'react-router';
+import {
+  AUTH_MESSAGES,
+  GOOGLE_LOGIN_EMAIL_PARAM,
+  GOOGLE_LOGIN_ERRORS,
+  GOOGLE_LOGIN_ERROR_PARAM,
+  ROLES,
+  ROLE_IDS,
+  SCHOOL_EMAIL_DOMAINS,
+  type GoogleLoginError,
+  type RoleId,
+} from '@ulaw/shared';
+import { googleLoginUrl, useDevLogin, useSession } from '../../api/auth';
 import { homePath } from '../../app/paths';
 import { useToast } from '../../components/Toast';
 import { SHOW_DEMO } from '../../lib/env';
@@ -19,8 +29,19 @@ const POINTS = [
 ];
 
 /**
- * Trang Đăng nhập. Hiện đang đăng nhập thử theo vai trò (API giả);
- * giai đoạn 2 thay bằng Google OAuth.
+ * Câu báo cho một lần đăng nhập Google không thành công (máy chủ chuyển về trang này kèm mã lỗi).
+ * @param error  mã lỗi trên đường dẫn
+ * @param email  email bị từ chối (chỉ có khi notSchoolEmail)
+ * @returns      câu báo hiện trong toast đỏ
+ */
+function googleLoginErrorMessage(error: GoogleLoginError, email: string | null): string {
+  if (error === 'notSchoolEmail') return AUTH_MESSAGES[403](email ?? '');
+  if (error === 'notConfigured') return AUTH_MESSAGES.googleNotConfigured;
+  return AUTH_MESSAGES.googleFailed;
+}
+
+/**
+ * Trang Đăng nhập: nút Đăng nhập bằng Google; khi dev có thêm phần đăng nhập thử theo vai trò.
  * @returns  giao diện trang; đã đăng nhập thì chuyển vào ứng dụng
  */
 export function LoginPage() {
@@ -28,7 +49,29 @@ export function LoginPage() {
   const login = useDevLogin();
   const location = useLocation();
   const toast = useToast();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [role, setRole] = useState<RoleId>('nguoiNopDon');
+  const [redirectingToGoogle, setRedirectingToGoogle] = useState(false);
+  const googleErrorShown = useRef(false);
+
+  // Trang cần mở sau khi đăng nhập (AppLayout gửi kèm khi chuyển về đây)
+  const from = (location.state as { from?: string } | null)?.from;
+
+  // Máy chủ chuyển về kèm mã lỗi đăng nhập Google: báo một lần rồi xóa khỏi đường dẫn
+  useEffect(() => {
+    const error = searchParams.get(GOOGLE_LOGIN_ERROR_PARAM);
+    if (!error || googleErrorShown.current) return;
+    googleErrorShown.current = true;
+    const knownError = (GOOGLE_LOGIN_ERRORS as readonly string[]).includes(error) ? (error as GoogleLoginError) : 'failed';
+    toast(googleLoginErrorMessage(knownError, searchParams.get(GOOGLE_LOGIN_EMAIL_PARAM)), 'error');
+    setSearchParams({}, { replace: true, state: location.state });
+  }, [searchParams, setSearchParams, toast, location.state]);
+
+  /** Sang trang chọn tài khoản Google (rời khỏi ứng dụng, máy chủ chuyển về sau khi xong). */
+  const logInWithGoogle = () => {
+    setRedirectingToGoogle(true);
+    window.location.assign(googleLoginUrl(from));
+  };
 
   /**
    * Đăng nhập thử; không đăng nhập được (vd email ngoài trường, máy chủ lỗi) thì báo bằng toast đỏ.
@@ -42,7 +85,6 @@ export function LoginPage() {
 
   // Đã đăng nhập: mở trang trong link nếu có (AppLayout gửi kèm), không thì trang chính của vai trò
   if (session.data) {
-    const from = (location.state as { from?: string } | null)?.from;
     return <Navigate to={from ?? homePath(session.data.role)} replace />;
   }
 
@@ -54,17 +96,15 @@ export function LoginPage() {
         <h1>Cổng xử lí đơn</h1>
         <p className={styles.lead}>Đăng nhập để đăng ký xét miễn môn học và theo dõi trạng thái đơn của bạn.</p>
 
-        {/* JUST FOR DEMO: START · đăng nhập thử theo vai trò đang chọn (API giả). Bản thật: chuyển sang Google OAuth. */}
         <button
           type="button"
           className={styles.googleButton}
-          disabled={login.isPending}
-          onClick={() => logIn()}
+          disabled={redirectingToGoogle || login.isPending}
+          onClick={logInWithGoogle}
         >
           <GoogleIcon />
-          {login.isPending ? 'Đang đăng nhập…' : 'Đăng nhập bằng email trường'}
+          {redirectingToGoogle ? 'Đang chuyển sang Google…' : 'Đăng nhập bằng email trường'}
         </button>
-        {/* JUST FOR DEMO: END */}
         <p className={styles.hint}>Dùng tài khoản Google do trường cấp (@{SCHOOL_EMAIL_DOMAINS[0]}).</p>
 
         <ul className={styles.points}>
@@ -93,6 +133,14 @@ export function LoginPage() {
                 <span>{ROLES[id].name}</span>
               </label>
             ))}
+            <button
+              type="button"
+              className={styles.demoLoginButton}
+              disabled={login.isPending || redirectingToGoogle}
+              onClick={() => logIn()}
+            >
+              {login.isPending ? 'Đang đăng nhập…' : `Đăng nhập thử: ${ROLES[role].name}`}
+            </button>
             <button
               type="button"
               className={styles.personalEmailButton}

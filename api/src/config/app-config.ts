@@ -27,7 +27,21 @@ const AppEnvSchema = z.object({
   WEB_BASE_URL_PRODUCTION: z.url().default('https://dichvu.hcmulaw.edu.vn'),
   // Chỉ dùng khi APP_ENV=dev: thư tự động gửi về địa chỉ này thay vì người nộp đơn; bỏ trống thì chỉ in ra console
   DEV_EMAIL_REDIRECT_TO: z.union([z.literal(''), z.email()]).default(''),
+  // OAuth client (loại Web application) tạo ở Google Cloud Console; bỏ trống: chưa bật đăng nhập Google (APP_ENV=dev vẫn đăng nhập thử được)
+  GOOGLE_CLIENT_ID: z.string().trim().default(''),
+  GOOGLE_CLIENT_SECRET: z.string().trim().default(''),
 });
+
+/** OAuth client của Google. */
+export interface GoogleOAuthConfig {
+  clientId: string;
+  clientSecret: string;
+  /** Địa chỉ Google chuyển về sau khi chọn tài khoản; phải khai báo y hệt ở mục Authorized redirect URIs của OAuth client */
+  redirectUri: string;
+}
+
+/** Đường dẫn (sau địa chỉ gốc của cổng) Google chuyển về; web server / Vite chuyển /api sang backend. */
+const GOOGLE_CALLBACK_PATH = '/api/auth/google/callback';
 
 /** Kết nối tới máy chủ gửi thư. */
 export interface SmtpConfig {
@@ -64,6 +78,8 @@ export class AppConfig {
   readonly webBaseUrl: string;
   /** Chỉ dùng khi APP_ENV=dev: địa chỉ nhận thay mọi thư tự động; null thì thư tự động chỉ in ra console. */
   readonly devEmailRedirectTo: string | null;
+  /** Đăng nhập Google; null khi chưa điền GOOGLE_CLIENT_ID hoặc GOOGLE_CLIENT_SECRET. */
+  readonly google: GoogleOAuthConfig | null;
 
   /**
    * Đọc và kiểm tra biến môi trường.
@@ -81,6 +97,14 @@ export class AppConfig {
     this.uploadDir = parsed.data.UPLOAD_DIR;
     this.webBaseUrl = this.isDev ? parsed.data.WEB_BASE_URL_DEV : parsed.data.WEB_BASE_URL_PRODUCTION;
     this.devEmailRedirectTo = parsed.data.DEV_EMAIL_REDIRECT_TO || null;
+    this.google =
+      parsed.data.GOOGLE_CLIENT_ID && parsed.data.GOOGLE_CLIENT_SECRET
+        ? {
+            clientId: parsed.data.GOOGLE_CLIENT_ID,
+            clientSecret: parsed.data.GOOGLE_CLIENT_SECRET,
+            redirectUri: new URL(GOOGLE_CALLBACK_PATH, this.webBaseUrl).toString(),
+          }
+        : null;
     this.smtp = { host: parsed.data.SMTP_HOST, port: parsed.data.SMTP_PORT, user: parsed.data.SMTP_USER, password: parsed.data.SMTP_PASSWORD };
   }
 }

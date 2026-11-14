@@ -27,6 +27,11 @@
 .rolePick input:checked+span{border-color:var(--accent);color:var(--accent);background:var(--accent-soft)}
 .rolePick input:focus-visible+span{outline:2px solid var(--focus);outline-offset:2px}
 
+/* nút đăng nhập thử theo vai trò đang chọn (bản thử nghiệm) */
+.demoLoginButton{width:100%;min-height:40px;margin-top:6px;border:1px solid var(--accent);border-radius:999px;background:var(--surface);color:var(--accent);font-size:13.5px;font-weight:500;cursor:pointer}
+.demoLoginButton:hover{background:var(--accent-soft)}
+.demoLoginButton:disabled{opacity:.6;cursor:progress}
+
 /* nút thử đăng nhập bằng email ngoài trường (bản thử nghiệm) */
 .personalEmailButton{width:100%;margin-top:4px;border:0;background:none;color:var(--accent);font-size:12.5px;font-weight:500;cursor:pointer;padding:4px}
 .personalEmailButton:hover{text-decoration:underline;text-underline-offset:3px}

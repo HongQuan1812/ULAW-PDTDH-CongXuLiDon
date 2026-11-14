@@ -1,4 +1,4 @@
-/* Hook gọi API đăng nhập: phiên hiện tại, đăng nhập thử, đăng xuất. */
+/* Hook gọi API đăng nhập: phiên hiện tại, đăng nhập Google, đăng nhập thử, đăng xuất. */
 import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
 import { ENDPOINTS, type DevLoginRequest, type Session } from '@ulaw/shared';
 import { clearTableStates } from '../components/table/tableStateStore';
@@ -40,6 +40,17 @@ export function handleUnauthorized(queryClient: QueryClient, error: unknown): vo
   // Đánh dấu chưa đăng nhập, rồi bỏ dữ liệu của phiên cũ (đăng nhập lại có thể là người khác)
   queryClient.setQueryData(SESSION_KEY, null);
   queryClient.removeQueries({ predicate: (query) => query.queryKey[0] !== SESSION_KEY[0] });
+}
+
+/**
+ * Đường dẫn bắt đầu đăng nhập Google. Trình duyệt mở thẳng đường này (không gọi bằng fetch):
+ * máy chủ chuyển sang Google, xong thì chuyển về trang `from`.
+ * @param from  trang trong giao diện cần mở sau khi đăng nhập, vd '/quan-li-don'; bỏ trống = trang chính của vai trò
+ * @returns     vd '/api/auth/google?from=%2Fquan-li-don'
+ */
+export function googleLoginUrl(from?: string): string {
+  const query = from ? `?${new URLSearchParams({ from }).toString()}` : '';
+  return `/api${ENDPOINTS.auth.googleStart}${query}`;
 }
 
 /* JUST FOR DEMO: START · đăng nhập thử theo vai trò, chỉ có ở API giả. Bản thật: Google OAuth. */

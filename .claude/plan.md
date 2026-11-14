@@ -52,9 +52,10 @@ Làm từng nhóm API. Xong nhóm nào thì chuyển nhóm đó sang API thật,
 | 10 | Xử lí đơn | `backend-xu-li-don` | `workflow.service.ts`: tiếp nhận, yêu cầu bổ sung, duyệt, từ chối, chuyển giao | ✓ |
 | 11 | Xuất Word | `backend-xuat-file` | nhóm `exports`: mẫu Word theo loại đơn, kiểm tra mã `{...}`, docxtemplater | ✓ |
 | 12 | Thư điện tử | `backend-email` | nhóm `email`: lưu cấu hình, gửi thư thử · thư tự động khi nộp đơn, ra quyết định | ✓ |
+| 13 | Đăng nhập Google | `backend-google-oauth` | `/auth/google` → Google → `/auth/google/callback`: authorization code + PKCE, kiểm tra state, ID token, email trường · tự tạo tài khoản Người nộp đơn lần đầu · trang Đăng nhập báo lỗi theo `loginError` | ✓ |
 
 Chưa làm, chờ thông tin từ bên ngoài:
-- Đăng nhập Google OAuth: cần tạo OAuth client và xác nhận tên miền email thật.
+- OAuth client thật cho máy chủ: tạo ở Google Cloud Console bằng tài khoản của trường, khai báo tên miền thật (cách tạo: README.md).
 - `student-directory` bản thật: cần cách kết nối database sinh viên của trường.
 - Triển khai lên máy chủ (bỏ quyền `CREATEDB` của user dự án, dùng `prisma migrate deploy`; nhập cấu hình gửi thư của hộp thư chính thức nếu không dùng Gmail đang thử).
 

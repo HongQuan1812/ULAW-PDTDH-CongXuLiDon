@@ -53,11 +53,21 @@ export function hashSessionToken(token: string): string {
  * @returns             mã phiên; không có cookie phiên thì null
  */
 export function readSessionToken(cookieHeader: string | undefined): string | null {
+  return readCookie(cookieHeader, SESSION_COOKIE_NAME);
+}
+
+/**
+ * Đọc giá trị một cookie từ header Cookie của request.
+ * @param cookieHeader  giá trị header Cookie, vd "a=1; ulaw_session=abc"; undefined nếu không có
+ * @param cookieName    tên cookie cần đọc, vd 'ulaw_session'
+ * @returns             giá trị cookie; không có hoặc rỗng thì null
+ */
+export function readCookie(cookieHeader: string | undefined, cookieName: string): string | null {
   if (!cookieHeader) return null;
   for (const part of cookieHeader.split(';')) {
     const separatorAt = part.indexOf('=');
     if (separatorAt < 0) continue;
-    if (part.slice(0, separatorAt).trim() === SESSION_COOKIE_NAME) return part.slice(separatorAt + 1).trim() || null;
+    if (part.slice(0, separatorAt).trim() === cookieName) return part.slice(separatorAt + 1).trim() || null;
   }
   return null;
 }

@@ -36,3 +36,26 @@ Tắt PostgreSQL:
 ```bash
 docker compose down
 ```
+
+## Đăng nhập Google
+
+Chưa điền `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` trong `api/.env` thì nút Đăng nhập bằng Google báo "chưa bật";
+khi `APP_ENV=dev` vẫn đăng nhập thử theo vai trò được (phần "Bản thử nghiệm" ở trang Đăng nhập).
+
+Tạo OAuth client (làm một lần, ở https://console.cloud.google.com):
+
+1. Tạo project (hoặc chọn project có sẵn).
+2. **Google Auth Platform → Branding**: điền tên ứng dụng, email hỗ trợ.
+   **Audience**: chọn *Internal* nếu project thuộc Google Workspace của trường (chỉ email trường đăng nhập được);
+   không thì *External*, và khi còn ở trạng thái *Testing* phải thêm email người thử vào *Test users*.
+3. **Clients → Create client** → loại *Web application*:
+   - *Authorized JavaScript origins*: `https://localhost:5173`
+   - *Authorized redirect URIs*: `https://localhost:5173/api/auth/google/callback`
+   (lên máy chủ thật thì thêm `https://<tên miền thật>` và `https://<tên miền thật>/api/auth/google/callback`)
+4. Chép *Client ID* và *Client secret* vào `api/.env`, rồi chạy lại backend.
+
+Redirect URI phải trùng từng ký tự với `WEB_BASE_URL_DEV` (khi dev) hoặc `WEB_BASE_URL_PRODUCTION` + `/api/auth/google/callback`.
+Google không nhận địa chỉ IP trong mạng LAN (vd `https://192.168.x.x:5173`), nên thử đăng nhập Google bằng `https://localhost:5173`.
+
+Email nào được vào cổng do `SCHOOL_EMAIL_DOMAINS` (`shared/src/validators/auth.ts`) quyết định, kể cả tên miền con.
+Email trường đăng nhập lần đầu được tạo tài khoản Người nộp đơn; đổi vai trò ở trang Quản lí tài khoản (Admin).

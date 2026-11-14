@@ -9,6 +9,10 @@ import { SCHOOL_EMAIL_DOMAINS } from '../validators';
 export const AUTH_ENDPOINTS = {
   /** GET: phiên đăng nhập hiện tại → Session; chưa đăng nhập → 401 */
   me: '/auth/me',
+  /** GET ?from=<trang muốn mở sau khi đăng nhập>: trình duyệt mở thẳng (không phải fetch) → chuyển sang trang chọn tài khoản Google */
+  googleStart: '/auth/google',
+  /** GET: Google chuyển về đây sau khi chọn tài khoản → tạo phiên rồi chuyển về giao diện (lỗi thì về trang Đăng nhập kèm GOOGLE_LOGIN_ERROR_PARAM) */
+  googleCallback: '/auth/google/callback',
   /* JUST FOR DEMO: START · chỉ có ở API giả, backend thật dùng Google OAuth */
   /** POST DevLoginRequest → Session */
   devLogin: '/auth/dev-login',
@@ -47,6 +51,19 @@ export const DevLoginRequestSchema = z.object({
 export type DevLoginRequest = z.infer<typeof DevLoginRequestSchema>;
 /* JUST FOR DEMO: END */
 
+/* ---------- Đăng nhập Google: lỗi báo về trang Đăng nhập qua tham số trên đường dẫn ---------- */
+
+/** Tên tham số mang mã lỗi, vd #/dang-nhap?loginError=notSchoolEmail&email=an@gmail.com */
+export const GOOGLE_LOGIN_ERROR_PARAM = 'loginError';
+/** Tên tham số mang email bị từ chối (chỉ có khi lỗi notSchoolEmail). */
+export const GOOGLE_LOGIN_EMAIL_PARAM = 'email';
+
+/** Mã lỗi đăng nhập Google:
+ *  notSchoolEmail: email không thuộc SCHOOL_EMAIL_DOMAINS · notConfigured: máy chủ chưa có GOOGLE_CLIENT_ID / SECRET
+ *  · failed: người dùng bấm Hủy, hết thời gian, hoặc Google trả lỗi */
+export const GOOGLE_LOGIN_ERRORS = ['notSchoolEmail', 'notConfigured', 'failed'] as const;
+export type GoogleLoginError = (typeof GOOGLE_LOGIN_ERRORS)[number];
+
 /* ---------- Câu thông báo, theo mã HTTP (lỗi hay thành công đều ghi ở đây) ---------- */
 
 export const AUTH_MESSAGES = {
@@ -59,6 +76,10 @@ export const AUTH_MESSAGES = {
   422: DEV_LOGIN_INVALID_MESSAGE,
   /** POST /auth/dev-login (JUST FOR DEMO) khi Admin đã đổi hết tài khoản của vai trò này sang vai trò khác (404) */
   noDemoAccount: 'Không còn tài khoản nào có vai trò này để đăng nhập thử.',
+  /** Đăng nhập Google khi máy chủ chưa cấu hình GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET */
+  googleNotConfigured: 'Cổng chưa bật đăng nhập bằng Google. Hãy báo quản trị viên.',
+  /** Đăng nhập Google không thành công (bấm Hủy, quá lâu mới chọn tài khoản, Google báo lỗi) */
+  googleFailed: 'Chưa đăng nhập được bằng Google. Hãy thử lại.',
   /** Bấm Đăng xuất mà không gửi được yêu cầu (mất mạng) */
   logoutFailed: 'Chưa đăng xuất được. Kiểm tra kết nối mạng rồi thử lại.',
   /** Đổi vai trò thử nghiệm mà không gửi được yêu cầu (mất mạng) */
