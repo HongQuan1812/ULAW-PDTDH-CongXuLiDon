@@ -1,4 +1,4 @@
-/* Gọi Google: đổi mã (code) Google trả về lấy ID token, rồi đọc email, họ tên trong đó. */
+/* Gọi Google: đổi mã (code) Google trả về lấy ID token, rồi đọc email trong đó. */
 import { Injectable, Logger } from '@nestjs/common';
 import type { GoogleOAuthConfig } from '../config/app-config';
 import { GOOGLE_TOKEN_URL, readGoogleIdToken, type GoogleIdentity } from './google-oauth';
@@ -15,7 +15,7 @@ export class GoogleOAuthService {
    * @param google        OAuth client
    * @param code          mã Google gửi kèm khi chuyển về
    * @param codeVerifier  mã PKCE đã tạo lúc chuyển sang Google
-   * @returns             email, họ tên; Google từ chối hoặc token không hợp lệ thì null (đã ghi log)
+   * @returns             email; Google từ chối hoặc token không hợp lệ thì null (đã ghi log)
    */
   async exchangeCode(google: GoogleOAuthConfig, code: string, codeVerifier: string): Promise<GoogleIdentity | null> {
     // Gửi code kèm bí mật của client và mã PKCE

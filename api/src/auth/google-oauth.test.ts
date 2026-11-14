@@ -26,7 +26,7 @@ const VALID_CLAIMS = {
   exp: NOW.getTime() / 1000 + 600,
   email: 'An.NV@Student.HCMULAW.edu.vn',
   email_verified: true,
-  name: ' Nguyễn Văn An ',
+  name: 'Nguyễn Văn An',
 };
 
 describe('toSafeReturnPath', () => {
@@ -80,7 +80,7 @@ describe('buildGoogleAuthorizeUrl', () => {
       client_id: GOOGLE.clientId,
       redirect_uri: GOOGLE.redirectUri,
       response_type: 'code',
-      scope: 'openid email profile',
+      scope: 'openid email',
       state: loginState.state,
       code_challenge: createHash('sha256').update(loginState.codeVerifier).digest('base64url'),
       code_challenge_method: 'S256',
@@ -90,15 +90,8 @@ describe('buildGoogleAuthorizeUrl', () => {
 });
 
 describe('readGoogleIdToken', () => {
-  it('token hợp lệ: email viết thường, họ tên bỏ khoảng trắng thừa', () => {
-    expect(readGoogleIdToken(fakeIdToken(VALID_CLAIMS), GOOGLE.clientId, NOW)).toEqual({
-      email: 'an.nv@student.hcmulaw.edu.vn',
-      name: 'Nguyễn Văn An',
-    });
-  });
-
-  it('không có họ tên: name null', () => {
-    expect(readGoogleIdToken(fakeIdToken({ ...VALID_CLAIMS, name: undefined }), GOOGLE.clientId, NOW)?.name).toBeNull();
+  it('token hợp lệ: chỉ lấy email, viết thường (không lấy họ tên)', () => {
+    expect(readGoogleIdToken(fakeIdToken(VALID_CLAIMS), GOOGLE.clientId, NOW)).toEqual({ email: 'an.nv@student.hcmulaw.edu.vn' });
   });
 
   it('từ chối: sai người phát hành, sai client, hết hạn, email chưa xác minh, thiếu email, token hỏng', () => {

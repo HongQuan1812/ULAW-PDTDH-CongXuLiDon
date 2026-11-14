@@ -9,8 +9,8 @@ tệp này nói luật đó để làm gì và trỏ tới chỗ khai báo. Hai 
   tính cả tên miền con (vd `...@student.hcmulaw.edu.vn`). Máy chủ kiểm tra email (đã được Google xác minh) khi Google chuyển về;
   không gửi tham số `hd` cho Google, nên muốn nhận thêm tên miền (kể cả người ngoài trường) chỉ cần thêm vào `SCHOOL_EMAIL_DOMAINS`.
   Email ngoài danh sách: không tạo tài khoản, không tạo phiên, trang Đăng nhập báo `AUTH_MESSAGES[403]`.
-- **Email trường chưa có tài khoản** đăng nhập lần đầu: tự tạo tài khoản vai trò **Người nộp đơn**, họ tên điền sẵn theo tài khoản Google,
-  chưa bổ sung thông tin. Muốn ai là Người xử lí đơn / Admin thì Admin đổi vai trò, hoặc tạo tài khoản trước ở Quản lí tài khoản.
+- **Email trường chưa có tài khoản** đăng nhập lần đầu: tự tạo tài khoản vai trò **Người nộp đơn**, họ tên để trống
+  (không lấy từ Google), chưa bổ sung thông tin: người dùng tự nhập họ tên ở màn Bổ sung thông tin. Muốn ai là Người xử lí đơn / Admin thì Admin đổi vai trò, hoặc tạo tài khoản trước ở Quản lí tài khoản.
 - **Lần đầu đăng nhập:** chỉ **Họ và tên** bắt buộc. CCCD và số điện thoại không bắt buộc; có nhập thì phải đúng định dạng.
   Bỏ trống thì hiện "—", bổ sung sau bằng nút Sửa thông tin.
 - **Kiểm tra thông tin tài khoản** (`shared/src/validators/profile.ts`): họ tên ít nhất 2 chữ; email là email trường, chưa tài khoản nào dùng;

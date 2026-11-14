@@ -41,7 +41,7 @@ const WEB_LOGIN_HASH_PATH = '/dang-nhap';
 export class AuthController {
   /**
    * @param authService         tạo, tìm, xóa phiên; tìm / tạo tài khoản theo email Google
-   * @param googleOAuthService  đổi code Google trả về lấy email, họ tên
+   * @param googleOAuthService  đổi code Google trả về lấy email
    * @param appConfig           cấu hình (chế độ dev, OAuth client, địa chỉ giao diện)
    */
   constructor(
@@ -110,7 +110,7 @@ export class AuthController {
       return response.redirect(302, this.webLoginErrorUrl('failed'));
     }
 
-    // Đổi code lấy email, họ tên
+    // Đổi code lấy email
     const identity = await this.googleOAuthService.exchangeCode(google, code, loginState.codeVerifier);
     if (!identity) return response.redirect(302, this.webLoginErrorUrl('failed'));
 
@@ -118,7 +118,7 @@ export class AuthController {
     if (!isSchoolEmail(identity.email)) return response.redirect(302, this.webLoginErrorUrl('notSchoolEmail', identity.email));
 
     // Tìm hoặc tạo tài khoản; xóa phiên cũ (nếu có), tạo phiên mới, đặt cookie
-    const user = await this.authService.findOrCreateGoogleUser(identity.email, identity.name);
+    const user = await this.authService.findOrCreateGoogleUser(identity.email);
     const previousToken = readSessionToken(request.headers.cookie);
     if (previousToken) await this.authService.destroySession(previousToken);
     const token = await this.authService.createSession(user.id);

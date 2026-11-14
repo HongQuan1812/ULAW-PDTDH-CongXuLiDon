@@ -78,7 +78,7 @@ describe('đăng nhập Google, đã cấu hình OAuth client', () => {
     expect(stateCookie).toContain('Path=/api/auth/google');
   });
 
-  it('email trường chưa có tài khoản: tạo tài khoản Người nộp đơn chưa bổ sung thông tin, đăng nhập, về trang cần mở', async () => {
+  it('email trường chưa có tài khoản: tạo tài khoản Người nộp đơn, họ tên trống, chưa bổ sung thông tin; đăng nhập, về trang cần mở', async () => {
     const googleResponse = Response.json({ id_token: fakeIdToken(NEW_SCHOOL_EMAIL) });
     const { callback, fetchSpy } = await loginThroughGoogle(googleResponse);
 
@@ -93,7 +93,7 @@ describe('đăng nhập Google, đã cấu hình OAuth client', () => {
     expect(sessionCookie).toBeTruthy();
     const me = await request(app.getHttpServer()).get('/api/auth/me').set('Cookie', sessionCookie!).expect(200);
     expect(SessionSchema.parse(me.body)).toMatchObject({
-      user: { email: NEW_SCHOOL_EMAIL, name: 'Người Thử Google' },
+      user: { email: NEW_SCHOOL_EMAIL, name: '' },
       role: 'nguoiNopDon',
       profileCompleted: false,
     });

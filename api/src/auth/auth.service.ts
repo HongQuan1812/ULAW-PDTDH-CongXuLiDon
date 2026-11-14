@@ -24,21 +24,20 @@ export class AuthService {
   }
 
   /**
-   * Tìm tài khoản theo email Google; chưa có thì tạo mới với vai trò Người nộp đơn, chưa bổ sung thông tin
-   * (giao diện sẽ mở màn Bổ sung thông tin để người dùng xác nhận họ tên).
+   * Tìm tài khoản theo email Google; chưa có thì tạo mới với vai trò Người nộp đơn, chưa bổ sung thông tin, họ tên trống
+   * (giao diện sẽ mở màn Bổ sung thông tin để người dùng tự nhập họ tên).
    * Chỉ gọi sau khi đã kiểm tra email là email trường.
-   * @param email       email Google đã xác minh, viết thường
-   * @param googleName  họ tên trên tài khoản Google, điền sẵn cho người dùng xác nhận; không có thì để trống
-   * @returns           tài khoản đã có, hoặc vừa tạo
+   * @param email  email Google đã xác minh, viết thường
+   * @returns      tài khoản đã có, hoặc vừa tạo
    */
-  async findOrCreateGoogleUser(email: string, googleName: string | null): Promise<User> {
+  async findOrCreateGoogleUser(email: string): Promise<User> {
     const existing = await this.prisma.user.findUnique({ where: { email } });
     if (existing) return existing;
 
     // Hai lần đăng nhập cùng lúc với cùng email: ràng buộc duy nhất chặn lần sau, lần sau dùng tài khoản lần trước vừa tạo
     try {
       return await this.prisma.user.create({
-        data: { id: `tk-${randomUUID()}`, email, role: 'nguoiNopDon', name: googleName ?? '', completed: false },
+        data: { id: `tk-${randomUUID()}`, email, role: 'nguoiNopDon', name: '', completed: false },
       });
     } catch (error) {
       if (!isUniqueViolation(error)) throw error;

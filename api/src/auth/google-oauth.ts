@@ -28,12 +28,10 @@ export interface GoogleLoginState {
   returnPath: string;
 }
 
-/** Thông tin người dùng lấy từ ID token. */
+/** Thông tin người dùng lấy từ ID token. Không lấy họ tên: người dùng tự nhập ở màn Bổ sung thông tin. */
 export interface GoogleIdentity {
   /** email đã được Google xác minh, viết thường */
   email: string;
-  /** họ tên trên tài khoản Google; không có thì null */
-  name: string | null;
 }
 
 /**
@@ -70,7 +68,7 @@ export function buildGoogleAuthorizeUrl(google: GoogleOAuthConfig, loginState: G
     client_id: google.clientId,
     redirect_uri: google.redirectUri,
     response_type: 'code',
-    scope: 'openid email profile',
+    scope: 'openid email',
     state: loginState.state,
     code_challenge: createHash('sha256').update(loginState.codeVerifier).digest('base64url'),
     code_challenge_method: 'S256',
@@ -122,7 +120,7 @@ export function googleStateCookieOptions(isDev: boolean): CookieOptions {
  * @param idToken   ID token (JWT) trong response của GOOGLE_TOKEN_URL
  * @param clientId  GOOGLE_CLIENT_ID của cổng
  * @param now       thời điểm hiện tại
- * @returns         email (viết thường) và họ tên; token sai hoặc email chưa xác minh thì null
+ * @returns         email (viết thường); token sai hoặc email chưa xác minh thì null
  */
 export function readGoogleIdToken(idToken: string, clientId: string, now: Date): GoogleIdentity | null {
   // Phần giữa của JWT là dữ liệu (claims) dạng base64url
@@ -142,6 +140,5 @@ export function readGoogleIdToken(idToken: string, clientId: string, now: Date):
 
   // Email phải có và đã được Google xác minh
   if (typeof claims['email'] !== 'string' || claims['email_verified'] !== true) return null;
-  const name = typeof claims['name'] === 'string' && claims['name'].trim() ? claims['name'].trim() : null;
-  return { email: claims['email'].toLowerCase(), name };
+  return { email: claims['email'].toLowerCase() };
 }
