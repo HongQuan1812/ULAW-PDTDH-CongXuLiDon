@@ -11,7 +11,8 @@ coverage/
 # Env
 .env
 .env.*
-!.env.example
+!.env.dev.example
+!.env.prod.example
 
 # Uploads (ổ đĩa máy chủ)
 api/uploads/

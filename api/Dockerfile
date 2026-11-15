@@ -13,11 +13,13 @@ ENV CI=true
 WORKDIR /app
 
 # Cài thư viện trước khi chép mã nguồn: mã đổi mà thư viện không đổi thì Docker dùng lại lớp này
-# (cài xong tự chạy prisma generate, nên cần schema)
+# (cài xong tự chạy prisma generate, nên cần schema và prisma.config.ts)
 COPY pnpm-lock.yaml pnpm-workspace.yaml package.json tsconfig.base.json ./
 COPY shared/package.json shared/
 COPY api/package.json api/prisma.config.ts api/
 COPY api/prisma api/prisma
+# prisma.config.ts dùng hàm đọc tệp env này
+COPY api/src/config/env-file.ts api/src/config/
 RUN pnpm install --frozen-lockfile --filter api...
 
 # Chép mã nguồn rồi build ra api/dist/main.mjs (gói luôn shared/)

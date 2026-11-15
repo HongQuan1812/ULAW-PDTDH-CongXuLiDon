@@ -18,7 +18,7 @@ COPY shared/ shared/
 COPY web/ web/
 
 # Biến VITE_* được nhúng vào dist/ lúc build, nên đặt giá trị bản thật ngay ở đây
-# (web/.env không được gửi vào lúc build, xem .dockerignore):
+# (.env.dev, .env.prod không được gửi vào lúc build, xem .dockerignore):
 #   backend thật, không MSW · tắt phần thử nghiệm của giao diện
 ENV VITE_USE_MOCK_BACKEND=false \
     VITE_REAL_BACKEND_GROUPS="" \

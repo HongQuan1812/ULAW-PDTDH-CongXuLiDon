@@ -1,9 +1,8 @@
-/* Cấu hình Prisma CLI (migrate, seed, generate). Biến môi trường đọc từ api/.env. */
-import { existsSync } from 'node:fs';
+/* Cấu hình Prisma CLI (migrate, seed, generate). Biến môi trường: .env.dev khi chạy trên máy, compose truyền vào khi chạy container. */
 import { defineConfig } from 'prisma/config';
+import { loadDevEnvFile } from './src/config/env-file';
 
-// Khi phát triển biến nằm trong api/.env; trên máy chủ thì biến đặt sẵn, không có tệp
-if (existsSync('.env')) process.loadEnvFile('.env');
+loadDevEnvFile();
 
 export default defineConfig({
   schema: 'prisma/schema.prisma',

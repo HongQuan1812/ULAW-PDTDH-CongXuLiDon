@@ -4,7 +4,8 @@ import { Logger } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { SWAGGER_PATH } from './common/swagger';
-import { AppConfig, loadApiEnvFile } from './config/app-config';
+import { AppConfig } from './config/app-config';
+import { loadDevEnvFile } from './config/env-file';
 import { configureApp } from './configure-app';
 
 /**
@@ -12,8 +13,8 @@ import { configureApp } from './configure-app';
  * @returns  Promise xong khi máy chủ đã sẵn sàng nhận request
  */
 async function bootstrap(): Promise<void> {
-  // Đọc api/.env trước khi tạo ứng dụng, để AppConfig thấy các biến
-  loadApiEnvFile();
+  // Đọc .env.dev (chạy thẳng trên máy) trước khi tạo ứng dụng, để AppConfig thấy các biến
+  loadDevEnvFile();
 
   // Tạo ứng dụng, gắn các thiết lập chung rồi nghe
   const app = await NestFactory.create(AppModule);

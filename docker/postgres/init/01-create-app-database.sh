@@ -5,9 +5,16 @@
 set -e
 
 psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname postgres \
-  -v app_user="$APP_DB_USER" -v app_password="$APP_DB_PASSWORD" -v app_db="$APP_DB_NAME" <<'SQL'
--- User của dự án: đăng nhập được; CREATEDB để Prisma Migrate tạo database tạm ("shadow database") khi phát triển
+  -v app_user="$APP_DB_USER" -v app_password="$APP_DB_PASSWORD" -v app_db="$APP_DB_NAME" \
+  -v app_createdb="${APP_DB_CREATEDB:-true}" <<'SQL'
+-- User của dự án: đăng nhập được.
+-- CREATEDB để "prisma migrate dev" tạo database tạm ("shadow database") khi phát triển.
+-- Bản thật (docker-compose.prod.yml đặt APP_DB_CREATEDB=false) không cần: "prisma migrate deploy" không tạo database
+\if :app_createdb
 CREATE ROLE :"app_user" LOGIN CREATEDB PASSWORD :'app_password';
+\else
+CREATE ROLE :"app_user" LOGIN NOCREATEDB PASSWORD :'app_password';
+\endif
 
 -- Database của dự án, do user dự án làm chủ; user khác (trừ superuser) không kết nối được
 CREATE DATABASE :"app_db" OWNER :"app_user";

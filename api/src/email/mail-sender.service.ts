@@ -1,4 +1,4 @@
-/* Gửi thư qua máy chủ SMTP trong cấu hình (api/.env: SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD).
+/* Gửi thư qua máy chủ SMTP trong cấu hình (.env.dev / .env.prod: SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD).
    Địa chỉ gửi là SMTP_USER; tên người gửi lấy từ trang Cấu hình email. */
 import { Injectable, Logger } from '@nestjs/common';
 import nodemailer, { type Transporter } from 'nodemailer';
@@ -50,7 +50,7 @@ export class MailSenderService {
     }
 
     /* JUST FOR DEMO: START · Chưa có máy chủ thư mà APP_ENV=dev: không gửi đi, chỉ dựng thư rồi in ra console để xem.
-       Bản thật đặt SMTP_HOST trong api/.env (không đặt thì không gửi được thư nào). */
+       Bản thật đặt SMTP_HOST trong .env.prod (không đặt thì không gửi được thư nào). */
     this.printOnly = config.isDev;
     this.transporter = this.printOnly ? nodemailer.createTransport({ jsonTransport: true }) : null;
     /* JUST FOR DEMO: END */

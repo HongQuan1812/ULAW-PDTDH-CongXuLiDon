@@ -1,6 +1,6 @@
 # Môi trường phát triển: PostgreSQL cho backend (api/).
-# Chạy: docker compose up -d  ·  Dừng: docker compose down  ·  Xóa sạch dữ liệu: docker compose down -v
-# Các biến lấy từ .env (chép từ .env.example).
+# Chạy: docker compose -f docker-compose.dev.yml --env-file .env.dev up -d  ·  Dừng: ... down  ·  Xóa sạch dữ liệu: ... down -v
+# Các biến lấy từ .env.dev (chép từ .env.dev.example).
 # Hai lớp tài khoản: superuser chung của cả instance (POSTGRES_ADMIN_*), và user riêng của dự án (APP_DB_*)
 # chỉ làm chủ database của dự án, do docker/postgres/init/ tạo ở lần khởi động đầu tiên.
 services:

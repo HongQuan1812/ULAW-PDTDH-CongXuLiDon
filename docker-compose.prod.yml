@@ -2,20 +2,20 @@
 #   Trình duyệt ──HTTPS──▶ nginx (80/443) ──/api──▶ api (3000) ──▶ postgres (5432)
 #
 # Cần trước khi chạy:
-#   - .env ở thư mục gốc (chép từ .env.example): tài khoản PostgreSQL, cổng, thư mục chứng chỉ
-#   - api/.env (chép từ api/.env.example): biến của backend. DATABASE_URL, UPLOAD_DIR, API_PORT trong tệp này
-#     bị bỏ qua, compose tự đặt bên dưới cho khớp với các container
+#   - .env.prod ở thư mục gốc (chép từ .env.prod.example): tài khoản PostgreSQL, cổng, chứng chỉ, biến của backend.
+#     DATABASE_URL, UPLOAD_DIR, API_PORT do compose tự đặt bên dưới cho khớp với các container
 #   - chứng chỉ HTTPS: fullchain.pem + privkey.pem trong TLS_CERT_DIR
 #     (thử trên máy mình: sh docker/nginx/make-dev-cert.sh tạo chứng chỉ tự kí)
 #
 # Lệnh:
-#   docker compose -f docker-compose.prod.yml up -d --build                     # build và chạy
-#   docker compose -f docker-compose.prod.yml run --rm api pnpm exec prisma migrate deploy   # tạo / cập nhật bảng
-#   docker compose -f docker-compose.prod.yml logs -f api                       # xem log backend
-#   docker compose -f docker-compose.prod.yml down                              # dừng (dữ liệu vẫn còn)
+#   docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --build                     # build và chạy
+#   docker compose -f docker-compose.prod.yml --env-file .env.prod run --rm api pnpm exec prisma migrate deploy   # tạo / cập nhật bảng
+#   docker compose -f docker-compose.prod.yml --env-file .env.prod run --rm api pnpm seed:production <email trường>   # Admin đầu tiên (không xóa gì)
+#   docker compose -f docker-compose.prod.yml --env-file .env.prod logs -f api                       # xem log backend
+#   docker compose -f docker-compose.prod.yml --env-file .env.prod down                              # dừng (dữ liệu vẫn còn)
 #   KHÔNG dùng "down -v": xóa luôn volume, mất hết dữ liệu và tệp tải lên
 
-# Tên riêng, để không dùng chung container và volume với docker-compose.yml (môi trường phát triển)
+# Tên riêng, để không dùng chung container và volume với docker-compose.dev.yml (môi trường phát triển)
 name: cong-xu-li-don-prod
 
 services:
@@ -29,6 +29,8 @@ services:
       APP_DB_USER: ${APP_DB_USER}
       APP_DB_PASSWORD: ${APP_DB_PASSWORD}
       APP_DB_NAME: ${APP_DB_NAME}
+      # User dự án không được tạo database (chỉ cần khi chạy "prisma migrate dev" lúc phát triển)
+      APP_DB_CREATEDB: 'false'
       TZ: Asia/Ho_Chi_Minh
       PGTZ: Asia/Ho_Chi_Minh
     # Không mở cổng ra ngoài: chỉ api gọi tới, qua mạng nội bộ của compose
@@ -47,8 +49,8 @@ services:
       dockerfile: api/Dockerfile
     image: ${API_IMAGE:-cong-xu-li-don-api:local}
     restart: unless-stopped
-    env_file: api/.env
-    # Ghi đè api/.env: các giá trị này phụ thuộc cách container nối với nhau, không phụ thuộc máy
+    env_file: .env.prod
+    # Ghi đè .env.prod: các giá trị này phụ thuộc cách container nối với nhau, không phụ thuộc máy
     # (mật khẩu có kí tự đặc biệt như @ : / thì phải mã hoá URL, hoặc chỉ dùng chữ và số)
     environment:
       DATABASE_URL: postgresql://${APP_DB_USER}:${APP_DB_PASSWORD}@postgres:5432/${APP_DB_NAME}?schema=public

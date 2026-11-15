@@ -1,6 +1,5 @@
 /* Dữ liệu mẫu cho database: cùng nguồn với API giả (shared/src/seed), nên cùng id người dùng, cùng mã đơn.
    Chạy: pnpm --filter api prisma db seed. Xóa sạch dữ liệu cũ rồi nạp lại, chỉ dùng khi phát triển. */
-import { existsSync } from 'node:fs';
 import { PrismaPg } from '@prisma/adapter-pg';
 import {
   EMAIL_SETTINGS_SEED,
@@ -14,10 +13,11 @@ import {
   seedFormTypes,
   seedForms,
 } from '@ulaw/shared';
+import { loadDevEnvFile } from '../src/config/env-file';
 import { PrismaClient, type Prisma } from '../src/generated/prisma/client';
 
-// Khi phát triển biến nằm trong api/.env; trên máy chủ thì biến đặt sẵn
-if (existsSync('.env')) process.loadEnvFile('.env');
+// Biến môi trường: .env.dev khi chạy trên máy, compose truyền vào khi chạy container
+loadDevEnvFile();
 
 /**
  * Đổi giờ Việt Nam 'YYYY-MM-DDTHH:mm' của dữ liệu mẫu thành thời điểm chính xác.

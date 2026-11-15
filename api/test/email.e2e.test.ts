@@ -1,6 +1,6 @@
 /* Test nhóm API email: Cấu hình email (xem, lưu, gửi thư thử).
    Cần database đã migrate và seed. Test ghi lại dòng cấu hình lúc đầu rồi trả lại như cũ khi xong.
-   Test bỏ SMTP_HOST (test/setup-env.ts), nên thư chỉ in ra console, không gửi đi dù api/.env có máy chủ thư. */
+   Test bỏ SMTP_HOST (test/setup-env.ts), nên thư chỉ in ra console, không gửi đi dù .env.dev có máy chủ thư. */
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import type { INestApplication } from '@nestjs/common';
 import request, { type Response } from 'supertest';

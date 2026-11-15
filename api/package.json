@@ -7,6 +7,7 @@
     "dev": "tsdown --watch --on-success \"node dist/main.mjs\"",
     "build": "tsdown",
     "start": "node dist/main.mjs",
+    "seed:production": "tsx prisma/seed-production.ts",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "postinstall": "prisma generate"

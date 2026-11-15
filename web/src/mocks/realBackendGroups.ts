@@ -1,6 +1,6 @@
 /* Khi bật backend giả (VITE_USE_MOCK_BACKEND=true): nhóm nào vẫn tới backend thật, nhóm nào do backend giả (MSW) trả lời.
    Tắt backend giả thì danh sách này không dùng tới: mọi nhóm tới backend thật.
-   Danh sách đặt ở VITE_REAL_BACKEND_GROUPS trong web/.env (mỗi máy đặt riêng). */
+   Danh sách đặt ở VITE_REAL_BACKEND_GROUPS trong .env.dev (mỗi máy đặt riêng). */
 
 /** Các nhóm API, trùng tên tệp trong shared/src/api-contract/ và mocks/handlers/. */
 export const API_GROUPS = [
@@ -28,7 +28,7 @@ export function parseRealBackendGroups(value: string | undefined): ReadonlySet<A
   const names = (value ?? '').split(',').map((name) => name.trim()).filter(Boolean);
   const unknown = names.filter((name) => !(API_GROUPS as readonly string[]).includes(name));
   if (unknown.length > 0) {
-    throw new Error(`VITE_REAL_BACKEND_GROUPS (web/.env) có nhóm không tồn tại: ${unknown.join(', ')}. Chỉ nhận: ${API_GROUPS.join(', ')}`);
+    throw new Error(`VITE_REAL_BACKEND_GROUPS (.env.dev) có nhóm không tồn tại: ${unknown.join(', ')}. Chỉ nhận: ${API_GROUPS.join(', ')}`);
   }
   return new Set(names as ApiGroup[]);
 }

@@ -1,7 +1,7 @@
 /* API giả của backend. Quy ước: tên có tiền tố "dev-" là bản giả, vd dev-login, dev-student-directory
    (TypeScript báo lỗi nếu tên trong DEMO_APIS thiếu "dev-"). Code của bản giả bọc trong JUST FOR DEMO.
    ENABLE_DEMO_APIS=true thì dùng bản giả, trừ các API trong ALWAYS_REAL_APIS; ENABLE_DEMO_APIS=false thì mọi API dùng bản thật
-   (cả hai biến nằm trong api/.env, mỗi máy đặt riêng).
+   (cả hai biến nằm trong .env.dev / .env.prod, mỗi máy đặt riêng).
    Bản thật chưa được phát triển thì request gọi tới báo lỗi 501 (realApiNotBuilt); backend vẫn chạy bình thường. */
 import { COMMON_MESSAGES } from '@ulaw/shared';
 import { ApiException } from '../common/api-exception';

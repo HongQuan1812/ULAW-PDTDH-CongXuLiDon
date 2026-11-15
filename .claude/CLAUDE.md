@@ -59,8 +59,8 @@ Như vậy luật nghiệp vụ chỉ viết một lần.
 ### Hạ tầng
 
 - **Docker Compose** cho môi trường phát triển: `postgres`.
-- Biến môi trường: `.env` ở thư mục gốc cho Docker, `api/.env` cho backend (mỗi tệp có `.env.example`). Không commit `.env`.
-- Mỗi biến một việc: `VITE_USE_MOCK_BACKEND` (+ `VITE_REAL_BACKEND_GROUPS`) chỉ chọn backend giả hay thật; `VITE_APP_ENV` chỉ bật phần thử nghiệm của giao diện; `APP_ENV` chỉ chọn môi trường backend (dev / bản thật); `ENABLE_DEMO_APIS` (+ `ALWAYS_REAL_APIS`) chỉ chọn bản giả hay bản thật của API backend (vd đăng nhập thử hay Google). Một cách làm cho mọi API có bản giả: bản giả `dev-<tên>` bọc `JUST FOR DEMO`, bản thật chưa phát triển thì `throw realApiNotBuilt('dev-<tên>')` (501), không chặn backend chạy. Tên `dev-<tên>` chỉ có ở backend: frontend và API giả (MSW) chỉ biết endpoint bình thường (vd `POST /auth/login`), backend tự chọn bản. Mọi biến nằm trong `.env` của từng bên (`api/.env`, `web/.env`, mỗi máy đặt riêng, không lên git), có mẫu ở `.env.example`. Xem README, mục Biến môi trường.
+- Biến môi trường: mỗi môi trường một tệp ở thư mục gốc, gồm biến PostgreSQL, backend, giao diện: `.env.dev` (dev), `.env.prod` (bản thật). Không commit, mẫu ở `.env.dev.example`, `.env.prod.example`. Backend, Prisma, Vite đọc `.env.dev` khi chạy trên máy; container nhận biến do compose truyền vào (`--env-file`), biến đã có không bị tệp ghi đè.
+- Mỗi biến một việc: `VITE_USE_MOCK_BACKEND` (+ `VITE_REAL_BACKEND_GROUPS`) chỉ chọn backend giả hay thật; `VITE_APP_ENV` chỉ bật phần thử nghiệm của giao diện; `APP_ENV` chỉ chọn môi trường backend (dev / bản thật); `ENABLE_DEMO_APIS` (+ `ALWAYS_REAL_APIS`) chỉ chọn bản giả hay bản thật của API backend (vd đăng nhập thử hay Google). Một cách làm cho mọi API có bản giả: bản giả `dev-<tên>` bọc `JUST FOR DEMO`, bản thật chưa phát triển thì `throw realApiNotBuilt('dev-<tên>')` (501), không chặn backend chạy. Tên `dev-<tên>` chỉ có ở backend: frontend và API giả (MSW) chỉ biết endpoint bình thường (vd `POST /auth/login`), backend tự chọn bản. Mọi biến nằm trong `.env.dev` / `.env.prod` (mỗi máy đặt riêng, không lên git). Xem README, mục Biến môi trường.
 
 ### Nguyên tắc thiết kế
 
@@ -121,8 +121,8 @@ Cổng xử lí đơn/
 │       ├── business-rules/       # LUẬT NGHIỆP VỤ: ví dụ, ROLES + can(), trạng thái nào sửa / tiếp nhận / chuyển giao / ra quyết định được
 │       └── validators/           # KIỂM TRA DỮ LIỆU: ví dụ, CCCD, SĐT, email trường, câu trả lời của lá đơn
 │
-├── docker-compose.yml            # postgres
-├── .env.example
+├── docker-compose.dev.yml · docker-compose.prod.yml
+├── .env.dev.example · .env.prod.example
 ├── package.json                  # script chung: dev, build, test, lint
 ├── pnpm-workspace.yaml           # packages: web, api, shared
 └── tsconfig.base.json
@@ -135,7 +135,7 @@ pnpm install
 pnpm --filter web dev                   # chỉ chạy frontend: đặt VITE_USE_MOCK_BACKEND=true (backend giả)
 
 # khi đã có backend
-docker compose up -d                    # postgres
+docker compose -f docker-compose.dev.yml --env-file .env.dev up -d   # postgres
 pnpm --filter api prisma migrate dev    # tạo bảng
 pnpm --filter api prisma db seed        # dữ liệu mẫu
 pnpm --filter api dev                   # chạy backend (cổng 3000), mở terminal riêng

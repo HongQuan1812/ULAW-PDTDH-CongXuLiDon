@@ -27,7 +27,7 @@ Mỗi bước làm trên một nhánh riêng. Xong thì tạo Pull Request vào 
 ### API giả (backend giả, MSW)
 
 - Frontend gọi `fetch('/api/...')` như thật. MSW chặn lại và trả dữ liệu giả, nên trang không biết mình đang dùng API giả.
-- Bật / tắt bằng `VITE_USE_MOCK_BACKEND` trong `web/.env`. Biến này chỉ chọn backend giả hay thật; chức năng thử nghiệm do `VITE_APP_ENV` / `APP_ENV` quản (README, mục Biến môi trường).
+- Bật / tắt bằng `VITE_USE_MOCK_BACKEND` trong `.env.dev`. Biến này chỉ chọn backend giả hay thật; chức năng thử nghiệm do `VITE_APP_ENV` / `APP_ENV` quản (README, mục Biến môi trường).
 - API giả làm đúng luật nghiệp vụ (chuyển trạng thái, kiểm tra quyền, sinh mã đơn) và trả lỗi như thật (401, 403, 404, 409, 422).
 - Dữ liệu giả nằm trong `web/src/mocks/db.ts`, giữ trong bộ nhớ. Tải lại trang là về ban đầu.
 - Nút Đăng nhập gọi `POST /api/auth/login`; backend quyết định: `ENABLE_DEMO_APIS=true` (và `ALWAYS_REAL_APIS` không có `dev-login`) thì đăng nhập thử theo vai trò gửi kèm (phát cookie phiên thật), còn lại trả đường dẫn sang Google. Backend giả luôn đăng nhập thử. Ô đổi vai trò trong menu cũng gọi `POST /api/auth/login` kèm vai trò. Frontend không biết tên `dev-login`, tên này chỉ có ở backend.
@@ -59,39 +59,52 @@ Chưa làm, chờ thông tin từ bên ngoài:
 - `student-directory` bản thật: cần cách kết nối database sinh viên của trường. Đã có trong `DEMO_APIS`: bản giả `dev-student-directory` đọc bảng mẫu, bản thật hiện `throw realApiNotBuilt(...)` (501); làm xong thì thay dòng đó bằng kết nối database trường.
 - Triển khai lên máy chủ: xem Giai đoạn 3.
 
-## Giai đoạn 3: Triển khai (chưa làm)
+## Giai đoạn 3: Container hóa, triển khai (đang làm)
 
-Ứng dụng đã đủ chức năng, chỉ còn `student-directory` bản thật (bước 5). Không có nó, ứng dụng vẫn chạy, chỉ thiếu thông tin sinh viên (MSSV, lớp, ngành…).
+Ứng dụng đã đủ chức năng, chỉ còn `student-directory` bản thật (bước 8). Không có nó, ứng dụng vẫn chạy, chỉ thiếu thông tin sinh viên (MSSV, lớp, ngành…).
 
-Mô hình chạy trên máy chủ: ba container trong một `docker-compose.prod.yml`, chỉ `nginx` mở cổng ra ngoài.
+Cả dev lẫn bản thật đều chạy bằng container. Mỗi môi trường một tệp compose, một tệp biến môi trường, `up` là chạy, không sửa tay giá trị.
+
+| | Dev | Bản thật |
+|---|---|---|
+| Compose | `docker-compose.dev.yml`: postgres + api (`pnpm dev`) + web (Vite) | `docker-compose.prod.yml`: postgres + api (bản build) + nginx (web đã build) |
+| Biến môi trường | `.env.dev` (chép từ `.env.dev.example`) | `.env.prod` (chép từ `.env.prod.example`) |
+| Lên git | chỉ `.env.dev.example`; `.env.dev` mỗi máy tự tạo | chỉ `.env.prod.example`; `.env.prod` tạo tay trên máy chủ |
+| Bật / restart container | `migrate deploy` → seed dữ liệu mẫu (**xóa sạch**, về trạng thái gốc) → `pnpm dev` | `migrate deploy` → `seed:production` (Admin đầu tiên + cấu hình email, **chỉ thêm khi chưa có**, không xóa gì) → chạy backend |
+| Sửa code | backend, web tự chạy lại bên trong container, không seed lại | build lại image rồi `up -d` |
+
+Mô hình chạy trên máy chủ: chỉ `nginx` mở cổng ra ngoài.
 
 ```
 Trình duyệt ──HTTPS──▶ nginx (80/443) ──/api──▶ api (NestJS, 3000) ──▶ postgres (5432)
                          └─ / : file web đã build (dist/)               └─ volume giữ dữ liệu
 ```
 
-Bước 0 đến 4 tự làm được ngay, thử trên máy mình, không cần chờ ai. Bước 5 và 6 chờ thông tin từ bên ngoài, đến lúc có thì chỉ việc đưa lên.
-Bước 4 (CI/CD) thử trọn vẹn trên máy cá nhân trước. Khi lên máy chủ trường chỉ đổi nơi chạy runner và các biến môi trường, quy trình giữ nguyên.
+Bước 0 đến 6 tự làm được ngay, thử trên máy mình, không cần chờ ai. Bước 7 và 8 chờ thông tin từ bên ngoài, đến lúc có thì chỉ việc đưa lên.
+Bước 6 (CI/CD) thử trọn vẹn trên máy cá nhân trước. Khi lên máy chủ trường chỉ đổi nơi chạy runner và `.env.prod`, quy trình giữ nguyên.
 
 | # | Bước | Nhánh | Gồm | |
 |---|---|---|---|---|
 | 0 | Đóng gói | `trien-khai-dong-goi` | `api/Dockerfile` · build web thành `dist/` (đặt `VITE_USE_MOCK_BACKEND=false`, bỏ trống `VITE_APP_ENV` rồi mới build) · `nginx.conf` (`/api/` → `proxy_pass http://api:3000`, `/` → `dist/` với `try_files ... /index.html`, header `X-Forwarded-Proto`) · `docker-compose.prod.yml` (3 service, `restart: unless-stopped`, volume cho Postgres và `UPLOAD_DIR`, mount chứng chỉ) | ✓ |
-| 1 | Cấu hình bản thật | `trien-khai-cau-hinh` | mọi thứ phụ thuộc môi trường nằm trong `api/.env` của từng máy (không lên git); trên máy đích tạo tay một lần, chép từ `.env.example` rồi điền giá trị bản thật · ghi chú giá trị bản thật thành vài dòng comment trong `.env.example` (không thêm tệp `.env.production` hay `.env.secret`) · mật khẩu Postgres, SMTP, Google đặt mới, không dùng lại mật khẩu dev · giá trị bản thật: bỏ trống `APP_ENV`, `ENABLE_DEMO_APIS=false`, `WEB_BASE_URL_PRODUCTION`, `DATABASE_URL`, `SMTP_*`, `GOOGLE_*` · bỏ quyền `CREATEDB` của user dự án · dùng `prisma migrate deploy` · seed dữ liệu thật (không seed dữ liệu giả) và tạo Admin đầu tiên | |
-| 2 | Chạy thử bản thật trên máy mình | `trien-khai-cau-hinh` | `docker compose -f docker-compose.prod.yml up -d` với `localhost` và chứng chỉ tự kí · nộp đơn, tải tệp, xử lí đơn, xuất Word, gửi thư · F5 ở trang con (vd `/forms/123`) không bị 404 · tắt rồi bật lại container, dữ liệu và tệp tải lên vẫn còn | |
-| 3 | Vận hành | `trien-khai-van-hanh` | viết sẵn script sao lưu Postgres và thư mục tệp tải lên · cách xem log · cách cập nhật bản mới (build lại, `migrate deploy`, khởi động lại) · cách khôi phục từ bản sao lưu · thử hết trên máy mình | |
-| 4 | CI/CD | `trien-khai-ci-cd` | GitHub Actions, chạy khi merge vào `main`: ① **CI**: chạy `pnpm --filter shared test`, `api test`, `web test` trên máy sạch (api cần Postgres tạm làm service container, chạy luôn migration); bỏ E2E Playwright cho nhẹ · đỏ thì dừng, không deploy ② **Build**: dựng image `api` và `nginx + web` rồi đẩy lên registry (GHCR); `VITE_USE_MOCK_BACKEND=false` và `VITE_APP_ENV=` đã đặt sẵn trong `web/Dockerfile`, CI không cần `web/.env` ③ **Deploy**: máy đích kéo image mới → sao lưu Postgres → `migrate deploy` → `up -d` · thử deploy lên **máy cá nhân** bằng **self-hosted runner** (GitHub không tự với tới máy nằm sau mạng nhà / LAN) · secret để trong GitHub Secrets hoặc `.env` trên máy đích · tuỳ chọn: bấm Approve tay (GitHub Environments) trước khi deploy | |
-| 5 | Lên máy chủ thật | (không có nhánh) | **chờ bên ngoài**: máy chủ Linux có Docker · domain / subdomain (vd `donthi.hcmulaw.edu.vn`) · chứng chỉ HTTPS thật · mở cổng 80/443 · OAuth client Google tạo bằng tài khoản trường (redirect `https://<domain>/api/auth/google/callback`) · xác nhận tên miền email thật để điền `SCHOOL_EMAIL_DOMAINS` · khi đủ thì: điền `api/.env` thật, mount chứng chỉ, `up -d`, đăng nhập Google bằng email trường, chạy lại các luồng chính | |
-| 6 | Kết nối database trường | `backend-student-directory` | **chờ bên ngoài**: loại database, địa chỉ, cổng, tài khoản chỉ đọc · mở tường lửa phía trường cho IP máy chủ · thêm driver nếu không phải PostgreSQL · thay `throw realApiNotBuilt('dev-student-directory')` bằng kết nối thật · thử bằng `nc -zv` từ máy chủ và từ trong container | |
+| 1 | Tách biến môi trường dev / bản thật | `trien-khai-container` | `.env.dev.example`, `.env.prod.example` thay cho ba tệp mẫu hiện có (`.env.example` gốc, `api/.env.example`, `web/.env.example`): mỗi môi trường **một tệp** gồm biến Postgres, backend, giao diện; compose chia biến cho từng container · `.gitignore` bỏ qua `.env.dev`, `.env.prod`, giữ hai tệp mẫu · `.env.prod.example` ghi sẵn giá trị bản thật: `APP_ENV=` trống, `ENABLE_DEMO_APIS=false`, `WEB_BASE_URL_PRODUCTION`, `SMTP_*`, `GOOGLE_*`, email Admin đầu tiên, mật khẩu Postgres đặt mới · `VITE_*` của bản thật vẫn cố định trong `web/Dockerfile` (không bao giờ bật MSW ở bản thật) · app vẫn chỉ cấu hình bằng biến môi trường, container chỉ ghi sẵn giá trị: không có container vẫn chạy được (`loadApiEnvFile` đọc `.env.dev` ở thư mục gốc thay cho `api/.env`; biến compose truyền vào thì ưu tiên hơn, kiểm lại cách `process.loadEnvFile` xử lí biến đã có) · muốn thử API thật khi dev (vd đăng nhập Google) thì sửa `.env.dev` rồi `up -d api`, không cần bản prod · sửa README, `.claude/CLAUDE.md` (mục Hạ tầng) theo cách mới | ✓ |
+| 2 | Container hóa dev | `trien-khai-container` | `docker-compose.dev.yml` (đã đổi tên từ `docker-compose.yml`): postgres (mở cổng 5432 để xem bằng công cụ DB) · api: target `dev` của `api/Dockerfile`, gắn mã nguồn vào container, lệnh khởi động `migrate deploy` → `prisma db seed` → `pnpm dev` (seed chỉ chạy lúc bật / restart container, sửa code thì `pnpm dev` tự chạy lại, không seed) · web: target `dev` của `web/Dockerfile`, Vite `https://localhost:5173`, `API_PROXY_TARGET=http://api:3000` · `node_modules` của container để trong volume riêng, không lẫn với máy · test chạy trong container (`docker compose -f docker-compose.dev.yml exec api pnpm test`) hoặc trên máy như cũ · trên máy vẫn `pnpm install` để VS Code gợi ý code, báo lỗi kiểu · chạy web một mình với API giả (MSW) vẫn làm được (`VITE_USE_MOCK_BACKEND=true` trong `.env.dev`) | |
+| 3 | Cấu hình bản thật | `trien-khai-container` | `docker-compose.prod.yml` đọc `.env.prod` · lệnh khởi động api: `migrate deploy` → `seed:production` → `node dist/main.mjs`, mỗi lần bật / restart (đã có: `api/prisma/seed-production.ts` tạo Admin + cấu hình email, không xóa gì, chạy lại an toàn) · user dự án không có quyền `CREATEDB` ở bản thật (đã có: `APP_DB_CREATEDB: 'false'`; dev vẫn có vì `prisma migrate dev` cần tạo shadow database) · mật khẩu Postgres, SMTP, Google đặt mới, không dùng lại mật khẩu dev | |
+| 4 | Chạy thử bản thật trên máy mình | `trien-khai-container` | `docker compose -f docker-compose.prod.yml up -d` với `localhost` và chứng chỉ tự kí · đăng nhập Google bằng Admin đầu tiên · nộp đơn, tải tệp, xử lí đơn, xuất Word, gửi thư · F5 ở trang con (vd `/forms/123`) không bị 404 · restart container: dữ liệu và tệp tải lên vẫn còn | |
+| 5 | Vận hành | `trien-khai-van-hanh` | viết sẵn script sao lưu Postgres và thư mục tệp tải lên · cách xem log · cách cập nhật bản mới (build lại rồi `up -d`; `migrate deploy` tự chạy lúc bật container) · cách khôi phục từ bản sao lưu · thử hết trên máy mình | |
+| 6 | CI/CD | `trien-khai-ci-cd` | GitHub Actions, chạy khi merge vào `main`: ① **CI**: chạy `pnpm --filter shared test`, `api test`, `web test` trên máy sạch (api cần Postgres tạm làm service container, chạy luôn migration); bỏ E2E Playwright cho nhẹ · đỏ thì dừng, không deploy ② **Build**: dựng image `api` và `nginx + web` rồi đẩy lên registry (GHCR); `VITE_USE_MOCK_BACKEND=false` và `VITE_APP_ENV=` đã đặt sẵn trong `web/Dockerfile`, CI không cần `.env.dev` ③ **Deploy**: máy đích kéo image mới → sao lưu Postgres → `migrate deploy` → `up -d` · thử deploy lên **máy cá nhân** bằng **self-hosted runner** (GitHub không tự với tới máy nằm sau mạng nhà / LAN) · secret để trong GitHub Secrets hoặc `.env` trên máy đích · tuỳ chọn: bấm Approve tay (GitHub Environments) trước khi deploy | |
+| 7 | Lên máy chủ thật | (không có nhánh) | **chờ bên ngoài**: máy chủ Linux có Docker · domain / subdomain (vd `donthi.hcmulaw.edu.vn`) · chứng chỉ HTTPS thật · mở cổng 80/443 · OAuth client Google tạo bằng tài khoản trường (redirect `https://<domain>/api/auth/google/callback`) · xác nhận tên miền email thật để điền `SCHOOL_EMAIL_DOMAINS` · khi đủ thì: tạo `.env.prod` thật, mount chứng chỉ, `up -d`, đăng nhập Google bằng email trường, chạy lại các luồng chính | |
+| 8 | Kết nối database trường | `backend-student-directory` | **chờ bên ngoài**: loại database, địa chỉ, cổng, tài khoản chỉ đọc · mở tường lửa phía trường cho IP máy chủ · thêm driver nếu không phải PostgreSQL · thay `throw realApiNotBuilt('dev-student-directory')` bằng kết nối thật · thử bằng `nc -zv` từ máy chủ và từ trong container | |
 
 ### Lưu ý khi triển khai
 
-- `VITE_*` được nhúng vào `dist/` lúc build, nên đặt đúng giá trị trước khi build. Trên máy chủ không cần `web/.env`.
-- `API_PROXY_TARGET` chỉ dùng lúc `pnpm --filter web dev` (Vite làm proxy). Trên máy chủ, nginx thay Vite làm việc này.
+- `VITE_*` được nhúng vào `dist/` lúc build. Bản thật đặt cố định trong `web/Dockerfile`; dev lấy từ `.env.dev`.
+- `API_PROXY_TARGET` chỉ dùng ở dev (Vite làm proxy). Bản thật thì nginx làm việc này.
 - Khi `ENABLE_DEMO_APIS=false`, chỉ còn đăng nhập Google: phải có OAuth client và tên miền email đúng trước khi mở cho người dùng.
 - Backend không cần `trust proxy`: cookie `secure` theo `APP_ENV`, không đọc `req.protocol` / `req.ip` (đã kiểm ở bước 0).
-- `docker-compose.prod.yml` tự đặt `DATABASE_URL` (host `postgres`, lấy `APP_DB_*` từ `.env` gốc), `UPLOAD_DIR`, `API_PORT`, ghi đè `api/.env`; nên một `api/.env` dùng được cho cả dev lẫn chạy bằng container.
-- `api` và `postgres` không mở cổng ra ngoài, nginx gọi backend bằng tên service (`http://api:3000`), không dùng `127.0.0.1`.
-- Chuỗi kết nối, mật khẩu SMTP, `GOOGLE_CLIENT_SECRET` chỉ nằm trong `api/.env` trên máy chủ, không commit, không đóng gói vào image.
+- Compose tự dựng `DATABASE_URL` từ biến Postgres trong tệp env (host `postgres`), không ghi chuỗi kết nối hai lần.
+- `api` và `postgres` bản thật không mở cổng ra ngoài, nginx gọi backend bằng tên service (`http://api:3000`), không dùng `127.0.0.1`.
+- Mật khẩu SMTP, `GOOGLE_CLIENT_SECRET`, mật khẩu Postgres bản thật chỉ nằm trong `.env.prod` trên máy chủ, không commit, không đóng gói vào image.
+- Không dùng `down -v`: xóa luôn volume, mất dữ liệu và tệp tải lên (dev thì không sao, bật lại là seed lại).
 
 ### Làm một nhóm API
 
@@ -104,7 +117,7 @@ Bước 4 (CI/CD) thử trọn vẹn trên máy cá nhân trước. Khi lên má
 
 ### Chạy giả và thật cùng lúc
 
-- `VITE_REAL_BACKEND_GROUPS` trong `web/.env` là danh sách các nhóm tới backend thật khi đang bật backend giả, vd `health,auth,profile`. MSW bỏ qua các nhóm này, Vite chuyển request sang backend.
+- `VITE_REAL_BACKEND_GROUPS` trong `.env.dev` là danh sách các nhóm tới backend thật khi đang bật backend giả, vd `health,auth,profile`. MSW bỏ qua các nhóm này, Vite chuyển request sang backend.
 - Backend seed từ cùng dữ liệu mẫu với API giả (cùng id người dùng, cùng mã đơn), nên nhóm giả và nhóm thật nói về cùng một người, cùng một lá đơn.
 - Khi nhóm `auth` đã thật: API giả lấy người đang đăng nhập từ API thật, không tự giữ phiên riêng.
 - Lỗi ngẫu nhiên (`VITE_MOCK_BACKEND_FAILURE_RATE`) chỉ áp dụng cho các nhóm còn giả.

@@ -1,11 +1,7 @@
 /* Biến môi trường của backend: đọc một lần lúc khởi động, kiểm tra bằng Zod. Thiếu hoặc sai thì dừng ngay. */
-import { existsSync } from 'node:fs';
 import { Injectable } from '@nestjs/common';
 import { z } from 'zod';
 import { DEMO_APIS, usesDemoApi, type DemoApi } from './demo-apis';
-
-/** Tệp biến môi trường của backend: api/.env (các lệnh pnpm --filter api chạy trong thư mục api/). */
-const API_ENV_FILE = '.env';
 
 /** Các biến backend cần. */
 const AppEnvSchema = z.object({
@@ -63,14 +59,6 @@ export interface SmtpConfig {
   password: string;
 }
 
-/**
- * Nạp api/.env vào process.env, nếu có. Biến đã đặt sẵn (vd trên máy chủ) không bị ghi đè.
- * Gọi trước khi tạo ứng dụng NestJS.
- */
-export function loadApiEnvFile(): void {
-  if (existsSync(API_ENV_FILE)) process.loadEnvFile(API_ENV_FILE);
-}
-
 /** Cấu hình của backend, tiêm vào nơi cần dùng. */
 @Injectable()
 export class AppConfig {
@@ -103,7 +91,7 @@ export class AppConfig {
     const parsed = AppEnvSchema.safeParse(process.env);
     if (!parsed.success) {
       const problems = parsed.error.issues.map((issue) => `${issue.path.join('.')}: ${issue.message}`).join('; ');
-      throw new Error(`Biến môi trường không hợp lệ (xem .env.example): ${problems}`);
+      throw new Error(`Biến môi trường không hợp lệ (xem .env.dev.example, .env.prod.example): ${problems}`);
     }
     this.isDev = parsed.data.APP_ENV === 'dev';
     this.demoApisEnabled = parsed.data.ENABLE_DEMO_APIS === 'true';
