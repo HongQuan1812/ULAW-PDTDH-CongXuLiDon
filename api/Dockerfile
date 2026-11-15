@@ -1,7 +1,10 @@
-# Image của backend (NestJS). Build từ thư mục gốc repo, vì backend cần cả shared/:
-#   docker compose -f docker-compose.prod.yml build api
-# Image không chứa .env: biến môi trường do docker-compose.prod.yml đưa vào lúc chạy.
-FROM node:24.16.0-slim
+# Image của backend (NestJS). Build từ thư mục gốc repo, vì backend cần cả shared/.
+#   dev:      target dev (docker-compose.dev.yml), mã nguồn gắn từ máy vào, không chép vào image
+#   bản thật: target production, mặc định (docker-compose.prod.yml build api)
+# Image không chứa .env: biến môi trường do compose đưa vào lúc chạy.
+
+# ---------- Nền chung ----------
+FROM node:24.16.0-slim AS base
 
 # Prisma cần openssl; pnpm cùng phiên bản với máy phát triển
 RUN apt-get update \
@@ -9,8 +12,19 @@ RUN apt-get update \
   && rm -rf /var/lib/apt/lists/* \
   && npm install -g pnpm@12.18.0
 ENV CI=true
-
 WORKDIR /app
+
+# ---------- Dev: chỉ có Node, pnpm; thư viện cài lúc bật container, vào volume riêng ----------
+# Tạo sẵn các thư mục sẽ gắn volume, thuộc user node (uid 1000, trùng user trên máy), để tệp sinh ra trong
+# thư mục mã nguồn (dist/, uploads/, src/generated/) vẫn thuộc user trên máy
+FROM base AS dev
+RUN mkdir -p /app/node_modules /app/api/node_modules /app/shared/node_modules /home/node/.pnpm-store \
+  && chown -R node:node /app /home/node/.pnpm-store
+USER node
+WORKDIR /app/api
+
+# ---------- Bản thật: cài thư viện, build ----------
+FROM base AS production
 
 # Cài thư viện trước khi chép mã nguồn: mã đổi mà thư viện không đổi thì Docker dùng lại lớp này
 # (cài xong tự chạy prisma generate, nên cần schema và prisma.config.ts)

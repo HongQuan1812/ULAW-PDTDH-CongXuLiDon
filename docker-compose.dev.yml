@@ -1,12 +1,20 @@
-# Môi trường phát triển: PostgreSQL cho backend (api/).
-# Chạy: docker compose -f docker-compose.dev.yml --env-file .env.dev up -d  ·  Dừng: ... down  ·  Xóa sạch dữ liệu: ... down -v
-# Các biến lấy từ .env.dev (chép từ .env.dev.example).
+# Môi trường phát triển: postgres + api (pnpm dev) + web (Vite). Biến lấy từ .env.dev (chép từ .env.dev.example).
+#   Chạy cả ba:        docker compose -f docker-compose.dev.yml --env-file .env.dev up -d
+#   Chỉ postgres:      ... up -d postgres   (backend, web chạy thẳng trên máy)
+#   Về dữ liệu mẫu:    ... restart api      (mỗi lần bật / restart api: migrate deploy → seed, xóa sạch dữ liệu cũ)
+#   Đổi .env.dev:      ... up -d api web
+#   Xem log:           ... logs -f api
+#   Dừng: ... down  ·  Xóa luôn dữ liệu, thư viện đã cài: ... down -v
+# Mã nguồn gắn từ máy vào container: sửa code thì backend, web tự chạy lại, không seed lại.
 # Hai lớp tài khoản: superuser chung của cả instance (POSTGRES_ADMIN_*), và user riêng của dự án (APP_DB_*)
 # chỉ làm chủ database của dự án, do docker/postgres/init/ tạo ở lần khởi động đầu tiên.
+# Tên đặt theo ulaw-cong-xu-li-don-<môi trường>-<phần>, để không lẫn với docker-compose.prod.yml và dự án khác
+name: ulaw-cong-xu-li-don-dev
+
 services:
   postgres:
     image: postgres:18.6
-    container_name: ulaw-postgres
+    container_name: ulaw-cong-xu-li-don-dev-postgres
     restart: unless-stopped
     environment:
       # Superuser chung (chỉ dùng để quản trị, tạo user / database cho từng dự án)
@@ -33,5 +41,75 @@ services:
       timeout: 3s
       retries: 10
 
+  api:
+    build:
+      context: .
+      dockerfile: api/Dockerfile
+      target: dev
+    image: ulaw-cong-xu-li-don-api:dev
+    container_name: ulaw-cong-xu-li-don-dev-api
+    env_file: .env.dev
+    # Ghi đè .env.dev: các giá trị này phụ thuộc cách container nối với nhau, không phụ thuộc máy
+    environment:
+      DATABASE_URL: postgresql://${APP_DB_USER}:${APP_DB_PASSWORD}@postgres:5432/${APP_DB_NAME}?schema=public
+      API_PORT: 3000
+      TZ: Asia/Ho_Chi_Minh
+    ports:
+      - '${API_PORT:-3000}:3000'
+    volumes:
+      - .:/app
+      # Thư viện của container nằm trong volume, không lẫn với node_modules trên máy
+      - api-node-modules-root:/app/node_modules
+      - api-node-modules-api:/app/api/node_modules
+      - api-node-modules-shared:/app/shared/node_modules
+      - pnpm-store:/home/node/.pnpm-store
+    # Cài thư viện (đã đủ thì xong ngay) → tạo / sửa bảng → nạp dữ liệu mẫu → chạy backend, tự chạy lại khi sửa code
+    command:
+      - sh
+      - -c
+      - >-
+        pnpm install --frozen-lockfile --filter api... --store-dir /home/node/.pnpm-store
+        && pnpm exec prisma migrate deploy
+        && pnpm exec prisma db seed
+        && pnpm dev
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  web:
+    build:
+      context: .
+      dockerfile: web/Dockerfile
+      target: dev
+    image: ulaw-cong-xu-li-don-web:dev
+    container_name: ulaw-cong-xu-li-don-dev-web
+    env_file: .env.dev
+    environment:
+      WEB_PORT: 5173
+      API_PROXY_TARGET: http://api:3000
+    ports:
+      - '${WEB_PORT:-5173}:5173'
+    volumes:
+      - .:/app
+      - web-node-modules-root:/app/node_modules
+      - web-node-modules-web:/app/web/node_modules
+      - web-node-modules-shared:/app/shared/node_modules
+      - pnpm-store:/home/node/.pnpm-store
+    command:
+      - sh
+      - -c
+      - >-
+        pnpm install --frozen-lockfile --filter web... --store-dir /home/node/.pnpm-store
+        && pnpm dev
+    depends_on:
+      - api
+
 volumes:
   postgres-data:
+  pnpm-store:
+  api-node-modules-root:
+  api-node-modules-api:
+  api-node-modules-shared:
+  web-node-modules-root:
+  web-node-modules-web:
+  web-node-modules-shared:

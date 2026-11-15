@@ -18,15 +18,38 @@ Tệp `.env.dev`, `.env.prod` mỗi máy tự tạo từ tệp `.example`, khôn
 
 ## Chạy dev
 
+Cách 1, tất cả trong container:
+
 ```bash
-docker compose -f docker-compose.dev.yml --env-file .env.dev up -d   # PostgreSQL
-pnpm --filter api exec prisma migrate dev                            # tạo bảng
-pnpm --filter api exec prisma db seed                                # dữ liệu mẫu (xóa dữ liệu cũ)
-pnpm --filter api dev                                                # backend: http://localhost:3000/api/docs
-pnpm --filter web dev                                                # giao diện: https://localhost:5173
+docker compose -f docker-compose.dev.yml --env-file .env.dev up -d --build
 ```
 
-Backend và giao diện mỗi cái một terminal. Đổi cách chạy (vd thử đăng nhập Google) thì sửa `.env.dev` rồi chạy lại.
+- Backend: http://localhost:3000/api/docs · giao diện: https://localhost:5173
+- Mỗi lần bật / restart `api`: tạo bảng, nạp dữ liệu mẫu (xóa dữ liệu cũ). Sửa code thì tự chạy lại, không seed lại.
+
+Các lần sau (`docker compose -f docker-compose.dev.yml --env-file .env.dev …`):
+
+| Việc | Lệnh |
+|---|---|
+| Bật lại | `up -d` |
+| Về dữ liệu mẫu | `restart api` |
+| Đổi `.env.dev` (vd thử đăng nhập Google) | `up -d api web` |
+| Đổi thư viện (`package.json`) | `restart api web` |
+| Chạy test | `exec api pnpm test` |
+| Xem log | `logs -f api` |
+| Tắt | `down` |
+
+Cách 2, chạy thẳng trên máy (chỉ postgres trong container), backend và giao diện mỗi cái một terminal:
+
+```bash
+docker compose -f docker-compose.dev.yml --env-file .env.dev up -d postgres
+pnpm --filter api exec prisma migrate dev                            # tạo bảng
+pnpm --filter api exec prisma db seed                                # dữ liệu mẫu (xóa dữ liệu cũ)
+pnpm --filter api dev                                                # backend
+pnpm --filter web dev                                                # giao diện
+```
+
+Hai cách dùng chung cổng 3000, 5173: chạy cách này thì tắt cách kia. Trên máy vẫn `pnpm install` để VS Code gợi ý code.
 
 ## Chạy bản thật
 

@@ -58,7 +58,7 @@ Như vậy luật nghiệp vụ chỉ viết một lần.
 
 ### Hạ tầng
 
-- **Docker Compose** cho môi trường phát triển: `postgres`.
+- **Docker Compose**: dev `docker-compose.dev.yml` (postgres + api `pnpm dev` + web Vite, mã nguồn gắn từ máy vào), bản thật `docker-compose.prod.yml` (postgres + api + nginx).
 - Biến môi trường: mỗi môi trường một tệp ở thư mục gốc, gồm biến PostgreSQL, backend, giao diện: `.env.dev` (dev), `.env.prod` (bản thật). Không commit, mẫu ở `.env.dev.example`, `.env.prod.example`. Backend, Prisma, Vite đọc `.env.dev` khi chạy trên máy; container nhận biến do compose truyền vào (`--env-file`), biến đã có không bị tệp ghi đè.
 - Mỗi biến một việc: `VITE_USE_MOCK_BACKEND` (+ `VITE_REAL_BACKEND_GROUPS`) chỉ chọn backend giả hay thật; `VITE_APP_ENV` chỉ bật phần thử nghiệm của giao diện; `APP_ENV` chỉ chọn môi trường backend (dev / bản thật); `ENABLE_DEMO_APIS` (+ `ALWAYS_REAL_APIS`) chỉ chọn bản giả hay bản thật của API backend (vd đăng nhập thử hay Google). Một cách làm cho mọi API có bản giả: bản giả `dev-<tên>` bọc `JUST FOR DEMO`, bản thật chưa phát triển thì `throw realApiNotBuilt('dev-<tên>')` (501), không chặn backend chạy. Tên `dev-<tên>` chỉ có ở backend: frontend và API giả (MSW) chỉ biết endpoint bình thường (vd `POST /auth/login`), backend tự chọn bản. Mọi biến nằm trong `.env.dev` / `.env.prod` (mỗi máy đặt riêng, không lên git). Xem README, mục Biến môi trường.
 
@@ -134,8 +134,11 @@ Cổng xử lí đơn/
 pnpm install
 pnpm --filter web dev                   # chỉ chạy frontend: đặt VITE_USE_MOCK_BACKEND=true (backend giả)
 
-# khi đã có backend
-docker compose -f docker-compose.dev.yml --env-file .env.dev up -d   # postgres
+# dev bằng container: postgres + api + web, bật / restart api là seed lại
+docker compose -f docker-compose.dev.yml --env-file .env.dev up -d
+
+# hoặc chạy thẳng trên máy
+docker compose -f docker-compose.dev.yml --env-file .env.dev up -d postgres
 pnpm --filter api prisma migrate dev    # tạo bảng
 pnpm --filter api prisma db seed        # dữ liệu mẫu
 pnpm --filter api dev                   # chạy backend (cổng 3000), mở terminal riêng
