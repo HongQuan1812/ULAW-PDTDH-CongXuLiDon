@@ -135,10 +135,11 @@ pnpm install
 pnpm --filter web dev                   # chỉ chạy frontend: đặt VITE_USE_MOCK_BACKEND=true (backend giả)
 
 # dev bằng container: postgres + api + web, bật / restart api là seed lại
-docker compose -f docker-compose.dev.yml --env-file .env.dev up -d
+pnpm dev:up                             # = docker compose -f docker-compose.dev.yml --env-file .env.dev up -d --build
+pnpm dev:reset                          # về dữ liệu mẫu · dev:logs · dev:test · dev:down · prod:up · prod:logs · prod:down
 
 # hoặc chạy thẳng trên máy
-docker compose -f docker-compose.dev.yml --env-file .env.dev up -d postgres
+pnpm dev:up postgres
 pnpm --filter api prisma migrate dev    # tạo bảng
 pnpm --filter api prisma db seed        # dữ liệu mẫu
 pnpm --filter api dev                   # chạy backend (cổng 3000), mở terminal riêng

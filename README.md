@@ -21,28 +21,27 @@ Tệp `.env.dev`, `.env.prod` mỗi máy tự tạo từ tệp `.example`, khôn
 Cách 1, tất cả trong container:
 
 ```bash
-docker compose -f docker-compose.dev.yml --env-file .env.dev up -d --build
+pnpm dev:up
 ```
 
 - Backend: http://localhost:3000/api/docs · giao diện: https://localhost:5173
 - Mỗi lần bật / restart `api`: tạo bảng, nạp dữ liệu mẫu (xóa dữ liệu cũ). Sửa code thì tự chạy lại, không seed lại.
 
-Các lần sau (`docker compose -f docker-compose.dev.yml --env-file .env.dev …`):
-
 | Việc | Lệnh |
 |---|---|
-| Bật lại | `up -d` |
-| Về dữ liệu mẫu | `restart api` |
-| Đổi `.env.dev` (vd thử đăng nhập Google) | `up -d api web` |
-| Đổi thư viện (`package.json`) | `restart api web` |
-| Chạy test | `exec api pnpm test` |
-| Xem log | `logs -f api` |
-| Tắt | `down` |
+| Bật / bật lại, đổi `.env.dev` (vd thử đăng nhập Google) | `pnpm dev:up` |
+| Về dữ liệu mẫu | `pnpm dev:reset` |
+| Đổi thư viện (`package.json`) | `pnpm dev:reset web` |
+| Chạy test | `pnpm dev:test` |
+| Xem log | `pnpm dev:logs` |
+| Tắt | `pnpm dev:down` |
+
+Các lệnh `pnpm dev:*`, `pnpm prod:*` ghi trong `package.json` ở thư mục gốc, là lệnh `docker compose` viết gọn. Thêm chữ phía sau thì nối vào cuối lệnh, vd `pnpm dev:up postgres` chỉ bật postgres.
 
 Cách 2, chạy thẳng trên máy (chỉ postgres trong container), backend và giao diện mỗi cái một terminal:
 
 ```bash
-docker compose -f docker-compose.dev.yml --env-file .env.dev up -d postgres
+pnpm dev:up postgres
 pnpm --filter api exec prisma migrate dev                            # tạo bảng
 pnpm --filter api exec prisma db seed                                # dữ liệu mẫu (xóa dữ liệu cũ)
 pnpm --filter api dev                                                # backend
@@ -63,7 +62,7 @@ Lần đầu:
 cp .env.prod.example .env.prod          # điền giá trị thật
 sh docker/nginx/make-dev-cert.sh        # chỉ khi thử trên máy mình; máy chủ thật thì chép chứng chỉ của trường vào docker/nginx/certs/
 
-docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --build
+pnpm prod:up
 docker compose -f docker-compose.prod.yml --env-file .env.prod run --rm api pnpm exec prisma migrate deploy
 docker compose -f docker-compose.prod.yml --env-file .env.prod run --rm api pnpm seed:production <email trường>
 ```
@@ -72,16 +71,15 @@ Mở `https://localhost` (chứng chỉ tự kí: bấm Nâng cao → Tiếp t�
 
 `seed:production` tạo Admin đầu tiên và cấu hình email mặc định. Không xóa gì, chạy lại vẫn an toàn.
 
-Các lần sau (`docker compose -f docker-compose.prod.yml --env-file .env.prod …`):
+Các lần sau:
 
 | Việc | Lệnh |
 |---|---|
-| Bật lại | `up -d` |
-| Đổi `.env.prod` | `up -d api` |
-| Có mã mới | `up -d --build`, rồi `migrate deploy` như trên |
-| Đổi chứng chỉ | `restart nginx` |
-| Xem log | `logs -f api` |
-| Tắt | `down` |
+| Bật lại, đổi `.env.prod` | `pnpm prod:up` |
+| Có mã mới | `pnpm prod:up`, rồi `migrate deploy` như trên |
+| Đổi chứng chỉ | `docker compose -f docker-compose.prod.yml --env-file .env.prod restart nginx` |
+| Xem log | `pnpm prod:logs` |
+| Tắt | `pnpm prod:down` |
 
 Không dùng `down -v`: xóa luôn dữ liệu và tệp tải lên.
 
