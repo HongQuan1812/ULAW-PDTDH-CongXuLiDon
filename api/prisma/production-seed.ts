@@ -17,24 +17,31 @@ export interface ProductionSeedReport {
 
 /**
  * Tạo Admin đầu tiên và cấu hình email mặc định nếu chưa có.
- * Admin mới tạo giống tài khoản tạo ở trang Quản lí tài khoản: họ tên trống, lần đầu đăng nhập Google thì tự nhập.
+ * Có họ tên: Admin mới tạo đã hoàn tất hồ sơ, đăng nhập Google là vào thẳng.
+ * Không có họ tên: giống tài khoản tạo ở trang Quản lí tài khoản, lần đầu đăng nhập Google thì tự nhập.
  * @param prisma      Prisma Client
  * @param adminEmail  email trường của Admin đầu tiên
+ * @param adminName   họ tên của Admin đầu tiên (FIRST_ADMIN_NAME), bỏ trống thì để người đó tự nhập; chỉ dùng khi tạo mới
  * @returns           việc đã làm với tài khoản Admin và cấu hình email
  * @throws            lỗi nếu email không thuộc tên miền trường (người đó không đăng nhập Google được)
  */
-export async function seedProduction(prisma: PrismaClient, adminEmail: string): Promise<ProductionSeedReport> {
+export async function seedProduction(
+  prisma: PrismaClient,
+  adminEmail: string,
+  adminName = '',
+): Promise<ProductionSeedReport> {
   // Email viết thường, giống email Google lúc đăng nhập (auth.service tìm tài khoản theo email này)
   const email = adminEmail.trim().toLowerCase();
   if (!isSchoolEmail(email)) throw new Error(`"${adminEmail}" không phải email trường (SCHOOL_EMAIL_DOMAINS), không đăng nhập được`);
+  const name = adminName.trim();
 
-  // Admin: chưa có thì tạo, có rồi thì chỉ đổi vai trò thành Admin, giữ nguyên các thông tin khác
+  // Admin: chưa có thì tạo (có họ tên thì coi như đã hoàn tất hồ sơ), có rồi thì chỉ đổi vai trò thành Admin, giữ nguyên các thông tin khác
   const existingUser = await prisma.user.findUnique({ where: { email } });
   let admin: ProductionSeedReport['admin'];
   let adminId: string;
   if (!existingUser) {
     adminId = `tk-${randomUUID()}`;
-    await prisma.user.create({ data: { id: adminId, email, role: 'admin', name: '', completed: false } });
+    await prisma.user.create({ data: { id: adminId, email, role: 'admin', name, completed: name !== '' } });
     admin = 'created';
   } else {
     adminId = existingUser.id;

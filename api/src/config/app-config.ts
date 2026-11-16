@@ -3,6 +3,18 @@ import { Injectable } from '@nestjs/common';
 import { z } from 'zod';
 import { DEMO_APIS, usesDemoApi, type DemoApi } from './demo-apis';
 
+/**
+ * Biến chứa một địa chỉ URL, không có hoặc để trống (vd `WEB_BASE_URL_PRODUCTION=`) thì dùng giá trị mặc định.
+ * @param fallbackUrl  địa chỉ dùng khi bỏ trống, vd 'https://localhost'
+ * @returns            schema Zod trả về địa chỉ đã kiểm tra
+ */
+function urlOrDefault(fallbackUrl: string) {
+  return z
+    .union([z.literal(''), z.url()])
+    .default('')
+    .transform((configuredUrl) => configuredUrl || fallbackUrl);
+}
+
 /** Các biến backend cần. */
 const AppEnvSchema = z.object({
   // Môi trường: dev (Swagger, thư in ra console, WEB_BASE_URL_DEV, cookie không secure) · bỏ trống: bản thật
@@ -25,12 +37,13 @@ const AppEnvSchema = z.object({
   // 465: kết nối mã hóa ngay (SSL/TLS) · cổng khác (vd 587): nâng lên mã hóa bằng STARTTLS
   SMTP_PORT: z.coerce.number().int().min(1).max(65535).default(465),
   // Tài khoản đăng nhập SMTP, cũng là địa chỉ gửi thư (người nộp đơn bấm "Trả lời" thì thư về đây)
-  SMTP_USER: z.email().default('daotao@hcmulaw.edu.vn'),
+  SMTP_USER: z.email().default('lhquan@hcmulaw.edu.vn'),
   // Mật khẩu ứng dụng của tài khoản SMTP
   SMTP_PASSWORD: z.string().default(''),
-  // Địa chỉ gốc của cổng (giao diện), để dựng đường dẫn tới đơn trong thư ({link_don}): APP_ENV=dev dùng bản dev, còn lại dùng bản production
-  WEB_BASE_URL_DEV: z.url().default('https://localhost:5173'),
-  WEB_BASE_URL_PRODUCTION: z.url().default('https://dichvu.hcmulaw.edu.vn'),
+  // Địa chỉ gốc của cổng (giao diện), để dựng đường dẫn tới đơn trong thư ({link_don}) và redirect URI của Google:
+  // APP_ENV=dev dùng bản dev, còn lại dùng bản production · bỏ trống: chạy trên máy mình (localhost)
+  WEB_BASE_URL_DEV: urlOrDefault('https://localhost:5173'),
+  WEB_BASE_URL_PRODUCTION: urlOrDefault('https://localhost'),
   // Chỉ dùng khi APP_ENV=dev: thư tự động gửi về địa chỉ này thay vì người nộp đơn; bỏ trống thì chỉ in ra console
   DEV_EMAIL_REDIRECT_TO: z.union([z.literal(''), z.email()]).default(''),
   // OAuth client (loại Web application) tạo ở Google Cloud Console; bỏ trống: chưa bật đăng nhập Google (ENABLE_DEMO_APIS=true vẫn đăng nhập thử được)

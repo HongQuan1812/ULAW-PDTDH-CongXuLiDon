@@ -35,13 +35,25 @@ describe('seedProduction', () => {
     expect(await prisma.emailSettings.findUniqueOrThrow({ where: { id: 1 } })).toEqual(settingsBefore);
   });
 
-  it('chạy lại không tạo thêm, không đổi gì', async () => {
+  it('chạy lại không tạo thêm, không đổi gì, kể cả khi có họ tên', async () => {
     const userCountBefore = await prisma.user.count();
+    const before = await prisma.user.findUniqueOrThrow({ where: { email: NEW_ADMIN_EMAIL } });
 
-    const report = await seedProduction(prisma, NEW_ADMIN_EMAIL);
+    const report = await seedProduction(prisma, NEW_ADMIN_EMAIL, 'Nguyễn Văn A');
 
     expect(report).toEqual({ admin: 'unchanged', emailSettings: 'unchanged' });
     expect(await prisma.user.count()).toBe(userCountBefore);
+    expect(await prisma.user.findUniqueOrThrow({ where: { email: NEW_ADMIN_EMAIL } })).toEqual(before);
+  });
+
+  it('có họ tên: tạo Admin đã hoàn tất hồ sơ, đăng nhập là vào thẳng', async () => {
+    await prisma.user.deleteMany({ where: { email: NEW_ADMIN_EMAIL } });
+
+    const report = await seedProduction(prisma, NEW_ADMIN_EMAIL, '  Nguyễn Văn A ');
+
+    expect(report.admin).toBe('created');
+    const admin = await prisma.user.findUniqueOrThrow({ where: { email: NEW_ADMIN_EMAIL } });
+    expect(admin).toMatchObject({ role: 'admin', name: 'Nguyễn Văn A', completed: true });
   });
 
   it('tài khoản đã có thì chỉ đổi vai trò thành Admin, giữ thông tin khác', async () => {

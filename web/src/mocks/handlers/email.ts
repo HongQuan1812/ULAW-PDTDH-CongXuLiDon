@@ -16,7 +16,7 @@ import { MOCK_DELAY_MS, api, apiError } from '../http';
 /* JUST FOR DEMO: START · API giả coi như máy chủ thư luôn kết nối được và không gửi thư thật.
    Máy chủ thật đọc địa chỉ gửi từ cấu hình SMTP (biến môi trường, cùng mật khẩu ứng dụng). */
 const MAIL_SERVER_CONNECTED = true;
-const SENDER_ADDRESS = 'daotao@hcmulaw.edu.vn';
+const SENDER_ADDRESS = 'lhquan@hcmulaw.edu.vn';
 /* JUST FOR DEMO: END */
 
 /**

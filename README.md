@@ -102,11 +102,12 @@ Chỉ email trường (`SCHOOL_EMAIL_DOMAINS`, `shared/src/validators/auth.ts`) 
 | `ALWAYS_REAL_APIS` | khi bật bản giả, các API vẫn dùng bản thật, vd `dev-login` |
 | `API_PORT` | cổng backend (dev) |
 | `UPLOAD_DIR` | thư mục lưu tệp tải lên (dev) |
-| `WEB_BASE_URL_DEV`, `WEB_BASE_URL_PRODUCTION` | địa chỉ cổng, dùng cho đường dẫn trong thư và đăng nhập Google |
+| `WEB_BASE_URL_DEV`, `WEB_BASE_URL_PRODUCTION` | địa chỉ cổng, dùng cho đường dẫn trong thư và redirect URI của Google · trống: `https://localhost:5173`, `https://localhost` |
 | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD` | máy chủ gửi thư · `SMTP_HOST` trống: không gửi |
 | `DEV_EMAIL_REDIRECT_TO` | dev: thư tự động gửi về địa chỉ này thay cho người dùng mẫu · trống: chỉ in ra console |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | OAuth client của Google · trống: chưa bật đăng nhập Google |
 | `FIRST_ADMIN_EMAIL` | email Admin đầu tiên (bản thật, bắt buộc): container `api` tạo khi bật nếu chưa có |
+| `FIRST_ADMIN_NAME` | họ tên Admin đầu tiên (bản thật): có thì đăng nhập là vào thẳng · trống: lần đầu tự nhập · chỉ dùng khi tạo mới |
 | `HTTP_PORT`, `HTTPS_PORT`, `TLS_CERT_DIR` | cổng và thư mục chứng chỉ của nginx (bản thật) |
 | `VITE_USE_MOCK_BACKEND` | `true`: giao diện dùng backend giả (MSW) · `false`: backend thật |
 | `VITE_REAL_BACKEND_GROUPS` | khi dùng backend giả, các nhóm vẫn tới backend thật, vd `health,auth` |
