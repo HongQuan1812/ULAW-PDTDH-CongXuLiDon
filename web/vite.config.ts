@@ -37,6 +37,9 @@ export default defineConfig(({ command, mode }) => {
       port: webPort,
       // Nghe trên mọi địa chỉ của máy: máy khác cùng mạng LAN mở được bằng https://<IP máy này>:<WEB_PORT>
       host: true,
+      // Tên miền được mở ngoài localhost / IP: *.nip.io (vd https://192.168.32.93.nip.io:5173, trỏ về IP trong tên),
+      // để đăng nhập Google từ máy khác trong LAN (Google không nhận IP làm redirect URI)
+      allowedHosts: ['.nip.io'],
       // Request /api tới backend thật (tắt backend giả, hoặc nhóm trong VITE_REAL_BACKEND_GROUPS khi bật) được chuyển sang đây
       proxy: { '/api': apiProxyTarget },
     },
