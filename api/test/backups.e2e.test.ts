@@ -174,7 +174,7 @@ describe('backups', () => {
     await request(server()).put(dailyPath).set('Cookie', adminCookie).send(DAILY_SCHEDULE).expect(200);
   });
 
-  it('Google Drive: phải kết nối (bản giả dev-backup-drive) rồi mới lưu được; kết nối dùng một lần; sửa thì giữ tài khoản cũ', async () => {
+  it('Google Drive: phải kết nối (bản giả dev-google-drive-connect) rồi mới lưu được; kết nối dùng một lần; sửa thì giữ tài khoản cũ', async () => {
     const driveTarget = { name: 'Drive', kind: 'googleDrive' as const, folder: 'Sao lưu', keepLatest: 3 };
     const connect = async (body: object) =>
       ConnectGoogleDriveResponseSchema.parse((await request(server()).post(api(BACKUP_ENDPOINTS.driveConnect)).set('Cookie', adminCookie).send(body).expect(200)).body);

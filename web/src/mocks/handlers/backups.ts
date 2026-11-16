@@ -121,7 +121,7 @@ export const backupHandlers = [
     return new HttpResponse(null, { status: 204 });
   }),
 
-  // Kết nối Google Drive (từ hộp thêm / sửa nơi lưu): API giả trả ngay tài khoản, như bản giả dev-backup-drive của backend
+  // Kết nối Google Drive (từ hộp thêm / sửa nơi lưu): API giả trả ngay tài khoản, như bản giả dev-google-drive-connect của backend
   http.post(api(ENDPOINTS.backups.driveConnect), async ({ request }) => {
     await delay(MOCK_DELAY_MS);
     const session = await backupSession();

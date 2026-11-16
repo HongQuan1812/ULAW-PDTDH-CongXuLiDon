@@ -17,7 +17,7 @@ export const DEMO_APIS = [
   'dev-email',
   /** kết nối Google Drive cho nơi lưu sao lưu không qua Google: tài khoản là email gửi kèm (mặc định email người đang đăng nhập),
       không có quyền thật nên sao lưu vào nơi đó báo lỗi trong lịch sử · bản thật: popup sang Google (chưa làm) */
-  'dev-backup-drive',
+  'dev-google-drive-connect',
 ] as const satisfies readonly `dev-${string}`[];
 export type DemoApi = (typeof DEMO_APIS)[number];
 

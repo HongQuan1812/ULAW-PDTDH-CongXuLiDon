@@ -21,7 +21,7 @@ export const BACKUP_ENDPOINTS = {
   target: '/backups/targets/:targetId',
   /** POST ConnectGoogleDriveRequest → ConnectGoogleDriveResponse: kết nối một tài khoản Google Drive (gọi từ hộp thêm / sửa nơi lưu, trước khi Lưu).
       Kết nối xong có driveGrantId (dùng một lần, có hạn) và email; bấm Lưu thì gửi driveGrantId kèm nơi lưu.
-      Bản giả (dev-backup-drive): trả ngay 'connected' với email gửi kèm. Bản thật (chưa làm): trả 'redirect', giao diện mở đường dẫn
+      Bản giả (dev-google-drive-connect): trả ngay 'connected' với email gửi kèm. Bản thật (chưa làm): trả 'redirect', giao diện mở đường dẫn
       trong cửa sổ popup sang Google; Google gọi về /backups/google-drive/callback, trang đó báo driveGrantId, email cho hộp thoại rồi tự đóng */
   driveConnect: '/backups/google-drive/connect',
   /** GET (Google gọi về sau khi Admin đồng ý), không gọi từ giao diện */

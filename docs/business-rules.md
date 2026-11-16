@@ -206,7 +206,7 @@ Mỗi loại đơn có hai nhóm mẫu, lưu ở máy chủ theo loại đơn, d
 - Trang **Sao lưu** (`#/sao-luu`, chỉ Admin). Mỗi bản sao lưu luôn gồm **cả database lẫn tệp tải lên**, là một tệp `sao-luu-<YYYYMMDD-HHmmss>.tar.gz`
   chứa `manifest.json`, `database.dump` (`pg_dump` dạng custom, khôi phục bằng `pg_restore`) và thư mục `uploads/`.
 - **Nơi lưu**: thư mục trên máy chủ (thư mục con trong `BACKUP_DIR`, không ra ngoài được) hoặc Google Drive (trong hộp thêm / sửa nơi lưu, Admin bấm
-  **Kết nối Google**, chọn tài khoản, thấy email rồi mới bấm Lưu; chưa kết nối thì không lưu được. Bản giả `dev-backup-drive` không qua Google: gõ email bất kì,
+  **Kết nối Google**, chọn tài khoản, thấy email rồi mới bấm Lưu; chưa kết nối thì không lưu được. Bản giả `dev-google-drive-connect` không qua Google: gõ email bất kì,
   sao lưu vào đó báo lỗi trong lịch sử vì không có quyền thật; bản thật mở cửa sổ popup sang Google, chưa làm.
   cổng chỉ xin quyền `drive.file`: chỉ thấy tệp, thư mục do chính nó tạo; thư mục chưa có thì tự tạo). Mỗi nơi lưu đặt **giữ N bản gần nhất**:
   sau mỗi lần sao lưu thành công vào đó, bản cũ hơn bị xóa (lịch sử vẫn ghi, đánh dấu đã xóa). Hai nơi lưu không được cùng kiểu cùng thư mục.

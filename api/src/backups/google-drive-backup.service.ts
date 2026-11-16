@@ -31,7 +31,7 @@ type BackupTargetRow = Prisma.BackupTargetGetPayload<object>;
 export interface DriveGrant {
   /** email tài khoản Google */
   email: string;
-  /** refresh token đã mã hóa; null = bản giả dev-backup-drive (không có quyền thật) */
+  /** refresh token đã mã hóa; null = bản giả dev-google-drive-connect (không có quyền thật) */
   encryptedRefreshToken: string | null;
 }
 
@@ -254,7 +254,7 @@ export class GoogleDriveBackupService {
     if (!google) throw new Error('Máy chủ chưa cấu hình Google (GOOGLE_CLIENT_ID).');
     const refreshToken = target.googleRefreshToken ? decryptToken(target.googleRefreshToken, google.clientSecret) : null;
     if (!refreshToken && target.googleAccount && !target.googleRefreshToken) {
-      throw new Error('Tài khoản Google này được kết nối bằng bản giả (dev-backup-drive), không lưu thật lên Drive được.');
+      throw new Error('Tài khoản Google này được kết nối bằng bản giả (dev-google-drive-connect), không lưu thật lên Drive được.');
     }
     if (!refreshToken) throw new Error('Chưa kết nối tài khoản Google Drive (hoặc cần kết nối lại).');
     const response = await fetch(GOOGLE_TOKEN_URL, {

@@ -99,7 +99,7 @@ Chỉ email trường (`SCHOOL_EMAIL_DOMAINS`, `shared/src/validators/auth.ts`) 
 | `POSTGRES_PORT` | cổng PostgreSQL mở ra máy (dev) |
 | `DATABASE_URL` | chuỗi kết nối khi chạy trên máy (dev), khớp `APP_DB_*`. Bản thật compose tự dựng |
 | `APP_ENV` | `dev`: Swagger, `WEB_BASE_URL_DEV`, cookie không `secure` · trống: bản thật |
-| `ENABLE_DEMO_APIS` | `true`: dùng bản giả của API: `dev-login` đăng nhập thử theo vai trò, `dev-student-directory` thông tin sinh viên mẫu, `dev-email` thư tự động không tới người nộp đơn, `dev-backup-drive` kết nối Google Drive cho nơi lưu sao lưu không qua Google · `false`: bản thật |
+| `ENABLE_DEMO_APIS` | `true`: dùng bản giả của API: `dev-login` đăng nhập thử theo vai trò, `dev-student-directory` thông tin sinh viên mẫu, `dev-email` thư tự động không tới người nộp đơn, `dev-google-drive-connect` chỉ giả bước kết nối Google Drive cho nơi lưu sao lưu (không qua Google; sao lưu vào nơi đó vẫn báo lỗi vì không có quyền thật) · `false`: bản thật |
 | `ALWAYS_REAL_APIS` | khi bật bản giả, các API vẫn dùng bản thật, vd `dev-login,dev-student-directory` |
 | `API_PORT` | cổng backend (dev) |
 | `UPLOAD_DIR` | thư mục lưu tệp tải lên (dev) |

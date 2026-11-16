@@ -144,15 +144,15 @@ export class BackupsController {
   connectGoogleDrive(@CurrentUser() user: User, @Body() requestBody: unknown): ConnectGoogleDriveResponse {
     const connectRequest = parseOrReject(requestBody ?? {}, ConnectGoogleDriveRequestSchema);
 
-    /* JUST FOR DEMO: START · bản giả dev-backup-drive: không qua Google, tài khoản là email gửi kèm (mặc định email người đang đăng nhập),
+    /* JUST FOR DEMO: START · bản giả dev-google-drive-connect: không qua Google, tài khoản là email gửi kèm (mặc định email người đang đăng nhập),
        không có refresh token nên sao lưu vào đó báo lỗi trong lịch sử. Bản thật: trả 'redirect' sang Google (popup), callback báo driveGrantId */
-    if (this.appConfig.usesDemoApi('dev-backup-drive')) {
+    if (this.appConfig.usesDemoApi('dev-google-drive-connect')) {
       const email = connectRequest.email ?? user.email;
       return { kind: 'connected', driveGrantId: this.googleDrive.createGrant(user.id, { email, encryptedRefreshToken: null }), email };
     }
     /* JUST FOR DEMO: END */
 
-    throw realApiNotBuilt('dev-backup-drive');
+    throw realApiNotBuilt('dev-google-drive-connect');
   }
 
   /**

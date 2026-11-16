@@ -174,8 +174,8 @@ export class BackupsService implements OnModuleInit, OnModuleDestroy {
       nextScheduledAt: nextScheduledAtOf(schedules, toVietnamTime(new Date())),
       lastSuccessAt: lastSuccess ? toVietnamSeconds(lastSuccess.startedAt) : null,
       running: this.busy,
-      // Bản giả dev-backup-drive không cần OAuth client
-      googleDriveAvailable: this.googleDrive.available || this.config.usesDemoApi('dev-backup-drive'),
+      // Bản giả dev-google-drive-connect không cần OAuth client
+      googleDriveAvailable: this.googleDrive.available || this.config.usesDemoApi('dev-google-drive-connect'),
     };
   }
 
