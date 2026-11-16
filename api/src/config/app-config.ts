@@ -17,7 +17,7 @@ function urlOrDefault(fallbackUrl: string) {
 
 /** Các biến backend cần. */
 const AppEnvSchema = z.object({
-  // Môi trường: dev (Swagger, thư in ra console, WEB_BASE_URL_DEV, cookie không secure) · bỏ trống: bản thật
+  // Môi trường: dev (Swagger, WEB_BASE_URL_DEV, cookie không secure) · bỏ trống: bản thật
   APP_ENV: z.enum(['dev', '']).default(''),
   // Bản giả của API (không liên quan APP_ENV): true: API nào có bản giả thì dùng bản giả (đăng nhập thử theo vai trò, dev-login),
   // trừ các API trong ALWAYS_REAL_APIS · false / bỏ trống: dùng bản thật (đăng nhập Google)
@@ -32,7 +32,8 @@ const AppEnvSchema = z.object({
   DATABASE_URL: z.string().startsWith('postgresql://'),
   // Thư mục lưu tệp tải lên trên ổ đĩa máy chủ (tương đối với thư mục chạy backend, hoặc đường dẫn tuyệt đối)
   UPLOAD_DIR: z.string().min(1).default('uploads'),
-  // Máy chủ gửi thư (SMTP). Có điền: gửi thư thật, kể cả khi APP_ENV=dev · bỏ trống: không gửi (APP_ENV=dev thì in ra console)
+  // Máy chủ gửi thư (SMTP). Có điền: gửi thư thật (bản giả dev-email vẫn gửi, nhưng thư tự động về DEV_EMAIL_REDIRECT_TO)
+  // · bỏ trống: không gửi (bản giả dev-email thì in ra console)
   SMTP_HOST: z.string().trim().default(''),
   // 465: kết nối mã hóa ngay (SSL/TLS) · cổng khác (vd 587): nâng lên mã hóa bằng STARTTLS
   SMTP_PORT: z.coerce.number().int().min(1).max(65535).default(465),
@@ -44,7 +45,7 @@ const AppEnvSchema = z.object({
   // APP_ENV=dev dùng bản dev, còn lại dùng bản production · bỏ trống: chạy trên máy mình (localhost)
   WEB_BASE_URL_DEV: urlOrDefault('https://localhost:5173'),
   WEB_BASE_URL_PRODUCTION: urlOrDefault('https://localhost'),
-  // Chỉ dùng khi APP_ENV=dev: thư tự động gửi về địa chỉ này thay vì người nộp đơn; bỏ trống thì chỉ in ra console
+  // Chỉ dùng ở bản giả dev-email: thư tự động gửi về địa chỉ này thay vì người nộp đơn; bỏ trống thì chỉ in ra console
   DEV_EMAIL_REDIRECT_TO: z.union([z.literal(''), z.email()]).default(''),
   // OAuth client (loại Web application) tạo ở Google Cloud Console; bỏ trống: chưa bật đăng nhập Google (ENABLE_DEMO_APIS=true vẫn đăng nhập thử được)
   GOOGLE_CLIENT_ID: z.string().trim().default(''),
@@ -90,7 +91,7 @@ export interface SchoolDatabaseConfig {
 /** Cấu hình của backend, tiêm vào nơi cần dùng. */
 @Injectable()
 export class AppConfig {
-  /** true khi APP_ENV = "dev": môi trường phát triển (Swagger, thư in ra console, WEB_BASE_URL_DEV, cookie không secure). */
+  /** true khi APP_ENV = "dev": môi trường phát triển (Swagger, WEB_BASE_URL_DEV, cookie không secure). */
   readonly isDev: boolean;
   /** true khi ENABLE_DEMO_APIS = "true": API nào có bản giả thì dùng bản giả, trừ ALWAYS_REAL_APIS. Hỏi từng API bằng usesDemoApi(). */
   readonly demoApisEnabled: boolean;
@@ -106,7 +107,7 @@ export class AppConfig {
   readonly smtp: SmtpConfig;
   /** Địa chỉ gốc của cổng theo môi trường: dev thì WEB_BASE_URL_DEV, còn lại WEB_BASE_URL_PRODUCTION. */
   readonly webBaseUrl: string;
-  /** Chỉ dùng khi APP_ENV=dev: địa chỉ nhận thay mọi thư tự động; null thì thư tự động chỉ in ra console. */
+  /** Chỉ dùng ở bản giả dev-email: địa chỉ nhận thay mọi thư tự động; null thì thư tự động chỉ in ra console. */
   readonly devEmailRedirectTo: string | null;
   /** Đăng nhập Google; null khi chưa điền GOOGLE_CLIENT_ID hoặc GOOGLE_CLIENT_SECRET. */
   readonly google: GoogleOAuthConfig | null;

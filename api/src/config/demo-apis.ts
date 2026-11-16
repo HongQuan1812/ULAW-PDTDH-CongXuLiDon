@@ -12,6 +12,9 @@ export const DEMO_APIS = [
   'dev-login',
   /** thông tin sinh viên đọc từ bảng StudentInfo do seed điền · bản thật: đọc database trường theo email */
   'dev-student-directory',
+  /** thư tự động không tới người nộp đơn: gửi về DEV_EMAIL_REDIRECT_TO, trống thì in ra console; chưa có SMTP_HOST thì mọi thư chỉ in ra
+      · bản thật: gửi tới email người nộp đơn qua SMTP */
+  'dev-email',
 ] as const satisfies readonly `dev-${string}`[];
 export type DemoApi = (typeof DEMO_APIS)[number];
 

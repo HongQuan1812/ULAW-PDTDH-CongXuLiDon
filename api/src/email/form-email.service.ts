@@ -17,7 +17,7 @@ export class FormEmailService {
   /**
    * @param prisma      đọc đơn, cấu hình email
    * @param mailSender  gửi thư
-   * @param config      địa chỉ gốc của cổng, địa chỉ nhận thay khi dev
+   * @param config      địa chỉ gốc của cổng; bản giả hay thật, địa chỉ nhận thay của bản giả dev-email
    */
   constructor(
     private readonly prisma: PrismaService,
@@ -40,7 +40,7 @@ export class FormEmailService {
    * Dựng và gửi thư báo một lần chuyển trạng thái.
    * @param code    mã đơn
    * @param status  trạng thái đơn vừa chuyển tới
-   * @returns       true nếu đã gửi; false nếu lúc gửi này đang tắt, không có đơn, chỉ in ra (dev), hoặc gửi lỗi
+   * @returns       true nếu đã gửi; false nếu lúc gửi này đang tắt, không có đơn, chỉ in ra (bản giả dev-email), hoặc gửi lỗi
    */
   async sendStatusEmail(code: string, status: EmailEventStatus): Promise<boolean> {
     // Cấu hình của lúc gửi này; đang tắt thì thôi
@@ -66,9 +66,9 @@ export class FormEmailService {
     );
     const content = buildEmailContent(event.subject, event.body, tagValues);
 
-    /* JUST FOR DEMO: START · Khi dev, người dùng mẫu có email trông như thật: thư gửi về DEV_EMAIL_REDIRECT_TO thay vì người nộp đơn,
+    /* JUST FOR DEMO: START · dev-email: người dùng mẫu có email trông như thật, nên thư gửi về DEV_EMAIL_REDIRECT_TO thay vì người nộp đơn,
        chưa đặt thì chỉ in ra console. Bản thật: gửi thẳng tới form.owner.email. */
-    if (this.config.isDev) {
+    if (this.config.usesDemoApi('dev-email')) {
       if (!this.config.devEmailRedirectTo) {
         this.logger.log(`Thư tự động (chưa gửi, chưa đặt DEV_EMAIL_REDIRECT_TO) tới ${form.owner.email}: ${content.subject}\n${content.text}`);
         return false;

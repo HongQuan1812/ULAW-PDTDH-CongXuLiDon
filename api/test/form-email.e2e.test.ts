@@ -1,5 +1,6 @@
 /* Test thư tự động báo cho người nộp đơn: dựng thư theo cấu hình và dữ liệu đơn, lúc gửi đang tắt thì không gửi,
-   khi dev thì gửi về địa chỉ nhận thay (chưa đặt thì chỉ in ra). Không gửi thư thật: thay lệnh gửi bằng hàm giả.
+   bản giả dev-email thì gửi về địa chỉ nhận thay (chưa đặt thì chỉ in ra), bản thật gửi tới người nộp đơn.
+   Không gửi thư thật: thay lệnh gửi bằng hàm giả.
    Cần database đã migrate và seed. Test trả cấu hình email và cấu hình backend về như cũ khi xong. */
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import type { INestApplication } from '@nestjs/common';
@@ -59,7 +60,7 @@ describe('thư tự động báo cho người nộp đơn', () => {
     await app.close();
   });
 
-  it('dựng thư theo cấu hình của lúc gửi và dữ liệu đơn; khi dev gửi về địa chỉ nhận thay', async () => {
+  it('dựng thư theo cấu hình của lúc gửi và dữ liệu đơn; bản giả dev-email gửi về địa chỉ nhận thay', async () => {
     config.devEmailRedirectTo = REDIRECT_ADDRESS;
     await writeSettings(EMAIL_SETTINGS_SEED);
     const form = await prisma.form.findUniqueOrThrow({ where: { code: FORM_CODE }, include: { owner: true } });
@@ -80,7 +81,18 @@ describe('thư tự động báo cho người nộp đơn', () => {
     expect(sentEmails).toHaveLength(1);
   });
 
-  it('khi dev chưa đặt địa chỉ nhận thay: chỉ in ra, không gửi; không có đơn: không gửi', async () => {
+  it('bản thật (dev-email trong ALWAYS_REAL_APIS): gửi tới email người nộp đơn, không về địa chỉ nhận thay', async () => {
+    const usesDemoApi = vi.spyOn(app.get(AppConfig), 'usesDemoApi').mockImplementation((api) => api !== 'dev-email');
+    try {
+      const form = await prisma.form.findUniqueOrThrow({ where: { code: FORM_CODE }, include: { owner: true } });
+      expect(await formEmail.sendStatusEmail(FORM_CODE, 'nop')).toBe(true);
+      expect(sentEmails.map((email) => email.to)).toEqual([form.owner.email]);
+    } finally {
+      usesDemoApi.mockRestore();
+    }
+  });
+
+  it('bản giả chưa đặt địa chỉ nhận thay: chỉ in ra, không gửi; không có đơn: không gửi', async () => {
     config.devEmailRedirectTo = null;
     expect(await formEmail.sendStatusEmail(FORM_CODE, 'nop')).toBe(false);
     config.devEmailRedirectTo = REDIRECT_ADDRESS;

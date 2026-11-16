@@ -1,5 +1,5 @@
 /* Chạy trước mỗi tệp test: nạp .env.dev, như lúc chạy thật.
-   Riêng máy chủ thư luôn bỏ trống: test không bao giờ gửi thư thật (thư chỉ dựng rồi in ra, nhờ APP_ENV=dev). */
+   Riêng máy chủ thư luôn bỏ trống: test không bao giờ gửi thư thật (thư chỉ dựng rồi in ra, nhờ bản giả dev-email). */
 import 'reflect-metadata';
 import { loadDevEnvFile } from '../src/config/env-file';
 

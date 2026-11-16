@@ -21,7 +21,7 @@ export class MailSenderService {
   private readonly logger = new Logger(MailSenderService.name);
   /** null: chưa cấu hình SMTP, không gửi được thư */
   private readonly transporter: Transporter | null;
-  /** true: chưa có máy chủ thư, thư chỉ in ra console (APP_ENV=dev) */
+  /** true: chưa có máy chủ thư, thư chỉ in ra console (bản giả dev-email) */
   private readonly printOnly: boolean;
   /** Địa chỉ gửi, cũng là địa chỉ nhận thư trả lời. */
   readonly senderAddress: string;
@@ -49,9 +49,9 @@ export class MailSenderService {
       return;
     }
 
-    /* JUST FOR DEMO: START · Chưa có máy chủ thư mà APP_ENV=dev: không gửi đi, chỉ dựng thư rồi in ra console để xem.
+    /* JUST FOR DEMO: START · dev-email, chưa có máy chủ thư: không gửi đi, chỉ dựng thư rồi in ra console để xem.
        Bản thật đặt SMTP_HOST trong .env.prod (không đặt thì không gửi được thư nào). */
-    this.printOnly = config.isDev;
+    this.printOnly = config.usesDemoApi('dev-email');
     this.transporter = this.printOnly ? nodemailer.createTransport({ jsonTransport: true }) : null;
     /* JUST FOR DEMO: END */
   }
