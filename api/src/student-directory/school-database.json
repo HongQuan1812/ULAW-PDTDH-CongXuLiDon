@@ -1,0 +1,184 @@
+{
+  "DANG_KY_HOC_PHAN": {
+    "DATABASE": "CoreUis",
+    "MO_TA": "SV đăng ký lớp học phần. Phân cấp: mã môn (CurriculumID) -> nhiều mã học phần theo kỳ (StudyUnitID) -> nhiều mã lớp học phần (ScheduleStudyUnitID)",
+    "HP_THEO_KY_TABLE": {
+      "NAME": "psc_StudyUnits",
+      "MO_TA": "Học phần mở trong một năm học/học kỳ (vd: 26131QTC302)",
+      "COLUMNS": {
+        "MA_HP_THEO_KY": "StudyUnitID",
+        "MA_MON": "CurriculumID",
+        "NAM_HOC": "YearStudy",
+        "HOC_KY": "TermID"
+      }
+    },
+    "LOP_HP_TABLE": {
+      "NAME": "psc_ScheduleStudyUnits",
+      "MO_TA": "Lớp học phần (vd: 26131QTC30201)",
+      "COLUMNS": {
+        "MA_LOP_HP": "ScheduleStudyUnitID",
+        "MA_HP_THEO_KY": "StudyUnitID"
+      }
+    },
+    "DANG_KY_TABLE": {
+      "NAME": "psc_StudentScheduleStudyUnits",
+      "MO_TA": "Mỗi dòng là một sinh viên trong một lớp học phần",
+      "COLUMNS": {
+        "MSSV": "StudentID",
+        "MA_LOP_HP": "ScheduleStudyUnitID"
+      }
+    },
+    "LOP_SV_LOP_HP_TABLE": {
+      "NAME": "psc_Sch_ClassStudentScheduleStudyUnits",
+      "MO_TA": "Lớp sinh viên được xếp học lớp học phần nào (vd: 152-QT48-nhom2 -> 26131LMT30111); có cả lớp tách nhóm",
+      "COLUMNS": {
+        "MA_LOP_SV": "ClassStudentID",
+        "MA_LOP_HP": "ScheduleStudyUnitID"
+      }
+    }
+  },
+  "THONG_TIN_DANH_SACH_THI": {
+    "DATABASE": "CoreUis",
+    "MO_TA": "Thông tin để in danh sách sinh viên dự thi (mẫu ULAW_DanhSachThi_QLDT0002)",
+    "MON_HOC_TABLE": {
+      "NAME": "psc_Curriculums",
+      "MO_TA": "Môn học (vd: LSN301 - Lịch sử Nhà nước và pháp luật, 3 tín chỉ)",
+      "COLUMNS": {
+        "MA_MON": "CurriculumID",
+        "TEN_MON": "CurriculumName",
+        "SO_TIN_CHI": "Credits"
+      }
+    },
+    "SINH_VIEN_TABLE": {
+      "NAME": "psc_Students",
+      "MO_TA": "Sinh viên; họ, tên đệm, tên tách riêng. Tên đệm có SV ghi ở MiddleName (vd: 'Nguyễn' / 'Trung Anh' / 'Minh'), có SV ghi chung vào LastName với MiddleName trống (vd: 'Đinh Y' / '' / 'Chúc')",
+      "COLUMNS": {
+        "MSSV": "StudentID",
+        "HO": "LastName",
+        "TEN_DEM": "MiddleName",
+        "TEN": "FirstName"
+      }
+    },
+    "LOP_SINH_VIEN_TABLE": {
+      "NAME": "psc_StudentClassStudent",
+      "MO_TA": "Lớp sinh hoạt của sinh viên (vd: 178-HC50(A))",
+      "COLUMNS": {
+        "MSSV": "StudentID",
+        "MA_LOP_SV": "ClassStudentID"
+      }
+    },
+    "NO_PHI_TABLE": {
+      "NAME": "psc_EX_SinhVienNoPhi",
+      "MO_TA": "Tình trạng đóng học phí của SV theo từng lớp học phần; SV còn nợ ở lớp nào thì không được dự thi lớp đó",
+      "GIA_TRI_NO": "Nợ HP",
+      "COLUMNS": {
+        "MSSV": "StudentID",
+        "MA_LOP_HP": "ScheduleStudyUnitID",
+        "KET_QUA": "KetQua"
+      }
+    },
+    "LICH_THI_TABLE": {
+      "NAME": "psc_ExaminationSchedules",
+      "MO_TA": "Lịch thi theo lớp học phần. Ngày thi lưu dạng tuần/thứ/năm, chưa kiểm chứng cách quy đổi ra ngày",
+      "COLUMNS": {
+        "MA_LOP_HP": "ScheduleStudyUnitID",
+        "LAN_THI": "Times",
+        "GIO_THI": "BeginTime",
+        "THU": "DayOfWeek",
+        "TUAN": "Week",
+        "NAM": "Year"
+      }
+    }
+  },
+  "THONG_TIN_SINH_VIEN": {
+    "DATABASE": "CoreUis",
+    "MO_TA": "Tra thông tin SV theo MSSV hoặc email trường. Chuỗi nối: SV -> lớp SV (MSSV) -> lớp (MA_LOP_SV) -> khóa (MA_KHOA) -> hình thức đào tạo (MA_HINH_THUC) và bậc (MA_BAC). Mỗi MSSV có tối đa 1 lớp nên chỉ có 1 hình thức đào tạo; 1 người học nhiều chương trình (vd Đại học + Cao học) thì mỗi chương trình 1 MSSV riêng. Ngành, khóa: SV -> NGANH_SV_TABLE (MSSV) -> danh mục ngành (MA_NGANH) và khóa (MA_KHOA). Nên lấy khóa (và hình thức đào tạo, bậc) qua NGANH_SV_TABLE thay vì qua lớp: phủ cả SV không có lớp và đúng hơn với SV chuyển khóa",
+    "SINH_VIEN_TABLE": {
+      "NAME": "psc_Students",
+      "MO_TA": "Sinh viên; không có cột email. Tên đệm có SV ghi ở MiddleName, có SV ghi chung vào LastName với MiddleName trống. Ngày sinh lưu dạng chuỗi, không thống nhất định dạng (vd: '21/10/2007', '24/12/65', '10-09-80'); khoảng 1.700 SV trống ngày sinh, 4.700 SV trống nơi sinh. Nơi sinh là chữ tự do (vd: 'TP.Hcm', 'Tp. HCM', 'Tỉnh Lâm Đồng')",
+      "COLUMNS": {
+        "MSSV": "StudentID",
+        "HO": "LastName",
+        "TEN_DEM": "MiddleName",
+        "TEN": "FirstName",
+        "NGAY_SINH": "BirthDay",
+        "NOI_SINH": "BirthPlace"
+      }
+    },
+    "THONG_TIN_SV_TABLE": {
+      "NAME": "psc_StudentInfo",
+      "MO_TA": "Thông tin thêm của SV, 1 dòng mỗi MSSV. Email là email trường (tên miền TEN_MIEN_EMAIL_TRUONG); khoảng 810 SV (đa số nhập học 2026) để trống hoặc ghi email khác. Có 47 email trường bị gán cho 2 SV (đều là SV nhập học 2022-2026; 41 email là cùng một người có 2 MSSV, thường MSSV cũ khóa 2022-2024 và MSSV mới năm 2025, email theo MSSV cũ; 6 email là 2 người khác nhau; mỗi email có đúng 1 MSSV bằng phần trước @). Phần trước @ chỉ bằng MSSV ở khoảng 96,6% SV nên phải tra qua bảng, không cắt chuỗi email. Bảng có các cột mật khẩu (PW, DefaultPW, PWParent, PWFamily, PWMoodle), không SELECT các cột này. Điện thoại: MobilePhone có ở khoảng 40 nghìn SV, HomePhone ở khoảng 45 nghìn SV (có SV ghi số di động vào HomePhone), có ít nhất một trong hai ở khoảng 59 nghìn SV; các khóa nhập học từ 2024 gần như đủ MobilePhone",
+      "TEN_MIEN_EMAIL_TRUONG": "email.hcmulaw.edu.vn",
+      "COLUMNS": {
+        "MSSV": "StudentID",
+        "EMAIL_TRUONG": "Email",
+        "EMAIL_CA_NHAN": "Email_2",
+        "DIEN_THOAI_DI_DONG": "MobilePhone",
+        "DIEN_THOAI_NHA": "HomePhone"
+      }
+    },
+    "LOP_SINH_VIEN_TABLE": {
+      "NAME": "psc_StudentClassStudent",
+      "MO_TA": "Lớp sinh hoạt của SV, tối đa 1 dòng mỗi MSSV; khoảng 1.095 SV không có dòng nào. DANG_O_LOP = 0 ở khoảng 31 nghìn dòng, ý nghĩa chưa kiểm chứng (có thể đã tốt nghiệp, nghỉ học, chuyển lớp)",
+      "COLUMNS": {
+        "MSSV": "StudentID",
+        "MA_LOP_SV": "ClassStudentID",
+        "DANG_O_LOP": "IsInClass"
+      }
+    },
+    "NGANH_SV_TABLE": {
+      "NAME": "psc_StudentEnrolls",
+      "MO_TA": "Ngành và khóa hiện tại của SV, đúng 1 dòng mỗi MSSV (khoảng 121.800 SV, gần bằng số SV trong psc_Students); có khóa cho khoảng 1.000 trên 1.095 SV không có lớp sinh hoạt (chủ yếu Cao học 2026, NCS). Có 5.320 SV có MA_KHOA khác khóa theo lớp sinh hoạt: khoảng 4.200 SV có lớp thuộc khóa tạm KHOA33_TMP (bảng này ghi khóa thật, vd Khóa 95, BTH_58); phần còn lại là SV chuyển khóa (vd 2012-2016 ở bảng này, 2011-2015 theo lớp), khi đó MA_KHOA_GOC bằng khóa theo lớp",
+      "COLUMNS": {
+        "MSSV": "StudentID",
+        "MA_NGANH": "OlogyID",
+        "MA_KHOA": "CourseID",
+        "MA_KHOA_GOC": "OriginCourseID"
+      }
+    },
+    "NGANH_TABLE": {
+      "NAME": "psc_Ologies",
+      "MO_TA": "Danh mục ngành (vd: Luật, Luật (CLC), Quản trị - Luật, Ngôn ngữ Anh). Nhiều mã ngành trùng tên (vd: 52, 53, 54 đều là 'Luật'). Khoảng 5.800 SV các khóa cũ (vd mã 506, 50, 58, 507) có MA_NGANH không có trong bảng này",
+      "COLUMNS": {
+        "MA_NGANH": "OlogyID",
+        "TEN_NGANH": "OlogyName"
+      }
+    },
+    "LOP_SV_TABLE": {
+      "NAME": "psc_ClassStudents",
+      "MO_TA": "Danh mục lớp sinh hoạt (vd: 178-HC50(A))",
+      "COLUMNS": {
+        "MA_LOP_SV": "ClassStudentID",
+        "TEN_LOP_SV": "ClassStudentName",
+        "MA_KHOA": "CourseID"
+      }
+    },
+    "KHOA_HOC_TABLE": {
+      "NAME": "psc_Courses",
+      "MO_TA": "Khóa học (vd: DHCQ_K51 - Khóa 51, nhập học 2026, Chính quy / Đại học)",
+      "COLUMNS": {
+        "MA_KHOA": "CourseID",
+        "TEN_KHOA": "CourseName",
+        "NAM_NHAP_HOC": "EnrollYear",
+        "MA_HINH_THUC": "StudyTypeID",
+        "MA_BAC": "GraduateLevelID"
+      }
+    },
+    "HINH_THUC_DAO_TAO_TABLE": {
+      "NAME": "psc_StudyTypes",
+      "MO_TA": "Hình thức đào tạo (vd: CQ - Chính quy, VB - Chính quy (VB), LT - Chính quy (LT), KQ - Vừa làm vừa học (KQ), TX - Từ xa). Bảng psc_dic_HeDaoTao có tên gọn hơn (vd: Văn bằng 2) nhưng chỉ có 6 tổ hợp bậc + hình thức",
+      "COLUMNS": {
+        "MA_HINH_THUC": "StudyTypeID",
+        "TEN_HINH_THUC": "StudyTypeName"
+      }
+    },
+    "BAC_DAO_TAO_TABLE": {
+      "NAME": "psc_GraduateLevels",
+      "MO_TA": "Bậc đào tạo (vd: DH - Đại học, CH - Cao học, NCS - Nghiên cứu sinh)",
+      "COLUMNS": {
+        "MA_BAC": "GraduateLevelID",
+        "TEN_BAC": "GraduateLevelName"
+      }
+    }
+  }
+}

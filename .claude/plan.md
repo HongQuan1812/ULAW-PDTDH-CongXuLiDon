@@ -54,14 +54,67 @@ Làm từng nhóm API. Xong nhóm nào thì chuyển nhóm đó sang API thật,
 | 12 | Thư điện tử | `backend-email` | nhóm `email`: lưu cấu hình, gửi thư thử · thư tự động khi nộp đơn, ra quyết định | ✓ |
 | 13 | Đăng nhập Google | `backend-google-oauth` | `POST /auth/login` (bản thật trả đường dẫn sang Google; `ENABLE_DEMO_APIS=true` thì đăng nhập thử) → Google → `/auth/google/callback`: authorization code + PKCE, kiểm tra state, ID token, email trường · tự tạo tài khoản Người nộp đơn lần đầu · trang Đăng nhập báo lỗi theo `loginError` | ✓ |
 
-Chưa làm, chờ thông tin từ bên ngoài:
+### Làm một nhóm API
+
+1. Đọc hợp đồng của nhóm trong `shared/src/api-contract/<nhóm>.ts` và API giả trong `web/src/mocks/handlers/<nhóm>.ts`. API giả cho biết hành vi cần có: luật, mã lỗi, câu thông báo. Đối chiếu thêm `docs/business-rules.md`.
+2. Thêm bảng, cột cần thiết vào `schema.prisma`, tạo migration, cập nhật seed.
+3. Viết module NestJS: controller mỏng, service gọi Prisma. Luật nghiệp vụ gọi hàm trong `shared/`, không viết lại.
+4. Viết test (Vitest + Supertest): response khớp schema Zod của `shared/`, kiểm tra quyền, các mã lỗi.
+5. Chuyển nhóm đó sang API thật, mở giao diện bấm thử như người dùng.
+6. Tạo Pull Request vào `main`.
+
+### Chạy giả và thật cùng lúc
+
+- `VITE_REAL_BACKEND_GROUPS` trong `.env.dev` là danh sách các nhóm tới backend thật khi đang bật backend giả, vd `health,auth,profile`. MSW bỏ qua các nhóm này, Vite chuyển request sang backend.
+- Backend seed từ cùng dữ liệu mẫu với API giả (cùng id người dùng, cùng mã đơn), nên nhóm giả và nhóm thật nói về cùng một người, cùng một lá đơn.
+- Khi nhóm `auth` đã thật: API giả lấy người đang đăng nhập từ API thật, không tự giữ phiên riêng.
+- Lỗi ngẫu nhiên (`VITE_MOCK_BACKEND_FAILURE_RATE`) chỉ áp dụng cho các nhóm còn giả.
+- Bảng danh sách: làm trước bằng hàm `applyListQuery` của `shared/` (đọc rồi lọc trong bộ nhớ), giống API giả. Khi dữ liệu nhiều, đo thấy chậm thì chuyển sang câu truy vấn SQL.
+
+### Chưa làm, chờ thông tin từ bên ngoài
+
 - OAuth client thật cho máy chủ: tạo ở Google Cloud Console bằng tài khoản của trường, khai báo tên miền thật (cách tạo: README.md).
-- `student-directory` bản thật: cần cách kết nối database sinh viên của trường. Đã có trong `DEMO_APIS`: bản giả `dev-student-directory` đọc bảng mẫu, bản thật hiện `throw realApiNotBuilt(...)` (501); làm xong thì thay dòng đó bằng kết nối database trường.
+- `student-directory` bản thật: đã có database trường, làm theo mục **`student-directory` bản thật** bên dưới. Bản giả `dev-student-directory` đọc bảng mẫu, bản thật hiện `throw realApiNotBuilt(...)` (501).
 - Triển khai lên máy chủ: xem Giai đoạn 3.
+
+### `student-directory` bản thật
+
+Nhánh `backend-student-directory`. Còn chờ: tài khoản chỉ đọc riêng cho máy chủ, mở tường lửa cho IP máy chủ.
+
+Thông tin sinh viên đọc từ SQL Server `CoreUis`. Cấu trúc ở `api/src/student-directory/school-database.json`, mục `THONG_TIN_SINH_VIEN`. Tệp này vừa là tài liệu, vừa là nơi code lấy tên database, tên bảng, tên cột (import thẳng, không chép lại ra hằng số riêng), nên đổi cấu trúc chỉ sửa một chỗ. Biến môi trường chỉ chứa thứ khác nhau theo máy hoặc bí mật: `SCHOOL_DB_HOST`, `SCHOOL_DB_PORT`, `SCHOOL_DB_USER`, `SCHOOL_DB_PASSWORD`. Không ghi gì vào database trường.
+
+Lấy thông tin theo email, mỗi mục của `StudentInfo` lấy từ:
+
+| Mục | Lấy từ |
+|---|---|
+| tìm MSSV theo email | `psc_StudentInfo.Email` = email đăng nhập; một email có thể có 2 MSSV, phải tra bảng, không cắt chuỗi email |
+| `studentId` | `psc_StudentInfo.StudentID`; MSSV trùng phần trước @ đứng đầu |
+| `className` | `psc_StudentClassStudent` → `psc_ClassStudents.ClassStudentName` (không có lớp: null) |
+| `major` | `psc_StudentEnrolls.OlogyID` → `psc_Ologies.OlogyName` (mã ngành không có trong danh mục: null) |
+| `currentCohort` | `psc_StudentEnrolls.CourseID` → `psc_Courses.CourseName` (lấy khóa qua bảng ngành, không qua lớp) |
+| `originalCohort` | `psc_StudentEnrolls.OriginCourseID` → `psc_Courses.CourseName` |
+| `trainingMode` | khóa → `psc_StudyTypes.StudyTypeName` |
+
+Database trường ghi gì thì trả đúng như vậy (chỉ cắt khoảng trắng đầu cuối), không ghép thêm mục khác (vd bậc, năm nhập học), không tự điền thay (vd khóa gốc trống thì null, không lấy khóa hiện tại). Lớp có `IsInClass = 0` vẫn hiện.
+
+| # | Việc | Gồm | |
+|---|---|---|---|
+| 0 | Xem dữ liệu thật | chạy vài câu SELECT bằng tài khoản dev: kiểu cột chữ (`NVARCHAR` hay `VARCHAR`, tiếng Việt có lỗi font không), collation (so email không phân biệt hoa thường thì khỏi `LOWER()`, dùng được index), kết nối có bắt buộc mã hóa (TLS) không | |
+| 1 | Cấu hình | `SCHOOL_DB_HOST/PORT/USER/PASSWORD` trong `app-config.ts`, tên database lấy từ `school-database.json` (đã có trong `.env.*`) · `SCHOOL_DB_HOST` trống mà dùng bản thật: báo lỗi rõ "chưa cấu hình database trường", backend vẫn chạy | |
+| 2 | Kết nối | thêm thư viện `mssql` · `SchoolDatabaseService`: một pool dùng chung, kết nối khi cần lần đầu, đóng khi tắt backend, thời gian chờ ngắn (vd 5 giây) · database trường lỗi / không tới được: trả 503 kèm câu thông báo, các trang khác vẫn chạy | |
+| 3 | Câu truy vấn | một câu SELECT dựng từ tên bảng, tên cột trong `school-database.json` (đặt trong `[...]` của SQL Server); giá trị người dùng chỉ đi qua tham số (`@email`, không nối chuỗi), `LEFT JOIN` các bảng ở trên · chỉ SELECT đúng các cột cần, **không bao giờ** SELECT cột mật khẩu của `psc_StudentInfo` · tách hàm thuần "dòng kết quả → `StudentInfo[]`" (cắt khoảng trắng, chuỗi rỗng thành null, sắp MSSV trùng email lên đầu) | |
+| 4 | Nối vào API | `findStudents` bản thật thay cho `throw realApiNotBuilt('dev-student-directory')`; tìm theo email của người dùng thay vì `userId` · bản giả `dev-student-directory` giữ nguyên | |
+| 5 | Test | test hàm chuyển dòng → `StudentInfo[]` bằng dữ liệu giả (chạy trên CI, CI không tới được database trường) · test kết nối thật chỉ chạy khi có `SCHOOL_DB_HOST` · thử trên giao diện: `ALWAYS_REAL_APIS=dev-student-directory`, đăng nhập thử bằng một tài khoản có email sinh viên thật | |
+| 6 | Container, bản thật | thử gọi từ trong container api (Docker tới được IP LAN) · bản thật: tài khoản **chỉ đọc riêng** (chỉ quyền SELECT trên các bảng cần), không dùng tài khoản cá nhân · mở tường lửa cho IP máy chủ | |
+| 7 | Tài liệu | README (biến `SCHOOL_DB_*`), `.claude/CLAUDE.md` (cây thư mục, bỏ việc còn treo "cách kết nối database sinh viên"), `docs/business-rules.md` | |
+
+Để sau (ngoài phạm vi việc này): lấy họ tên (`psc_Students`), số điện thoại (`MobilePhone`, `HomePhone`) để điền sẵn khi sinh viên đăng nhập lần đầu.
+
+Tên miền email sinh viên trong database trường là `email.hcmulaw.edu.vn`, là tên miền con của `hcmulaw.edu.vn`, nên `SCHOOL_EMAIL_DOMAINS` hiện có đã cho đăng nhập.
 
 ## Giai đoạn 3: Container hóa, triển khai (đang làm)
 
-Ứng dụng đã đủ chức năng, chỉ còn `student-directory` bản thật (bước 8). Không có nó, ứng dụng vẫn chạy, chỉ thiếu thông tin sinh viên (MSSV, lớp, ngành…).
+Ứng dụng đã đủ chức năng, chỉ còn `student-directory` bản thật (Giai đoạn 2, việc chưa làm). Không có nó, ứng dụng vẫn chạy, chỉ thiếu thông tin sinh viên (MSSV, lớp, ngành…).
 
 Cả dev lẫn bản thật đều chạy bằng container. Mỗi môi trường một tệp compose, một tệp biến môi trường, `up` là chạy, không sửa tay giá trị.
 
@@ -80,7 +133,7 @@ Trình duyệt ──HTTPS──▶ nginx (80/443) ──/api──▶ api (Nest
                          └─ / : file web đã build (dist/)               └─ volume giữ dữ liệu
 ```
 
-Bước 0 đến 6 tự làm được ngay, thử trên máy mình, không cần chờ ai. Bước 7 và 8 chờ thông tin từ bên ngoài, đến lúc có thì chỉ việc đưa lên.
+Bước 0 đến 6 tự làm được ngay, thử trên máy mình, không cần chờ ai. Bước 7 chờ thông tin từ bên ngoài, đến lúc có thì chỉ việc đưa lên.
 Bước 6 (CI/CD) thử trọn vẹn trên máy cá nhân trước. Khi lên máy chủ trường chỉ đổi nơi chạy runner và `.env.prod`, quy trình giữ nguyên.
 
 | # | Bước | Nhánh | Gồm | |
@@ -93,7 +146,6 @@ Bước 6 (CI/CD) thử trọn vẹn trên máy cá nhân trước. Khi lên má
 | 5 | Vận hành | `trien-khai-van-hanh` | viết sẵn script sao lưu Postgres và thư mục tệp tải lên · cách xem log · cách cập nhật bản mới (build lại rồi `up -d`; `migrate deploy` tự chạy lúc bật container) · cách khôi phục từ bản sao lưu · thử hết trên máy mình | |
 | 6 | CI/CD | `trien-khai-ci-cd` | GitHub Actions, chạy khi merge vào `main`: ① **CI**: chạy `pnpm --filter shared test`, `api test`, `web test` trên máy sạch (api cần Postgres tạm làm service container, chạy luôn migration); bỏ E2E Playwright cho nhẹ · đỏ thì dừng, không deploy ② **Build**: dựng image `api` và `nginx + web` rồi đẩy lên registry (GHCR); `VITE_USE_MOCK_BACKEND=false` và `VITE_APP_ENV=` đã đặt sẵn trong `web/Dockerfile`, CI không cần `.env.dev` ③ **Deploy**: máy đích kéo image mới → sao lưu Postgres → `migrate deploy` → `up -d` · thử deploy lên **máy cá nhân** bằng **self-hosted runner** (GitHub không tự với tới máy nằm sau mạng nhà / LAN) · secret để trong GitHub Secrets hoặc `.env` trên máy đích · tuỳ chọn: bấm Approve tay (GitHub Environments) trước khi deploy | |
 | 7 | Lên máy chủ thật | (không có nhánh) | **chờ bên ngoài**: máy chủ Linux có Docker · domain / subdomain (vd `donthi.hcmulaw.edu.vn`) · chứng chỉ HTTPS thật · mở cổng 80/443 · OAuth client Google tạo bằng tài khoản trường (redirect `https://<domain>/api/auth/google/callback`) · xác nhận tên miền email thật để điền `SCHOOL_EMAIL_DOMAINS` · khi đủ thì: tạo `.env.prod` thật, mount chứng chỉ, `up -d`, đăng nhập Google bằng email trường, chạy lại các luồng chính | |
-| 8 | Kết nối database trường | `backend-student-directory` | **chờ bên ngoài**: loại database, địa chỉ, cổng, tài khoản chỉ đọc · mở tường lửa phía trường cho IP máy chủ · thêm driver nếu không phải PostgreSQL · thay `throw realApiNotBuilt('dev-student-directory')` bằng kết nối thật · thử bằng `nc -zv` từ máy chủ và từ trong container | |
 
 ### Lưu ý khi triển khai
 
@@ -105,20 +157,3 @@ Bước 6 (CI/CD) thử trọn vẹn trên máy cá nhân trước. Khi lên má
 - `api` và `postgres` bản thật không mở cổng ra ngoài, nginx gọi backend bằng tên service (`http://api:3000`), không dùng `127.0.0.1`.
 - Mật khẩu SMTP, `GOOGLE_CLIENT_SECRET`, mật khẩu Postgres bản thật chỉ nằm trong `.env.prod` trên máy chủ, không commit, không đóng gói vào image.
 - Không dùng `down -v`: xóa luôn volume, mất dữ liệu và tệp tải lên (dev thì không sao, bật lại là seed lại).
-
-### Làm một nhóm API
-
-1. Đọc hợp đồng của nhóm trong `shared/src/api-contract/<nhóm>.ts` và API giả trong `web/src/mocks/handlers/<nhóm>.ts`. API giả cho biết hành vi cần có: luật, mã lỗi, câu thông báo. Đối chiếu thêm `docs/business-rules.md`.
-2. Thêm bảng, cột cần thiết vào `schema.prisma`, tạo migration, cập nhật seed.
-3. Viết module NestJS: controller mỏng, service gọi Prisma. Luật nghiệp vụ gọi hàm trong `shared/`, không viết lại.
-4. Viết test (Vitest + Supertest): response khớp schema Zod của `shared/`, kiểm tra quyền, các mã lỗi.
-5. Chuyển nhóm đó sang API thật, mở giao diện bấm thử như người dùng.
-6. Tạo Pull Request vào `main`.
-
-### Chạy giả và thật cùng lúc
-
-- `VITE_REAL_BACKEND_GROUPS` trong `.env.dev` là danh sách các nhóm tới backend thật khi đang bật backend giả, vd `health,auth,profile`. MSW bỏ qua các nhóm này, Vite chuyển request sang backend.
-- Backend seed từ cùng dữ liệu mẫu với API giả (cùng id người dùng, cùng mã đơn), nên nhóm giả và nhóm thật nói về cùng một người, cùng một lá đơn.
-- Khi nhóm `auth` đã thật: API giả lấy người đang đăng nhập từ API thật, không tự giữ phiên riêng.
-- Lỗi ngẫu nhiên (`VITE_MOCK_BACKEND_FAILURE_RATE`) chỉ áp dụng cho các nhóm còn giả.
-- Bảng danh sách: làm trước bằng hàm `applyListQuery` của `shared/` (đọc rồi lọc trong bộ nhớ), giống API giả. Khi dữ liệu nhiều, đo thấy chậm thì chuyển sang câu truy vấn SQL.
