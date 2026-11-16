@@ -106,6 +106,17 @@ describe('validateFormTypeDraft', () => {
     expect(validateFormTypeDraft({ ...validDraft(), sections: [section] }, [])).toEqual([]);
   });
 
+  it('cột tên "STT" trùng mã số thứ tự dòng {<bảng>_stt} của chính bảng đó: báo trùng mã có sẵn', () => {
+    const section = FormSectionSchema.parse({
+      id: 's1',
+      title: 'A',
+      questions: [{ id: 'q1', type: 'table', label: 'IELTS', tag: 'ielts', rowName: 'chứng chỉ', columns: [{ label: 'STT', type: 'text' }] }],
+    });
+    expect(validateFormTypeDraft({ ...validDraft(), sections: [section] }, [])).toEqual([
+      { target: FORM_TYPE_ISSUE_TARGET.questionTag('q1'), message: FORM_TYPE_DRAFT_MESSAGES.tagReserved(1, 1, 'ielts_stt') },
+    ]);
+  });
+
   it('loại đơn đang mở phải có câu hỏi; nháp thì không cần', () => {
     const onlyInfo = [FormSectionSchema.parse({ id: 's1', title: 'A', questions: [{ id: 'i', type: 'info', content: EMPTY_RICH_TEXT_DOC }] })];
     expect(validateFormTypeDraft({ ...validDraft(), sections: onlyInfo }, [])).toEqual([

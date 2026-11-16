@@ -5,7 +5,7 @@
    Máy chủ điền dữ liệu của đơn vào mẫu; file Word nhận về mở trong trình xem, có nút "Tải file Word" trên thanh xem. */
 import { useState } from 'react';
 import { useQueries } from '@tanstack/react-query';
-import { questionExportTags, type ExportTemplate, type FormDetail } from '@ulaw/shared';
+import type { ExportTemplate, FormDetail } from '@ulaw/shared';
 import { checkFormExport, exportForm, useExportTemplates } from '../../api/exports';
 import { Button } from '../../components/Button';
 import { Modal } from '../../components/Modal';
@@ -32,15 +32,12 @@ export function ExportButton({ form, className }: { form: FormDetail; className?
   const [exportedFile, setExportedFile] = useState<PreviewFile | null>(null);
 
   // Chỉ kiểm tra khi hộp đang mở; mã mẫu và mã đơn đổi (hiếm) thì kiểm tra lại
-  const tableTags = questionExportTags(form.sections)
-    .filter((question) => question.columns)
-    .map((question) => question.tag);
   const checks = useQueries({
     queries: templates.map((template) => ({
       queryKey: ['export-check', form.code, template.id, template.uploadedAt],
       queryFn: async (): Promise<TemplateResult> => {
         try {
-          return checkResultOf(await checkFormExport(form.code, { templateId: template.id }), tableTags, 'đơn');
+          return checkResultOf(await checkFormExport(form.code, { templateId: template.id }), 'đơn');
         } catch (error) {
           return checkFailureOf(error);
         }

@@ -213,9 +213,6 @@ function TemplateList({
       lastCheckRound.current = checkRound;
       checkedDrafts.current.clear();
     }
-    const tableTags = questionExportTags(checkDraft.sections)
-      .filter((question) => question.columns)
-      .map((question) => question.tag);
     rows.forEach((row) => {
       if (checkedDrafts.current.get(row.id) === checkDraft) return;
       checkedDrafts.current.set(row.id, checkDraft);
@@ -224,7 +221,7 @@ function TemplateList({
           ? checkExportTemplate(formTypeId!, row.id, checkDraft)
           : checkExportTemplateFile(row.staged.file, checkDraft);
       void checking
-        .then((check): TemplateResult => checkResultOf(check, tableTags, 'phiên bản này'))
+        .then((check): TemplateResult => checkResultOf(check, 'phiên bản này'))
         .catch((error: unknown): TemplateResult => checkFailureOf(error))
         .then((result) => {
           if (checkedDrafts.current.get(row.id) !== checkDraft) return;

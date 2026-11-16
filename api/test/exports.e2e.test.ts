@@ -154,7 +154,7 @@ describe('exports', () => {
     const cookie = await loginAs('nguoiXuLiDon');
     const path = `/api${exportTemplatePath('xmm', SEED_EXPORT_TEMPLATE.id, 'check')}`;
     const check = ExportTemplateCheckSchema.parse((await request(server()).post(path).set('Cookie', cookie).send(xmmDraft).expect(200)).body);
-    expect(check).toMatchObject({ unknown: [], outside: [], error: '' });
+    expect(check).toMatchObject({ unknown: [], error: '' });
     expect(check.found).toContain('ho_ten');
 
     const invalid = await request(server()).post(path).set('Cookie', cookie).send({ sections: 'sai' }).expect(422);
@@ -171,7 +171,7 @@ describe('exports', () => {
         .attach(EXPORT_TEMPLATE_FIELDS.file, content, fileName);
 
     const check = ExportTemplateCheckSchema.parse((await checkFile('mẫu mới.docx', sampleDocx).expect(200)).body);
-    expect(check).toMatchObject({ unknown: [], outside: [], error: '' });
+    expect(check).toMatchObject({ unknown: [], error: '' });
 
     expect(messageOf(await checkFile('mau.doc', sampleDocx).expect(422))).toBe(EXPORT_MESSAGES.notTemplateFile);
     expect(messageOf(await checkFile('hong.docx', Buffer.from('không phải docx')).expect(422))).toBe(EXPORT_MESSAGES.unreadable);

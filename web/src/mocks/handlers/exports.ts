@@ -247,7 +247,7 @@ export const exportHandlers = [
     if (!stored || stored.template.purpose !== 'form') return apiError(404, EXPORT_MESSAGES.templateNotFound);
 
     try {
-      const filled = renderDocxTemplate(stored.bytes, buildExportData(exportable.source, vietnamToday()));
+      const filled = renderDocxTemplate(stored.bytes, buildExportData(exportable.source, vietnamToday()), exportable.source.sections);
       return fileResponse(filled, exportFileName(code, stored.template.name, 'form'), DOCX_CONTENT_TYPE);
     } catch (docxError) {
       return apiError(422, EXPORT_MESSAGES.renderFailed(explainDocxError(docxError)));

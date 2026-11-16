@@ -2,7 +2,7 @@
    Trình soạn dùng để báo lỗi và tô đỏ ô sai; API giả và backend dùng lại để kiểm tra lần cuối, nên câu báo giống nhau. */
 import type { FormSection } from '../aux-schema/form-types--sections';
 import type { FormTypeStatus } from '../aux-schema/form-types--statuses';
-import { COMMON_EXPORT_TAGS, EXPORT_TAG_PATTERN, FORM_COUNT_TAG, ROW_NUMBER_TAG, columnTag, questionTag } from '../business-rules/exports--tags';
+import { COMMON_EXPORT_TAGS, EXPORT_TAG_PATTERN, FORM_COUNT_TAG, FORM_NUMBER_TAG, columnTag, questionTag, rowNumberTag } from '../business-rules/exports--tags';
 
 /** Câu báo lỗi của bản soạn loại đơn. "Phần 1, câu 2" đếm như trình soạn: câu hỏi đếm cả khối thông báo. */
 export const FORM_TYPE_DRAFT_MESSAGES = {
@@ -115,7 +115,7 @@ export function validateFormTypeDraft(draft: FormTypeDraftInput, otherPrefixes: 
     });
   });
 
-  // Mã dùng trong file Word: đúng dạng, không trùng mã có sẵn, không trùng nhau (kể cả mã cột của bảng)
+  // Mã dùng trong file Word: đúng dạng, không trùng mã có sẵn, không trùng nhau (kể cả mã cột và mã số thứ tự dòng {<bảng>_stt} của bảng)
   const tagUsedAt = new Map<string, string>();
   draft.sections.forEach((section, sectionIndex) => {
     section.questions.forEach((question, questionIndex) => {
@@ -125,14 +125,23 @@ export function validateFormTypeDraft(draft: FormTypeDraftInput, otherPrefixes: 
       const ownTag = questionTag(question);
       if (!EXPORT_TAG_PATTERN.test(ownTag)) add(target, FORM_TYPE_DRAFT_MESSAGES.tagFormat(sectionNumber, questionNumber));
       // Câu hỏi / cột chưa có tên (đã báo lỗi ở trên) thì chưa có mã để so trùng
-      const tags = [question.tag || question.label.trim() ? ownTag : null, ...(question.type === 'table' ? question.columns.map((column) => (column.tag || column.label.trim() ? columnTag(question, column) : null)) : [])];
+      const hasOwnTag = Boolean(question.tag || question.label.trim());
+      const tags = [hasOwnTag ? ownTag : null, ...(question.type === 'table' ? question.columns.map((column) => (column.tag || column.label.trim() ? columnTag(question, column) : null)) : [])];
+      const ownRowNumberTag = question.type === 'table' && hasOwnTag ? rowNumberTag(ownTag) : null;
       tags.forEach((tag, i) => {
         if (tag === null) return;
         const usedAt = tagUsedAt.get(tag);
-        if (COMMON_EXPORT_TAGS.has(tag) || tag === ROW_NUMBER_TAG || tag === FORM_COUNT_TAG) add(target, FORM_TYPE_DRAFT_MESSAGES.tagReserved(sectionNumber, questionNumber, tag));
+        const reserved = COMMON_EXPORT_TAGS.has(tag) || tag === FORM_NUMBER_TAG || tag === FORM_COUNT_TAG || tag === ownRowNumberTag;
+        if (reserved) add(target, FORM_TYPE_DRAFT_MESSAGES.tagReserved(sectionNumber, questionNumber, tag));
         else if (usedAt) add(target, FORM_TYPE_DRAFT_MESSAGES.tagTaken(sectionNumber, questionNumber, tag, usedAt, i > 0));
         else tagUsedAt.set(tag, `phần ${sectionNumber}, câu ${questionNumber}`);
       });
+      // Mã số thứ tự dòng của bảng cũng là mã đã dùng: câu hỏi khác không đặt trùng được
+      if (ownRowNumberTag) {
+        const usedAt = tagUsedAt.get(ownRowNumberTag);
+        if (usedAt) add(target, FORM_TYPE_DRAFT_MESSAGES.tagTaken(sectionNumber, questionNumber, ownRowNumberTag, usedAt, false));
+        else tagUsedAt.set(ownRowNumberTag, `phần ${sectionNumber}, câu ${questionNumber}`);
+      }
     });
   });
 

@@ -166,9 +166,7 @@ export const ExportTemplateCheckSchema = z.object({
   found: z.array(z.string()),
   /** Mã không có trong loại đơn (khi xuất sẽ để trống) */
   unknown: z.array(z.string()),
-  /** Mẫu Word: mã cột đặt ngoài vòng lặp {#bảng} … {/bảng} (khi xuất sẽ để trống) · mẫu Excel: luôn rỗng */
-  outside: z.array(z.string()),
-  /** Lỗi cú pháp của mẫu (ngoặc, vòng lặp không khớp); "" = không lỗi */
+  /** Lỗi cú pháp của mẫu (thiếu ngoặc; mẫu Word còn {#…} {/…} không dùng nữa); "" = không lỗi */
   error: z.string(),
 });
 export type ExportTemplateCheck = z.infer<typeof ExportTemplateCheckSchema>;

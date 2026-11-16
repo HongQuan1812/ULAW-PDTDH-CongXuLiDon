@@ -23,7 +23,6 @@ describe('mẫu xuất file Xét miễn môn có sẵn', () => {
     const check = checkDocxTemplate(sampleBytes(), xmmSections());
     expect(check.error).toBe('');
     expect(check.unknown).toEqual([]);
-    expect(check.outside).toEqual([]);
     expect(check.found).toContain('ho_ten');
   });
 
@@ -37,7 +36,7 @@ describe('mẫu xuất file Xét miễn môn có sẵn', () => {
 
   test('điền dữ liệu của một đơn: có họ tên, mã đơn, không còn mã trong ngoặc', () => {
     const exportable = getExportSource('XMM-2026-001-01520')!;
-    const filled = renderDocxTemplate(sampleBytes(), buildExportData(exportable.source, '2026-11-11'));
+    const filled = renderDocxTemplate(sampleBytes(), buildExportData(exportable.source, '2026-11-11'), exportable.source.sections);
     const text = documentText(filled);
     expect(text).toContain(exportable.source.applicant.name);
     expect(text).toContain('XMM-2026-001-01520');

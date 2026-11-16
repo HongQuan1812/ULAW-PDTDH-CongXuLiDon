@@ -110,10 +110,9 @@
 .kind{font-weight:400;color:var(--muted)}
 .codeChip{border:0;background:var(--accent-soft);color:var(--accent);border-radius:6px;padding:2px 8px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;cursor:pointer;max-width:100%;text-align:left;overflow-wrap:anywhere}
 .codeChip:hover{background:color-mix(in srgb,var(--accent) 18%,var(--surface))}
-.loopBox{display:grid;gap:10px;background:var(--surface)}
-.loopBox p{font-size:13px;line-height:1.6;color:var(--muted)}
-.loopBox>button{justify-self:start}
-.loop{color:var(--s-bsg-fg);font-family:ui-monospace,Menlo,Consolas,monospace}
+.sampleTableBox{display:grid;gap:10px;background:var(--surface)}
+.sampleTableBox p{font-size:13px;line-height:1.6;color:var(--muted)}
+.sampleTableBox>button{justify-self:start}
 .wordTableScroll{overflow-x:auto}
 .wordTable{border-collapse:collapse;border:1px solid var(--line-2)}
 .wordTable th,.wordTable td{border:1px solid var(--line-2);padding:6px 10px;font-size:12.5px;background:var(--surface);text-align:left;font-family:ui-monospace,Menlo,Consolas,monospace}

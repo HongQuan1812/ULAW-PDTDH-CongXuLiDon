@@ -10,24 +10,17 @@ export interface TemplateResult {
 
 /**
  * Câu kết quả của Kiểm tra mã.
- * @param check      kết quả từ máy chủ
- * @param tableTags  mã các câu hỏi dạng bảng, để chỉ chỗ đặt mã cột
- * @param subject    mã được so với cái gì, vd "loại đơn", "đơn"
- * @returns          câu báo và sắc thái (tốt / có vấn đề)
+ * @param check    kết quả từ máy chủ
+ * @param subject  mã được so với cái gì, vd "loại đơn", "đơn"
+ * @returns        câu báo và sắc thái (tốt / có vấn đề)
  */
-export function checkResultOf(check: ExportTemplateCheck, tableTags: string[], subject: string): TemplateResult {
+export function checkResultOf(check: ExportTemplateCheck, subject: string): TemplateResult {
   const codes = (tags: string[]) => tags.map((tag) => `{${tag}}`).join(' ');
   if (check.error) return { tone: 'bad', text: `Mẫu có lỗi: ${check.error}` };
   if (!check.found.length) return { tone: 'bad', text: 'Không thấy mã trường nào trong mẫu. Gõ mã trong ngoặc nhọn, vd {ho_ten}.' };
-  const problems: string[] = [];
   if (check.unknown.length) {
-    problems.push(`Có ${check.unknown.length} mã không có trong ${subject} này: ${codes(check.unknown)} — sẽ để trống khi xuất file.`);
+    return { tone: 'bad', text: `Có ${check.unknown.length} mã không có trong ${subject} này: ${codes(check.unknown)} — sẽ để trống khi xuất file.` };
   }
-  if (check.outside.length) {
-    const loops = tableTags.map((tag) => `{#${tag}} … {/${tag}}`).join(' hoặc ');
-    problems.push(`Mã cột ${codes(check.outside)} nằm ngoài vòng lặp — sẽ để trống. Đặt chúng giữa ${loops}.`);
-  }
-  if (problems.length) return { tone: 'bad', text: problems.join('\n') };
   return { tone: 'good', text: `Mẫu khớp với ${subject} này: ${check.found.length} mã trường đều dùng được.` };
 }
 

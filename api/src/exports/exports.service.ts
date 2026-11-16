@@ -281,7 +281,8 @@ export class ExportsService {
     // Điền mẫu; mẫu sai cú pháp thì báo lí do
     const exportedOn = toVietnamTime(new Date()).slice(0, 10);
     try {
-      const filled = renderDocxTemplate(template.content, buildExportData(await this.exportSourceOf(form), exportedOn));
+      const source = await this.exportSourceOf(form);
+      const filled = renderDocxTemplate(template.content, buildExportData(source, exportedOn), source.sections);
       return { fileName: exportFileName(form.code, template.name, 'form'), contentType: DOCX_CONTENT_TYPE, content: Buffer.from(filled) };
     } catch (docxError) {
       throw new ApiException(422, EXPORT_MESSAGES.renderFailed(explainDocxError(docxError)));
@@ -293,7 +294,7 @@ export class ExportsService {
    * @param code        mã đơn
    * @param templateId  id mẫu
    * @param viewer      người đang đăng nhập
-   * @returns           kết quả kiểm tra: mã nào đơn này không có (sẽ để trống), mã cột đặt ngoài vòng lặp, lỗi cú pháp
+   * @returns           kết quả kiểm tra: mã nào đơn này không có (sẽ để trống), lỗi cú pháp
    * @throws            404 không có đơn / không được xem, mẫu không phải mẫu đơn của loại đơn này
    */
   async checkTemplateForForm(code: string, templateId: string, viewer: User): Promise<ExportTemplateCheck> {

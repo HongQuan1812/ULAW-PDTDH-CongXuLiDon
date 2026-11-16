@@ -9,6 +9,7 @@ import {
   QUESTION_TYPES,
   QUESTION_TYPE_LABEL,
   questionTag,
+  rowNumberTag,
   type AnswerableQuestion,
   type InfoBlockColor,
   type Question,
@@ -166,7 +167,7 @@ function InfoColorPicker({ color, onChange }: { color: InfoBlockColor; onChange:
  */
 function tagHelp(type: AnswerableQuestion['type'], tag: string): string {
   if (type === 'table') {
-    return `Mã của cả bảng. Trong file Word, gõ {#${tag}} ở ô đầu và {/${tag}} ở ô cuối của một dòng mẫu; khi xuất file, đơn có bao nhiêu dòng thì bảng có bấy nhiêu dòng. Mỗi cột có mã riêng, hiện dưới tên cột.`;
+    return `Mã của cả bảng, đứng đầu mã mọi cột (hiện dưới tên cột) và số thứ tự dòng {${rowNumberTag(tag)}}. Trong file Word, dòng nào có mã cột thì khi xuất tự nhân lên: đơn có bao nhiêu dòng thì bảng có bấy nhiêu dòng.`;
   }
   if (type === 'check') return `Chỗ nào trong file Word có {${tag}} sẽ được điền các lựa chọn, nối bằng dấu phẩy.`;
   if (type === 'file') return `Chỗ nào trong file Word có {${tag}} sẽ được điền tên các tệp đã tải lên.`;

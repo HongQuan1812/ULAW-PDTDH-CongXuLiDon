@@ -1,10 +1,12 @@
 /* Đọc, kiểm tra, điền mẫu xuất file Word bằng docxtemplater + PizZip.
+   Câu hỏi dạng bảng không cần vòng lặp {#…} {/…}: hàng bảng hay đoạn văn nào có mã cột (hoặc {<mã bảng>_stt}) thì tự nhân lên
+   theo số dòng của bảng, giống mẫu Excel. Một dòng có mã cột của nhiều bảng thì dòng thứ k điền dòng thứ k của từng bảng.
    Backend (api/src/exports) và API giả (web/src/mocks/handlers/exports.ts) cùng dùng. */
 import Docxtemplater from 'docxtemplater';
 import PizZip from 'pizzip';
 import type { ExportTemplateCheck } from '../api-contract/exports';
 import type { FormSection } from '../aux-schema/form-types--sections';
-import { COMMON_EXPORT_TAG_GROUPS, ROW_NUMBER_TAG, columnTagOwners, knownExportTags, questionExportTags, type ExportData, type QuestionExportTag } from './exports--tags';
+import { COMMON_EXPORT_TAG_GROUPS, knownExportTags, questionExportTags, rowNumberTag, rowTagTables, type ExportData, type QuestionExportTag } from './exports--tags';
 
 /** Nội dung file: ArrayBuffer (trình duyệt) hoặc Buffer / Uint8Array (Node). */
 export type DocxBytes = ArrayBuffer | Uint8Array;
@@ -28,6 +30,63 @@ function textParts(zip: PizZip): string[] {
  */
 function plainText(xml: string): string {
   return xml.replace(/<w:tab\/>/g, ' ').replace(/<[^>]+>/g, '');
+}
+
+/** Mã trong chữ trơn, kèm dấu đầu (#, /, ^, - của vòng lặp docxtemplater), vd "{ho_ten}", "{#mon}". */
+const TAG_WITH_SIGN = /\{\s*([#/^-]?)\s*([^{}]*?)\s*\}/g;
+
+/** Một hàng bảng Word (không chứa bảng con), hoặc một đoạn văn (trừ đoạn rỗng tự đóng <w:p/>). Gặp hàng bảng thì lấy cả hàng. */
+const ROW_OR_PARAGRAPH_XML = /<w:tr(?:\s[^>]*)?>(?:(?!<w:tr[\s>])[\s\S])*?<\/w:tr>|<w:p(?:\s[^>]*)?(?<!\/)>[\s\S]*?<\/w:p>/g;
+
+/** Các vòng lặp tự thêm: tên vòng lặp → các bảng mà dòng đó dùng. */
+type RowLoops = Map<string, string[]>;
+
+/**
+ * Tự thêm vòng lặp cho mọi dòng có mã cột: hàng bảng thì nhân cả hàng ({-w:tr …}), đoạn văn thì nhân cả đoạn ({-w:p …}).
+ * Sửa thẳng các phần XML của file đã mở.
+ * @param zip         file Word đã mở
+ * @param tableOfTag  mã cột / mã số thứ tự dòng → mã bảng (rowTagTables)
+ * @returns           các vòng lặp đã thêm, để dựng dữ liệu cho chúng
+ */
+function addRowLoops(zip: PizZip, tableOfTag: ReadonlyMap<string, string>): RowLoops {
+  const loops: RowLoops = new Map();
+  for (const partName of textParts(zip)) {
+    const xml = zip.file(partName)!.asText();
+    const looped = xml.replace(ROW_OR_PARAGRAPH_XML, (unitXml) => {
+      // Các bảng mà dòng này có mã cột, theo thứ tự gặp
+      const tables = [...new Set([...plainText(unitXml).matchAll(TAG_WITH_SIGN)].flatMap(([, , tag = '']) => tableOfTag.get(tag) ?? []))];
+      if (!tables.length) return unitXml;
+
+      // Mở vòng lặp ở đầu chữ đầu tiên, đóng ở cuối chữ cuối cùng của dòng
+      const loopName = `dong__${tables.join('__')}`;
+      loops.set(loopName, tables);
+      const kind = unitXml.startsWith('<w:tr') ? 'w:tr' : 'w:p';
+      const opened = unitXml.replace(/<w:t(?:\s[^>]*)?>/, (textTag) => `${textTag}{-${kind} ${loopName}}`);
+      const closeAt = opened.lastIndexOf('</w:t>');
+      return `${opened.slice(0, closeAt)}{/${loopName}}${opened.slice(closeAt)}`;
+    });
+    if (looped !== xml) zip.file(partName, looped);
+  }
+  return loops;
+}
+
+/**
+ * Dữ liệu của các vòng lặp tự thêm: dòng thứ k gộp dòng thứ k của từng bảng; bảng hết dòng thì các mã của nó để trống.
+ * @param loops       vòng lặp đã thêm (addRowLoops)
+ * @param exportData  giá trị theo mã, bảng là các dòng
+ * @returns           tên vòng lặp → các dòng
+ */
+function rowLoopData(loops: RowLoops, exportData: ExportData): ExportData {
+  return Object.fromEntries(
+    [...loops].map(([loopName, tables]) => {
+      const tableRows = tables.map((tableTag) => {
+        const rows = exportData[tableTag];
+        return Array.isArray(rows) ? rows : [];
+      });
+      const height = Math.max(0, ...tableRows.map((rows) => rows.length));
+      return [loopName, Array.from({ length: height }, (_, k) => Object.assign({}, ...tableRows.map((rows) => rows[k] ?? {})) as Record<string, string | number>)];
+    }),
+  );
 }
 
 /**
@@ -68,7 +127,7 @@ export function openDocx(bytes: DocxBytes): PizZip | null {
 }
 
 /**
- * Kiểm tra mẫu theo các câu hỏi của loại đơn: mã không có trong loại đơn, mã cột đặt ngoài vòng lặp, lỗi cú pháp.
+ * Kiểm tra mẫu theo các câu hỏi của loại đơn: mã không có trong loại đơn, mã vòng lặp {#…} {/…} không còn dùng, lỗi cú pháp.
  * @param bytes     nội dung file mẫu (đã biết là .docx đọc được)
  * @param sections  các phần của loại đơn (bản soạn hiện tại)
  * @returns         kết quả kiểm tra
@@ -76,43 +135,45 @@ export function openDocx(bytes: DocxBytes): PizZip | null {
 export function checkDocxTemplate(bytes: DocxBytes, sections: readonly FormSection[]): ExportTemplateCheck {
   const zip = new PizZip(bytes);
   const known = knownExportTags(sections);
-  const owners = columnTagOwners(sections);
-  const [found, unknown, outside] = [new Set<string>(), new Set<string>(), new Set<string>()];
+  const [found, unknown, loopCodes] = [new Set<string>(), new Set<string>(), new Set<string>()];
 
-  // Đọc từng mã theo thứ tự; nhớ các vòng lặp đang mở để biết mã cột có nằm trong vòng lặp của bảng không
+  // Đọc từng mã; mã có dấu vòng lặp (#, /, ^, -) để riêng
   for (const partName of textParts(zip)) {
-    const openLoops: string[] = [];
-    for (const match of plainText(zip.file(partName)!.asText()).matchAll(/\{\s*([#/^]?)\s*([^{}]*?)\s*\}/g)) {
-      const [, sign, tag = ''] = match;
-      found.add(tag);
-      if (!known.has(tag)) unknown.add(tag);
-      if (sign === '#' || sign === '^') openLoops.push(tag);
-      else if (sign === '/') {
-        const index = openLoops.lastIndexOf(tag);
-        if (index >= 0) openLoops.splice(index);
-      } else if (owners.has(tag) && !owners.get(tag)!.some((tableTag) => openLoops.includes(tableTag))) outside.add(tag);
+    for (const [, sign, tag = ''] of plainText(zip.file(partName)!.asText()).matchAll(TAG_WITH_SIGN)) {
+      if (sign) loopCodes.add(`{${sign}${tag}}`);
+      else {
+        found.add(tag);
+        if (!known.has(tag)) unknown.add(tag);
+      }
     }
   }
 
-  // Lỗi cú pháp: để docxtemplater tự đọc mẫu
+  // Lỗi: còn mã vòng lặp (dòng có mã cột đã tự nhân lên); không thì để docxtemplater tự đọc mẫu sau khi thêm vòng lặp
   let error = '';
-  try {
-    new Docxtemplater(zip, RENDER_OPTIONS);
-  } catch (docxError) {
-    error = explainDocxError(docxError);
+  if (loopCodes.size) error = `Không cần ${[...loopCodes].join(' ')} nữa: dòng có mã cột tự nhân lên theo số dòng của bảng. Hãy xóa các mã này.`;
+  else {
+    try {
+      addRowLoops(zip, rowTagTables(sections));
+      new Docxtemplater(zip, RENDER_OPTIONS);
+    } catch (docxError) {
+      error = explainDocxError(docxError);
+    }
   }
-  return { found: [...found], unknown: [...unknown], outside: [...outside], error };
+  return { found: [...found], unknown: [...unknown], error };
 }
 
 /**
- * Điền dữ liệu vào mẫu.
+ * Điền dữ liệu vào mẫu: dòng có mã cột tự nhân lên theo số dòng của bảng, rồi điền mọi mã.
  * @param bytes       nội dung file mẫu
- * @param exportData  giá trị theo mã
+ * @param exportData  giá trị theo mã (buildExportData)
+ * @param sections    các phần của lá đơn (bản chụp lúc nộp), để biết mã cột nào thuộc bảng nào
  * @returns           nội dung file Word đã điền; mẫu sai cú pháp thì ném lỗi (đổi thành câu báo bằng explainDocxError)
  */
-export function renderDocxTemplate(bytes: DocxBytes, exportData: ExportData): ArrayBuffer {
-  const document = new Docxtemplater(new PizZip(bytes), RENDER_OPTIONS);
-  document.render(exportData);
+export function renderDocxTemplate(bytes: DocxBytes, exportData: ExportData, sections: readonly FormSection[]): ArrayBuffer {
+  const zip = new PizZip(bytes);
+  const loops = addRowLoops(zip, rowTagTables(sections));
+  const document = new Docxtemplater(zip, RENDER_OPTIONS);
+  document.render({ ...exportData, ...rowLoopData(loops, exportData) });
   // Nén lại như file Word thường (mặc định PizZip không nén, file nặng gấp nhiều lần)
   return document.getZip().generate({ type: 'arraybuffer', compression: 'DEFLATE' });
 }
@@ -144,7 +205,7 @@ const TABLE_WIDTH = 8918;
 const STT_COLUMN_WIDTH = 900;
 
 /**
- * Bảng có viền, thụt vào ngang chữ của gạch đầu dòng (nằm trong câu hỏi của nó): một hàng đầu cột và một hàng mã; hàng mã mở vòng lặp ở ô đầu và đóng ở ô cuối nên nhân lên mỗi dòng của câu trả lời.
+ * Bảng có viền, thụt vào ngang chữ của gạch đầu dòng (nằm trong câu hỏi của nó): một hàng đầu cột và một hàng mã; hàng mã có mã cột nên khi xuất tự nhân lên mỗi dòng của câu trả lời.
  * @param question  câu hỏi dạng bảng
  * @returns         XML bảng
  */
@@ -154,7 +215,7 @@ function loopTableXml(question: QuestionExportTag): string {
   const widths = [STT_COLUMN_WIDTH, ...columns.map(() => Math.floor((TABLE_WIDTH - STT_COLUMN_WIDTH) / Math.max(columns.length, 1)))];
   const cell = (text: string, width: number, bold = false) => `<w:tc><w:tcPr><w:tcW w:w="${width}" w:type="dxa"/></w:tcPr>${paragraphXml([{ text, bold }])}</w:tc>`;
   const headerRow = `<w:tr>${['STT', ...columns.map((column) => column.label)].map((label, index) => cell(label, widths[index]!, true)).join('')}</w:tr>`;
-  const loopCells = [`{#${question.tag}}{${ROW_NUMBER_TAG}}`, ...columns.map((column, index) => `{${column.tag}}${index === columns.length - 1 ? `{/${question.tag}}` : ''}`)];
+  const loopCells = [`{${rowNumberTag(question.tag)}}`, ...columns.map((column) => `{${column.tag}}`)];
   const loopRow = `<w:tr>${loopCells.map((text, index) => cell(text, widths[index]!)).join('')}</w:tr>`;
   const border = (side: string) => `<w:${side} w:val="single" w:sz="4" w:space="0" w:color="808080"/>`;
   const borders = `<w:tblBorders>${['top', 'left', 'bottom', 'right', 'insideH', 'insideV'].map(border).join('')}</w:tblBorders>`;

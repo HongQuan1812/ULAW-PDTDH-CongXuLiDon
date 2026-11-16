@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'vitest';
 import { FormSectionSchema } from '../aux-schema/form-types--sections';
 import { EMPTY_RICH_TEXT_DOC, plainTextToRichText } from '../aux-schema/rich-text';
-import { buildExportData, columnTagOwners, knownExportTags, textToTag, type ExportSource } from './exports--tags';
+import { buildExportData, knownExportTags, rowTagTables, textToTag, type ExportSource } from './exports--tags';
 
 /** Loại đơn thử: một câu ngày, một câu chọn nhiều, một câu tải tệp, một bảng có cột tính tổng. */
 const sections = [
@@ -39,14 +39,15 @@ describe('textToTag', () => {
   });
 });
 
-describe('knownExportTags, columnTagOwners', () => {
-  test('gồm mã chung, mã câu hỏi, mã bảng (stt, cột, so_, tong_); bỏ khối thông báo', () => {
+describe('knownExportTags, rowTagTables', () => {
+  test('gồm mã chung, mã câu hỏi, mã bảng (<bảng>_stt, cột, so_, tong_); bỏ khối thông báo', () => {
     const known = knownExportTags(sections);
-    for (const tag of ['ho_ten', 'ngay_bat_dau', 'hoc_ky', 'tep_bang_diem', 'mon', 'stt', 'mon_mon_hoc_cua_truong', 'so_mon', 'tong_mon_so_tin_chi']) {
+    for (const tag of ['ho_ten', 'ngay_bat_dau', 'hoc_ky', 'tep_bang_diem', 'mon', 'mon_stt', 'mon_mon_hoc_cua_truong', 'so_mon', 'tong_mon_so_tin_chi']) {
       expect(known.has(tag)).toBe(true);
     }
     expect(known.has('luu_y')).toBe(false);
-    expect(columnTagOwners(sections).get('mon_so_tin_chi')).toEqual(['mon']);
+    expect(known.has('stt')).toBe(false);
+    expect(Object.fromEntries(rowTagTables(sections))).toEqual({ mon_stt: 'mon', mon_mon_hoc_cua_truong: 'mon', mon_so_tin_chi: 'mon' });
   });
 });
 
@@ -100,8 +101,8 @@ describe('buildExportData', () => {
     expect(exportData.hoc_ky).toBe('HK1, HK2');
     expect(exportData.tep_bang_diem).toBe('bang-diem.pdf');
     expect(exportData.mon).toEqual([
-      { stt: 1, mon_mon_hoc_cua_truong: 'Triết học', mon_so_tin_chi: 3 },
-      { stt: 2, mon_mon_hoc_cua_truong: 'Kinh tế', mon_so_tin_chi: '' },
+      { mon_stt: 1, mon_mon_hoc_cua_truong: 'Triết học', mon_so_tin_chi: 3 },
+      { mon_stt: 2, mon_mon_hoc_cua_truong: 'Kinh tế', mon_so_tin_chi: '' },
     ]);
     expect(exportData.so_mon).toBe(2);
     expect(exportData.tong_mon_so_tin_chi).toBe(3);

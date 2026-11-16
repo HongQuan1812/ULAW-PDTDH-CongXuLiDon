@@ -5,13 +5,13 @@
    - Hàng chỉ có mã chung của file (STATS_SUMMARY_TAGS: {so_don}, {loai_don}, {ngay_xuat}) chỉ điền một lần, vd tiêu đề, dòng tổng.
    - Câu hỏi dạng bảng có hai cách đặt: cả bảng vào một ô ({<bảng>}, mỗi dòng của bảng một dòng trong ô),
      hoặc mỗi cột một ô ({<cột>}): đơn có n dòng thì chiếm n hàng, ô cột của bảng điền từng dòng,
-     các ô còn lại của đơn gộp dọc n hàng. {stt_dong} là số thứ tự dòng của bảng. {so_<bảng>}, {tong_<cột>} điền như mẫu Word.
+     các ô còn lại của đơn gộp dọc n hàng. {<bảng>_stt} là số thứ tự dòng của bảng. {so_<bảng>}, {tong_<cột>} điền như mẫu Word.
    ExcelJS khá nặng nên chỉ tải khi cần (import động). Backend (api/src/exports) và API giả cùng dùng. */
 import type { Cell, Row, Workbook, Worksheet } from 'exceljs';
 import { EXPORT_MESSAGES, type ExportTemplateCheck, type ExportTemplatePurpose } from '../api-contract/exports';
 import type { FormSection } from '../aux-schema/form-types--sections';
 import { openDocx } from './exports--docx';
-import { FORM_COUNT_TAG, ROW_NUMBER_TAG, STATS_SUMMARY_TAGS, knownExportTags, questionExportTags, type ExportData } from './exports--tags';
+import { FORM_COUNT_TAG, FORM_NUMBER_TAG, STATS_SUMMARY_TAGS, knownExportTags, questionExportTags, rowNumberTag, type ExportData } from './exports--tags';
 
 /** Nội dung file: ArrayBuffer (trình duyệt) hoặc Buffer / Uint8Array (Node). */
 export type XlsxBytes = ArrayBuffer | Uint8Array;
@@ -150,13 +150,14 @@ function fillRow(row: Row, sheetData: SheetData): void {
 
 /**
  * Gộp các dòng của câu hỏi dạng bảng thành chữ trong một ô: mỗi dòng một dòng, vd "1. Triết học · 3".
- * @param tableRows  các dòng theo mã cột (có stt)
+ * @param tableRows  các dòng: số thứ tự dòng đứng đầu, rồi các cột (buildExportData)
  * @returns          chữ
  */
 function tableText(tableRows: ReadonlyArray<Record<string, string | number>>): string {
   return tableRows
-    .map(({ [ROW_NUMBER_TAG]: rowNumber, ...cells }) => {
-      const cellTexts = Object.values(cells).map(String).filter((cell) => cell !== '');
+    .map((row) => {
+      const [rowNumber, ...cells] = Object.values(row);
+      const cellTexts = cells.map(String).filter((cell) => cell !== '');
       return `${rowNumber}. ${cellTexts.join(' · ')}`;
     })
     .join('\n');
@@ -171,16 +172,13 @@ function toSheetData(exportData: ExportData): SheetData {
   return Object.fromEntries(Object.entries(exportData).map(([tag, value]) => [tag, Array.isArray(value) ? tableText(value) : value]));
 }
 
-/** Mã số thứ tự dòng của bảng (khác {stt} là số thứ tự của đơn trong file). */
-export const TABLE_ROW_NUMBER_TAG = 'stt_dong';
-
 /** Một đơn khi điền: giá trị các mã (bảng đã gộp thành chữ) và các bảng còn nguyên từng dòng. */
 interface FormFill {
   sheetData: SheetData;
   tables: TableFill[];
 }
 
-/** Một bảng của đơn: mã các cột và các dòng (chỉ bảng có dòng mới biết mã cột). */
+/** Một bảng của đơn: mã các cột (kể cả số thứ tự dòng) và các dòng (chỉ bảng có dòng mới biết mã cột). */
 interface TableFill {
   columnTags: string[];
   rows: ReadonlyArray<Record<string, string | number>>;
@@ -208,30 +206,22 @@ interface TemplateRowMerges {
 function tablesOf(formData: ExportData): TableFill[] {
   return Object.values(formData).flatMap((value): TableFill[] => {
     if (!Array.isArray(value) || !value.length) return [];
-    return [{ columnTags: Object.keys(value[0]!).filter((tag) => tag !== ROW_NUMBER_TAG), rows: value }];
+    return [{ columnTags: Object.keys(value[0]!), rows: value }];
   });
 }
 
 /**
- * Giá trị các cột của bảng ở dòng thứ k của đơn; bảng hết dòng thì để trống.
- * Hai bảng trùng mã cột thì bảng đứng trước được dùng.
+ * Giá trị các cột của bảng ở dòng thứ k của đơn (kể cả số thứ tự dòng {<bảng>_stt}); bảng hết dòng thì để trống.
  * @param tables  các bảng của đơn đang dùng trong hàng mẫu
  * @param k       thứ tự dòng, từ 0
- * @returns       giá trị theo mã, có {stt_dong}
+ * @returns       giá trị theo mã
  */
 function tableRowData(tables: readonly TableFill[], k: number): SheetData {
-  const rowData: SheetData = {};
-  for (const table of [...tables].reverse()) {
-    Object.entries(table.rows[k] ?? {}).forEach(([tag, value]) => {
-      if (tag !== ROW_NUMBER_TAG) rowData[tag] = value;
-    });
-  }
-  if (tables.some((table) => table.rows.length > k)) rowData[TABLE_ROW_NUMBER_TAG] = k + 1;
-  return rowData;
+  return Object.assign({}, ...tables.map((table) => table.rows[k] ?? {})) as SheetData;
 }
 
 /**
- * Các cột của hàng mẫu thuộc cả đơn (gộp dọc khi đơn chiếm nhiều hàng): mọi ô, trừ ô có mã cột của bảng hoặc {stt_dong}, và ô đã gộp ngang.
+ * Các cột của hàng mẫu thuộc cả đơn (gộp dọc khi đơn chiếm nhiều hàng): mọi ô, trừ ô có mã cột của bảng (kể cả {<bảng>_stt}), và ô đã gộp ngang.
  * @param row          hàng mẫu
  * @param tableTagSet  mọi mã cột của bảng trong dữ liệu
  * @returns            số cột (từ 1)
@@ -259,7 +249,7 @@ function fillSheet(sheet: Worksheet, forms: readonly FormFill[], summaryData: Sh
   sheet.eachRow((row, rowNumber) => {
     if (rowTags(row).some((tag) => !SUMMARY_TAG_SET.has(tag))) templateRowNumbers.push(rowNumber);
   });
-  const tableTagSet = new Set([TABLE_ROW_NUMBER_TAG, ...forms.flatMap((form) => form.tables.flatMap((table) => table.columnTags))]);
+  const tableTagSet = new Set(forms.flatMap((form) => form.tables.flatMap((table) => table.columnTags)));
 
   // Làm từ dưới lên, để hàng chèn thêm không làm lệch số hàng của các hàng mẫu phía trên.
   // Không có đơn nào thì bỏ hàng mẫu
@@ -311,7 +301,7 @@ function fillSheet(sheet: Worksheet, forms: readonly FormFill[], summaryData: Sh
  * @returns          các đơn sẵn sàng điền
  */
 function formFillsOf(formsData: readonly ExportData[]): FormFill[] {
-  return formsData.map((formData, index): FormFill => ({ sheetData: { ...toSheetData(formData), [ROW_NUMBER_TAG]: index + 1 }, tables: tablesOf(formData) }));
+  return formsData.map((formData, index): FormFill => ({ sheetData: { ...toSheetData(formData), [FORM_NUMBER_TAG]: index + 1 }, tables: tablesOf(formData) }));
 }
 
 /**
@@ -405,14 +395,13 @@ export async function renderXlsxByVersion(bytes: XlsxBytes, groups: readonly Ver
 }
 
 /**
- * Mọi mã dùng được trong mẫu thống kê: như mẫu Word (có mã cột của bảng), thêm {stt} (thứ tự đơn), {stt_dong} (thứ tự dòng bảng) và {so_don}.
+ * Mọi mã dùng được trong mẫu thống kê: như mẫu Word (có mã cột và {<bảng>_stt} của bảng), thêm {stt} (thứ tự đơn) và {so_don}.
  * @param sections  các phần của loại đơn
  * @returns         các mã
  */
 export function knownStatsTags(sections: readonly FormSection[]): Set<string> {
   const known = knownExportTags(sections);
-  known.add(ROW_NUMBER_TAG);
-  known.add(TABLE_ROW_NUMBER_TAG);
+  known.add(FORM_NUMBER_TAG);
   known.add(FORM_COUNT_TAG);
   return known;
 }
@@ -426,7 +415,7 @@ export interface StatsStarterColumn {
 
 /** Các cột chung đứng đầu file mẫu dựng sẵn; sau đó là từng câu hỏi của loại đơn. */
 export const STATS_STARTER_COMMON_COLUMNS: readonly StatsStarterColumn[] = [
-  { header: 'STT', tag: ROW_NUMBER_TAG },
+  { header: 'STT', tag: FORM_NUMBER_TAG },
   { header: 'Mã đơn', tag: 'ma_don' },
   { header: 'Họ và tên', tag: 'ho_ten' },
   { header: 'MSSV', tag: 'mssv' },
@@ -437,14 +426,17 @@ export const STATS_STARTER_COMMON_COLUMNS: readonly StatsStarterColumn[] = [
 
 /**
  * Các cột của file mẫu dựng sẵn: cột chung, rồi mỗi câu hỏi một cột;
- * câu dạng bảng thành một cột cho mỗi cột của bảng (có tableLabel), rồi thêm cột tổng của các cột tính tổng.
+ * câu dạng bảng thành cột STT của bảng và một cột cho mỗi cột của bảng (có tableLabel), rồi thêm cột tổng của các cột tính tổng.
  * @param sections  các phần của loại đơn
  * @returns         các cột theo thứ tự
  */
 export function statsStarterColumns(sections: readonly FormSection[]): StatsStarterColumn[] {
   const questionColumns = questionExportTags(sections).flatMap((question): StatsStarterColumn[] => {
     if (!question.columns) return [{ header: question.label, tag: question.tag }];
-    const tableColumns = question.columns.map((column) => ({ header: column.label, tag: column.tag, tableLabel: question.label }));
+    const tableColumns = [
+      { header: 'STT', tag: rowNumberTag(question.tag), tableLabel: question.label },
+      ...question.columns.map((column) => ({ header: column.label, tag: column.tag, tableLabel: question.label })),
+    ];
     const sumColumns = question.columns.filter((column) => column.sum).map((column) => ({ header: `Tổng ${column.label.toLowerCase()}`, tag: `tong_${column.tag}` }));
     return [...tableColumns, ...sumColumns];
   });
@@ -521,11 +513,11 @@ export async function createStatsStarterXlsx(sections: readonly FormSection[]): 
  * Kiểm tra mẫu thống kê theo các câu hỏi của loại đơn: mã không dùng được, ô thiếu dấu ngoặc.
  * @param bytes     nội dung file mẫu
  * @param sections  các phần của loại đơn (bản soạn hiện tại)
- * @returns         kết quả kiểm tra (outside luôn rỗng); không đọc được file thì báo ở error
+ * @returns         kết quả kiểm tra; không đọc được file thì báo ở error
  */
 export async function checkXlsxTemplate(bytes: XlsxBytes, sections: readonly FormSection[]): Promise<ExportTemplateCheck> {
   const workbook = await openWorkbook(bytes);
-  if (!workbook) return { found: [], unknown: [], outside: [], error: EXPORT_MESSAGES.unreadableXlsx };
+  if (!workbook) return { found: [], unknown: [], error: EXPORT_MESSAGES.unreadableXlsx };
   const known = knownStatsTags(sections);
   const [found, unknown] = [new Set<string>(), new Set<string>()];
   const braceErrors: string[] = [];
@@ -544,5 +536,5 @@ export async function checkXlsxTemplate(bytes: XlsxBytes, sections: readonly For
       }),
     ),
   );
-  return { found: [...found], unknown: [...unknown], outside: [], error: braceErrors.slice(0, 5).join(' ') };
+  return { found: [...found], unknown: [...unknown], error: braceErrors.slice(0, 5).join(' ') };
 }

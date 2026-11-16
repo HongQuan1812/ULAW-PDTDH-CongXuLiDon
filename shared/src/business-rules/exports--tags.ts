@@ -2,8 +2,9 @@
    Cán bộ gõ mã trong ngoặc nhọn vào file Word, vd {ho_ten}, {mssv}; khi xuất file, máy chủ thay mã bằng dữ liệu của đơn.
    - Mã chung (mọi loại đơn): thông tin người nộp đơn và thông tin đơn (COMMON_EXPORT_TAG_GROUPS).
    - Mã câu hỏi: ô "Mã dùng trong file Word" của câu hỏi; bỏ trống thì lấy theo nội dung câu hỏi bỏ dấu.
-   - Câu hỏi dạng bảng: vòng lặp {#mã bảng} … {/mã bảng}; trong vòng lặp có {stt} và mã từng cột (mã bảng + tên cột, vd {ielts_so_hieu});
-     ngoài vòng lặp có {so_<mã bảng>} (số dòng) và {tong_<mã cột>} (tổng cột có tính tổng).
+   - Câu hỏi dạng bảng: mã từng cột (mã bảng + tên cột, vd {ielts_so_hieu}) và số thứ tự dòng {<mã bảng>_stt}, vd {ielts_stt}.
+     Không cần vòng lặp: dòng nào (hàng bảng Word, đoạn văn, hàng Excel) có mã cột thì tự nhân lên theo số dòng của bảng.
+     Thêm {so_<mã bảng>} (số dòng) và {tong_<mã cột>} (tổng cột có tính tổng).
    Trình soạn (bảng mã, kiểm tra trùng mã), API giả và backend (điền mẫu, kiểm tra mẫu) cùng dùng file này. */
 import type { AnswerValue, FormAnswers, TableCell } from '../aux-schema/forms--answers';
 import type { AnswerableQuestion, Question, TableColumn } from '../aux-schema/form-types--question-types';
@@ -16,8 +17,14 @@ import { FORM_STATUS_LABEL, type FormStatus } from '../aux-schema/forms--statuse
 /** Mã hợp lệ: chữ thường không dấu, số, gạch dưới; không bắt đầu bằng số. */
 export const EXPORT_TAG_PATTERN = /^[a-z_][a-z0-9_]*$/;
 
-/** Mã của số thứ tự dòng trong vòng lặp bảng. */
-export const ROW_NUMBER_TAG = 'stt';
+/**
+ * Mã số thứ tự dòng của một bảng, vd 'ielts_stt'. Gắn mã bảng như mã cột, nên hai bảng không lẫn số thứ tự của nhau.
+ * @param tableTag  mã của câu hỏi dạng bảng
+ * @returns         '<mã bảng>_stt'
+ */
+export function rowNumberTag(tableTag: string): string {
+  return `${tableTag}_stt`;
+}
 
 /**
  * Đổi một đoạn chữ thành mã: bỏ dấu, chữ thường, ký tự khác chữ số thành "_", vd "Tệp bảng điểm" → "tep_bang_diem".
@@ -114,6 +121,9 @@ export const COMMON_EXPORT_TAGS: ReadonlySet<string> = new Set([
 /** Mã số lá đơn có trong file thống kê. */
 export const FORM_COUNT_TAG = 'so_don';
 
+/** Mã số thứ tự của đơn trong file thống kê (1, 2, 3…), khác số thứ tự dòng của bảng {<mã bảng>_stt}. */
+export const FORM_NUMBER_TAG = 'stt';
+
 /** Mã chung của cả file thống kê: đặt ở hàng không có mã của đơn (vd tiêu đề, dòng tổng) thì chỉ điền một lần. */
 export const STATS_SUMMARY_TAGS: readonly ExportTagInfo[] = [
   { tag: FORM_COUNT_TAG, label: 'Số đơn trong file' },
@@ -160,14 +170,14 @@ export function questionExportTags(sections: readonly FormSection[]): QuestionEx
 /**
  * Mọi mã dùng được trong mẫu của một loại đơn (để Kiểm tra mẫu).
  * @param sections  các phần của loại đơn
- * @returns         mã chung, mã câu hỏi, và với câu hỏi dạng bảng: stt, mã cột, so_<bảng>, tong_<cột>
+ * @returns         mã chung, mã câu hỏi, và với câu hỏi dạng bảng: <bảng>_stt, mã cột, so_<bảng>, tong_<cột>
  */
 export function knownExportTags(sections: readonly FormSection[]): Set<string> {
   const known = new Set(COMMON_EXPORT_TAGS);
   for (const question of questionExportTags(sections)) {
     known.add(question.tag);
     if (!question.columns) continue;
-    known.add(ROW_NUMBER_TAG);
+    known.add(rowNumberTag(question.tag));
     known.add(`so_${question.tag}`);
     for (const column of question.columns) {
       known.add(column.tag);
@@ -178,24 +188,23 @@ export function knownExportTags(sections: readonly FormSection[]): Set<string> {
 }
 
 /**
- * Mã cột của từng bảng, để Kiểm tra mẫu báo mã cột đặt ngoài vòng lặp.
+ * Mã nào thuộc dòng của bảng nào: mã cột và mã số thứ tự dòng. Dòng của mẫu có các mã này thì nhân lên theo bảng đó.
  * @param sections  các phần của loại đơn
- * @returns         mã cột (và stt) → các mã bảng chứa cột đó
+ * @returns         mã cột / mã số thứ tự dòng → mã bảng
  */
-export function columnTagOwners(sections: readonly FormSection[]): Map<string, string[]> {
-  const owners = new Map<string, string[]>();
-  const addOwner = (columnTagText: string, tableTag: string) => owners.set(columnTagText, [...(owners.get(columnTagText) ?? []), tableTag]);
+export function rowTagTables(sections: readonly FormSection[]): Map<string, string> {
+  const tables = new Map<string, string>();
   for (const question of questionExportTags(sections)) {
     if (!question.columns) continue;
-    addOwner(ROW_NUMBER_TAG, question.tag);
-    question.columns.forEach((column) => addOwner(column.tag, question.tag));
+    tables.set(rowNumberTag(question.tag), question.tag);
+    question.columns.forEach((column) => tables.set(column.tag, question.tag));
   }
-  return owners;
+  return tables;
 }
 
 /* ---------- Dữ liệu điền vào mẫu ---------- */
 
-/** Giá trị điền vào mẫu: chữ, số, hoặc các dòng của bảng (mỗi dòng theo mã cột). */
+/** Giá trị điền vào mẫu: chữ, số, hoặc các dòng của bảng (mỗi dòng theo mã số thứ tự dòng và mã cột). */
 export type ExportValue = string | number | Array<Record<string, string | number>>;
 export type ExportData = Record<string, ExportValue>;
 
@@ -310,7 +319,7 @@ export function buildExportData(source: ExportSource, exportedOn: string): Expor
   };
   addLegacyTags(exportData);
 
-  // Mã câu hỏi: bảng thành các dòng (kèm số dòng, tổng cột), câu khác thành chữ
+  // Mã câu hỏi: bảng thành các dòng (mỗi dòng có số thứ tự và mã cột; kèm số dòng, tổng cột), câu khác thành chữ
   for (const section of source.sections) {
     for (const question of section.questions) {
       if (question.type === 'info') continue;
@@ -322,7 +331,7 @@ export function buildExportData(source: ExportSource, exportedOn: string): Expor
       }
       const rows = (Array.isArray(value) ? value : []) as TableCell[][];
       exportData[tag] = rows.map((row, rowIndex) =>
-        Object.fromEntries([[ROW_NUMBER_TAG, rowIndex + 1], ...question.columns.map((column, i) => [columnTag(question, column), row[i] ?? ''])]),
+        Object.fromEntries([[rowNumberTag(tag), rowIndex + 1], ...question.columns.map((column, i) => [columnTag(question, column), row[i] ?? ''])]),
       );
       exportData[`so_${tag}`] = rows.length;
       question.columns.forEach((column, i) => {

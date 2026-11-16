@@ -148,8 +148,11 @@ Mỗi loại đơn có hai nhóm mẫu, lưu ở máy chủ theo loại đơn, d
   - **Mã chung**: thông tin người nộp đơn và thông tin đơn; ngày nộp tách thêm `{ngay}` `{thang}` `{nam}`.
   - **Mã câu hỏi**: ô "Mã dùng trong file Word" của câu hỏi; bỏ trống thì lấy theo nội dung câu hỏi bỏ dấu (`Tệp bảng điểm` → `tep_bang_diem`).
     Mã sai dạng, trùng nhau hoặc trùng mã chung thì không lưu được loại đơn. Đổi tên câu hỏi khi chưa đặt mã riêng thì mã đổi theo.
-  - **Câu hỏi dạng bảng**: vòng lặp `{#mã bảng}` … `{/mã bảng}`, bên trong có `{stt}` và mã từng cột (mã bảng + tên cột, vd bảng `{#ielts}` có cột `{ielts_so_hieu}`, nên hai bảng có cột cùng tên không trùng mã);
-    ngoài vòng lặp có `{so_<mã bảng>}` (số dòng) và `{tong_<mã cột>}` (tổng cột). Mã cột đặt ngoài vòng lặp sẽ để trống.
+  - **Câu hỏi dạng bảng**: mã từng cột là mã bảng + tên cột, số thứ tự dòng là `{<mã bảng>_stt}` (vd bảng `ielts` có `{ielts_stt}`, `{ielts_so_hieu}`),
+    nên hai bảng có cột cùng tên không trùng mã. Cột tên "STT" trùng `{<mã bảng>_stt}` nên báo trùng mã.
+    **Không cần vòng lặp** `{#…}` `{/…}`: hàng bảng Word hay đoạn văn nào có mã cột thì khi xuất tự nhân lên, mỗi dòng của bảng một hàng / một đoạn
+    (bảng không có dòng nào thì hàng / đoạn đó biến mất). Một hàng có mã cột của hai bảng thì số hàng theo bảng dài hơn, bảng ngắn để trống phần còn lại, giống mẫu Excel.
+    Thêm `{so_<mã bảng>}` (số dòng) và `{tong_<mã cột>}` (tổng cột), đặt ở đâu cũng được. Mẫu còn `{#…}` `{/…}` thì Kiểm tra mẫu báo lỗi, bảo xóa đi.
 - **Kiểm tra** mẫu báo mã không có trong loại đơn và lỗi ngoặc. **Xuất thử** điền bằng một đơn của loại đơn, chưa có đơn thì bằng dữ liệu giả.
 
 ### Mẫu xuất file thống kê (Excel)
@@ -170,13 +173,12 @@ Mỗi loại đơn có hai nhóm mẫu, lưu ở máy chủ theo loại đơn, d
 - Câu hỏi dạng bảng có hai cách đặt trong mẫu:
   - **Mỗi cột một ô** (file mẫu dựng sẵn làm vậy): đặt `{<mã cột>}` ở hàng mẫu. Đơn có bảng n dòng thì **chiếm n hàng**: mỗi hàng điền một dòng của bảng,
     các ô còn lại của đơn (mã đơn, họ tên, tổng…) **gộp dọc** n hàng. Đơn không có dòng nào thì chiếm một hàng, ô của bảng để trống.
-    Đơn có nhiều bảng thì số hàng theo bảng dài nhất; bảng ngắn hơn để trống phần còn lại. `{stt_dong}` là số thứ tự dòng của bảng (đánh lại từ 1 ở mỗi đơn).
-    Hai bảng có cột trùng mã thì dùng bảng đứng trước.
+    Đơn có nhiều bảng thì số hàng theo bảng dài nhất; bảng ngắn hơn để trống phần còn lại. `{<mã bảng>_stt}` là số thứ tự dòng của bảng (đánh lại từ 1 ở mỗi đơn), như mẫu Word.
   - **Cả bảng một ô**: đặt `{<mã bảng>}`, mỗi dòng của bảng một dòng trong ô, vd "1. Triết học · 3".
   - Cả hai cách đều có `{so_<mã bảng>}`, `{tong_<mã cột>}` như mẫu Word.
-- **File mẫu dựng sẵn** có đầu cột hai tầng: cột thường gộp dọc hai hàng; câu hỏi dạng bảng là ô gộp ngang trên các cột của nó, tên từng cột nằm ở tầng dưới.
+- **File mẫu dựng sẵn** có đầu cột hai tầng: cột thường gộp dọc hai hàng; câu hỏi dạng bảng là ô gộp ngang trên các cột của nó, STT của bảng và tên từng cột nằm ở tầng dưới.
   Cột tổng (`{tong_<mã cột>}`) đứng sau bảng, thuộc cả đơn nên cũng gộp dọc.
-- Ô chỉ có một mã mà giá trị là số (vd `{stt}`, `{tong_so_tin_chi}`) được điền thành số, để Excel tính toán được.
+- Ô chỉ có một mã mà giá trị là số (vd `{stt}`, `{tong_cac_mon_xin_mien_so_tin_chi}`) được điền thành số, để Excel tính toán được.
 - Công thức trong mẫu không tự giãn theo số hàng chèn thêm; nên đặt dòng tổng bằng mã `{so_don}` hoặc tự viết công thức sau khi xuất.
 
 ## Thống kê ở trang Quản lí đơn

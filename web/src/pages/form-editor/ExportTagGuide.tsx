@@ -2,18 +2,19 @@
    - "Cách tạo một mẫu" (ExportHowTo, ngay trên khung chọn file, thu gọn được): 3 bước và ví dụ trước / sau;
    - "Bảng mã" (ExportTagGuide, dưới danh sách mẫu): mã câu trả lời của từng câu hỏi và mã chung, mỗi mã một dòng (Gõ vào file Word / Excel · Sẽ được điền bằng).
    Bấm vào mã để sao chép.
-   Mẫu Word: ví dụ theo kiểu định dạng; câu hỏi dạng bảng có bảng mẫu một dòng (vòng lặp) và nút sao chép để dán vào Word thành bảng thật.
-   Mẫu Excel: có nút "Tải file mẫu có sẵn" (đã có đầu cột, mã mọi câu hỏi). Không có vòng lặp: hàng có mã của đơn (hàng mẫu) nhân lên
-   mỗi đơn một hàng, câu hỏi dạng bảng gộp vào một ô; mã tiêu đề file chỉ điền một lần. */
+   Mẫu Word: ví dụ theo kiểu định dạng; câu hỏi dạng bảng có bảng mẫu một dòng (dòng có mã cột tự nhân lên) và nút sao chép để dán vào Word thành bảng thật.
+   Mẫu Excel: có nút "Tải file mẫu có sẵn" (đã có đầu cột, mã mọi câu hỏi). Hàng có mã của đơn (hàng mẫu) nhân lên mỗi đơn một hàng;
+   câu hỏi dạng bảng đặt mỗi cột một ô (đơn chiếm số hàng bằng số dòng) hoặc cả bảng một ô; mã tiêu đề file chỉ điền một lần. */
 import { Fragment, useState, type ReactNode } from 'react';
 import {
   COMMON_EXPORT_TAG_GROUPS,
-  ROW_NUMBER_TAG,
+  FORM_NUMBER_TAG,
   STATS_SUMMARY_TAGS,
   DOCX_CONTENT_TYPE,
   XLSX_CONTENT_TYPE,
   createFormStarterDocx,
   createStatsStarterXlsx,
+  rowNumberTag,
   type ExportTemplatePurpose,
   type FormSection,
   type QuestionExportTag,
@@ -46,15 +47,39 @@ async function copyText(text: string, toast: ReturnType<typeof useToast>) {
 }
 
 /**
- * Sao chép bảng mẫu của câu hỏi dạng bảng để dán vào Word.
+ * Sao chép bảng mẫu của câu hỏi dạng bảng để dán vào Word: hàng đầu cột và một hàng mã (STT rồi từng cột).
  * @param question  câu hỏi dạng bảng
  * @param toast     hàm báo
  */
-async function copyLoopTable(question: QuestionExportTag, toast: ReturnType<typeof useToast>) {
+async function copySampleTable(question: QuestionExportTag, toast: ReturnType<typeof useToast>) {
   const columns = question.columns ?? [];
-  const cells = [`{#${question.tag}}{${ROW_NUMBER_TAG}}`, ...columns.map((column, i) => `{${column.tag}}${i === columns.length - 1 ? `{/${question.tag}}` : ''}`)];
+  const cells = [`{${rowNumberTag(question.tag)}}`, ...columns.map((column) => `{${column.tag}}`)];
   const headers = ['STT', ...columns.map((column) => column.label)];
   await copyTable(headers, cells, 'Word', toast);
+}
+
+/**
+ * Các dòng mã chung của câu hỏi dạng bảng (cả mẫu Word lẫn Excel): số thứ tự dòng, từng cột, số dòng, tổng cột.
+ * @param question  câu hỏi dạng bảng
+ * @returns         các dòng bảng
+ */
+function TableTagRows({ question }: { question: QuestionExportTag }) {
+  const columns = question.columns ?? [];
+  const rowName = question.rowName || 'dòng';
+  return (
+    <>
+      <TagRow tag={rowNumberTag(question.tag)} meaning={`Số thứ tự ${rowName} (1, 2, 3…)`} />
+      {columns.map((column) => (
+        <TagRow key={column.tag} tag={column.tag} meaning={`Cột “${column.label}”`} />
+      ))}
+      <TagRow tag={`so_${question.tag}`} meaning={`Số ${rowName} trong bảng`} />
+      {columns
+        .filter((column) => column.sum)
+        .map((column) => (
+          <TagRow key={`tong_${column.tag}`} tag={`tong_${column.tag}`} meaning={`Tổng cột “${column.label}”`} />
+        ))}
+    </>
+  );
 }
 
 /**
@@ -88,7 +113,7 @@ async function copyTable(headers: string[], cells: string[], appName: string, to
 
 /**
  * Nút mã: bấm để sao chép, vd {ho_ten}.
- * @param tag  mã (không có ngoặc); có thể kèm dấu #, / của vòng lặp
+ * @param tag  mã (không có ngoặc)
  * @returns    nút
  */
 function CodeChip({ tag }: { tag: string }) {
@@ -145,7 +170,7 @@ function TagTableHead({ purpose }: { purpose: ExportTemplatePurpose }) {
 
 /**
  * Các dòng của một câu hỏi trong Bảng mã của mẫu Excel: câu thường một dòng;
- * câu dạng bảng gộp vào một ô (không có mã cột), kèm số dòng và tổng cột.
+ * câu dạng bảng: cả bảng một ô, rồi các mã như mẫu Word (số thứ tự dòng, từng cột, số dòng, tổng cột).
  * @param question  mã của câu hỏi
  * @returns         các dòng bảng
  */
@@ -163,12 +188,7 @@ function StatsQuestionTagRows({ question }: { question: QuestionExportTag }) {
       {question.columns ? (
         <>
           <TagRow tag={question.tag} meaning={`Cả bảng trong một ô, mỗi ${rowName} một dòng, vd “1. ${question.columns.map((column) => column.label).join(' · ')}”`} />
-          <TagRow tag={`so_${question.tag}`} meaning={`Số ${rowName} trong bảng`} />
-          {question.columns
-            .filter((column) => column.sum)
-            .map((column) => (
-              <TagRow key={`tong_${column.tag}`} tag={`tong_${column.tag}`} meaning={`Tổng cột “${column.label}”`} />
-            ))}
+          <TableTagRows question={question} />
         </>
       ) : (
         <TagRow tag={question.tag} meaning={`Câu trả lời${kind ? ` (${kind})` : ''}`} />
@@ -178,7 +198,7 @@ function StatsQuestionTagRows({ question }: { question: QuestionExportTag }) {
 }
 
 /**
- * Các dòng của một câu hỏi trong Bảng mã: câu thường một dòng; câu dạng bảng có bảng mẫu, mã stt, mã cột, số dòng, tổng cột.
+ * Các dòng của một câu hỏi trong Bảng mã: câu thường một dòng; câu dạng bảng có bảng mẫu, mã số thứ tự dòng, mã cột, số dòng, tổng cột.
  * @param question     mã của câu hỏi
  * @returns  các dòng bảng
  */
@@ -198,7 +218,7 @@ function QuestionTagRows({ question }: { question: QuestionExportTag }) {
     );
   }
 
-  // Câu dạng bảng: bảng mẫu một dòng có vòng lặp, rồi mã trong và ngoài vòng lặp
+  // Câu dạng bảng: bảng mẫu một dòng (dòng có mã cột tự nhân lên), rồi các mã của bảng
   const columns = question.columns;
   const rowName = question.rowName || 'dòng';
   return (
@@ -211,10 +231,10 @@ function QuestionTagRows({ question }: { question: QuestionExportTag }) {
       <tr>
         {/* ô trải hết 2 cột; nội dung bọc trong div, vì đặt display:grid lên td thì nó không còn là ô bảng */}
         <td colSpan={2}>
-          <div className={styles.loopBox}>
+          <div className={styles.sampleTableBox}>
             <p>
-              Trong Word, tạo bảng có <b>một dòng mẫu</b> như dưới đây. Khi xuất file, dòng này tự nhân lên theo số {rowName} trong đơn.{' '}
-              <b className={styles.loop}>{`{#${question.tag}}`}</b> ở ô đầu và <b className={styles.loop}>{`{/${question.tag}}`}</b> ở ô cuối đánh dấu dòng mẫu.
+              Trong Word, tạo bảng có <b>một dòng mẫu</b> như dưới đây. Khi xuất file, dòng có mã cột tự nhân lên theo số {rowName} trong đơn.
+              Đặt mã cột trong một đoạn văn cũng vậy: đoạn đó nhân lên mỗi {rowName} một đoạn.
             </p>
             <div className={styles.wordTableScroll}>
               <table className={styles.wordTable}>
@@ -226,36 +246,21 @@ function QuestionTagRows({ question }: { question: QuestionExportTag }) {
                     ))}
                   </tr>
                   <tr>
-                    <td>
-                      <b className={styles.loop}>{`{#${question.tag}}`}</b>
-                      {`{${ROW_NUMBER_TAG}}`}
-                    </td>
-                    {columns.map((column, i) => (
-                      <td key={column.tag}>
-                        {`{${column.tag}}`}
-                        {i === columns.length - 1 && <b className={styles.loop}>{`{/${question.tag}}`}</b>}
-                      </td>
+                    <td>{`{${rowNumberTag(question.tag)}}`}</td>
+                    {columns.map((column) => (
+                      <td key={column.tag}>{`{${column.tag}}`}</td>
                     ))}
                   </tr>
                 </tbody>
               </table>
             </div>
-            <Button className={styles.smallButton} onClick={() => void copyLoopTable(question, toast)}>
+            <Button className={styles.smallButton} onClick={() => void copySampleTable(question, toast)}>
               Sao chép bảng mẫu để dán vào Word
             </Button>
           </div>
         </td>
       </tr>
-      <TagRow tag={ROW_NUMBER_TAG} meaning="Số thứ tự (đặt trong vòng lặp)" />
-      {columns.map((column) => (
-        <TagRow key={column.tag} tag={column.tag} meaning={`Cột “${column.label}” (đặt trong vòng lặp)`} />
-      ))}
-      <TagRow tag={`so_${question.tag}`} meaning={`Số ${rowName} trong bảng (đặt ngoài vòng lặp)`} />
-      {columns
-        .filter((column) => column.sum)
-        .map((column) => (
-          <TagRow key={`tong_${column.tag}`} tag={`tong_${column.tag}`} meaning={`Tổng cột “${column.label}” (đặt ngoài vòng lặp)`} />
-        ))}
+      <TableTagRows question={question} />
     </>
   );
 }
@@ -281,7 +286,7 @@ const FORMAT_EXAMPLES = [
 const STATS_EXAMPLE = {
   title: { template: 'Danh sách đơn {loai_don} · {so_don} đơn', filled: 'Danh sách đơn Xét miễn môn · 3 đơn' },
   columns: [
-    { header: 'STT', tag: ROW_NUMBER_TAG },
+    { header: 'STT', tag: FORM_NUMBER_TAG },
     { header: 'Mã đơn', tag: 'ma_don' },
     { header: 'Họ và tên', tag: 'ho_ten' },
   ],
@@ -569,7 +574,7 @@ function TagGroups({ purpose, questionTags }: Omit<ExportTagGuideProps, 'version
         <TagGroup key={group.title} title={group.title} purpose={purpose}>
           {/* Mẫu Excel: {stt} đứng đầu nhóm có mã đơn */}
           {purpose === 'stats' && group.tags.some(({ tag }) => tag === 'ma_don') && (
-            <TagRow tag={ROW_NUMBER_TAG} meaning="Số thứ tự hàng (1, 2, 3…), không phải mã đơn" />
+            <TagRow tag={FORM_NUMBER_TAG} meaning="Số thứ tự đơn (1, 2, 3…), không phải mã đơn" />
           )}
           {group.tags.map(({ tag, label }) => (
             <TagRow key={tag} tag={tag} meaning={label} />

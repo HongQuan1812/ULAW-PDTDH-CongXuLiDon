@@ -6,7 +6,7 @@
    File Excel nhận về mở trong trình xem, có nút "Tải file Excel" trên thanh xem. */
 import { useState } from 'react';
 import { useQueries } from '@tanstack/react-query';
-import { questionExportTags, type ExportTemplate, type FormTypeVersion } from '@ulaw/shared';
+import type { ExportTemplate, FormTypeVersion } from '@ulaw/shared';
 import { checkExportTemplate, exportStats, useExportTemplates } from '../../api/exports';
 import { Button } from '../../components/Button';
 import { DateInput } from '../../components/DateInput';
@@ -89,10 +89,7 @@ export function StatsExportButton({
       queryFn: async (): Promise<TemplateResult> => {
         try {
           const check = await checkExportTemplate(formTypeId, template.id, { name: version.name, prefix, sections: version.sections });
-          const tableTags = questionExportTags(version.sections)
-            .filter((question) => question.columns)
-            .map((question) => question.tag);
-          return checkResultOf(check, tableTags, 'phiên bản này');
+          return checkResultOf(check, 'phiên bản này');
         } catch (error) {
           return checkFailureOf(error);
         }
