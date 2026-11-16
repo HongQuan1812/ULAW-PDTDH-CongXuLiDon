@@ -32,7 +32,7 @@ Mỗi bước làm trên một nhánh riêng. Xong thì tạo Pull Request vào 
 - Dữ liệu giả nằm trong `web/src/mocks/db.ts`, giữ trong bộ nhớ. Tải lại trang là về ban đầu.
 - Nút Đăng nhập gọi `POST /api/auth/login`; backend quyết định: `ENABLE_DEMO_APIS=true` (và `ALWAYS_REAL_APIS` không có `dev-login`) thì đăng nhập thử theo vai trò gửi kèm (phát cookie phiên thật), còn lại trả đường dẫn sang Google. Backend giả luôn đăng nhập thử. Ô đổi vai trò trong menu cũng gọi `POST /api/auth/login` kèm vai trò. Frontend không biết tên `dev-login`, tên này chỉ có ở backend.
 
-## Giai đoạn 2: Backend (đang làm)
+## Giai đoạn 2: Backend ✓
 
 Làm `api/` (NestJS + Prisma + PostgreSQL) theo đúng hợp đồng trong `shared/src/api-contract/`.
 Làm từng nhóm API. Xong nhóm nào thì chuyển nhóm đó sang API thật, các nhóm còn lại vẫn dùng API giả. Giao diện không phải sửa.
@@ -71,15 +71,15 @@ Làm từng nhóm API. Xong nhóm nào thì chuyển nhóm đó sang API thật,
 - Lỗi ngẫu nhiên (`VITE_MOCK_BACKEND_FAILURE_RATE`) chỉ áp dụng cho các nhóm còn giả.
 - Bảng danh sách: làm trước bằng hàm `applyListQuery` của `shared/` (đọc rồi lọc trong bộ nhớ), giống API giả. Khi dữ liệu nhiều, đo thấy chậm thì chuyển sang câu truy vấn SQL.
 
-### Chưa làm, chờ thông tin từ bên ngoài
+### Việc chờ bên ngoài (đã xong)
 
-- OAuth client thật cho máy chủ: tạo ở Google Cloud Console bằng tài khoản của trường, khai báo tên miền thật (cách tạo: README.md).
-- `student-directory` bản thật: đã đọc được database trường (mục **`student-directory` bản thật** bên dưới), còn tài khoản chỉ đọc riêng cho máy chủ. Bản giả `dev-student-directory` đọc bảng mẫu.
+- OAuth client Google tạo bằng tài khoản của trường ✓ (cách tạo: README.md). Lên máy chủ thật thì thêm redirect của tên miền thật (Giai đoạn 3, bước 7).
+- `student-directory` bản thật ✓ (mục **`student-directory` bản thật** bên dưới). Bản giả `dev-student-directory` đọc bảng mẫu.
 - Triển khai lên máy chủ: xem Giai đoạn 3.
 
 ### `student-directory` bản thật
 
-Nhánh `backend-student-directory`. Còn chờ: tài khoản chỉ đọc riêng cho máy chủ, mở tường lửa cho IP máy chủ.
+Nhánh `backend-student-directory` ✓. Kết nối bằng tài khoản `lhquan` (không có quyền sửa), không làm tài khoản chỉ đọc riêng.
 
 Thông tin sinh viên đọc từ SQL Server `CoreUis`. Cấu trúc ở `api/src/student-directory/school-database.json`, mục `THONG_TIN_SINH_VIEN`. Tệp này vừa là tài liệu, vừa là nơi code lấy tên database, tên bảng, tên cột (import thẳng, không chép lại ra hằng số riêng), nên đổi cấu trúc chỉ sửa một chỗ. Biến môi trường chỉ chứa thứ khác nhau theo máy hoặc bí mật: `SCHOOL_DB_HOST`, `SCHOOL_DB_PORT`, `SCHOOL_DB_USER`, `SCHOOL_DB_PASSWORD`. Không ghi gì vào database trường.
 
@@ -105,7 +105,7 @@ Database trường ghi gì thì trả đúng như vậy (chỉ cắt khoảng tr
 | 3 | Câu truy vấn | một câu SELECT dựng từ tên bảng, tên cột trong `school-database.json` (đặt trong `[...]` của SQL Server); giá trị người dùng chỉ đi qua tham số (`@email`, không nối chuỗi), `LEFT JOIN` các bảng ở trên · chỉ SELECT đúng các cột cần, **không bao giờ** SELECT cột mật khẩu của `psc_StudentInfo` · tách hàm thuần "dòng kết quả → `StudentInfo[]`" (cắt khoảng trắng, chuỗi rỗng thành null, sắp MSSV trùng email lên đầu) |✓ |
 | 4 | Nối vào API | `findStudents` bản thật thay cho `throw realApiNotBuilt('dev-student-directory')`; tìm theo email của người dùng thay vì `userId` · bản giả `dev-student-directory` giữ nguyên · các hàm nhận người dùng (`id`, `email`) thay cho `userId` |✓ |
 | 5 | Test | test hàm chuyển dòng → `StudentInfo[]` bằng dữ liệu giả (chạy trên CI, CI không tới được database trường) · test kết nối thật chỉ chạy khi có `SCHOOL_DB_HOST` · thử trên giao diện: `ALWAYS_REAL_APIS=dev-student-directory`, đăng nhập thử bằng một tài khoản có email sinh viên thật · đã thử trên 297 email thật (có đủ 47 email 2 MSSV): đều ra MSSV, trung bình 45 ms · đã thử trên giao diện |✓ |
-| 6 | Container, bản thật | thử gọi từ trong container api (Docker tới được IP LAN) · bản thật: tài khoản **chỉ đọc riêng** (chỉ quyền SELECT trên các bảng cần), không dùng tài khoản cá nhân · mở tường lửa cho IP máy chủ · container dev gọi được · **còn**: tài khoản chỉ đọc riêng, tường lửa | |
+| 6 | Container, bản thật | thử gọi từ trong container api (Docker tới được IP LAN) · container dev, prod gọi được · dùng tài khoản `lhquan` (không có quyền sửa), không làm tài khoản chỉ đọc riêng · máy chủ thật phải tới được database trường (Giai đoạn 3, bước 7) |✓ |
 | 7 | Tài liệu | README (biến `SCHOOL_DB_*`), `.claude/CLAUDE.md` (cây thư mục, bỏ việc còn treo "cách kết nối database sinh viên"), `docs/business-rules.md` |✓ |
 
 Để sau (ngoài phạm vi việc này): lấy họ tên (`psc_Students`), số điện thoại (`MobilePhone`, `HomePhone`) để điền sẵn khi sinh viên đăng nhập lần đầu.
@@ -114,7 +114,7 @@ Tên miền email sinh viên trong database trường là `email.hcmulaw.edu.vn`
 
 ## Giai đoạn 3: Container hóa, triển khai (đang làm)
 
-Ứng dụng đã đủ chức năng, chỉ còn `student-directory` bản thật (Giai đoạn 2, việc chưa làm). Không có nó, ứng dụng vẫn chạy, chỉ thiếu thông tin sinh viên (MSSV, lớp, ngành…).
+Ứng dụng đã đủ chức năng, kể cả `student-directory` bản thật (đọc database trường).
 
 Cả dev lẫn bản thật đều chạy bằng container. Mỗi môi trường một tệp compose, một tệp biến môi trường, `up` là chạy, không sửa tay giá trị.
 
@@ -145,7 +145,7 @@ Bước 6 (CI/CD) thử trọn vẹn trên máy cá nhân trước. Khi lên má
 | 4 | Chạy thử bản thật trên máy mình | `trien-khai-container` | `docker compose -f docker-compose.prod.yml up -d` với `localhost` và chứng chỉ tự kí · đăng nhập Google bằng Admin đầu tiên · nộp đơn, tải tệp, xử lí đơn, xuất Word, gửi thư · F5 ở trang con (vd `/forms/123`) không bị 404 · restart container: dữ liệu và tệp tải lên vẫn còn | |
 | 5 | Vận hành | `trien-khai-van-hanh` | viết sẵn script sao lưu Postgres và thư mục tệp tải lên · cách xem log · cách cập nhật bản mới (build lại rồi `up -d`; `migrate deploy` tự chạy lúc bật container) · cách khôi phục từ bản sao lưu · thử hết trên máy mình | |
 | 6 | CI/CD | `trien-khai-ci-cd` | GitHub Actions, chạy khi merge vào `main`: ① **CI**: chạy `pnpm --filter shared test`, `api test`, `web test` trên máy sạch (api cần Postgres tạm làm service container, chạy luôn migration); bỏ E2E Playwright cho nhẹ · đỏ thì dừng, không deploy ② **Build**: dựng image `api` và `nginx + web` rồi đẩy lên registry (GHCR); `VITE_USE_MOCK_BACKEND=false` và `VITE_APP_ENV=` đã đặt sẵn trong `web/Dockerfile`, CI không cần `.env.dev` ③ **Deploy**: máy đích kéo image mới → sao lưu Postgres → `migrate deploy` → `up -d` · thử deploy lên **máy cá nhân** bằng **self-hosted runner** (GitHub không tự với tới máy nằm sau mạng nhà / LAN) · secret để trong GitHub Secrets hoặc `.env` trên máy đích · tuỳ chọn: bấm Approve tay (GitHub Environments) trước khi deploy | |
-| 7 | Lên máy chủ thật | (không có nhánh) | **chờ bên ngoài**: máy chủ Linux có Docker · domain / subdomain (vd `donthi.hcmulaw.edu.vn`) · chứng chỉ HTTPS thật · mở cổng 80/443 · OAuth client Google tạo bằng tài khoản trường (redirect `https://<domain>/api/auth/google/callback`) · xác nhận tên miền email thật để điền `SCHOOL_EMAIL_DOMAINS` · khi đủ thì: tạo `.env.prod` thật, mount chứng chỉ, `up -d`, đăng nhập Google bằng email trường, chạy lại các luồng chính | |
+| 7 | Lên máy chủ thật | (không có nhánh) | **chờ bên ngoài**: máy chủ Linux có Docker · domain / subdomain (vd `donthi.hcmulaw.edu.vn`) · chứng chỉ HTTPS thật · mở cổng 80/443 · thêm redirect `https://<domain>/api/auth/google/callback` vào OAuth client Google của trường (đã có) · máy chủ tới được database trường (192.168.3.25:1433) · xác nhận tên miền email thật để điền `SCHOOL_EMAIL_DOMAINS` · khi đủ thì: tạo `.env.prod` thật, mount chứng chỉ, `up -d`, đăng nhập Google bằng email trường, chạy lại các luồng chính | |
 
 ### Lưu ý khi triển khai
 

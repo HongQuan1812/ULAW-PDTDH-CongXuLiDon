@@ -166,5 +166,5 @@ pnpm --filter web test
 - Khi nghiệp vụ thay đổi: cập nhật `shared/` trước, sau đó sửa backend và frontend, rồi sửa `docs/business-rules.md`.
 - Code chỉ dùng để thử khi phát triển (đăng nhập theo vai trò, đổi vai trò…) bọc trong `JUST FOR DEMO: START · <làm gì, bản thật thay bằng gì>` … `JUST FOR DEMO: END`
   (comment `/* */`, trong JSX `{/* */}`). Tìm tất cả: `grep -rn "JUST FOR DEMO" web/src`.
-- Việc còn treo: xác nhận tên miền email thật của sinh viên và cán bộ; tài khoản chỉ đọc riêng cho máy chủ để đọc database trường.
+- Việc còn treo: xác nhận tên miền email thật của sinh viên và cán bộ.
 
