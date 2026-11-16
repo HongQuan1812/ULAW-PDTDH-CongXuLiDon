@@ -50,7 +50,10 @@ ENV NODE_ENV=production
 EXPOSE 3000
 
 # Kiểm tra sống: gọi /api/health
-HEALTHCHECK --interval=10s --timeout=3s --start-period=20s --retries=5 \
+# (start-period dài hơn vì trước khi chạy backend còn migrate, seed)
+HEALTHCHECK --interval=10s --timeout=3s --start-period=60s --retries=5 \
   CMD node -e "fetch('http://localhost:3000/api/health').then((r) => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
 
-CMD ["node", "dist/main.mjs"]
+# Mỗi lần bật / restart: tạo / cập nhật bảng → Admin đầu tiên + cấu hình email (chỉ thêm khi chưa có, không xóa gì) → chạy backend
+# (exec để node nhận tín hiệu dừng của docker trực tiếp)
+CMD ["sh", "-c", "pnpm exec prisma migrate deploy && pnpm seed:production && exec node dist/main.mjs"]

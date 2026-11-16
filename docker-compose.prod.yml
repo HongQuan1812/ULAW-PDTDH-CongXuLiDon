@@ -9,8 +9,7 @@
 #
 # Lệnh:
 #   docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --build                     # build và chạy
-#   docker compose -f docker-compose.prod.yml --env-file .env.prod run --rm api pnpm exec prisma migrate deploy   # tạo / cập nhật bảng
-#   docker compose -f docker-compose.prod.yml --env-file .env.prod run --rm api pnpm seed:production <email trường>   # Admin đầu tiên (không xóa gì)
+#     (mỗi lần bật / restart api tự chạy: migrate deploy → seed:production với FIRST_ADMIN_EMAIL → backend, không xóa gì)
 #   docker compose -f docker-compose.prod.yml --env-file .env.prod logs -f api                       # xem log backend
 #   docker compose -f docker-compose.prod.yml --env-file .env.prod down                              # dừng (dữ liệu vẫn còn)
 #   KHÔNG dùng "down -v": xóa luôn volume, mất hết dữ liệu và tệp tải lên

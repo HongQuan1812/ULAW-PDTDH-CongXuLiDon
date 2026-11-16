@@ -59,24 +59,22 @@ Trình duyệt ──HTTPS──▶ nginx (80/443) ──/api──▶ api (3000
 Lần đầu:
 
 ```bash
-cp .env.prod.example .env.prod          # điền giá trị thật
+cp .env.prod.example .env.prod          # điền giá trị thật, mật khẩu đặt mới (không dùng lại của dev), có FIRST_ADMIN_EMAIL
 sh docker/nginx/make-dev-cert.sh        # chỉ khi thử trên máy mình; máy chủ thật thì chép chứng chỉ của trường vào docker/nginx/certs/
 
 pnpm prod:up
-docker compose -f docker-compose.prod.yml --env-file .env.prod run --rm api pnpm exec prisma migrate deploy
-docker compose -f docker-compose.prod.yml --env-file .env.prod run --rm api pnpm seed:production <email trường>
 ```
 
 Mở `https://localhost` (chứng chỉ tự kí: bấm Nâng cao → Tiếp tục, dùng Chrome / Edge).
 
-`seed:production` tạo Admin đầu tiên và cấu hình email mặc định. Không xóa gì, chạy lại vẫn an toàn.
+Mỗi lần bật / restart, container `api` tự chạy `prisma migrate deploy` (tạo / cập nhật bảng) → `seed:production` (Admin đầu tiên theo `FIRST_ADMIN_EMAIL` và cấu hình email mặc định, chỉ thêm khi chưa có, không xóa gì) → backend. Thiếu `FIRST_ADMIN_EMAIL` thì `api` không chạy, xem `pnpm prod:logs`.
 
 Các lần sau:
 
 | Việc | Lệnh |
 |---|---|
 | Bật lại, đổi `.env.prod` | `pnpm prod:up` |
-| Có mã mới | `pnpm prod:up`, rồi `migrate deploy` như trên |
+| Có mã mới | `pnpm prod:up` (build lại, migration tự chạy) |
 | Đổi chứng chỉ | `docker compose -f docker-compose.prod.yml --env-file .env.prod restart nginx` |
 | Xem log | `pnpm prod:logs` |
 | Tắt | `pnpm prod:down` |
@@ -108,7 +106,7 @@ Chỉ email trường (`SCHOOL_EMAIL_DOMAINS`, `shared/src/validators/auth.ts`) 
 | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD` | máy chủ gửi thư · `SMTP_HOST` trống: không gửi |
 | `DEV_EMAIL_REDIRECT_TO` | dev: thư tự động gửi về địa chỉ này thay cho người dùng mẫu · trống: chỉ in ra console |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | OAuth client của Google · trống: chưa bật đăng nhập Google |
-| `FIRST_ADMIN_EMAIL` | email Admin đầu tiên (bản thật) |
+| `FIRST_ADMIN_EMAIL` | email Admin đầu tiên (bản thật, bắt buộc): container `api` tạo khi bật nếu chưa có |
 | `HTTP_PORT`, `HTTPS_PORT`, `TLS_CERT_DIR` | cổng và thư mục chứng chỉ của nginx (bản thật) |
 | `VITE_USE_MOCK_BACKEND` | `true`: giao diện dùng backend giả (MSW) · `false`: backend thật |
 | `VITE_REAL_BACKEND_GROUPS` | khi dùng backend giả, các nhóm vẫn tới backend thật, vd `health,auth` |

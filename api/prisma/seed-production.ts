@@ -1,6 +1,6 @@
 /* Seed bản thật: tạo Admin đầu tiên và cấu hình email mặc định. Không xóa dữ liệu nào, chạy lại vẫn an toàn.
-   Chạy: pnpm --filter api seed:production <email trường của Admin>
-   Trong container: docker compose -f docker-compose.prod.yml run --rm api pnpm seed:production <email> */
+   Container bản thật tự chạy mỗi lần bật / restart (api/Dockerfile), email lấy từ FIRST_ADMIN_EMAIL trong .env.prod.
+   Chạy tay: pnpm --filter api seed:production [email trường của Admin], bỏ trống thì lấy FIRST_ADMIN_EMAIL */
 import { PrismaPg } from '@prisma/adapter-pg';
 import { loadDevEnvFile } from '../src/config/env-file';
 import { PrismaClient } from '../src/generated/prisma/client';
@@ -16,10 +16,10 @@ const ADMIN_MESSAGES = {
 } as const;
 const EMAIL_SETTINGS_MESSAGES = { created: 'đã tạo cấu hình mặc định', unchanged: 'đã có, giữ nguyên' } as const;
 
-// Email Admin lấy từ tham số dòng lệnh
-const adminEmail = process.argv[2];
+// Email Admin: tham số dòng lệnh, không có thì lấy FIRST_ADMIN_EMAIL
+const adminEmail = process.argv[2] || process.env.FIRST_ADMIN_EMAIL?.trim();
 if (!adminEmail) {
-  console.error('Thiếu email Admin. Cách chạy: pnpm seed:production <email trường>');
+  console.error('Thiếu email Admin. Đặt FIRST_ADMIN_EMAIL trong .env.prod, hoặc chạy: pnpm seed:production <email trường>');
   process.exit(1);
 }
 
