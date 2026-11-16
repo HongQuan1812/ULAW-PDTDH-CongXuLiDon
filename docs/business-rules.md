@@ -120,7 +120,7 @@ Có lí do của Phòng Đào tạo thì hiện thêm dòng "Phòng Đào tạo:
   - Muốn sửa nội dung đã khóa thì tạo phiên bản mới.
 - Mỗi phần có công tắc **Nội dung chính**: chỉ các phần này hiện ở xem nhanh (dòng xổ ra trong các bảng đơn).
 - **Các loại câu hỏi** (`shared/src/aux-schema/form-types--question-types.ts`): trả lời ngắn, đoạn văn, số, ngày, chọn một, chọn nhiều,
-  danh sách thả xuống, tải tệp (đuôi tệp và dung lượng tối đa), bảng nhiều dòng (các cột kiểu chữ / số / chọn, cột số có thể tính tổng), khối thông báo.
+  danh sách thả xuống, tải tệp (đuôi tệp và dung lượng tối đa), bảng nhiều dòng (các cột kiểu chữ / số / ngày / chọn, cột số có thể tính tổng, cột ngày xuất file dạng dd/mm/yyyy), khối thông báo.
   Câu trả lời lưu theo **id câu hỏi**; kiểm tra câu trả lời ở `shared/src/validators/forms--answers.ts`.
 - Bảng môn của Xét miễn môn là một câu hỏi bảng nhiều dòng.
 - Nộp đơn: nút **+ Nộp đơn mới** luôn mở hộp chọn loại đơn (kể cả khi chỉ có một loại), liệt kê các loại đang mở.

@@ -101,7 +101,7 @@ function columnTypeChanges(column: TableColumn, type: TableColumnType): Partial<
 }
 
 /**
- * Cài đặt bảng: tên gọi mỗi dòng, rồi mỗi cột một hàng (tên, mô tả nhỏ, kiểu Chữ / Số / Chọn, tính tổng, nút bỏ).
+ * Cài đặt bảng: tên gọi mỗi dòng, rồi mỗi cột một hàng (tên, mô tả nhỏ, kiểu Chữ / Số / Ngày / Chọn, tính tổng, nút bỏ).
  * Dưới tên cột là mã của cột trong file Word (mã bảng + tên cột).
  * Tên cột và mô tả dài thì tự xuống hàng như ô chữ trong bảng trả lời.
  * Chỉ cột Số mới tính tổng được. Cột Chọn có thêm danh sách lựa chọn cho người nộp đơn chọn, ngay dưới hàng của cột.

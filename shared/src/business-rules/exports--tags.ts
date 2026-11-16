@@ -275,6 +275,18 @@ function answerText(question: Question, value: AnswerValue | undefined): string 
 }
 
 /**
+ * Ô của bảng dưới dạng chữ để điền: cột ngày → dd/mm/yyyy; ô trống → "".
+ * @param column  cột chứa ô
+ * @param cell    giá trị ô
+ * @returns       chữ hoặc số để điền
+ */
+function cellText(column: TableColumn, cell: TableCell | undefined): string | number {
+  if (cell === undefined || cell === null) return '';
+  if (column.type === 'date' && typeof cell === 'string') return toDayMonthYear(cell);
+  return cell;
+}
+
+/**
  * Thêm giá trị cho các mã cũ, bằng giá trị của mã mới tương ứng.
  * @param exportData  dữ liệu đã có mã chung (sửa trực tiếp)
  */
@@ -331,7 +343,7 @@ export function buildExportData(source: ExportSource, exportedOn: string): Expor
       }
       const rows = (Array.isArray(value) ? value : []) as TableCell[][];
       exportData[tag] = rows.map((row, rowIndex) =>
-        Object.fromEntries([[rowNumberTag(tag), rowIndex + 1], ...question.columns.map((column, i) => [columnTag(question, column), row[i] ?? ''])]),
+        Object.fromEntries([[rowNumberTag(tag), rowIndex + 1], ...question.columns.map((column, i) => [columnTag(question, column), cellText(column, row[i])])]),
       );
       exportData[`so_${tag}`] = rows.length;
       question.columns.forEach((column, i) => {

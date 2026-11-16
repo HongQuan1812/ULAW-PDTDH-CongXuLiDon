@@ -115,6 +115,15 @@ describe('buildExportData', () => {
     expect(exportData.ghi_chu).toBe('Chuỗi cũ');
   });
 
+  test('cột ngày của bảng → dd/mm/yyyy', () => {
+    const dateSections = [FormSectionSchema.parse({ id: 's', title: 'A', questions: [{ id: 'q', type: 'table', label: 'IELTS', rowName: 'chứng chỉ', columns: [{ label: 'Ngày thi', type: 'date' }] }] })];
+    const exportData = buildExportData({ ...source, sections: dateSections, answers: { q: [['2026-03-12'], ['']] } }, '2026-11-11');
+    expect(exportData.ielts).toEqual([
+      { ielts_stt: 1, ielts_ngay_thi: '12/03/2026' },
+      { ielts_stt: 2, ielts_ngay_thi: '' },
+    ]);
+  });
+
   test('không có MSSV thì các mã sinh viên để trống', () => {
     expect(buildExportData({ ...source, mainStudent: null }, '2026-11-11')).toMatchObject({ mssv: '', nganh: '' });
   });

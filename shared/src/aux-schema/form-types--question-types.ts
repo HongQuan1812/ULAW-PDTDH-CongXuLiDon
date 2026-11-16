@@ -63,14 +63,15 @@ const FileQuestionSchema = z.object({
   maxMB: z.number().positive(),
 });
 
-/** Kiểu ô của một cột bảng: chữ, số, chọn. */
-export const TABLE_COLUMN_TYPES = ['text', 'number', 'select'] as const;
+/** Kiểu ô của một cột bảng: chữ, số, ngày, chọn. */
+export const TABLE_COLUMN_TYPES = ['text', 'number', 'date', 'select'] as const;
 export type TableColumnType = (typeof TABLE_COLUMN_TYPES)[number];
 
 /** Tên kiểu cột hiện trong trình soạn loại đơn. */
 export const TABLE_COLUMN_TYPE_LABEL: Record<TableColumnType, string> = {
   text: 'Chữ',
   number: 'Số',
+  date: 'Ngày',
   select: 'Chọn',
 };
 
@@ -80,7 +81,7 @@ export const TableColumnSchema = z.object({
   label: z.string().min(1),
   /** Mô tả nhỏ dưới tên cột */
   sub: z.string().optional(),
-  /** Kiểu ô: chữ, số, hoặc chọn một giá trị trong danh sách người soạn đặt sẵn */
+  /** Kiểu ô: chữ, số, ngày ('YYYY-MM-DD'), hoặc chọn một giá trị trong danh sách người soạn đặt sẵn */
   type: z.enum(TABLE_COLUMN_TYPES),
   /** Cột Chọn: các giá trị cho người nộp đơn chọn, theo thứ tự hiện (cột khác không có) */
   options: z.array(z.string().min(1)).min(1, 'Cột chọn cần ít nhất một lựa chọn.').optional(),

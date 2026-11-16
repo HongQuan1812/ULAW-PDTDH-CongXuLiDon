@@ -2,6 +2,8 @@
 import { useEffect, useRef, type CSSProperties } from 'react';
 import { isEmptyCell, isValidTableCell, type TableCell, type TableColumn } from '@ulaw/shared';
 import { Button } from '../../components/Button';
+import { DateInput } from '../../components/DateInput';
+import { formatDate } from '../../lib/format';
 import type { AnswerProps } from './answerProps';
 import { emptyTableRow, tableTotalText } from './formAnswers';
 import { GrowingTextarea } from './GrowingTextarea';
@@ -11,6 +13,8 @@ import styles from './FormRenderer.module.css';
    Tên cột dài hơn thì tự xuống dòng; bảng rộng hơn khung thì cuộn ngang. */
 const COLUMN_MIN_CHARS = 7;
 const COLUMN_MAX_CHARS = 24;
+/** Cột ngày: đủ chỗ cho dd/mm/yyyy và nút lịch */
+const DATE_COLUMN_CHARS = 15;
 
 /**
  * Độ rộng một cột, tính bằng số ký tự.
@@ -20,7 +24,8 @@ const COLUMN_MAX_CHARS = 24;
 function columnWidthChars(column: TableColumn): number {
   // Cột chọn: thêm 3 ký tự cho mũi tên ▾ của ô chọn
   const longestOptionChars = Math.max(0, ...(column.options ?? []).map((option) => option.length + 3));
-  const wanted = Math.max(COLUMN_MIN_CHARS, column.label.length, Math.ceil((column.sub ?? '').length * 0.85), longestOptionChars);
+  const minChars = column.type === 'date' ? DATE_COLUMN_CHARS : COLUMN_MIN_CHARS;
+  const wanted = Math.max(minChars, column.label.length, Math.ceil((column.sub ?? '').length * 0.85), longestOptionChars);
   return Math.min(COLUMN_MAX_CHARS, wanted) + 2;
 }
 
@@ -156,7 +161,13 @@ export function TableAnswer({
 
                   // Chỉ xem: ô chữ
                   if (readOnly) {
-                    const text = isEmptyCell(cell) ? '—' : typeof cell === 'number' ? cell.toLocaleString('vi-VN') : cell;
+                    const text = isEmptyCell(cell)
+                      ? '—'
+                      : typeof cell === 'number'
+                        ? cell.toLocaleString('vi-VN')
+                        : column.type === 'date'
+                          ? formatDate(String(cell))
+                          : cell;
                     return (
                       <td key={columnIndex}>
                         {text}
@@ -164,7 +175,7 @@ export function TableAnswer({
                     );
                   }
 
-                  // Sửa được: cột số là ô nhập số, cột chọn là danh sách thả xuống, cột chữ là ô tự xuống hàng khi chữ dài;
+                  // Sửa được: cột số là ô nhập số, cột ngày là ô ngày dd/mm/yyyy, cột chọn là danh sách thả xuống, cột chữ là ô tự xuống hàng khi chữ dài;
                   // đang báo lỗi thì tô đỏ ô sai
                   const cellInvalid = invalid && isInvalidCell(column, cell);
                   const cellProps = {
@@ -209,6 +220,8 @@ export function TableAnswer({
                             className={undefined}
                           />
                         </div>
+                      ) : column.type === 'date' ? (
+                        <DateInput value={typeof cell === 'string' ? cell : ''} onValueChange={(nextValue) => updateCell(rowIndex, columnIndex, nextValue)} {...cellProps} />
                       ) : (
                         <GrowingTextarea
                           value={typeof cell === 'string' ? cell : ''}

@@ -119,6 +119,13 @@ describe('validateAnswer', () => {
     expect(validateAnswer(table, [['Triết học', 'HK2']])).toBe('');
   });
 
+  it('bảng: cột ngày chỉ nhận ngày có thật dạng YYYY-MM-DD', () => {
+    const table = questionOf({ id: 'c', type: 'table', label: 'Chứng chỉ', rowName: 'chứng chỉ', columns: [{ label: 'Ngày thi', type: 'date' }] });
+    expect(validateAnswer(table, [['12/03/2026']])).toBe(ANSWER_MESSAGES.tableDateInvalid('Ngày thi'));
+    expect(validateAnswer(table, [['2026-02-31']])).toBe(ANSWER_MESSAGES.tableDateInvalid('Ngày thi'));
+    expect(validateAnswer(table, [['2026-03-12']])).toBe('');
+  });
+
   it('câu trả lời trống theo loại câu hỏi', () => {
     expect(emptyAnswer(questionOf({ id: 'n', type: 'number', label: 'Số' }))).toBeNull();
     expect(emptyAnswer(XMM_SECTIONS[0]!.questions[0] as AnswerableQuestion)).toEqual([]);

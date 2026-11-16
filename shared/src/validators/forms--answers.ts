@@ -30,6 +30,8 @@ export const ANSWER_MESSAGES = {
   tableNumberInvalid: (columnLabel: string) => `Cột “${columnLabel}” chỉ nhận số không âm.`,
   /** Cột chọn có ô không thuộc danh sách lựa chọn */
   tableChoiceInvalid: (columnLabel: string) => `Cột “${columnLabel}”: chọn một giá trị trong danh sách.`,
+  /** Cột ngày có ô không phải ngày có thật */
+  tableDateInvalid: (columnLabel: string) => `Cột “${columnLabel}”: nhập ngày dạng ngày/tháng/năm.`,
   /** Câu báo chung dưới nút Gửi đơn cho phần có lỗi */
   section: (sectionTitle: string) => `Kiểm tra lại phần “${sectionTitle}”.`,
   /** Một câu gộp các phần có lỗi (toast khi bấm Gửi đơn), vd "Kiểm tra lại các phần “A”, “B”." */
@@ -54,12 +56,24 @@ export function isEmptyCell(cell: TableCell | undefined): boolean {
  * Ô đã điền của bảng có đúng kiểu cột không (ô trống thì kiểm tra riêng bằng isEmptyCell).
  * @param column  cột chứa ô
  * @param cell    giá trị ô
- * @returns       cột số: số không âm · cột chọn: một giá trị trong danh sách lựa chọn · cột chữ: luôn đúng
+ * @returns       cột số: số không âm · cột ngày: ngày có thật 'YYYY-MM-DD' · cột chọn: một giá trị trong danh sách lựa chọn · cột chữ: luôn đúng
  */
 export function isValidTableCell(column: Pick<TableColumn, 'type' | 'options'>, cell: TableCell | undefined): boolean {
   if (column.type === 'number') return typeof cell === 'number' && Number.isFinite(cell) && cell >= 0;
+  if (column.type === 'date') return typeof cell === 'string' && isValidDate(cell);
   if (column.type === 'select') return typeof cell === 'string' && (column.options ?? []).includes(cell);
   return true;
+}
+
+/**
+ * Chuỗi có phải ngày có thật dạng 'YYYY-MM-DD' không (câu hỏi ngày, cột ngày của bảng).
+ * @param text  chuỗi cần xem
+ * @returns     true nếu đúng dạng và ngày có thật
+ */
+export function isValidDate(text: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(text)) return false;
+  const date = new Date(`${text}T00:00:00Z`);
+  return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === text;
 }
 
 /* ---------- Tệp tải lên ---------- */
@@ -194,7 +208,7 @@ export function validateAnswer(question: AnswerableQuestion, value: AnswerValue 
     case 'date': {
       const text = isText(value) ? value : '';
       if (!text) return question.required ? ANSWER_MESSAGES.required : '';
-      return /^\d{4}-\d{2}-\d{2}$/.test(text) && !Number.isNaN(Date.parse(text)) ? '' : ANSWER_MESSAGES.invalidDate;
+      return isValidDate(text) ? '' : ANSWER_MESSAGES.invalidDate;
     }
     case 'radio':
     case 'select': {
@@ -222,12 +236,14 @@ export function validateAnswer(question: AnswerableQuestion, value: AnswerValue 
       );
       if (!allFilled) return ANSWER_MESSAGES.tableCellsMissing(columns.length);
 
-      // Cột số chỉ nhận số không âm; cột chọn chỉ nhận giá trị có trong danh sách
+      // Cột số chỉ nhận số không âm; cột ngày chỉ nhận ngày có thật; cột chọn chỉ nhận giá trị có trong danh sách
       for (const [index, column] of columns.entries()) {
         if (column.type === 'text') continue;
         const valid = rows.every((row) => isValidTableCell(column, (row as TableCell[])[index]));
         if (valid) continue;
-        return column.type === 'number' ? ANSWER_MESSAGES.tableNumberInvalid(column.label) : ANSWER_MESSAGES.tableChoiceInvalid(column.label);
+        if (column.type === 'number') return ANSWER_MESSAGES.tableNumberInvalid(column.label);
+        if (column.type === 'date') return ANSWER_MESSAGES.tableDateInvalid(column.label);
+        return ANSWER_MESSAGES.tableChoiceInvalid(column.label);
       }
       return '';
     }
