@@ -10,7 +10,7 @@ import { ApiException } from '../common/api-exception';
 export const DEMO_APIS = [
   /** đăng nhập thử theo vai trò · bản thật: đăng nhập Google */
   'dev-login',
-  /** thông tin sinh viên đọc từ bảng StudentInfo do seed điền · bản thật: đọc database trường (chưa phát triển, chờ cách kết nối) */
+  /** thông tin sinh viên đọc từ bảng StudentInfo do seed điền · bản thật: đọc database trường theo email */
   'dev-student-directory',
 ] as const satisfies readonly `dev-${string}`[];
 export type DemoApi = (typeof DEMO_APIS)[number];

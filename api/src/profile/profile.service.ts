@@ -60,17 +60,17 @@ export class ProfileService {
    * @returns     theo StudentsResponseSchema
    */
   findStudents(user: User): Promise<StudentsResponse> {
-    return this.studentDirectory.findStudentsResponse(user.id, user.mainStudentId);
+    return this.studentDirectory.findStudentsResponse(user, user.mainStudentId);
   }
 
   /**
    * Kiểm tra một MSSV có thuộc người dùng này không.
-   * @param userId     id người dùng
+   * @param user       người dùng
    * @param studentId  MSSV cần kiểm tra
    * @returns          true nếu thuộc người này
    */
-  async ownsStudent(userId: string, studentId: string): Promise<boolean> {
-    const students = await this.studentDirectory.findStudents(userId);
+  async ownsStudent(user: User, studentId: string): Promise<boolean> {
+    const students = await this.studentDirectory.findStudents(user);
     return students.some((student) => student.studentId === studentId);
   }
 
@@ -82,7 +82,7 @@ export class ProfileService {
    */
   async saveMainStudent(user: User, studentId: string): Promise<StudentsResponse> {
     await this.prisma.user.update({ where: { id: user.id }, data: { mainStudentId: studentId } });
-    return this.studentDirectory.findStudentsResponse(user.id, studentId);
+    return this.studentDirectory.findStudentsResponse(user, studentId);
   }
 
   /**

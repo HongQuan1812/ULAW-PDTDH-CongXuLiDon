@@ -106,6 +106,7 @@ Chỉ email trường (`SCHOOL_EMAIL_DOMAINS`, `shared/src/validators/auth.ts`) 
 | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD` | máy chủ gửi thư · `SMTP_HOST` trống: không gửi |
 | `DEV_EMAIL_REDIRECT_TO` | dev: thư tự động gửi về địa chỉ này thay cho người dùng mẫu · trống: chỉ in ra console |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | OAuth client của Google · trống: chưa bật đăng nhập Google |
+| `SCHOOL_DB_HOST`, `SCHOOL_DB_PORT`, `SCHOOL_DB_USER`, `SCHOOL_DB_PASSWORD` | database trường (SQL Server, chỉ đọc) cho thông tin sinh viên; tên database, bảng, cột ở `api/src/student-directory/school-database.json` · `SCHOOL_DB_HOST` trống: chưa kết nối, trang hồ sơ báo chưa lấy được thông tin sinh viên. Bản thật dùng tài khoản chỉ có quyền SELECT |
 | `FIRST_ADMIN_EMAIL` | email Admin đầu tiên (bản thật, bắt buộc): container `api` tạo khi bật nếu chưa có |
 | `FIRST_ADMIN_NAME` | họ tên Admin đầu tiên (bản thật): có thì đăng nhập là vào thẳng · trống: lần đầu tự nhập · chỉ dùng khi tạo mới |
 | `HTTP_PORT`, `HTTPS_PORT`, `TLS_CERT_DIR` | cổng và thư mục chứng chỉ của nginx (bản thật) |

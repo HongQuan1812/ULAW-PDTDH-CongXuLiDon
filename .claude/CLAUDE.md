@@ -52,7 +52,7 @@ Như vậy luật nghiệp vụ chỉ viết một lần.
 | Đăng nhập | Google OAuth (authorization code + PKCE, tự gọi Google bằng `fetch`, không dùng Passport), kiểm tra tên miền ở máy chủ theo `SCHOOL_EMAIL_DOMAINS` | Phiên đăng nhập bằng cookie httpOnly |
 | Tệp tải lên | **Ổ đĩa máy chủ** | |
 | Xuất Word | **docxtemplater** | Điền mã `{...}` vào mẫu .docx |
-| Dữ liệu sinh viên | Module `student-directory` | Đọc từ database trường (cách kết nối chờ xác nhận) |
+| Dữ liệu sinh viên | Module `student-directory`, **mssql** | Đọc SQL Server của trường theo email, chỉ đọc; tên bảng, cột ở `school-database.json` |
 | Tài liệu API | Swagger (OpenAPI) tự sinh | |
 | Kiểm thử | Vitest + Supertest | Cùng công cụ test với `web/`, `shared/` |
 
@@ -106,7 +106,7 @@ Cổng xử lí đơn/
 │   │   ├── common/               # PrismaService, guard quyền (@RequirePerm), lọc lỗi, phân trang
 │   │   ├── auth/                 # Google OAuth, phiên đăng nhập, kiểm tra tên miền
 │   │   ├── users/                # hồ sơ cá nhân, Quản lí tài khoản, phân vai trò
-│   │   ├── student-directory/    # đọc thông tin sinh viên từ database trường
+│   │   ├── student-directory/    # đọc thông tin sinh viên từ database trường (SQL Server), school-database.json: cấu trúc bảng
 │   │   ├── form-types/           # CRUD loại đơn, mở / đóng, kiểm tra cấu trúc
 │   │   ├── forms/                # nộp, sửa, tìm kiếm, lọc + workflow.service.ts (tiếp nhận, bổ sung, duyệt, từ chối, chuyển giao)
 │   │   ├── files/                # tải lên / tải về tệp minh chứng
@@ -166,5 +166,5 @@ pnpm --filter web test
 - Khi nghiệp vụ thay đổi: cập nhật `shared/` trước, sau đó sửa backend và frontend, rồi sửa `docs/business-rules.md`.
 - Code chỉ dùng để thử khi phát triển (đăng nhập theo vai trò, đổi vai trò…) bọc trong `JUST FOR DEMO: START · <làm gì, bản thật thay bằng gì>` … `JUST FOR DEMO: END`
   (comment `/* */`, trong JSX `{/* */}`). Tìm tất cả: `grep -rn "JUST FOR DEMO" web/src`.
-- Việc còn treo: xác nhận tên miền email thật của sinh viên và cán bộ; cách kết nối với database sinh viên của trường.
+- Việc còn treo: xác nhận tên miền email thật của sinh viên và cán bộ; tài khoản chỉ đọc riêng cho máy chủ để đọc database trường.
 

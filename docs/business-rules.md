@@ -27,7 +27,9 @@ tệp này nói luật đó để làm gì và trỏ tới chỗ khai báo. Hai 
 - Một email có thể gắn với **nhiều MSSV** (vd học văn bằng 2). Có một **MSSV chính**: mặc định MSSV trùng phần trước @ của email, người dùng đổi được.
   Chỉ chính người đó hoặc Admin đổi được. MSSV chính là thông tin điền vào file Word khi xuất đơn.
 - Database trường có MSSV thiếu ngành, khóa hoặc lớp: mục trống ghi "—". Không có MSSV nào (vd cán bộ) thì ẩn cả phần, không báo lỗi.
-- **Cần xác nhận cách kết nối** database sinh viên của trường.
+- Tra theo **email đăng nhập** trong database trường (SQL Server `CoreUis`, chỉ đọc; bảng, cột: `api/src/student-directory/school-database.json`), không cắt chuỗi email.
+  Database trường ghi gì thì hiện đúng như vậy, không ghép thêm mục khác, không tự điền thay (vd khóa gốc trống thì để trống).
+- Database trường không tới được: trang hồ sơ báo "Chưa lấy được thông tin sinh viên từ hệ thống của trường.", các trang khác vẫn dùng được.
 
 ## Vai trò và quyền
 

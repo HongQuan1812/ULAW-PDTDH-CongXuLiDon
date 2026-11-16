@@ -49,6 +49,12 @@ const AppEnvSchema = z.object({
   // OAuth client (loại Web application) tạo ở Google Cloud Console; bỏ trống: chưa bật đăng nhập Google (ENABLE_DEMO_APIS=true vẫn đăng nhập thử được)
   GOOGLE_CLIENT_ID: z.string().trim().default(''),
   GOOGLE_CLIENT_SECRET: z.string().trim().default(''),
+  // Database trường (SQL Server, chỉ đọc), cho student-directory bản thật; tên database, bảng, cột lấy từ student-directory/school-database.json
+  // · SCHOOL_DB_HOST bỏ trống: chưa kết nối (bản thật trả 503)
+  SCHOOL_DB_HOST: z.string().trim().default(''),
+  SCHOOL_DB_PORT: z.coerce.number().int().min(1).max(65535).default(1433),
+  SCHOOL_DB_USER: z.string().trim().default(''),
+  SCHOOL_DB_PASSWORD: z.string().default(''),
 });
 
 /** OAuth client của Google. */
@@ -68,6 +74,15 @@ export interface SmtpConfig {
   host: string;
   port: number;
   /** tài khoản đăng nhập, cũng là địa chỉ gửi */
+  user: string;
+  password: string;
+}
+
+/** Kết nối tới database trường (SQL Server). Tên database không ở đây: lấy từ school-database.json. */
+export interface SchoolDatabaseConfig {
+  /** vd '192.168.3.25' */
+  host: string;
+  port: number;
   user: string;
   password: string;
 }
@@ -95,6 +110,8 @@ export class AppConfig {
   readonly devEmailRedirectTo: string | null;
   /** Đăng nhập Google; null khi chưa điền GOOGLE_CLIENT_ID hoặc GOOGLE_CLIENT_SECRET. */
   readonly google: GoogleOAuthConfig | null;
+  /** Database trường; null khi chưa điền SCHOOL_DB_HOST. */
+  readonly schoolDatabase: SchoolDatabaseConfig | null;
 
   /**
    * Đọc và kiểm tra biến môi trường.
@@ -123,6 +140,14 @@ export class AppConfig {
           }
         : null;
     this.smtp = { host: parsed.data.SMTP_HOST, port: parsed.data.SMTP_PORT, user: parsed.data.SMTP_USER, password: parsed.data.SMTP_PASSWORD };
+    this.schoolDatabase = parsed.data.SCHOOL_DB_HOST
+      ? {
+          host: parsed.data.SCHOOL_DB_HOST,
+          port: parsed.data.SCHOOL_DB_PORT,
+          user: parsed.data.SCHOOL_DB_USER,
+          password: parsed.data.SCHOOL_DB_PASSWORD,
+        }
+      : null;
   }
 
   /**

@@ -74,7 +74,7 @@ Làm từng nhóm API. Xong nhóm nào thì chuyển nhóm đó sang API thật,
 ### Chưa làm, chờ thông tin từ bên ngoài
 
 - OAuth client thật cho máy chủ: tạo ở Google Cloud Console bằng tài khoản của trường, khai báo tên miền thật (cách tạo: README.md).
-- `student-directory` bản thật: đã có database trường, làm theo mục **`student-directory` bản thật** bên dưới. Bản giả `dev-student-directory` đọc bảng mẫu, bản thật hiện `throw realApiNotBuilt(...)` (501).
+- `student-directory` bản thật: đã đọc được database trường (mục **`student-directory` bản thật** bên dưới), còn tài khoản chỉ đọc riêng cho máy chủ. Bản giả `dev-student-directory` đọc bảng mẫu.
 - Triển khai lên máy chủ: xem Giai đoạn 3.
 
 ### `student-directory` bản thật
@@ -99,14 +99,14 @@ Database trường ghi gì thì trả đúng như vậy (chỉ cắt khoảng tr
 
 | # | Việc | Gồm | |
 |---|---|---|---|
-| 0 | Xem dữ liệu thật | chạy vài câu SELECT bằng tài khoản dev: kiểu cột chữ (`NVARCHAR` hay `VARCHAR`, tiếng Việt có lỗi font không), collation (so email không phân biệt hoa thường thì khỏi `LOWER()`, dùng được index), kết nối có bắt buộc mã hóa (TLS) không | |
-| 1 | Cấu hình | `SCHOOL_DB_HOST/PORT/USER/PASSWORD` trong `app-config.ts`, tên database lấy từ `school-database.json` (đã có trong `.env.*`) · `SCHOOL_DB_HOST` trống mà dùng bản thật: báo lỗi rõ "chưa cấu hình database trường", backend vẫn chạy | |
-| 2 | Kết nối | thêm thư viện `mssql` · `SchoolDatabaseService`: một pool dùng chung, kết nối khi cần lần đầu, đóng khi tắt backend, thời gian chờ ngắn (vd 5 giây) · database trường lỗi / không tới được: trả 503 kèm câu thông báo, các trang khác vẫn chạy | |
-| 3 | Câu truy vấn | một câu SELECT dựng từ tên bảng, tên cột trong `school-database.json` (đặt trong `[...]` của SQL Server); giá trị người dùng chỉ đi qua tham số (`@email`, không nối chuỗi), `LEFT JOIN` các bảng ở trên · chỉ SELECT đúng các cột cần, **không bao giờ** SELECT cột mật khẩu của `psc_StudentInfo` · tách hàm thuần "dòng kết quả → `StudentInfo[]`" (cắt khoảng trắng, chuỗi rỗng thành null, sắp MSSV trùng email lên đầu) | |
-| 4 | Nối vào API | `findStudents` bản thật thay cho `throw realApiNotBuilt('dev-student-directory')`; tìm theo email của người dùng thay vì `userId` · bản giả `dev-student-directory` giữ nguyên | |
-| 5 | Test | test hàm chuyển dòng → `StudentInfo[]` bằng dữ liệu giả (chạy trên CI, CI không tới được database trường) · test kết nối thật chỉ chạy khi có `SCHOOL_DB_HOST` · thử trên giao diện: `ALWAYS_REAL_APIS=dev-student-directory`, đăng nhập thử bằng một tài khoản có email sinh viên thật | |
-| 6 | Container, bản thật | thử gọi từ trong container api (Docker tới được IP LAN) · bản thật: tài khoản **chỉ đọc riêng** (chỉ quyền SELECT trên các bảng cần), không dùng tài khoản cá nhân · mở tường lửa cho IP máy chủ | |
-| 7 | Tài liệu | README (biến `SCHOOL_DB_*`), `.claude/CLAUDE.md` (cây thư mục, bỏ việc còn treo "cách kết nối database sinh viên"), `docs/business-rules.md` | |
+| 0 | Xem dữ liệu thật | chạy vài câu SELECT bằng tài khoản dev: kiểu cột chữ (`NVARCHAR` hay `VARCHAR`, tiếng Việt có lỗi font không), collation (so email không phân biệt hoa thường thì khỏi `LOWER()`, dùng được index), kết nối có bắt buộc mã hóa (TLS) không · kết quả: cột tên `NVARCHAR` (tiếng Việt đúng), collation `CI_AS` nên so `=` là đủ, cột `Email` là `VARCHAR(50)` không có index (tham số khai báo `VarChar`), mã hóa không bắt buộc (vẫn bật), tài khoản dev không có quyền sửa |✓ |
+| 1 | Cấu hình | `SCHOOL_DB_HOST/PORT/USER/PASSWORD` trong `app-config.ts`, tên database lấy từ `school-database.json` (đã có trong `.env.*`) · `SCHOOL_DB_HOST` trống mà dùng bản thật: báo lỗi rõ "chưa cấu hình database trường", backend vẫn chạy |✓ |
+| 2 | Kết nối | thêm thư viện `mssql` · `SchoolDatabaseService`: một pool dùng chung, kết nối khi cần lần đầu, đóng khi tắt backend, thời gian chờ ngắn (vd 5 giây) · database trường lỗi / không tới được: trả 503 kèm câu thông báo, các trang khác vẫn chạy |✓ |
+| 3 | Câu truy vấn | một câu SELECT dựng từ tên bảng, tên cột trong `school-database.json` (đặt trong `[...]` của SQL Server); giá trị người dùng chỉ đi qua tham số (`@email`, không nối chuỗi), `LEFT JOIN` các bảng ở trên · chỉ SELECT đúng các cột cần, **không bao giờ** SELECT cột mật khẩu của `psc_StudentInfo` · tách hàm thuần "dòng kết quả → `StudentInfo[]`" (cắt khoảng trắng, chuỗi rỗng thành null, sắp MSSV trùng email lên đầu) |✓ |
+| 4 | Nối vào API | `findStudents` bản thật thay cho `throw realApiNotBuilt('dev-student-directory')`; tìm theo email của người dùng thay vì `userId` · bản giả `dev-student-directory` giữ nguyên · các hàm nhận người dùng (`id`, `email`) thay cho `userId` |✓ |
+| 5 | Test | test hàm chuyển dòng → `StudentInfo[]` bằng dữ liệu giả (chạy trên CI, CI không tới được database trường) · test kết nối thật chỉ chạy khi có `SCHOOL_DB_HOST` · thử trên giao diện: `ALWAYS_REAL_APIS=dev-student-directory`, đăng nhập thử bằng một tài khoản có email sinh viên thật · đã thử trên 297 email thật (có đủ 47 email 2 MSSV): đều ra MSSV, trung bình 45 ms · **còn**: thử trên giao diện | |
+| 6 | Container, bản thật | thử gọi từ trong container api (Docker tới được IP LAN) · bản thật: tài khoản **chỉ đọc riêng** (chỉ quyền SELECT trên các bảng cần), không dùng tài khoản cá nhân · mở tường lửa cho IP máy chủ · container dev gọi được · **còn**: tài khoản chỉ đọc riêng, tường lửa | |
+| 7 | Tài liệu | README (biến `SCHOOL_DB_*`), `.claude/CLAUDE.md` (cây thư mục, bỏ việc còn treo "cách kết nối database sinh viên"), `docs/business-rules.md` |✓ |
 
 Để sau (ngoài phạm vi việc này): lấy họ tên (`psc_Students`), số điện thoại (`MobilePhone`, `HomePhone`) để điền sẵn khi sinh viên đăng nhập lần đầu.
 

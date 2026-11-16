@@ -114,7 +114,7 @@ export class ProfileController {
     @CurrentUser() user: User,
     @Body(new ZodValidationPipe(SetMainStudentRequestSchema, MAIN_STUDENT_MESSAGES[422])) setMainStudentRequest: SetMainStudentRequest,
   ): Promise<StudentsResponse> {
-    if (!(await this.profileService.ownsStudent(user.id, setMainStudentRequest.studentId))) {
+    if (!(await this.profileService.ownsStudent(user, setMainStudentRequest.studentId))) {
       throw new ApiException(422, MAIN_STUDENT_MESSAGES[422]);
     }
     return this.profileService.saveMainStudent(user, setMainStudentRequest.studentId);
@@ -208,7 +208,7 @@ export class ProfileController {
   ): Promise<StudentsResponse> {
     const person = await this.findPersonOrFail(userId);
     if (!can(editor.role, 'editApplicant')) throw new ApiException(403, MAIN_STUDENT_MESSAGES[403]);
-    if (!(await this.profileService.ownsStudent(person.id, setMainStudentRequest.studentId))) {
+    if (!(await this.profileService.ownsStudent(person, setMainStudentRequest.studentId))) {
       throw new ApiException(422, MAIN_STUDENT_MESSAGES.personNotOwned);
     }
     return this.profileService.saveMainStudent(person, setMainStudentRequest.studentId);

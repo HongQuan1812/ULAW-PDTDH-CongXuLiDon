@@ -244,7 +244,7 @@ export class ExportsService {
    * @returns     thông tin để điền
    */
   private async exportSourceOf(form: FormWithPeople): Promise<ExportSource> {
-    const { students, mainStudentId } = await this.studentDirectory.findStudentsResponse(form.ownerId, form.owner.mainStudentId);
+    const { students, mainStudentId } = await this.studentDirectory.findStudentsResponse(form.owner, form.owner.mainStudentId);
     const snapshot = form.formTypeSnapshot as unknown as FormType;
     const decided = form.status === 'duyet' || form.status === 'tc';
     return {
