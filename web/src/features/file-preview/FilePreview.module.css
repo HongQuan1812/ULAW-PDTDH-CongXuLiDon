@@ -17,6 +17,9 @@
 .word{width:100%;display:flex;justify-content:center}
 .word :global(.docx-wrapper){background:transparent!important;padding:0!important}
 .word :global(section.docx){box-shadow:0 8px 30px rgba(0,0,0,.4);margin-bottom:16px!important}
+/* Bảng giữ đúng độ rộng đặt trong file (vừa khổ giấy); chữ dài không có khoảng trắng (vd mã {cac_mon_..._ten_mon}) tự xuống dòng như Word, không kéo giãn bảng ra ngoài trang */
+.word :global(section.docx table){table-layout:fixed;max-width:100%}
+.word :global(section.docx td){overflow-wrap:anywhere;word-break:break-word}
 
 /* Excel: giống bảng tính, tiêu đề cột và số dòng dính khi cuộn, thẻ sheet ở đáy */
 .excel{width:100%;flex:1;min-height:0;display:flex;flex-direction:column;background:#fff;box-shadow:0 8px 30px rgba(0,0,0,.4);color:#1b1f1d}
