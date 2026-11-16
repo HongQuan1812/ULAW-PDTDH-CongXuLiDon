@@ -1,7 +1,7 @@
 /* Kết nối tới database trường (SQL Server), chỉ đọc. Một pool dùng chung, kết nối lần đầu khi cần, đóng khi tắt backend.
    Database trường chưa cấu hình, không tới được hoặc lỗi: trả 503, các trang khác vẫn chạy. */
 import { Injectable, Logger, type OnModuleDestroy } from '@nestjs/common';
-import { STUDENTS_MESSAGES, type StudentInfo } from '@ulaw/shared';
+import { STUDENTS_MESSAGES, type SchoolDatabaseProblem, type StudentInfo } from '@ulaw/shared';
 import sql from 'mssql';
 import { ApiException } from '../common/api-exception';
 import { AppConfig } from '../config/app-config';
@@ -13,6 +13,27 @@ const REQUEST_TIMEOUT_MS = 10000;
 
 /** Câu SELECT dựng một lần, chỉ phụ thuộc school-database.json. */
 const STUDENTS_BY_EMAIL_QUERY = buildStudentsByEmailQuery();
+
+/** Kết quả thử kết nối database trường. */
+export interface SchoolDatabaseConnectionCheck {
+  connected: boolean;
+  /** thời gian thử, mili giây; null khi chưa kết nối được */
+  latencyMs: number | null;
+  /** vì sao chưa kết nối được; null khi đã kết nối */
+  problem: SchoolDatabaseProblem | null;
+}
+
+/**
+ * Xếp lỗi của mssql vào một lí do để hiện cho Admin.
+ * @param error  lỗi bắt được khi kết nối / truy vấn
+ * @returns      'loginFailed' sai tài khoản, mật khẩu · 'unreachable' không tới được máy chủ, hết thời gian chờ · 'error' lỗi khác
+ */
+export function problemOf(error: unknown): SchoolDatabaseProblem {
+  const code = (error as { code?: unknown } | null)?.code;
+  if (code === 'ELOGIN') return 'loginFailed';
+  if (code === 'ESOCKET' || code === 'ETIMEOUT' || code === 'EINSTLOOKUP' || code === 'ECONNCLOSED') return 'unreachable';
+  return 'error';
+}
 
 @Injectable()
 export class SchoolDatabaseService implements OnModuleDestroy {
@@ -39,6 +60,25 @@ export class SchoolDatabaseService implements OnModuleDestroy {
       if (error instanceof ApiException) throw error;
       this.logger.error(`Không đọc được database trường: ${error instanceof Error ? error.message : String(error)}`);
       throw new ApiException(503, STUDENTS_MESSAGES[503]);
+    }
+  }
+
+  /**
+   * Thử kết nối và chạy một câu truy vấn nhỏ (SELECT 1), cho trang Nguồn dữ liệu. Không báo lỗi ra ngoài.
+   * @returns  đã kết nối được chưa, mất bao lâu (mili giây), vì sao chưa kết nối được
+   */
+  async checkConnection(): Promise<SchoolDatabaseConnectionCheck> {
+    if (!this.appConfig.schoolDatabase) return { connected: false, latencyMs: null, problem: 'notConfigured' };
+
+    // Tính cả thời gian kết nối lần đầu (nếu pool chưa có)
+    const startedAt = Date.now();
+    try {
+      const pool = await this.pool();
+      await pool.request().query('SELECT 1 AS ok');
+      return { connected: true, latencyMs: Date.now() - startedAt, problem: null };
+    } catch (error) {
+      this.logger.warn(`Thử kết nối database trường không được: ${error instanceof Error ? error.message : String(error)}`);
+      return { connected: false, latencyMs: null, problem: problemOf(error) };
     }
   }
 

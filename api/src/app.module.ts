@@ -13,6 +13,7 @@ import { HealthModule } from './health/health.module';
 import { ProfileModule } from './profile/profile.module';
 import { AccountsModule } from './accounts/accounts.module';
 import { EmailModule } from './email/email.module';
+import { DataSourcesModule } from './data-sources/data-sources.module';
 
-@Module({ imports: [ConfigModule, PrismaModule, AuthModule, HealthModule, ProfileModule, AccountsModule, FormTypesModule, FilesModule, FormsModule, FormModule, ExportsModule, FormNotesModule, EmailModule] })
+@Module({ imports: [ConfigModule, PrismaModule, AuthModule, HealthModule, ProfileModule, AccountsModule, FormTypesModule, FilesModule, FormsModule, FormModule, ExportsModule, FormNotesModule, EmailModule, DataSourcesModule] })
 export class AppModule {}

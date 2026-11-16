@@ -17,6 +17,7 @@ export const PERMISSIONS = [
   'manageAccounts', //     trang Quản lí tài khoản
   'manageFormTypes', //    trang Quản lí loại đơn
   'manageEmail', //        trang Cấu hình email: người gửi, bật / tắt và nội dung email báo khi đơn đổi trạng thái
+  'manageDataSources', //  trang Nguồn dữ liệu: xem cấu hình và tình trạng kết nối tới database trường
 ] as const;
 export type Permission = (typeof PERMISSIONS)[number];
 
@@ -27,6 +28,7 @@ export const PAGES = [
   'formTypes', // Quản lí loại đơn
   'accounts', //   Quản lí tài khoản
   'emailSettings', // Cấu hình email
+  'dataSources', //  Nguồn dữ liệu
 ] as const;
 export type Page = (typeof PAGES)[number];
 

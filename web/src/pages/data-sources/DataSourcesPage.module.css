@@ -1,0 +1,32 @@
+/* Trang Nguồn dữ liệu. Khung trang, thẻ dùng chung ProfilePage.module.css. */
+
+.titleBlock{display:grid;gap:4px;min-width:0}
+.title{font-size:clamp(24px,2.6vw,30px);line-height:1.2;font-weight:600;letter-spacing:-.03em}
+.subtitle{font-size:13px;color:var(--muted)}
+
+/* thẻ một nguồn dữ liệu */
+.sourceCard{display:grid;gap:16px}
+.cardHead{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.cardTitleBlock{display:grid;gap:4px;min-width:0}
+.cardTitleBlock h2{font-size:17px;font-weight:600}
+.cardDescription{font-size:13px;color:var(--muted)}
+
+/* nhãn kết nối (như trang Cấu hình email) */
+.connection{display:flex;align-items:center;gap:8px}
+.connected,.disconnected,.checking{display:inline-flex;align-items:center;gap:8px;font-size:12.5px;font-weight:500;padding:3px 11px;border-radius:999px;white-space:nowrap}
+.connected{color:var(--s-duyet-fg);background:var(--s-duyet-bg)}
+.disconnected{color:var(--s-tc-fg);background:var(--s-tc-bg)}
+.checking{color:var(--muted);background:var(--surface-2)}
+.connected i,.disconnected i,.checking i{width:7px;height:7px;border-radius:50%;background:currentColor}
+
+/* lí do chưa kết nối được (đỏ), ghi chú dùng dữ liệu mẫu (vàng) */
+.problem,.note{font-size:13.5px;padding:10px 14px;border-radius:var(--r);overflow-wrap:anywhere}
+.problem{color:var(--s-tc-fg);background:var(--s-tc-bg)}
+.note{color:var(--s-bs-fg);background:var(--s-bs-bg)}
+
+/* cấu hình: nhãn bên trái, giá trị bên phải; hẹp thì nhãn nằm trên */
+.details{margin:0;display:grid;border-top:1px solid var(--line)}
+.details>div{display:grid;grid-template-columns:minmax(140px,200px) minmax(0,1fr);gap:4px 16px;padding:10px 0;border-bottom:1px solid var(--line)}
+.details dt{font-size:13.5px;color:var(--muted)}
+.details dd{margin:0;font-size:14px;overflow-wrap:anywhere}
+@media (max-width:520px){.details>div{grid-template-columns:minmax(0,1fr)}}

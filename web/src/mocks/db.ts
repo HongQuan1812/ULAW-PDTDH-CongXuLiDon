@@ -691,7 +691,7 @@ function toDetail(form: MockForm): FormDetail {
  * Thời điểm hiện tại theo giờ Việt Nam (UTC+7), không phụ thuộc múi giờ của máy.
  * @returns  vd '2026-11-10T16:05'
  */
-function vietnamNow(): string {
+export function vietnamNow(): string {
   return new Date(Date.now() + 7 * 3_600_000).toISOString().slice(0, 16);
 }
 

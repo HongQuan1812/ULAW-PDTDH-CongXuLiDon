@@ -56,6 +56,7 @@ Giao diện ẩn / hiện nút theo quyền; **máy chủ kiểm tra lại mọi
 | Quản lí tài khoản: tạo, sửa thông tin và vai trò | `manageAccounts` | ✗ | ✗ | ✓ |
 | Quản lí loại đơn: tạo, sửa, mở / đóng | `manageFormTypes` | ✗ | ✓ | ✓ |
 | Cấu hình email | `manageEmail` | ✗ | ✓ | ✓ |
+| Nguồn dữ liệu: xem cấu hình (không có mật khẩu) và tình trạng kết nối database trường | `manageDataSources` | ✗ | ✗ | ✓ |
 
 Ghi chú:
 - **Admin không tự đổi được vai trò của chính mình**, để không tự khóa mình khỏi trang Quản lí tài khoản (`canChangeAccountRole`).

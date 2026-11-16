@@ -6,6 +6,7 @@
 export const API_GROUPS = [
   'accounts',
   'auth',
+  'data-sources',
   'email',
   'exports',
   'files',

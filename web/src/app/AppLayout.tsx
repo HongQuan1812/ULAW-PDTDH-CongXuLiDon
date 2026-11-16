@@ -294,6 +294,14 @@ const PAGE_ICON: Record<Page, ReactNode> = {
       <path d="m3 7 9 6 9-6" />
     </Icon>
   ),
+  // Nguồn dữ liệu: hình trụ database
+  dataSources: (
+    <Icon>
+      <ellipse cx="12" cy="5.5" rx="7.5" ry="2.5" />
+      <path d="M4.5 5.5v13c0 1.4 3.4 2.5 7.5 2.5s7.5-1.1 7.5-2.5v-13" />
+      <path d="M4.5 12c0 1.4 3.4 2.5 7.5 2.5s7.5-1.1 7.5-2.5" />
+    </Icon>
+  ),
 };
 
 function MenuIcon() {

@@ -2,6 +2,7 @@ import { HttpHandler, passthrough, type RequestHandler } from 'msw';
 import { REAL_BACKEND_GROUPS, type ApiGroup } from '../realBackendGroups';
 import { accountHandlers } from './accounts';
 import { authHandlers } from './auth';
+import { dataSourceHandlers } from './data-sources';
 import { emailHandlers } from './email';
 import { exportHandlers } from './exports';
 import { fileHandlers } from './files';
@@ -17,6 +18,7 @@ import { createRandomFailureHandler } from './random-failure';
 const HANDLER_GROUPS: readonly (readonly [ApiGroup, readonly HttpHandler[]])[] = [
   ['auth', authHandlers],
   ['accounts', accountHandlers],
+  ['data-sources', dataSourceHandlers],
   ['email', emailHandlers],
   // forms trước form: /forms/mine, /forms/handled, /forms/cccds phải được xét trước /forms/:code
   ['forms', formsHandlers],

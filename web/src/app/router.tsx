@@ -1,6 +1,7 @@
 import { RichTextDemoPage } from '../pages/dev/RichTextDemoPage';
 import { createHashRouter } from 'react-router';
 import { AccountsPage } from '../pages/accounts/AccountsPage';
+import { DataSourcesPage } from '../pages/data-sources/DataSourcesPage';
 import { EmailSettingsPage } from '../pages/email-settings/EmailSettingsPage';
 import { FormDetailPage } from '../pages/form/FormDetailPage';
 import { NewFormPage } from '../pages/form/NewFormPage';
@@ -59,6 +60,10 @@ export const router = createHashRouter([
       {
         path: PAGE_PATH.emailSettings,
         element: <PageGuard page="emailSettings" permission="manageEmail"><EmailSettingsPage /></PageGuard>,
+      },
+      {
+        path: PAGE_PATH.dataSources,
+        element: <PageGuard page="dataSources" permission="manageDataSources"><DataSourcesPage /></PageGuard>,
       },
       // Trang thử tạm của trình soạn văn bản (xóa khi đã gắn vào câu hỏi / mô tả phần)
       { path: '/thu-soan-van-ban', element: <RichTextDemoPage /> },
