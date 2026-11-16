@@ -1,0 +1,71 @@
+/* Trang Sao lưu. Khung trang, thẻ dùng chung ProfilePage.module.css. */
+
+.titleBlock{display:grid;gap:4px;min-width:0}
+.title{font-size:clamp(24px,2.6vw,30px);line-height:1.2;font-weight:600;letter-spacing:-.03em}
+.subtitle{font-size:13px;color:var(--muted)}
+
+/* đầu thẻ: tên, mô tả bên trái; nút bên phải */
+.cardHead{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+.cardTitleBlock{display:grid;gap:4px;min-width:0;flex:1 1 260px}
+.cardTitleBlock h2{font-size:17px;font-weight:600}
+.cardDescription{font-size:13px;color:var(--muted)}
+.cardActions{display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap;margin-top:16px}
+
+/* thẻ tóm tắt: ba ô, hẹp thì xếp dọc */
+.summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+.summaryItem{display:grid;gap:4px;align-content:start;min-width:0}
+.summaryItem>span:first-child{font-size:12.5px;color:var(--muted)}
+.summaryItem strong{font-size:15px;font-weight:600;overflow-wrap:anywhere}
+@media (max-width:720px){.summary{grid-template-columns:minmax(0,1fr)}}
+.runningPill{display:inline-flex;align-items:center;gap:8px;width:max-content;font-size:12.5px;font-weight:500;padding:3px 11px;border-radius:999px;color:var(--s-xet-fg);background:var(--s-xet-bg)}
+.runningPill i{width:7px;height:7px;border-radius:50%;background:currentColor;animation:pulse 1.2s ease-in-out infinite}
+@keyframes pulse{50%{opacity:.3}}
+@media (prefers-reduced-motion:reduce){.runningPill i{animation:none}}
+
+/* ô chọn có nhãn ngắn đứng trước */
+.inlineField{display:flex;align-items:center;gap:10px;min-width:0}
+.inlineField>span{font-size:13.5px;color:var(--muted);white-space:nowrap}
+.inlineField select,.inlineField input{min-width:0}
+
+/* sao lưu ngay */
+.runNow{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.runNow .inlineField{flex:1 1 280px}
+.runNow select{flex:1}
+
+/* nơi lưu: mỗi nơi một dòng, nút bên phải; hẹp thì nút xuống dưới */
+.targetList{list-style:none;margin:0;padding:0;display:grid;border-top:1px solid var(--line)}
+.target{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:12px 0;border-bottom:1px solid var(--line)}
+.targetInfo{display:grid;gap:3px;min-width:0;flex:1 1 280px}
+.targetInfo strong{font-weight:600}
+.targetMeta{font-size:13px;color:var(--muted);overflow-wrap:anywhere}
+.targetActions{display:flex;gap:8px;flex-wrap:wrap}
+.warning{font-size:13px;color:var(--s-bs-fg)}
+
+/* lịch định kì */
+.switch{display:inline-flex;align-items:center;gap:8px;font-size:13.5px;font-weight:500;cursor:pointer}
+.scheduleGrid{border:0;margin:0;padding:0;display:flex;gap:12px 20px;flex-wrap:wrap}
+.scheduleTargets{border:0;margin:16px 0 0;padding:0;display:grid;gap:8px}
+.scheduleTargets legend{font-size:13.5px;color:var(--muted);padding:0;margin-bottom:8px}
+.scheduleGrid:disabled,.scheduleTargets:disabled{opacity:.55}
+.checkRow{display:flex;align-items:center;gap:10px;font-size:14px;cursor:pointer}
+.checkRow small{color:var(--muted)}
+.formError{margin-top:12px;font-size:13px;color:var(--s-tc-fg)}
+
+/* lịch sử: bảng cuộn ngang trong thẻ khi hẹp */
+.tableWrap{overflow-x:auto;margin:0 -4px}
+.history{width:100%;border-collapse:collapse;font-size:13.5px}
+.history th{text-align:left;font-weight:500;font-size:12.5px;color:var(--muted);padding:8px;border-bottom:1px solid var(--line-2);white-space:nowrap}
+.history td{padding:10px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+.nowrap{white-space:nowrap}
+.cellSub,.cellError{display:block;font-size:12px;margin-top:2px}
+.cellSub{color:var(--muted)}
+.cellError{color:var(--s-tc-fg);overflow-wrap:anywhere;max-width:320px}
+.statusOk,.statusError,.statusRunning{font-weight:500}
+.statusOk{color:var(--s-duyet-fg)}
+.statusError{color:var(--s-tc-fg)}
+.statusRunning{color:var(--s-xet-fg)}
+
+/* hộp thoại */
+.dialogForm{display:grid;gap:16px}
+.dialogText{font-size:13.5px;color:var(--muted)}
+.dialogButtons{display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap;margin-top:8px}

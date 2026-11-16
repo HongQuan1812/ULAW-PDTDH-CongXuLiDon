@@ -57,6 +57,7 @@ Giao diện ẩn / hiện nút theo quyền; **máy chủ kiểm tra lại mọi
 | Quản lí loại đơn: tạo, sửa, mở / đóng | `manageFormTypes` | ✗ | ✓ | ✓ |
 | Cấu hình email | `manageEmail` | ✗ | ✓ | ✓ |
 | Nguồn dữ liệu: xem cấu hình (không có mật khẩu) và tình trạng kết nối database trường | `manageDataSources` | ✗ | ✗ | ✓ |
+| Sao lưu: nơi lưu, sao lưu ngay, lịch định kì, lịch sử, tải bản sao lưu về | `manageBackups` | ✗ | ✗ | ✓ |
 
 Ghi chú:
 - **Admin không tự đổi được vai trò của chính mình**, để không tự khóa mình khỏi trang Quản lí tài khoản (`canChangeAccountRole`).
@@ -199,6 +200,26 @@ Mỗi loại đơn có hai nhóm mẫu, lưu ở máy chủ theo loại đơn, d
   Bản giả `dev-email` (`ENABLE_DEMO_APIS=true`, không có `dev-email` trong `ALWAYS_REAL_APIS`): thư tự động gửi về `DEV_EMAIL_REDIRECT_TO` thay vì người nộp đơn (bỏ trống thì chỉ in ra console), để không gửi nhầm tới email của người dùng mẫu. Bản thật gửi tới email người nộp đơn.
 - Backend: bảng `EmailSettings` (một dòng), module `api/src/email/`. Máy chủ thư đặt ở `.env.dev` / `.env.prod` (`SMTP_HOST`, `SMTP_PORT`, `SMTP_USER` là địa chỉ gửi, `SMTP_PASSWORD`).
   Chưa đặt `SMTP_HOST` thì chưa gửi được thư; riêng bản giả `dev-email` thì thư in ra console thay vì gửi đi.
+
+## Sao lưu
+
+- Trang **Sao lưu** (`#/sao-luu`, chỉ Admin). Mỗi bản sao lưu luôn gồm **cả database lẫn tệp tải lên**, là một tệp `sao-luu-<YYYYMMDD-HHmmss>.tar.gz`
+  chứa `manifest.json`, `database.dump` (`pg_dump` dạng custom, khôi phục bằng `pg_restore`) và thư mục `uploads/`.
+- **Nơi lưu**: thư mục trên máy chủ (thư mục con trong `BACKUP_DIR`, không ra ngoài được) hoặc Google Drive (Admin bấm kết nối tài khoản Google,
+  cổng chỉ xin quyền `drive.file`: chỉ thấy tệp, thư mục do chính nó tạo; thư mục chưa có thì tự tạo). Mỗi nơi lưu đặt **giữ N bản gần nhất**:
+  sau mỗi lần sao lưu thành công vào đó, bản cũ hơn bị xóa (lịch sử vẫn ghi, đánh dấu đã xóa). Hai nơi lưu không được cùng kiểu cùng thư mục.
+  Bỏ nơi lưu: lịch không lưu vào đó nữa, bản đã lưu và lịch sử giữ nguyên.
+- **Sao lưu ngay**: chọn một nơi lưu, hoặc **Tải về máy này** (tạo bản rồi tải thẳng về trình duyệt, không giữ trên máy chủ). Mỗi lúc chỉ chạy một bản;
+  đang chạy thì bấm lại báo 409. Bản lưu ở thư mục máy chủ có nút Tải về trong lịch sử.
+- **Lịch định kì**: bật / tắt, hằng ngày hoặc hằng tuần (thứ mấy), giờ chạy theo giờ Việt Nam, lưu vào một hoặc nhiều nơi (một tệp, chép vào từng nơi;
+  nơi nào lỗi thì chỉ dòng đó lỗi). Backend kiểm mỗi 30 giây; tắt đúng phút chạy thì lần ấy bỏ qua; khởi động lại trong cùng phút không chạy trùng.
+  Bản thật mặc định (seed:production, chỉ thêm khi chưa có lịch): một nơi lưu "Trên máy chủ" (`hang-ngay`, giữ 14 bản), chạy 02:00 hằng ngày.
+- **Lịch sử**: mỗi lần sao lưu vào mỗi nơi một dòng: lúc bắt đầu, nơi lưu (tên chép lại lúc chạy), chạy tay (ai bấm) hay định kì, dung lượng, thành công / lỗi kèm câu lỗi.
+  Backend tắt khi đang sao lưu thì lần đó ghi lỗi lúc bật lại.
+- Google Drive: refresh token lưu mã hóa (khóa băm từ `GOOGLE_CLIENT_SECRET`), không trả về giao diện; đổi bí mật hoặc thu hồi quyền thì phải kết nối lại.
+  Cần thêm redirect URI `<địa chỉ cổng>/api/backups/google-drive/callback` vào OAuth client (README, mục Đăng nhập Google).
+- Khôi phục từ bản sao lưu: chưa làm.
+- Backend: bảng `BackupTarget`, `BackupSchedule` (một dòng), `BackupRun`, module `api/src/backups/`. Image api cài sẵn `pg_dump` 18 (khớp PostgreSQL).
 
 ## Quy ước màu
 

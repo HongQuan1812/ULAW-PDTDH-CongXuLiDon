@@ -142,10 +142,36 @@ Bước 6 (CI/CD) thử trọn vẹn trên máy cá nhân trước. Khi lên má
 | 1 | Tách biến môi trường dev / bản thật | `trien-khai-container` | `.env.dev.example`, `.env.prod.example` thay cho ba tệp mẫu hiện có (`.env.example` gốc, `api/.env.example`, `web/.env.example`): mỗi môi trường **một tệp** gồm biến Postgres, backend, giao diện; compose chia biến cho từng container · `.gitignore` bỏ qua `.env.dev`, `.env.prod`, giữ hai tệp mẫu · `.env.prod.example` ghi sẵn giá trị bản thật: `APP_ENV=` trống, `ENABLE_DEMO_APIS=false`, `WEB_BASE_URL_PRODUCTION`, `SMTP_*`, `GOOGLE_*`, email Admin đầu tiên, mật khẩu Postgres đặt mới · `VITE_*` của bản thật vẫn cố định trong `web/Dockerfile` (không bao giờ bật MSW ở bản thật) · app vẫn chỉ cấu hình bằng biến môi trường, container chỉ ghi sẵn giá trị: không có container vẫn chạy được (`loadApiEnvFile` đọc `.env.dev` ở thư mục gốc thay cho `api/.env`; biến compose truyền vào thì ưu tiên hơn, kiểm lại cách `process.loadEnvFile` xử lí biến đã có) · muốn thử API thật khi dev (vd đăng nhập Google) thì sửa `.env.dev` rồi `up -d api`, không cần bản prod · sửa README, `.claude/CLAUDE.md` (mục Hạ tầng) theo cách mới | ✓ |
 | 2 | Container hóa dev | `trien-khai-container` | `docker-compose.dev.yml` (đã đổi tên từ `docker-compose.yml`): postgres (mở cổng 5432 để xem bằng công cụ DB) · api: target `dev` của `api/Dockerfile`, gắn mã nguồn vào container, lệnh khởi động `migrate deploy` → `prisma db seed` → `pnpm dev` (seed chỉ chạy lúc bật / restart container, sửa code thì `pnpm dev` tự chạy lại, không seed) · web: target `dev` của `web/Dockerfile`, Vite `https://localhost:5173`, `API_PROXY_TARGET=http://api:3000` · `node_modules` của container để trong volume riêng, không lẫn với máy · test chạy trong container (`docker compose -f docker-compose.dev.yml exec api pnpm test`) hoặc trên máy như cũ · trên máy vẫn `pnpm install` để VS Code gợi ý code, báo lỗi kiểu · chạy web một mình với API giả (MSW) vẫn làm được (`VITE_USE_MOCK_BACKEND=true` trong `.env.dev`) | ✓ |
 | 3 | Cấu hình bản thật | `trien-khai-container` | `docker-compose.prod.yml` đọc `.env.prod` · lệnh khởi động api: `migrate deploy` → `seed:production` → `node dist/main.mjs`, mỗi lần bật / restart (đã có: `api/prisma/seed-production.ts` tạo Admin + cấu hình email, không xóa gì, chạy lại an toàn) · user dự án không có quyền `CREATEDB` ở bản thật (đã có: `APP_DB_CREATEDB: 'false'`; dev vẫn có vì `prisma migrate dev` cần tạo shadow database) · mật khẩu Postgres, SMTP, Google đặt mới, không dùng lại mật khẩu dev · email Admin đầu tiên lấy từ `FIRST_ADMIN_EMAIL` | ✓ |
-| 4 | Chạy thử bản thật trên máy mình | `trien-khai-container` | `docker compose -f docker-compose.prod.yml up -d` với `localhost` và chứng chỉ tự kí · đăng nhập Google bằng Admin đầu tiên · nộp đơn, tải tệp, xử lí đơn, xuất Word, gửi thư · F5 ở trang con (vd `/forms/123`) không bị 404 · restart container: dữ liệu và tệp tải lên vẫn còn | |
-| 5 | Vận hành | `trien-khai-van-hanh` | viết sẵn script sao lưu Postgres và thư mục tệp tải lên · cách xem log · cách cập nhật bản mới (build lại rồi `up -d`; `migrate deploy` tự chạy lúc bật container) · cách khôi phục từ bản sao lưu · thử hết trên máy mình | |
+| 4 | Chạy thử bản thật trên máy mình | `trien-khai-container` | `docker compose -f docker-compose.prod.yml up -d` với `localhost` và chứng chỉ tự kí · đăng nhập Google bằng Admin đầu tiên · nộp đơn, tải tệp, xử lí đơn, xuất Word, gửi thư · F5 ở trang con (vd `/forms/123`) không bị 404 · restart container: dữ liệu và tệp tải lên vẫn còn · đã thử: đăng nhập Google, lấy được thông tin sinh viên từ database trường, F5 trang con, http → https, restart giữ dữ liệu; nộp / xử lí / xuất Word / gửi thư đã thử ở bản dev (cùng code) | ✓ |
+| 5 | Sao lưu | `trien-khai-sao-luu` | trang Sao lưu cho Admin: nơi lưu, sao lưu ngay, lịch định kì, lịch sử (mục **Sao lưu** bên dưới) · xem log đã có (`pnpm prod:logs`), `migrate deploy` đã tự chạy lúc bật container (bước 3) · khôi phục: bàn sau | |
 | 6 | CI/CD | `trien-khai-ci-cd` | GitHub Actions, chạy khi merge vào `main`: ① **CI**: chạy `pnpm --filter shared test`, `api test`, `web test` trên máy sạch (api cần Postgres tạm làm service container, chạy luôn migration); bỏ E2E Playwright cho nhẹ · đỏ thì dừng, không deploy ② **Build**: dựng image `api` và `nginx + web` rồi đẩy lên registry (GHCR); `VITE_USE_MOCK_BACKEND=false` và `VITE_APP_ENV=` đã đặt sẵn trong `web/Dockerfile`, CI không cần `.env.dev` ③ **Deploy**: máy đích kéo image mới → sao lưu Postgres → `migrate deploy` → `up -d` · thử deploy lên **máy cá nhân** bằng **self-hosted runner** (GitHub không tự với tới máy nằm sau mạng nhà / LAN) · secret để trong GitHub Secrets hoặc `.env` trên máy đích · tuỳ chọn: bấm Approve tay (GitHub Environments) trước khi deploy | |
 | 7 | Lên máy chủ thật | (không có nhánh) | **chờ bên ngoài**: máy chủ Linux có Docker · domain / subdomain (vd `donthi.hcmulaw.edu.vn`) · chứng chỉ HTTPS thật · mở cổng 80/443 · thêm redirect `https://<domain>/api/auth/google/callback` vào OAuth client Google của trường (đã có) · máy chủ tới được database trường (192.168.3.25:1433) · xác nhận tên miền email thật để điền `SCHOOL_EMAIL_DOMAINS` · khi đủ thì: tạo `.env.prod` thật, mount chứng chỉ, `up -d`, đăng nhập Google bằng email trường, chạy lại các luồng chính | |
+
+### Sao lưu
+
+Tính năng của cổng, chỉ Admin dùng (quyền mới trong `ROLES`). Mỗi bản sao lưu luôn gồm **cả database lẫn tệp tải lên**: một tệp `sao-luu-<YYYYMMDD-HHmmss>.tar.gz` chứa `database.dump` (`pg_dump -Fc`) và thư mục `uploads/`. api tự chạy, không cần script ngoài.
+
+Nơi lưu:
+
+| Kiểu | Gồm |
+|---|---|
+| Thư mục trên máy chủ | Admin đặt tên và thư mục con, nằm trong `BACKUP_DIR` (volume `backups`, máy chủ thật có thể gắn ổ thứ hai vào đây); không cho ra ngoài `BACKUP_DIR` |
+| Google Drive | Admin bấm kết nối tài khoản Google (OAuth client của trường, quyền `drive.file`), chọn thư mục; refresh token lưu mã hóa ở máy chủ, không trả về giao diện |
+| Tải về máy Admin | chỉ có khi sao lưu ngay: tạo bản rồi tải thẳng về trình duyệt, không giữ trên máy chủ; bản đã lưu ở thư mục máy chủ cũng có nút tải về |
+
+- **Sao lưu ngay**: chọn một nơi lưu rồi bấm. Mỗi lúc chỉ chạy một bản, đang chạy thì nút khóa lại.
+- **Lịch định kì**: bật / tắt, hằng ngày hoặc hằng tuần (thứ mấy), giờ chạy, nơi lưu (một hoặc nhiều, không có Tải về). Mỗi nơi lưu đặt giữ N bản gần nhất (bản cũ hơn tự xóa sau mỗi lần sao lưu thành công, chạy tay hay định kì đều vậy). Giờ theo `Asia/Ho_Chi_Minh`.
+- **Lịch sử**: mỗi lần chạy một dòng: lúc bắt đầu, thời gian chạy, chạy tay (ai bấm) hay định kì, nơi lưu, dung lượng, thành công / lỗi (kèm câu lỗi). Trên đầu trang: lần sao lưu thành công gần nhất, lần chạy định kì tới.
+- Lỗi khi sao lưu (hết chỗ, mất kết nối Drive…) ghi vào lịch sử, không làm hỏng các trang khác.
+
+| # | Việc | Gồm | |
+|---|---|---|---|
+| 0 | Hợp đồng | `shared/src/api-contract/backups.ts`: nơi lưu, lịch, lịch sử, sao lưu ngay, tải về · quyền mới · câu thông báo | ✓ |
+| 1 | API giả, giao diện | handler MSW · hook · trang Sao lưu trong menu Admin: thẻ tóm tắt, nơi lưu, lịch, bảng lịch sử | ✓ |
+| 2 | Bảng, chạy sao lưu | `schema.prisma`: `BackupTarget`, `BackupSchedule`, `BackupRun` · `pg_dump` trong image api (bản `postgresql-client` khớp Postgres 18) · volume `backups` · tạo tệp `.tar.gz`, lưu vào thư mục máy chủ, tải về | |
+| 3 | Lịch định kì | api tự kiểm mỗi phút, tới giờ thì chạy · giữ N bản gần nhất · restart không chạy trùng | |
+| 4 | Google Drive | kết nối tài khoản, chọn thư mục, tải tệp lên · xóa bản cũ trên Drive · mất quyền thì báo trong lịch sử | |
+| 5 | Test, tài liệu | test api (quyền, lịch, giữ N bản) · thử trên bản prod ở máy mình · README, `docs/business-rules.md` | |
 
 ### Lưu ý khi triển khai
 

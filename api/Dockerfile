@@ -6,9 +6,16 @@
 # ---------- Nền chung ----------
 FROM node:24.16.0-slim AS base
 
-# Prisma cần openssl; pnpm cùng phiên bản với máy phát triển
+# Prisma cần openssl; trang Sao lưu cần pg_dump cùng bản với PostgreSQL (18, lấy từ kho apt.postgresql.org) và tar;
+# pnpm cùng phiên bản với máy phát triển
 RUN apt-get update \
-  && apt-get install -y --no-install-recommends openssl \
+  && apt-get install -y --no-install-recommends openssl ca-certificates curl \
+  && install -d /usr/share/postgresql-common/pgdg \
+  && curl -fsSL -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc https://www.postgresql.org/media/keys/ACCC4CF8.asc \
+  && . /etc/os-release \
+  && echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt $VERSION_CODENAME-pgdg main" > /etc/apt/sources.list.d/pgdg.list \
+  && apt-get update \
+  && apt-get install -y --no-install-recommends postgresql-client-18 \
   && rm -rf /var/lib/apt/lists/* \
   && npm install -g pnpm@12.18.0
 ENV CI=true
@@ -41,9 +48,9 @@ COPY shared/ shared/
 COPY api/ api/
 RUN pnpm --filter api build
 
-# Thư mục tệp tải lên (gắn volume ở docker-compose.prod.yml), thuộc user node vì không chạy bằng root
+# Thư mục tệp tải lên và thư mục sao lưu (gắn volume ở docker-compose.prod.yml), thuộc user node vì không chạy bằng root
 WORKDIR /app/api
-RUN mkdir -p uploads && chown node:node uploads
+RUN mkdir -p uploads backups && chown node:node uploads backups
 USER node
 
 ENV NODE_ENV=production

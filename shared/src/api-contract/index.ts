@@ -1,6 +1,7 @@
 /* HỢP ĐỒNG API: mỗi nhóm API một file, gom lại ở đây. */
 import { ACCOUNT_ENDPOINTS } from './accounts';
 import { AUTH_ENDPOINTS } from './auth';
+import { BACKUP_ENDPOINTS } from './backups';
 import { DATA_SOURCE_ENDPOINTS } from './data-sources';
 import { EMAIL_ENDPOINTS } from './email';
 import { EXPORT_ENDPOINTS } from './exports';
@@ -15,6 +16,7 @@ import { PROFILE_ENDPOINTS } from './profile';
 export * from './common';
 export * from './accounts';
 export * from './auth';
+export * from './backups';
 export * from './data-sources';
 export * from './email';
 export * from './exports';
@@ -30,6 +32,7 @@ export * from './profile';
 export const ENDPOINTS = {
   accounts: ACCOUNT_ENDPOINTS,
   auth: AUTH_ENDPOINTS,
+  backups: BACKUP_ENDPOINTS,
   dataSources: DATA_SOURCE_ENDPOINTS,
   email: EMAIL_ENDPOINTS,
   exports: EXPORT_ENDPOINTS,

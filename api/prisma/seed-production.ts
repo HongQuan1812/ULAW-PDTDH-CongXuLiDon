@@ -16,6 +16,7 @@ const ADMIN_MESSAGES = {
   unchanged: 'đã là Admin từ trước, giữ nguyên',
 } as const;
 const EMAIL_SETTINGS_MESSAGES = { created: 'đã tạo cấu hình mặc định', unchanged: 'đã có, giữ nguyên' } as const;
+const BACKUP_MESSAGES = { created: 'đã tạo nơi lưu trên máy chủ và lịch 02:00 hằng ngày', unchanged: 'đã có lịch, giữ nguyên' } as const;
 
 // Email Admin: tham số dòng lệnh, không có thì lấy FIRST_ADMIN_EMAIL
 const adminEmail = process.argv[2] || process.env.FIRST_ADMIN_EMAIL?.trim();
@@ -29,6 +30,7 @@ try {
   const report = await seedProduction(prisma, adminEmail, process.env.FIRST_ADMIN_NAME ?? '');
   console.log(`Admin ${adminEmail}: ${ADMIN_MESSAGES[report.admin]}.`);
   console.log(`Cấu hình email: ${EMAIL_SETTINGS_MESSAGES[report.emailSettings]}.`);
+  console.log(`Sao lưu: ${BACKUP_MESSAGES[report.backups]}.`);
 } finally {
   await prisma.$disconnect();
 }

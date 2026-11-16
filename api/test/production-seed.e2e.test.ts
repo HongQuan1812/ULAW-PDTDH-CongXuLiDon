@@ -27,7 +27,7 @@ describe('seedProduction', () => {
 
     const report = await seedProduction(prisma, '  Admin.Dau.Tien@HCMULAW.edu.vn ');
 
-    expect(report).toEqual({ admin: 'created', emailSettings: 'unchanged' });
+    expect(report).toEqual({ admin: 'created', emailSettings: 'unchanged', backups: 'unchanged' });
     const admin = await prisma.user.findUniqueOrThrow({ where: { email: NEW_ADMIN_EMAIL } });
     expect(admin).toMatchObject({ role: 'admin', name: '', completed: false });
     expect(admin.id).toMatch(/^tk-/);
@@ -41,7 +41,7 @@ describe('seedProduction', () => {
 
     const report = await seedProduction(prisma, NEW_ADMIN_EMAIL, 'Nguyễn Văn A');
 
-    expect(report).toEqual({ admin: 'unchanged', emailSettings: 'unchanged' });
+    expect(report).toEqual({ admin: 'unchanged', emailSettings: 'unchanged', backups: 'unchanged' });
     expect(await prisma.user.count()).toBe(userCountBefore);
     expect(await prisma.user.findUniqueOrThrow({ where: { email: NEW_ADMIN_EMAIL } })).toEqual(before);
   });
@@ -80,6 +80,20 @@ describe('seedProduction', () => {
     } finally {
       // Trả về dòng của seed mẫu (người lưu cb-1), để afterAll xóa được Admin thử
       await prisma.emailSettings.upsert({ where: { id: 1 }, create: settingsBefore as never, update: settingsBefore as never });
+    }
+  });
+
+  it('chưa có lịch sao lưu thì tạo nơi lưu trên máy chủ và lịch 02:00 hằng ngày; đã có thì giữ nguyên', async () => {
+    const scheduleBefore = await prisma.backupSchedule.findUniqueOrThrow({ where: { id: 1 } });
+    await prisma.backupSchedule.delete({ where: { id: 1 } });
+    try {
+      const report = await seedProduction(prisma, NEW_ADMIN_EMAIL);
+
+      expect(report.backups).toBe('created');
+      expect(await prisma.backupSchedule.findUniqueOrThrow({ where: { id: 1 } })).toMatchObject({ enabled: true, time: '02:00', targetIds: ['backup-target-server'] });
+      expect(await prisma.backupTarget.count({ where: { id: 'backup-target-server' } })).toBe(1);
+    } finally {
+      await prisma.backupSchedule.upsert({ where: { id: 1 }, create: scheduleBefore, update: scheduleBefore });
     }
   });
 

@@ -2,6 +2,8 @@
    Chạy: pnpm --filter api prisma db seed. Xóa sạch dữ liệu cũ rồi nạp lại, chỉ dùng khi phát triển. */
 import { PrismaPg } from '@prisma/adapter-pg';
 import {
+  BACKUP_SCHEDULE_SEED,
+  BACKUP_TARGETS_SEED,
   EMAIL_SETTINGS_SEED,
   EMAIL_SETTINGS_SEED_UPDATE,
   SAMPLE_EXPORT_TEMPLATE_BASE64,
@@ -43,6 +45,9 @@ function parseFormCode(formCode: string): { prefix: string; year: number; versio
 async function clearAll(prisma: PrismaClient): Promise<void> {
   await prisma.$transaction([
     prisma.authSession.deleteMany(),
+    prisma.backupRun.deleteMany(),
+    prisma.backupTarget.deleteMany(),
+    prisma.backupSchedule.deleteMany(),
     prisma.fileObject.deleteMany(),
     prisma.form.deleteMany(),
     prisma.formCodeCounter.deleteMany(),
@@ -149,6 +154,10 @@ async function seedAll(prisma: PrismaClient): Promise<void> {
       updatedById: EMAIL_SETTINGS_SEED_UPDATE.updatedById,
     },
   });
+
+  // Sao lưu: nơi lưu và lịch mẫu, chưa có lần sao lưu nào
+  await prisma.backupTarget.createMany({ data: [...BACKUP_TARGETS_SEED] });
+  await prisma.backupSchedule.create({ data: { id: 1, ...BACKUP_SCHEDULE_SEED } });
 }
 
 const prisma = new PrismaClient({ adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL }) });

@@ -85,6 +85,7 @@ Không dùng `down -v`: xóa luôn dữ liệu và tệp tải lên.
 
 1. Google Cloud Console → Credentials → OAuth client ID, loại **Web application**.
 2. Redirect URI: `https://localhost:5173/api/auth/google/callback` (dev) hoặc `https://<tên miền>/api/auth/google/callback` (bản thật).
+   Muốn sao lưu vào Google Drive (trang Sao lưu) thì thêm `…/api/backups/google-drive/callback` (cùng địa chỉ gốc), và bật **Google Drive API** trong cùng project.
 3. Điền `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` vào `.env.dev` / `.env.prod`.
 
 Chỉ email trường (`SCHOOL_EMAIL_DOMAINS`, `shared/src/validators/auth.ts`) đăng nhập được.
@@ -102,6 +103,7 @@ Chỉ email trường (`SCHOOL_EMAIL_DOMAINS`, `shared/src/validators/auth.ts`) 
 | `ALWAYS_REAL_APIS` | khi bật bản giả, các API vẫn dùng bản thật, vd `dev-login,dev-student-directory` |
 | `API_PORT` | cổng backend (dev) |
 | `UPLOAD_DIR` | thư mục lưu tệp tải lên (dev) |
+| `BACKUP_DIR` | thư mục sao lưu (dev): mỗi nơi lưu kiểu "Thư mục trên máy chủ" là một thư mục con. Bản thật compose đặt `/app/api/backups` (volume `backups`) |
 | `WEB_BASE_URL_DEV`, `WEB_BASE_URL_PRODUCTION` | địa chỉ cổng, dùng cho đường dẫn trong thư và redirect URI của Google · trống: `https://localhost:5173`, `https://localhost` |
 | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD` | máy chủ gửi thư · `SMTP_HOST` trống: không gửi |
 | `DEV_EMAIL_REDIRECT_TO` | bản giả `dev-email`: thư tự động gửi về địa chỉ này thay cho người nộp đơn · trống: chỉ in ra console |

@@ -1,5 +1,10 @@
 /* Dữ liệu giả của API giả, giữ trong bộ nhớ trình duyệt. */
 import type {
+  BackupRun,
+  BackupSchedule,
+  BackupTarget,
+  BackupTargetInput,
+  BackupsResponse,
   EmailSettings,
   Account,
   ApplicantRef,
@@ -34,6 +39,9 @@ import type {
 } from '@ulaw/shared';
 import {
   ACCOUNT_MESSAGES,
+  BACKUP_RUNS_LIMIT,
+  backupFileName,
+  nextScheduledAt,
   ENDPOINTS,
   FORM_STATUSES,
   FORM_TYPE_MESSAGES,
@@ -50,6 +58,8 @@ import { buildSamplePdf } from './samplePdf';
 import { REAL_BACKEND_GROUPS } from './realBackendGroups';
 import type { SeedAccount, SeedForm, SeedFormType, SeedFormTypeVersion } from '@ulaw/shared';
 import {
+  BACKUP_SCHEDULE_SEED,
+  BACKUP_TARGETS_SEED,
   EMAIL_SETTINGS_SEED,
   EMAIL_SETTINGS_SEED_UPDATE,
   SAMPLE_EXPORT_TEMPLATE_BASE64,
@@ -931,6 +941,7 @@ export function resetMockDb(): void {
   FILES.clear();
   EXPORT_TEMPLATES = seedExportTemplates();
   FORM_NOTES.clear();
+  resetBackups();
   try {
     sessionStorage.removeItem(ACCOUNTS_KEY);
   } catch {
@@ -1230,6 +1241,200 @@ export function saveEmailSettings(settings: EmailSettings, staffId: string): Ema
   emailSettings = structuredClone(settings);
   emailSettingsUpdate = { updatedAt: vietnamNow(), updatedById: staffId };
   return getEmailSettings();
+}
+
+/* ---------- Sao lưu ---------- */
+
+/** Nơi lưu trong API giả (không có backupCount, tính lúc trả về). */
+type MockBackupTarget = Omit<BackupTarget, 'backupCount'>;
+
+/** Lần sao lưu trong API giả: thêm id nơi lưu (null = tải về máy). */
+type MockBackupRun = BackupRun & { targetId: string | null };
+
+/** Bản sao lưu chạy xong sau chừng này mili giây (API giả không sao lưu thật). */
+const MOCK_BACKUP_RUN_MS = 4000;
+
+let backupTargets: MockBackupTarget[] = [];
+let backupSchedule: BackupSchedule = structuredClone(BACKUP_SCHEDULE_SEED);
+/** Lịch sử, mới nhất trước. */
+let backupRuns: MockBackupRun[] = [];
+/** Số tăng dần để sinh id nơi lưu, lần sao lưu. */
+let backupSequence = 0;
+
+/** Đưa sao lưu về ban đầu: nơi lưu, lịch mẫu, chưa có lần sao lưu nào. */
+function resetBackups(): void {
+  backupTargets = BACKUP_TARGETS_SEED.map((target) => ({ ...target, googleAccount: null }));
+  backupSchedule = structuredClone(BACKUP_SCHEDULE_SEED);
+  backupRuns = [];
+}
+resetBackups();
+
+/**
+ * Giờ Việt Nam tới giây.
+ * @returns  'YYYY-MM-DDTHH:mm:ss'
+ */
+function vietnamNowSeconds(): string {
+  return new Date(Date.now() + 7 * 3_600_000).toISOString().slice(0, 19);
+}
+
+/**
+ * Tổng quan trang Sao lưu.
+ * @returns  nơi lưu (kèm số bản đang có), lịch, lần tới, lần thành công gần nhất, đang chạy không, lịch sử
+ */
+export function getBackupsOverview(): BackupsResponse {
+  const targets = backupTargets.map((target) => ({
+    ...target,
+    backupCount: backupRuns.filter((run) => run.targetId === target.id && run.status === 'ok' && !run.pruned).length,
+  }));
+  return structuredClone({
+    targets,
+    schedule: backupSchedule,
+    nextScheduledAt: nextScheduledAt(backupSchedule, vietnamNow()),
+    lastSuccessAt: backupRuns.find((run) => run.status === 'ok')?.startedAt ?? null,
+    running: backupRuns.some((run) => run.status === 'running'),
+    googleDriveAvailable: true,
+    runs: backupRuns.slice(0, BACKUP_RUNS_LIMIT).map(({ targetId: _targetId, ...run }) => run),
+  });
+}
+
+/**
+ * Thêm hoặc sửa một nơi lưu.
+ * @param input     thông tin nơi lưu (đã kiểm tra bằng BackupTargetInputSchema)
+ * @param targetId  id nơi lưu cần sửa; không có = thêm mới
+ * @returns         nơi lưu sau khi lưu; 'notFound' khi không có nơi lưu đó; 'duplicate' khi trùng kiểu và thư mục với nơi khác
+ */
+export function saveBackupTarget(input: BackupTargetInput, targetId?: string): BackupTarget | 'notFound' | 'duplicate' {
+  const existing = targetId ? backupTargets.find((target) => target.id === targetId) : undefined;
+  if (targetId && !existing) return 'notFound';
+  if (backupTargets.some((target) => target.id !== targetId && target.kind === input.kind && target.folder === input.folder)) return 'duplicate';
+
+  // Đổi kiểu nơi lưu thì bỏ tài khoản Google đã kết nối
+  const googleAccount = existing && existing.kind === input.kind ? existing.googleAccount : null;
+  const saved: MockBackupTarget = { ...input, id: targetId ?? `backup-target-${++backupSequence}`, googleAccount };
+  backupTargets = existing ? backupTargets.map((target) => (target.id === targetId ? saved : target)) : [...backupTargets, saved];
+  return getBackupsOverview().targets.find((target) => target.id === saved.id)!;
+}
+
+/**
+ * Bỏ một nơi lưu; lịch không còn lưu vào đó (bản đã lưu và lịch sử giữ nguyên).
+ * @param targetId  id nơi lưu
+ * @returns         false khi không có nơi lưu đó
+ */
+export function removeBackupTarget(targetId: string): boolean {
+  if (!backupTargets.some((target) => target.id === targetId)) return false;
+  backupTargets = backupTargets.filter((target) => target.id !== targetId);
+  backupSchedule = { ...backupSchedule, targetIds: backupSchedule.targetIds.filter((id) => id !== targetId) };
+  return true;
+}
+
+/**
+ * Coi như đã kết nối Google Drive cho một nơi lưu (API giả không gọi Google).
+ * @param targetId  id nơi lưu kiểu googleDrive
+ * @param email     tài khoản Google, lấy email người đang đăng nhập
+ * @returns         false khi không có nơi lưu Drive đó
+ */
+export function connectBackupDrive(targetId: string, email: string): boolean {
+  const target = backupTargets.find((candidate) => candidate.id === targetId && candidate.kind === 'googleDrive');
+  if (!target) return false;
+  target.googleAccount = email;
+  return true;
+}
+
+/**
+ * Lưu lịch định kì.
+ * @param schedule  lịch (đã kiểm tra bằng BackupScheduleSchema)
+ * @returns         tổng quan sau khi lưu; 'unknownTarget' khi lịch chọn nơi lưu không có
+ */
+export function saveBackupSchedule(schedule: BackupSchedule): BackupsResponse | 'unknownTarget' {
+  if (schedule.targetIds.some((id) => !backupTargets.some((target) => target.id === id))) return 'unknownTarget';
+  backupSchedule = structuredClone(schedule);
+  return getBackupsOverview();
+}
+
+/**
+ * Bắt đầu sao lưu vào một nơi lưu: ghi một dòng 'running', vài giây sau thành công, rồi xóa bớt bản cũ quá số bản giữ lại.
+ * @param targetId  id nơi lưu
+ * @param staffId   người bấm
+ * @returns         lần sao lưu vừa bắt đầu; 'notFound' · 'busy' (đang có bản chạy) · 'driveNotConnected'
+ */
+export function startBackupRun(targetId: string, staffId: string): BackupRun | 'notFound' | 'busy' | 'driveNotConnected' {
+  const target = backupTargets.find((candidate) => candidate.id === targetId);
+  if (!target) return 'notFound';
+  if (backupRuns.some((run) => run.status === 'running')) return 'busy';
+  if (target.kind === 'googleDrive' && !target.googleAccount) return 'driveNotConnected';
+
+  // Dòng đang chạy
+  const startedAt = vietnamNowSeconds();
+  const run: MockBackupRun = {
+    id: `backup-run-${++backupSequence}`,
+    startedAt,
+    finishedAt: null,
+    trigger: 'manual',
+    startedBy: staffOf(staffId),
+    targetId,
+    targetName: target.name,
+    targetKind: target.kind,
+    fileName: backupFileName(startedAt),
+    sizeBytes: null,
+    status: 'running',
+    error: null,
+    fileAvailable: false,
+    pruned: false,
+  };
+  backupRuns = [run, ...backupRuns];
+
+  // Vài giây sau: xong, rồi xóa bớt bản cũ ở nơi này
+  setTimeout(() => {
+    Object.assign(run, {
+      status: 'ok',
+      finishedAt: vietnamNowSeconds(),
+      sizeBytes: 3_000_000 + Math.round(Math.random() * 2_000_000),
+      fileAvailable: target.kind === 'serverFolder',
+    });
+    backupRuns
+      .filter((stored) => stored.targetId === targetId && stored.status === 'ok' && !stored.pruned)
+      .slice(target.keepLatest)
+      .forEach((stored) => Object.assign(stored, { pruned: true, fileAvailable: false }));
+  }, MOCK_BACKUP_RUN_MS);
+  const { targetId: _targetId, ...startedRun } = run;
+  return structuredClone(startedRun);
+}
+
+/**
+ * Ghi một lần sao lưu tải về máy (xong ngay, không giữ tệp).
+ * @param staffId  người bấm
+ * @returns        tên tệp
+ */
+export function recordBackupDownload(staffId: string): string {
+  const startedAt = vietnamNowSeconds();
+  const fileName = backupFileName(startedAt);
+  const run: MockBackupRun = {
+    id: `backup-run-${++backupSequence}`,
+    startedAt,
+    finishedAt: startedAt,
+    trigger: 'manual',
+    startedBy: staffOf(staffId),
+    targetId: null,
+    targetName: 'Tải về máy',
+    targetKind: 'download',
+    fileName,
+    sizeBytes: 4_200_000,
+    status: 'ok',
+    error: null,
+    fileAvailable: false,
+    pruned: false,
+  };
+  backupRuns = [run, ...backupRuns];
+  return fileName;
+}
+
+/**
+ * Tìm một lần sao lưu.
+ * @param runId  id lần sao lưu
+ * @returns      lần sao lưu; undefined khi không có
+ */
+export function findBackupRun(runId: string): BackupRun | undefined {
+  return backupRuns.find((run) => run.id === runId);
 }
 
 /* ---------- Ghi chú nội bộ trên lá đơn ---------- */

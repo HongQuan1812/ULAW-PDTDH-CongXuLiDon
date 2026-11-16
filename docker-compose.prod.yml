@@ -56,10 +56,13 @@ services:
     environment:
       DATABASE_URL: postgresql://${APP_DB_USER}:${APP_DB_PASSWORD}@postgres:5432/${APP_DB_NAME}?schema=public
       UPLOAD_DIR: /app/api/uploads
+      BACKUP_DIR: /app/api/backups
       API_PORT: 3000
       TZ: Asia/Ho_Chi_Minh
     volumes:
       - uploads:/app/api/uploads
+      # Nơi lưu kiểu "Thư mục trên máy chủ" của trang Sao lưu; máy chủ thật có thể gắn ổ thứ hai, vd /mnt/sao-luu:/app/api/backups
+      - backups:/app/api/backups
     depends_on:
       postgres:
         condition: service_healthy
@@ -85,3 +88,5 @@ volumes:
   postgres-data:
   # Tệp tải lên (UPLOAD_DIR)
   uploads:
+  # Bản sao lưu (BACKUP_DIR)
+  backups:

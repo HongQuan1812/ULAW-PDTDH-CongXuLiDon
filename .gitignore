@@ -16,6 +16,7 @@ coverage/
 
 # Uploads (ổ đĩa máy chủ)
 api/uploads/
+api/backups/
 
 # Chứng chỉ HTTPS cho nginx (docker-compose.prod.yml): khóa riêng không lên git
 docker/nginx/certs/

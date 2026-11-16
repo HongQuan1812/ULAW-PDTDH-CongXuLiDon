@@ -11,6 +11,7 @@ export const PAGE_PATH: Record<Page, string> = {
   accounts: '/quan-li-tai-khoan',
   emailSettings: '/cau-hinh-email',
   dataSources: '/nguon-du-lieu',
+  backups: '/sao-luu',
 };
 
 /** Trang nộp đơn mới, khai báo trong router: /nop-don/<mã loại đơn>. */
@@ -120,6 +121,7 @@ export const PAGE_LABEL: Record<Page, string> = {
   accounts: 'Quản lí tài khoản',
   emailSettings: 'Cấu hình email',
   dataSources: 'Nguồn dữ liệu',
+  backups: 'Sao lưu',
 };
 
 /**

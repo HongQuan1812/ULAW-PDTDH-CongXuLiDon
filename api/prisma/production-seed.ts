@@ -1,7 +1,7 @@
-/* Dữ liệu ban đầu cho bản thật: Admin đầu tiên và dòng cấu hình email. Không xóa, không ghi đè dữ liệu nào đã có,
+/* Dữ liệu ban đầu cho bản thật: Admin đầu tiên, dòng cấu hình email, nơi lưu và lịch sao lưu mặc định. Không xóa, không ghi đè dữ liệu nào đã có,
    nên chạy lại nhiều lần vẫn an toàn. Chạy bằng prisma/seed-production.ts. */
 import { randomUUID } from 'node:crypto';
-import { EMAIL_SETTINGS_SEED, isSchoolEmail } from '@ulaw/shared';
+import { BACKUP_SCHEDULE_SEED, BACKUP_TARGETS_SEED, EMAIL_SETTINGS_SEED, isSchoolEmail } from '@ulaw/shared';
 import type { Prisma, PrismaClient } from '../src/generated/prisma/client';
 
 /** Dòng cấu hình email duy nhất (cùng id với SETTINGS_ROW_ID của api/src/email/email-settings.service.ts). */
@@ -13,16 +13,18 @@ export interface ProductionSeedReport {
   admin: 'created' | 'promoted' | 'unchanged';
   /** Cấu hình email: vừa tạo, hay đã có từ trước (giữ nguyên) */
   emailSettings: 'created' | 'unchanged';
+  /** Sao lưu: vừa tạo nơi lưu và lịch mặc định, hay đã có lịch từ trước (giữ nguyên) */
+  backups: 'created' | 'unchanged';
 }
 
 /**
- * Tạo Admin đầu tiên và cấu hình email mặc định nếu chưa có.
+ * Tạo Admin đầu tiên, cấu hình email, nơi lưu và lịch sao lưu mặc định nếu chưa có.
  * Có họ tên: Admin mới tạo đã hoàn tất hồ sơ, đăng nhập Google là vào thẳng.
  * Không có họ tên: giống tài khoản tạo ở trang Quản lí tài khoản, lần đầu đăng nhập Google thì tự nhập.
  * @param prisma      Prisma Client
  * @param adminEmail  email trường của Admin đầu tiên
  * @param adminName   họ tên của Admin đầu tiên (FIRST_ADMIN_NAME), bỏ trống thì để người đó tự nhập; chỉ dùng khi tạo mới
- * @returns           việc đã làm với tài khoản Admin và cấu hình email
+ * @returns           việc đã làm với tài khoản Admin, cấu hình email, sao lưu
  * @throws            lỗi nếu email không thuộc tên miền trường (người đó không đăng nhập Google được)
  */
 export async function seedProduction(
@@ -51,14 +53,23 @@ export async function seedProduction(
 
   // Cấu hình email: trang Cấu hình email cần sẵn một dòng; đã có (có thể cán bộ đã sửa) thì giữ nguyên
   const existingSettings = await prisma.emailSettings.findUnique({ where: { id: EMAIL_SETTINGS_ROW_ID } });
-  if (existingSettings) return { admin, emailSettings: 'unchanged' };
-  await prisma.emailSettings.create({
-    data: {
-      id: EMAIL_SETTINGS_ROW_ID,
-      settings: EMAIL_SETTINGS_SEED as unknown as Prisma.InputJsonValue,
-      updatedAt: new Date(),
-      updatedById: adminId,
-    },
-  });
-  return { admin, emailSettings: 'created' };
+  let emailSettings: ProductionSeedReport['emailSettings'] = 'unchanged';
+  if (!existingSettings) {
+    await prisma.emailSettings.create({
+      data: {
+        id: EMAIL_SETTINGS_ROW_ID,
+        settings: EMAIL_SETTINGS_SEED as unknown as Prisma.InputJsonValue,
+        updatedAt: new Date(),
+        updatedById: adminId,
+      },
+    });
+    emailSettings = 'created';
+  }
+
+  // Sao lưu: chưa có lịch thì tạo nơi lưu trên máy chủ và lịch 02:00 hằng ngày; đã có (có thể Admin đã sửa, đã tắt) thì giữ nguyên
+  const existingSchedule = await prisma.backupSchedule.findUnique({ where: { id: 1 } });
+  if (existingSchedule) return { admin, emailSettings, backups: 'unchanged' };
+  await prisma.backupTarget.createMany({ data: [...BACKUP_TARGETS_SEED], skipDuplicates: true });
+  await prisma.backupSchedule.create({ data: { id: 1, ...BACKUP_SCHEDULE_SEED } });
+  return { admin, emailSettings, backups: 'created' };
 }

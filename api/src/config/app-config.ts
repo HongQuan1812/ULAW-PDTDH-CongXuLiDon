@@ -32,6 +32,8 @@ const AppEnvSchema = z.object({
   DATABASE_URL: z.string().startsWith('postgresql://'),
   // Thư mục lưu tệp tải lên trên ổ đĩa máy chủ (tương đối với thư mục chạy backend, hoặc đường dẫn tuyệt đối)
   UPLOAD_DIR: z.string().min(1).default('uploads'),
+  // Thư mục chứa các nơi lưu kiểu "Thư mục trên máy chủ" của trang Sao lưu (mỗi nơi lưu một thư mục con); như UPLOAD_DIR
+  BACKUP_DIR: z.string().min(1).default('backups'),
   // Máy chủ gửi thư (SMTP). Có điền: gửi thư thật (bản giả dev-email vẫn gửi, nhưng thư tự động về DEV_EMAIL_REDIRECT_TO)
   // · bỏ trống: không gửi (bản giả dev-email thì in ra console)
   SMTP_HOST: z.string().trim().default(''),
@@ -103,6 +105,8 @@ export class AppConfig {
   readonly databaseUrl: string;
   /** Thư mục lưu tệp tải lên, vd 'uploads'. */
   readonly uploadDir: string;
+  /** Thư mục sao lưu, vd 'backups'. */
+  readonly backupDir: string;
   /** Máy chủ gửi thư. */
   readonly smtp: SmtpConfig;
   /** Địa chỉ gốc của cổng theo môi trường: dev thì WEB_BASE_URL_DEV, còn lại WEB_BASE_URL_PRODUCTION. */
@@ -130,6 +134,7 @@ export class AppConfig {
     this.port = parsed.data.API_PORT;
     this.databaseUrl = parsed.data.DATABASE_URL;
     this.uploadDir = parsed.data.UPLOAD_DIR;
+    this.backupDir = parsed.data.BACKUP_DIR;
     this.webBaseUrl = this.isDev ? parsed.data.WEB_BASE_URL_DEV : parsed.data.WEB_BASE_URL_PRODUCTION;
     this.devEmailRedirectTo = parsed.data.DEV_EMAIL_REDIRECT_TO || null;
     this.google =

@@ -55,6 +55,7 @@ model User {
   emailSettings    EmailSettings[]
   authSessions     AuthSession[]
   formNotes        FormNote[]
+  backupRuns       BackupRun[]
 }
 
 // Phiên đăng nhập: trình duyệt giữ cookie chứa mã ngẫu nhiên, ở đây chỉ lưu bản băm SHA-256 của mã đó
@@ -215,4 +216,84 @@ model EmailSettings {
   updatedAt   DateTime @db.Timestamptz(3)
   updatedById String
   updatedBy   User     @relation(fields: [updatedById], references: [id])
+}
+
+// ---------- Sao lưu (trang Sao lưu của Admin) ----------
+
+enum BackupTargetKind {
+  serverFolder
+  googleDrive
+}
+
+// Nơi lưu bản sao lưu
+model BackupTarget {
+  id                 String           @id
+  name               String
+  kind               BackupTargetKind
+  // serverFolder: thư mục con trong BACKUP_DIR · googleDrive: tên thư mục trên Drive
+  folder             String
+  // giữ bao nhiêu bản gần nhất ở đây
+  keepLatest         Int
+  // googleDrive: tài khoản đã kết nối, refresh token (đã mã hóa, không bao giờ trả về giao diện), id thư mục cổng đã tạo trên Drive
+  googleAccount      String?
+  googleRefreshToken String?
+  googleFolderId     String?
+  createdAt          DateTime         @default(now()) @db.Timestamptz(3)
+
+  runs BackupRun[]
+
+  @@unique([kind, folder])
+}
+
+// Lịch định kì (một dòng duy nhất, id = 1); giờ theo giờ Việt Nam
+model BackupSchedule {
+  id        Int      @id @default(1)
+  enabled   Boolean
+  // 'daily' | 'weekly'
+  frequency String
+  // 1 = Thứ Hai … 7 = Chủ nhật (chỉ dùng khi weekly)
+  weekday   Int
+  // 'HH:mm'
+  time      String
+  targetIds String[]
+}
+
+enum BackupRunStatus {
+  running
+  ok
+  error
+}
+
+enum BackupRunTrigger {
+  manual
+  scheduled
+}
+
+// Một lần sao lưu vào một nơi lưu
+model BackupRun {
+  id          String           @id
+  startedAt   DateTime         @db.Timestamptz(3)
+  finishedAt  DateTime?        @db.Timestamptz(3)
+  trigger     BackupRunTrigger
+  // lịch định kì: phút chạy theo lịch (để không chạy trùng khi backend khởi động lại)
+  scheduledAt DateTime?        @db.Timestamptz(3)
+  startedById String?
+  startedBy   User?            @relation(fields: [startedById], references: [id], onDelete: SetNull)
+  targetId    String?
+  target      BackupTarget?    @relation(fields: [targetId], references: [id], onDelete: SetNull)
+  // tên, kiểu nơi lưu lúc chạy ('serverFolder' | 'googleDrive' | 'download'), giữ lại khi nơi lưu bị sửa, bỏ
+  targetName  String
+  targetKind  String
+  fileName    String
+  sizeBytes   BigInt?
+  status      BackupRunStatus
+  error       String?
+  // serverFolder: đường dẫn tệp trong BACKUP_DIR · googleDrive: id tệp trên Drive
+  storagePath String?
+  driveFileId String?
+  // đã xóa khỏi nơi lưu vì quá số bản giữ lại
+  pruned      Boolean          @default(false)
+
+  @@index([startedAt])
+  @@index([targetId, status])
 }

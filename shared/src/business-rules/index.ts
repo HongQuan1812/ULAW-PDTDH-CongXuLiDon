@@ -1,5 +1,6 @@
 /* LUẬT NGHIỆP VỤ: vai trò nào được làm gì, trạng thái nào cho phép làm gì. Frontend và backend cùng dùng. */
 export * from './accounts--permissions';
+export * from './backups--schedule';
 export * from './email--tags';
 export * from './exports--docx';
 export * from './exports--stats';

@@ -302,6 +302,14 @@ const PAGE_ICON: Record<Page, ReactNode> = {
       <path d="M4.5 12c0 1.4 3.4 2.5 7.5 2.5s7.5-1.1 7.5-2.5" />
     </Icon>
   ),
+  // Sao lưu: mũi tên vòng quanh đồng hồ
+  backups: (
+    <Icon>
+      <path d="M3.5 12a8.5 8.5 0 1 0 2.5-6" />
+      <path d="M3.5 4v4h4" />
+      <path d="M12 8v4l3 2" />
+    </Icon>
+  ),
 };
 
 function MenuIcon() {
