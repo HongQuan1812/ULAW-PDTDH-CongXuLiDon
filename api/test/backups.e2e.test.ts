@@ -1,4 +1,4 @@
-/* Test nhóm API Sao lưu: quyền, nơi lưu, lịch, sao lưu ngay, giữ N bản, tải về, chạy theo lịch.
+/* Test nhóm API Sao lưu: quyền, nơi lưu, lịch, sao lưu ngay (một hoặc nhiều nơi), giữ N bản, tải về, chạy theo lịch, lịch sử theo trang.
    Cần database đã migrate và seed. Thư mục sao lưu là một thư mục tạm (BACKUP_DIR đặt trước khi dựng app), xóa khi xong.
    Phần tạo tệp thật cần pg_dump (có trong image api); máy không có pg_dump thì bỏ qua các test đó.
    Xong thì trả nơi lưu, lịch về như seed và xóa lịch sử do test tạo. */
@@ -13,18 +13,24 @@ import {
   ApiErrorBodySchema,
   BACKUP_ENDPOINTS,
   BACKUP_MESSAGES,
-  BACKUP_SCHEDULE_SEED,
+  BACKUP_SCHEDULES_SEED,
   BACKUP_TARGETS_SEED,
   BackupRunSchema,
+  BackupRunsResponseSchema,
   BackupTargetSchema,
   BackupsResponseSchema,
   backupRunFilePath,
+  backupSchedulePath,
   backupTargetPath,
-  connectGoogleDrivePath,
+  COMMON_MESSAGES,
+  ConnectGoogleDriveResponseSchema,
+  listQueryParams,
   type BackupTargetInput,
+  type ListQuery,
   type RoleId,
 } from '@ulaw/shared';
 import { BackupsService } from '../src/backups/backups.service';
+import { AppConfig } from '../src/config/app-config';
 import { PrismaService } from '../src/common/prisma.service';
 import { fromVietnamTime } from '../src/common/vietnam-time';
 import { createTestApp } from './create-test-app';
@@ -46,6 +52,9 @@ const HAS_PG_DUMP = (() => {
  */
 const messageOf = (response: Response) => ApiErrorBodySchema.parse(response.body).message;
 
+/** Lịch mẫu (02:00 hằng ngày vào thư mục máy chủ), không có id. */
+const { id: DAILY_SCHEDULE_ID, ...DAILY_SCHEDULE } = BACKUP_SCHEDULES_SEED[0]!;
+
 /** Nơi lưu thử trên máy chủ. */
 const TEST_TARGET: BackupTargetInput = { name: 'Thử', kind: 'serverFolder', folder: 'thu/hang-ngay', keepLatest: 2 };
 
@@ -64,12 +73,24 @@ describe('backups', () => {
     return (response.headers['set-cookie'] as unknown as string[]).map((cookie) => cookie.split(';')[0]).join('; ');
   }
 
+  /**
+   * Một trang lịch sử.
+   * @param changes  phần của lần hỏi trang khác mặc định (trang 1, 20 dòng)
+   * @returns        trang đã kiểm theo schema
+   */
+  async function runsPage(changes: Partial<ListQuery> = {}) {
+    const listQuery: ListQuery = { page: 1, pageSize: 20, search: '', sort: [], filters: [], ...changes };
+    const response = await request(server()).get(api(BACKUP_ENDPOINTS.runs)).query(listQueryParams(listQuery)).set('Cookie', adminCookie).expect(200);
+    return BackupRunsResponseSchema.parse(response.body);
+  }
+
   /** Đưa nơi lưu, lịch về như seed; xóa lịch sử. */
   async function resetBackups(): Promise<void> {
     await prisma.backupRun.deleteMany();
     await prisma.backupTarget.deleteMany();
     await prisma.backupTarget.createMany({ data: [...BACKUP_TARGETS_SEED] });
-    await prisma.backupSchedule.upsert({ where: { id: 1 }, create: { id: 1, ...BACKUP_SCHEDULE_SEED }, update: BACKUP_SCHEDULE_SEED });
+    await prisma.backupSchedule.deleteMany();
+    await prisma.backupSchedule.createMany({ data: BACKUP_SCHEDULES_SEED.map((schedule) => ({ ...schedule })) });
   }
 
   beforeAll(async () => {
@@ -100,9 +121,10 @@ describe('backups', () => {
     const response = await request(server()).get(api(BACKUP_ENDPOINTS.overview)).set('Cookie', adminCookie).expect(200);
     const overview = BackupsResponseSchema.parse(response.body);
     expect(overview.targets.map((target) => target.id)).toEqual(['backup-target-server']);
-    expect(overview.schedule).toEqual(BACKUP_SCHEDULE_SEED);
+    expect(overview.schedules).toEqual(BACKUP_SCHEDULES_SEED);
     expect(overview.nextScheduledAt).toMatch(/T02:00$/);
-    expect(overview).toMatchObject({ lastSuccessAt: null, running: false, runs: [] });
+    expect(overview).toMatchObject({ lastSuccessAt: null, running: false });
+    expect(await runsPage()).toMatchObject({ runs: [], total: 0, page: 1 });
   });
 
   it('thêm, sửa, bỏ nơi lưu; trùng thư mục 409; thư mục ra ngoài BACKUP_DIR 422; bỏ thì lịch không còn lưu vào đó', async () => {
@@ -119,43 +141,91 @@ describe('backups', () => {
     expect(renamed.body.name).toBe('Thử 2');
 
     // Lịch lưu vào cả hai nơi; bỏ nơi thử thì lịch chỉ còn nơi của seed
-    await request(server()).put(api(BACKUP_ENDPOINTS.schedule)).set('Cookie', adminCookie).send({ ...BACKUP_SCHEDULE_SEED, targetIds: ['backup-target-server', added.id] }).expect(200);
+    await request(server()).put(api(backupSchedulePath(DAILY_SCHEDULE_ID))).set('Cookie', adminCookie).send({ ...DAILY_SCHEDULE, targetIds: ['backup-target-server', added.id] }).expect(200);
     await request(server()).delete(api(backupTargetPath(added.id))).set('Cookie', adminCookie).expect(204);
     const overview = BackupsResponseSchema.parse((await request(server()).get(api(BACKUP_ENDPOINTS.overview)).set('Cookie', adminCookie)).body);
-    expect(overview.schedule.targetIds).toEqual(['backup-target-server']);
+    expect(overview.schedules[0]!.targetIds).toEqual(['backup-target-server']);
     await request(server()).delete(api(backupTargetPath(added.id))).set('Cookie', adminCookie).expect(404);
   });
 
-  it('lịch: chọn nơi lưu không có thì 422; bật mà không chọn nơi nào thì 422; tắt thì không có lần tới', async () => {
-    const unknown = await request(server()).put(api(BACKUP_ENDPOINTS.schedule)).set('Cookie', adminCookie).send({ ...BACKUP_SCHEDULE_SEED, targetIds: ['khong-co'] }).expect(422);
+  it('lịch: thêm, sửa, bỏ nhiều lịch; lần tới là lịch sớm nhất; chọn nơi lưu không có / bật mà không chọn nơi nào thì 422', async () => {
+    const dailyPath = api(backupSchedulePath(DAILY_SCHEDULE_ID));
+    const unknown = await request(server()).put(dailyPath).set('Cookie', adminCookie).send({ ...DAILY_SCHEDULE, targetIds: ['khong-co'] }).expect(422);
     expect(messageOf(unknown)).toBe(BACKUP_MESSAGES.unknownScheduleTarget);
-    await request(server()).put(api(BACKUP_ENDPOINTS.schedule)).set('Cookie', adminCookie).send({ ...BACKUP_SCHEDULE_SEED, targetIds: [] }).expect(422);
-    const off = await request(server()).put(api(BACKUP_ENDPOINTS.schedule)).set('Cookie', adminCookie).send({ ...BACKUP_SCHEDULE_SEED, enabled: false }).expect(200);
+    await request(server()).put(dailyPath).set('Cookie', adminCookie).send({ ...DAILY_SCHEDULE, targetIds: [] }).expect(422);
+
+    // Thêm lịch 01:00 hằng ngày: lần tới là 01:00
+    const added = BackupsResponseSchema.parse(
+      (await request(server()).post(api(BACKUP_ENDPOINTS.schedules)).set('Cookie', adminCookie).send({ ...DAILY_SCHEDULE, time: '01:00' }).expect(201)).body,
+    );
+    expect(added.schedules).toHaveLength(2);
+    expect(added.nextScheduledAt).toMatch(/T01:00$/);
+    const extraId = added.schedules[1]!.id;
+
+    // Tắt cả hai thì không có lần tới
+    await request(server()).put(api(backupSchedulePath(extraId))).set('Cookie', adminCookie).send({ ...DAILY_SCHEDULE, time: '01:00', enabled: false }).expect(200);
+    const off = await request(server()).put(dailyPath).set('Cookie', adminCookie).send({ ...DAILY_SCHEDULE, enabled: false }).expect(200);
     expect(off.body.nextScheduledAt).toBeNull();
-    await request(server()).put(api(BACKUP_ENDPOINTS.schedule)).set('Cookie', adminCookie).send(BACKUP_SCHEDULE_SEED).expect(200);
+
+    // Bỏ lịch thêm; bỏ lần nữa thì 404; trả lịch mẫu về như cũ
+    const removed = BackupsResponseSchema.parse((await request(server()).delete(api(backupSchedulePath(extraId))).set('Cookie', adminCookie).expect(200)).body);
+    expect(removed.schedules.map((schedule) => schedule.id)).toEqual([DAILY_SCHEDULE_ID]);
+    await request(server()).delete(api(backupSchedulePath(extraId))).set('Cookie', adminCookie).expect(404);
+    await request(server()).put(dailyPath).set('Cookie', adminCookie).send(DAILY_SCHEDULE).expect(200);
   });
 
-  it('nơi lưu Google Drive chưa kết nối: sao lưu vào đó 409; không có nơi lưu 404', async () => {
-    const drive = (await request(server()).post(api(BACKUP_ENDPOINTS.targets)).set('Cookie', adminCookie).send({ name: 'Drive', kind: 'googleDrive', folder: 'Sao lưu', keepLatest: 3 }).expect(201)).body;
-    const notConnected = await request(server()).post(api(BACKUP_ENDPOINTS.run)).set('Cookie', adminCookie).send({ targetId: drive.id }).expect(409);
-    expect(messageOf(notConnected)).toBe(BACKUP_MESSAGES.driveNotConnected);
-    await request(server()).post(api(BACKUP_ENDPOINTS.run)).set('Cookie', adminCookie).send({ targetId: 'khong-co' }).expect(404);
+  it('Google Drive: phải kết nối (bản giả dev-backup-drive) rồi mới lưu được; kết nối dùng một lần; sửa thì giữ tài khoản cũ', async () => {
+    const driveTarget = { name: 'Drive', kind: 'googleDrive' as const, folder: 'Sao lưu', keepLatest: 3 };
+    const connect = async (body: object) =>
+      ConnectGoogleDriveResponseSchema.parse((await request(server()).post(api(BACKUP_ENDPOINTS.driveConnect)).set('Cookie', adminCookie).send(body).expect(200)).body);
 
-    // Kết nối: có OAuth client thì trả đường dẫn sang Google xin quyền drive.file; nơi lưu không phải Drive thì 404
-    const connect = await request(server()).post(api(connectGoogleDrivePath(drive.id))).set('Cookie', adminCookie);
-    if (connect.status === 200) expect(connect.body.url).toContain('drive.file');
-    else expect(connect.status).toBe(503);
-    await request(server()).post(api(connectGoogleDrivePath('backup-target-server'))).set('Cookie', adminCookie).expect(404);
-    await request(server()).delete(api(backupTargetPath(drive.id))).set('Cookie', adminCookie).expect(204);
+    // Chưa kết nối thì không lưu được
+    const notConnected = await request(server()).post(api(BACKUP_ENDPOINTS.targets)).set('Cookie', adminCookie).send(driveTarget).expect(422);
+    expect(messageOf(notConnected)).toBe(BACKUP_MESSAGES.driveConnectFirst);
+
+    // Kết nối (bản giả trả ngay email gửi kèm), rồi lưu kèm driveGrantId
+    const connected = await connect({ email: 'Phong.DaoTao@gmail.com' });
+    expect(connected).toMatchObject({ kind: 'connected', email: 'phong.daotao@gmail.com' });
+    if (connected.kind !== 'connected') throw new Error('Bản giả phải trả connected');
+    const added = BackupTargetSchema.parse(
+      (await request(server()).post(api(BACKUP_ENDPOINTS.targets)).set('Cookie', adminCookie).send({ ...driveTarget, driveGrantId: connected.driveGrantId }).expect(201)).body,
+    );
+    expect(added.googleAccount).toBe('phong.daotao@gmail.com');
+
+    // driveGrantId chỉ dùng một lần
+    const reused = await request(server()).post(api(BACKUP_ENDPOINTS.targets)).set('Cookie', adminCookie).send({ ...driveTarget, folder: 'Khác', driveGrantId: connected.driveGrantId }).expect(422);
+    expect(messageOf(reused)).toBe(BACKUP_MESSAGES.driveGrantExpired);
+
+    // Sửa tên, không kết nối lại: giữ tài khoản; đổi sang thư mục máy chủ rồi về Drive thì phải kết nối lại
+    const renamed = await request(server()).put(api(backupTargetPath(added.id))).set('Cookie', adminCookie).send({ ...driveTarget, name: 'Drive 2' }).expect(200);
+    expect(renamed.body.googleAccount).toBe('phong.daotao@gmail.com');
+    await request(server()).put(api(backupTargetPath(added.id))).set('Cookie', adminCookie).send({ ...driveTarget, kind: 'serverFolder', folder: 'tu-drive' }).expect(200);
+    await request(server()).put(api(backupTargetPath(added.id))).set('Cookie', adminCookie).send(driveTarget).expect(422);
+
+    // Nơi lưu không còn: 404
+    await request(server()).post(api(BACKUP_ENDPOINTS.run)).set('Cookie', adminCookie).send({ targetIds: ['khong-co'] }).expect(404);
+    await request(server()).post(api(BACKUP_ENDPOINTS.run)).set('Cookie', adminCookie).send({ targetIds: [] }).expect(422);
+    await request(server()).delete(api(backupTargetPath(added.id))).set('Cookie', adminCookie).expect(204);
+  });
+
+  it('Google Drive bản thật chưa phát triển: 501', async () => {
+    const appConfig = app.get(AppConfig);
+    const original = appConfig.demoApisEnabled;
+    (appConfig as { demoApisEnabled: boolean }).demoApisEnabled = false;
+    try {
+      await request(server()).post(api(BACKUP_ENDPOINTS.driveConnect)).set('Cookie', adminCookie).send({}).expect(501);
+    } finally {
+      (appConfig as { demoApisEnabled: boolean }).demoApisEnabled = original;
+    }
   });
 
   it.skipIf(!HAS_PG_DUMP)('sao lưu ngay vào thư mục trên máy chủ: chạy nền, xong thì có tệp, tải về được; quá số bản giữ lại thì bản cũ bị xóa', async () => {
     await prisma.backupTarget.update({ where: { id: 'backup-target-server' }, data: { keepLatest: 1 } });
     const runIds: string[] = [];
     for (let i = 0; i < 2; i++) {
-      const started = BackupRunSchema.parse((await request(server()).post(api(BACKUP_ENDPOINTS.run)).set('Cookie', adminCookie).send({ targetId: 'backup-target-server' }).expect(202)).body);
-      expect(started.status).toBe('running');
-      runIds.push(started.id);
+      const [started] = BackupRunSchema.array().parse((await request(server()).post(api(BACKUP_ENDPOINTS.run)).set('Cookie', adminCookie).send({ targetIds: ['backup-target-server'] }).expect(202)).body);
+      expect(started!.status).toBe('running');
+      runIds.push(started!.id);
       // Đang chạy thì bản khác 409
       if (i === 0) await request(server()).post(api(BACKUP_ENDPOINTS.download)).set('Cookie', adminCookie).expect(409);
       await backupsService.waitIdle();
@@ -164,7 +234,8 @@ describe('backups', () => {
     }
 
     const overview = BackupsResponseSchema.parse((await request(server()).get(api(BACKUP_ENDPOINTS.overview)).set('Cookie', adminCookie)).body);
-    const [newer, older] = runIds.reverse().map((id) => overview.runs.find((run) => run.id === id)!);
+    const { runs } = await runsPage();
+    const [newer, older] = runIds.reverse().map((id) => runs.find((run) => run.id === id)!);
     expect(newer).toMatchObject({ status: 'ok', fileAvailable: true, pruned: false, trigger: 'manual', targetKind: 'serverFolder' });
     expect(newer!.sizeBytes).toBeGreaterThan(0);
     expect(older).toMatchObject({ status: 'ok', fileAvailable: false, pruned: true });
@@ -185,6 +256,62 @@ describe('backups', () => {
     expect(Number(response.headers['content-length'])).toBeGreaterThan(0);
     const run = await prisma.backupRun.findFirstOrThrow({ where: { targetKind: 'download' }, orderBy: { startedAt: 'desc' } });
     expect(run).toMatchObject({ status: 'ok', storagePath: null });
+  });
+
+  it.skipIf(!HAS_PG_DUMP)('sao lưu ngay vào hai nơi: một tệp, mỗi nơi một dòng lịch sử, cùng tên tệp', async () => {
+    const second = BackupTargetSchema.parse(
+      (await request(server()).post(api(BACKUP_ENDPOINTS.targets)).set('Cookie', adminCookie).send({ ...TEST_TARGET, folder: 'thu/hai-noi' }).expect(201)).body,
+    );
+    const started = BackupRunSchema.array().parse(
+      (await request(server()).post(api(BACKUP_ENDPOINTS.run)).set('Cookie', adminCookie).send({ targetIds: ['backup-target-server', second.id] }).expect(202)).body,
+    );
+    expect(started.map((run) => run.targetName)).toEqual(['Trên máy chủ', TEST_TARGET.name]);
+    await backupsService.waitIdle();
+
+    const { runs } = await runsPage();
+    const finished = started.map((startedRun) => runs.find((run) => run.id === startedRun.id)!);
+    expect(finished.map((run) => run.status)).toEqual(['ok', 'ok']);
+    expect(finished[0]!.fileName).toBe(finished[1]!.fileName);
+    expect(existsSync(path.join(backupDir, 'hang-ngay', started[0]!.fileName))).toBe(true);
+    expect(existsSync(path.join(backupDir, 'thu', 'hai-noi', started[1]!.fileName))).toBe(true);
+    await request(server()).delete(api(backupTargetPath(second.id))).set('Cookie', adminCookie).expect(204);
+  });
+
+  it('lịch sử theo trang: tìm, lọc, sắp xếp như các bảng khác; điều kiện sai thì 422', async () => {
+    // Ghi thẳng vài dòng lịch sử (không cần pg_dump)
+    await prisma.backupRun.deleteMany();
+    const day = (dayOfMonth: number) => fromVietnamTime(`2026-11-${String(dayOfMonth).padStart(2, '0')}T02:00`);
+    await prisma.backupRun.createMany({
+      data: Array.from({ length: 12 }, (_, index) => ({
+        id: `backup-run-thu-${index + 1}`,
+        startedAt: day(index + 1),
+        finishedAt: day(index + 1),
+        trigger: 'scheduled' as const,
+        targetId: 'backup-target-server',
+        targetName: index === 4 ? 'Drive phòng' : 'Trên máy chủ',
+        targetKind: index === 4 ? 'googleDrive' : 'serverFolder',
+        fileName: `sao-luu-202611${String(index + 1).padStart(2, '0')}-020000.tar.gz`,
+        sizeBytes: index === 4 ? null : 1_000_000,
+        status: index === 4 ? ('error' as const) : ('ok' as const),
+        error: index === 4 ? 'Google Drive từ chối truy cập' : null,
+        pruned: index < 2,
+      })),
+    });
+
+    // Trang 2 (5 dòng mỗi trang), mới nhất trước
+    const second = await runsPage({ page: 2, pageSize: 5 });
+    expect(second).toMatchObject({ total: 12, page: 2 });
+    expect(second.runs.map((run) => run.id)).toEqual([7, 6, 5, 4, 3].map((n) => `backup-run-thu-${n}`));
+
+    // Tìm theo câu lỗi; lọc bản đã xóa; sắp xếp cũ nhất trước
+    expect((await runsPage({ search: 'tu choi' })).runs.map((run) => run.id)).toEqual(['backup-run-thu-5']);
+    expect((await runsPage({ filters: [{ fieldKey: 'status', operator: 'equals', value: 'pruned', from: '', to: '' }] })).total).toBe(2);
+    expect((await runsPage({ sort: [{ id: 'startedAt', desc: false }], pageSize: 1 })).runs[0]!.id).toBe('backup-run-thu-1');
+
+    // Cột không có thì 422
+    const wrong = await request(server()).get(api(BACKUP_ENDPOINTS.runs)).query({ sort: 'khongCo:asc' }).set('Cookie', adminCookie).expect(422);
+    expect(messageOf(wrong)).toBe(COMMON_MESSAGES.listQuery);
+    await prisma.backupRun.deleteMany();
   });
 
   it.skipIf(!HAS_PG_DUMP)('chạy theo lịch: đúng phút thì chạy một lần, kiểm lại cùng phút (vd backend khởi động lại) không chạy trùng', async () => {

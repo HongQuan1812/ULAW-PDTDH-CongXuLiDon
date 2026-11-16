@@ -6,15 +6,21 @@ import type { Request, Response } from 'express';
 import {
   BACKUP_ENDPOINTS,
   BACKUP_MESSAGES,
+  BACKUP_RUN_LIST_FIELDS,
   BackupRunSchema,
+  BackupRunsResponseSchema,
+  COMMON_MESSAGES,
   BackupScheduleSchema,
   BackupTargetInputSchema,
   BackupTargetSchema,
   BackupsResponseSchema,
+  ConnectGoogleDriveRequestSchema,
   ConnectGoogleDriveResponseSchema,
   DRIVE_ERROR_PARAM,
   RunBackupRequestSchema,
+  parseListQuery,
   type BackupRun,
+  type BackupRunsResponse,
   type BackupTarget,
   type BackupsResponse,
   type ConnectGoogleDriveResponse,
@@ -25,10 +31,11 @@ import { CurrentUser, RequirePermission } from '../auth/require-permission.decor
 import { readCookie } from '../auth/session-cookie';
 import { ApiException } from '../common/api-exception';
 import { openApiSchemaOf } from '../common/swagger';
+import { realApiNotBuilt } from '../config/demo-apis';
 import { AppConfig } from '../config/app-config';
 import type { User } from '../generated/prisma/client';
 import { BackupsService, type BackupDownload } from './backups.service';
-import { DRIVE_STATE_COOKIE_NAME, GoogleDriveBackupService, decodeDriveState, driveStateCookieOptions, encodeDriveState } from './google-drive-backup.service';
+import { DRIVE_STATE_COOKIE_NAME, GoogleDriveBackupService, decodeDriveState, driveStateCookieOptions } from './google-drive-backup.service';
 
 /** Trang Sao lưu của giao diện (hash router: #/sao-luu), nơi Google Drive chuyển về. */
 const WEB_BACKUPS_HASH_PATH = '/sao-luu';
@@ -82,13 +89,26 @@ export class BackupsController {
   }
 
   /**
+   * Một trang lịch sử sao lưu.
+   * @param queryParams  page, pageSize, search, sort, filters (xem listQueryParams)
+   * @throws             422 điều kiện tìm, lọc, sắp xếp sai
+   */
+  @Get(BACKUP_ENDPOINTS.runs)
+  @ApiOkResponse({ schema: openApiSchemaOf(BackupRunsResponseSchema) })
+  runs(@Query() queryParams: Record<string, string | undefined>): Promise<BackupRunsResponse> {
+    const listQuery = parseListQuery(queryParams, BACKUP_RUN_LIST_FIELDS);
+    if (!listQuery) throw new ApiException(422, COMMON_MESSAGES.listQuery);
+    return this.backupsService.findRunsPage(listQuery);
+  }
+
+  /**
    * Thêm nơi lưu.
-   * @throws  422 sai dạng · 409 trùng thư mục
+   * @throws  422 sai dạng, Drive chưa kết nối / kết nối hết hạn · 409 trùng thư mục
    */
   @Post(BACKUP_ENDPOINTS.targets)
   @ApiOkResponse({ schema: openApiSchemaOf(BackupTargetSchema) })
-  addTarget(@Body() requestBody: unknown): Promise<BackupTarget> {
-    return this.backupsService.saveTarget(parseOrReject(requestBody, BackupTargetInputSchema));
+  addTarget(@CurrentUser() user: User, @Body() requestBody: unknown): Promise<BackupTarget> {
+    return this.backupsService.saveTarget(parseOrReject(requestBody, BackupTargetInputSchema), user);
   }
 
   /**
@@ -97,8 +117,8 @@ export class BackupsController {
    */
   @Put(BACKUP_ENDPOINTS.target)
   @ApiOkResponse({ schema: openApiSchemaOf(BackupTargetSchema) })
-  saveTarget(@Param('targetId') targetId: string, @Body() requestBody: unknown): Promise<BackupTarget> {
-    return this.backupsService.saveTarget(parseOrReject(requestBody, BackupTargetInputSchema), targetId);
+  saveTarget(@CurrentUser() user: User, @Param('targetId') targetId: string, @Body() requestBody: unknown): Promise<BackupTarget> {
+    return this.backupsService.saveTarget(parseOrReject(requestBody, BackupTargetInputSchema), user, targetId);
   }
 
   /**
@@ -112,23 +132,31 @@ export class BackupsController {
   }
 
   /**
-   * Bắt đầu kết nối Google Drive cho một nơi lưu: nhớ state trong cookie, trả đường dẫn sang Google.
-   * @throws  503 chưa có OAuth client · 404 không có nơi lưu Drive đó
+   * Kết nối một tài khoản Google Drive (từ hộp thêm / sửa nơi lưu, trước khi Lưu).
+   * @param user         người đang đăng nhập (chỉ người này dùng được driveGrantId trả về)
+   * @param requestBody  ConnectGoogleDriveRequest
+   * @returns            bản giả: 'connected' kèm driveGrantId, email
+   * @throws             422 email sai dạng · 501 bản thật chưa phát triển
    */
-  @Post(BACKUP_ENDPOINTS.connectGoogleDrive)
+  @Post(BACKUP_ENDPOINTS.driveConnect)
   @HttpCode(200)
   @ApiOkResponse({ schema: openApiSchemaOf(ConnectGoogleDriveResponseSchema) })
-  async connectGoogleDrive(@Param('targetId') targetId: string, @Res({ passthrough: true }) response: Response): Promise<ConnectGoogleDriveResponse> {
-    const overview = await this.backupsService.overview();
-    if (!overview.targets.some((target) => target.id === targetId && target.kind === 'googleDrive')) throw new ApiException(404, BACKUP_MESSAGES.targetNotFound);
-    const started = this.googleDrive.startConnect(targetId);
-    if (!started) throw new ApiException(503, BACKUP_MESSAGES.driveUnavailable);
-    response.cookie(DRIVE_STATE_COOKIE_NAME, encodeDriveState(started.connectState), driveStateCookieOptions(this.appConfig.isDev));
-    return { url: started.url };
+  connectGoogleDrive(@CurrentUser() user: User, @Body() requestBody: unknown): ConnectGoogleDriveResponse {
+    const connectRequest = parseOrReject(requestBody ?? {}, ConnectGoogleDriveRequestSchema);
+
+    /* JUST FOR DEMO: START · bản giả dev-backup-drive: không qua Google, tài khoản là email gửi kèm (mặc định email người đang đăng nhập),
+       không có refresh token nên sao lưu vào đó báo lỗi trong lịch sử. Bản thật: trả 'redirect' sang Google (popup), callback báo driveGrantId */
+    if (this.appConfig.usesDemoApi('dev-backup-drive')) {
+      const email = connectRequest.email ?? user.email;
+      return { kind: 'connected', driveGrantId: this.googleDrive.createGrant(user.id, { email, encryptedRefreshToken: null }), email };
+    }
+    /* JUST FOR DEMO: END */
+
+    throw realApiNotBuilt('dev-backup-drive');
   }
 
   /**
-   * Google chuyển về sau khi Admin đồng ý (hoặc bấm Hủy): lưu quyền, rồi về trang Sao lưu (lỗi thì kèm ?driveError=…).
+   * (Bản thật sẽ làm lại theo cách popup) Google chuyển về sau khi Admin đồng ý (hoặc bấm Hủy): lưu quyền, rồi về trang Sao lưu (lỗi thì kèm ?driveError=…).
    * @param code      mã Google gửi kèm (không có khi bấm Hủy)
    * @param state     phải trùng state trong cookie
    * @param error     Google gửi 'access_denied' khi bấm Hủy
@@ -156,24 +184,44 @@ export class BackupsController {
   }
 
   /**
-   * Lưu lịch định kì.
+   * Thêm một lịch định kì.
    * @throws  422 sai dạng, nơi lưu không có
    */
-  @Put(BACKUP_ENDPOINTS.schedule)
+  @Post(BACKUP_ENDPOINTS.schedules)
   @ApiOkResponse({ schema: openApiSchemaOf(BackupsResponseSchema) })
-  saveSchedule(@Body() requestBody: unknown): Promise<BackupsResponse> {
+  addSchedule(@Body() requestBody: unknown): Promise<BackupsResponse> {
     return this.backupsService.saveSchedule(parseOrReject(requestBody, BackupScheduleSchema));
   }
 
   /**
-   * Sao lưu ngay vào một nơi lưu (chạy nền).
-   * @throws  422 sai dạng · 404 không có nơi lưu · 409 đang chạy, Drive chưa kết nối
+   * Sửa một lịch định kì.
+   * @throws  422 sai dạng, nơi lưu không có · 404 không có lịch
+   */
+  @Put(BACKUP_ENDPOINTS.schedule)
+  @ApiOkResponse({ schema: openApiSchemaOf(BackupsResponseSchema) })
+  saveSchedule(@Param('scheduleId') scheduleId: string, @Body() requestBody: unknown): Promise<BackupsResponse> {
+    return this.backupsService.saveSchedule(parseOrReject(requestBody, BackupScheduleSchema), scheduleId);
+  }
+
+  /**
+   * Bỏ một lịch định kì.
+   * @throws  404 không có lịch
+   */
+  @Delete(BACKUP_ENDPOINTS.schedule)
+  @ApiOkResponse({ schema: openApiSchemaOf(BackupsResponseSchema) })
+  removeSchedule(@Param('scheduleId') scheduleId: string): Promise<BackupsResponse> {
+    return this.backupsService.removeSchedule(scheduleId);
+  }
+
+  /**
+   * Sao lưu ngay vào các nơi đã chọn (chạy nền).
+   * @throws  422 sai dạng · 404 có nơi lưu không còn · 409 đang chạy, Drive chưa kết nối
    */
   @Post(BACKUP_ENDPOINTS.run)
   @HttpCode(202)
-  @ApiOkResponse({ schema: openApiSchemaOf(BackupRunSchema) })
-  run(@CurrentUser() starter: User, @Body() requestBody: unknown): Promise<BackupRun> {
-    return this.backupsService.runNow(parseOrReject(requestBody, RunBackupRequestSchema).targetId, starter);
+  @ApiOkResponse({ schema: openApiSchemaOf(BackupRunSchema.array()) })
+  run(@CurrentUser() starter: User, @Body() requestBody: unknown): Promise<BackupRun[]> {
+    return this.backupsService.runNow(parseOrReject(requestBody, RunBackupRequestSchema).targetIds, starter);
   }
 
   /**

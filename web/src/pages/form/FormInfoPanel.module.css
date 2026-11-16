@@ -16,7 +16,9 @@
 .toggle svg{flex:none}
 
 /* các mục trong khung, ngăn nhau bằng đường kẻ */
-.sections{display:grid}
+.sections{display:flex;flex-direction:column}
+/* màn hình hẹp (khung trượt): tiêu đề khung đứng yên, các mục cuộn bên dưới */
+.sheetSections{flex:0 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain}
 .section{padding:18px 20px;display:grid;gap:12px;border-bottom:1px solid var(--line)}
 .section:last-child{border-bottom:0}
 /* mục trạng thái, loại đơn, ngày nộp ở đầu khung: nền khác màu */

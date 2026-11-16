@@ -246,8 +246,9 @@ model BackupTarget {
 }
 
 // Lịch định kì (một dòng duy nhất, id = 1); giờ theo giờ Việt Nam
+// Lịch định kì: có thể nhiều lịch; nhiều lịch trúng cùng một phút thì chạy chung một lần
 model BackupSchedule {
-  id        Int      @id @default(1)
+  id        String   @id
   enabled   Boolean
   // 'daily' | 'weekly'
   frequency String
@@ -256,6 +257,7 @@ model BackupSchedule {
   // 'HH:mm'
   time      String
   targetIds String[]
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
 }
 
 enum BackupRunStatus {

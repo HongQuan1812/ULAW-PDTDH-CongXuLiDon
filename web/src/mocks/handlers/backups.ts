@@ -3,29 +3,37 @@
 import { delay, http, HttpResponse } from 'msw';
 import {
   BACKUP_MESSAGES,
+  BACKUP_RUN_LIST_DEFAULT_SORTING,
+  BACKUP_RUN_LIST_FIELDS,
   BackupScheduleSchema,
   BackupTargetInputSchema,
+  ConnectGoogleDriveRequestSchema,
   ENDPOINTS,
+  COMMON_MESSAGES,
   RunBackupRequestSchema,
+  applyListQuery,
+  backupRunExtraSearchText,
   can,
   type BackupRun,
+  type BackupRunsResponse,
   type BackupTarget,
   type BackupsResponse,
   type ConnectGoogleDriveResponse,
 } from '@ulaw/shared';
 import {
-  connectBackupDrive,
+  createBackupDriveGrant,
   findBackupRun,
+  getBackupRuns,
   getBackupsOverview,
   readSession,
   recordBackupDownload,
   removeBackupTarget,
+  removeBackupSchedule,
   saveBackupSchedule,
   saveBackupTarget,
-  startBackupRun,
+  startBackupRuns,
 } from '../db';
-import { MOCK_DELAY_MS, api, apiError } from '../http';
-import { PAGE_PATH } from '../../app/paths';
+import { MOCK_DELAY_MS, api, apiError, readListQuery } from '../http';
 
 /**
  * Người đang đăng nhập, nếu có quyền sao lưu.
@@ -49,6 +57,17 @@ function fakeArchive(fileName: string) {
   });
 }
 
+/**
+ * Response lỗi khi lưu nơi lưu.
+ * @param failure  lí do db trả về
+ * @returns        response 404 / 409 / 422
+ */
+function targetSaveError(failure: 'notFound' | 'duplicate' | 'connectFirst' | 'grantExpired') {
+  if (failure === 'notFound') return apiError(404, BACKUP_MESSAGES.targetNotFound);
+  if (failure === 'duplicate') return apiError(409, BACKUP_MESSAGES.duplicateTarget);
+  return apiError(422, failure === 'connectFirst' ? BACKUP_MESSAGES.driveConnectFirst : BACKUP_MESSAGES.driveGrantExpired);
+}
+
 export const backupHandlers = [
   // Tổng quan
   http.get(api(ENDPOINTS.backups.overview), async () => {
@@ -58,6 +77,17 @@ export const backupHandlers = [
     return HttpResponse.json<BackupsResponse>(getBackupsOverview());
   }),
 
+  // Một trang lịch sử: tìm, lọc, sắp xếp như các bảng khác
+  http.get(api(ENDPOINTS.backups.runs), async ({ request }) => {
+    await delay(MOCK_DELAY_MS);
+    const session = await backupSession();
+    if (session instanceof Response) return session;
+    const listQuery = readListQuery(request, BACKUP_RUN_LIST_FIELDS);
+    if (!listQuery) return apiError(422, COMMON_MESSAGES.listQuery);
+    const { rows, ...pageMeta } = applyListQuery(getBackupRuns(), BACKUP_RUN_LIST_FIELDS, listQuery, BACKUP_RUN_LIST_DEFAULT_SORTING, backupRunExtraSearchText);
+    return HttpResponse.json<BackupRunsResponse>({ ...pageMeta, runs: rows });
+  }),
+
   // Thêm nơi lưu
   http.post(api(ENDPOINTS.backups.targets), async ({ request }) => {
     await delay(MOCK_DELAY_MS);
@@ -65,9 +95,8 @@ export const backupHandlers = [
     if (session instanceof Response) return session;
     const parsed = BackupTargetInputSchema.safeParse(await request.json());
     if (!parsed.success) return apiError(422, BACKUP_MESSAGES[422]);
-    const saved = saveBackupTarget(parsed.data);
-    if (saved === 'duplicate') return apiError(409, BACKUP_MESSAGES.duplicateTarget);
-    if (saved === 'notFound') return apiError(404, BACKUP_MESSAGES.targetNotFound);
+    const saved = saveBackupTarget(parsed.data, session.user.id);
+    if (typeof saved === 'string') return targetSaveError(saved);
     return HttpResponse.json<BackupTarget>(saved, { status: 201 });
   }),
 
@@ -78,9 +107,8 @@ export const backupHandlers = [
     if (session instanceof Response) return session;
     const parsed = BackupTargetInputSchema.safeParse(await request.json());
     if (!parsed.success) return apiError(422, BACKUP_MESSAGES[422]);
-    const saved = saveBackupTarget(parsed.data, String(params.targetId));
-    if (saved === 'duplicate') return apiError(409, BACKUP_MESSAGES.duplicateTarget);
-    if (saved === 'notFound') return apiError(404, BACKUP_MESSAGES.targetNotFound);
+    const saved = saveBackupTarget(parsed.data, session.user.id, String(params.targetId));
+    if (typeof saved === 'string') return targetSaveError(saved);
     return HttpResponse.json<BackupTarget>(saved);
   }),
 
@@ -93,43 +121,64 @@ export const backupHandlers = [
     return new HttpResponse(null, { status: 204 });
   }),
 
-  // Kết nối Google Drive: API giả coi như Admin đã đồng ý ngay, trả đường dẫn về lại trang Sao lưu
-  http.post(api(ENDPOINTS.backups.connectGoogleDrive), async ({ params }) => {
+  // Kết nối Google Drive (từ hộp thêm / sửa nơi lưu): API giả trả ngay tài khoản, như bản giả dev-backup-drive của backend
+  http.post(api(ENDPOINTS.backups.driveConnect), async ({ request }) => {
     await delay(MOCK_DELAY_MS);
     const session = await backupSession();
     if (session instanceof Response) return session;
-
-    /* JUST FOR DEMO: START · API giả không gọi Google: lấy email người đang đăng nhập làm tài khoản Drive.
-       Máy chủ thật trả đường dẫn sang Google, Google gọi về /backups/google-drive/callback. */
-    if (!connectBackupDrive(String(params.targetId), session.user.email)) return apiError(404, BACKUP_MESSAGES.targetNotFound);
-    return HttpResponse.json<ConnectGoogleDriveResponse>({ url: `${location.origin}/#${PAGE_PATH.backups}` });
-    /* JUST FOR DEMO: END */
+    const parsed = ConnectGoogleDriveRequestSchema.safeParse(await request.json().catch(() => ({})));
+    if (!parsed.success) return apiError(422, parsed.error.issues[0]?.message ?? BACKUP_MESSAGES[422]);
+    const email = parsed.data.email ?? session.user.email;
+    return HttpResponse.json<ConnectGoogleDriveResponse>({ kind: 'connected', driveGrantId: createBackupDriveGrant(session.user.id, email), email });
   }),
 
-  // Lưu lịch
-  http.put(api(ENDPOINTS.backups.schedule), async ({ request }) => {
+  // Thêm lịch
+  http.post(api(ENDPOINTS.backups.schedules), async ({ request }) => {
     await delay(MOCK_DELAY_MS);
     const session = await backupSession();
     if (session instanceof Response) return session;
     const parsed = BackupScheduleSchema.safeParse(await request.json());
-    if (!parsed.success) return apiError(422, BACKUP_MESSAGES[422]);
+    if (!parsed.success) return apiError(422, parsed.error.issues[0]?.message ?? BACKUP_MESSAGES[422]);
     const saved = saveBackupSchedule(parsed.data);
+    if (typeof saved === 'string') return apiError(422, BACKUP_MESSAGES.unknownScheduleTarget);
+    return HttpResponse.json<BackupsResponse>(saved, { status: 201 });
+  }),
+
+  // Sửa lịch
+  http.put(api(ENDPOINTS.backups.schedule), async ({ request, params }) => {
+    await delay(MOCK_DELAY_MS);
+    const session = await backupSession();
+    if (session instanceof Response) return session;
+    const parsed = BackupScheduleSchema.safeParse(await request.json());
+    if (!parsed.success) return apiError(422, parsed.error.issues[0]?.message ?? BACKUP_MESSAGES[422]);
+    const saved = saveBackupSchedule(parsed.data, String(params.scheduleId));
+    if (saved === 'notFound') return apiError(404, BACKUP_MESSAGES.scheduleNotFound);
     if (saved === 'unknownTarget') return apiError(422, BACKUP_MESSAGES.unknownScheduleTarget);
     return HttpResponse.json<BackupsResponse>(saved);
   }),
 
-  // Sao lưu ngay vào một nơi lưu
+  // Bỏ lịch
+  http.delete(api(ENDPOINTS.backups.schedule), async ({ params }) => {
+    await delay(MOCK_DELAY_MS);
+    const session = await backupSession();
+    if (session instanceof Response) return session;
+    const removed = removeBackupSchedule(String(params.scheduleId));
+    if (removed === 'notFound') return apiError(404, BACKUP_MESSAGES.scheduleNotFound);
+    return HttpResponse.json<BackupsResponse>(removed);
+  }),
+
+  // Sao lưu ngay vào các nơi đã chọn
   http.post(api(ENDPOINTS.backups.run), async ({ request }) => {
     await delay(MOCK_DELAY_MS);
     const session = await backupSession();
     if (session instanceof Response) return session;
     const parsed = RunBackupRequestSchema.safeParse(await request.json());
-    if (!parsed.success) return apiError(422, BACKUP_MESSAGES[422]);
-    const run = startBackupRun(parsed.data.targetId, session.user.id);
-    if (run === 'notFound') return apiError(404, BACKUP_MESSAGES.targetNotFound);
-    if (run === 'busy') return apiError(409, BACKUP_MESSAGES.busy);
-    if (run === 'driveNotConnected') return apiError(409, BACKUP_MESSAGES.driveNotConnected);
-    return HttpResponse.json<BackupRun>(run, { status: 202 });
+    if (!parsed.success) return apiError(422, parsed.error.issues[0]?.message ?? BACKUP_MESSAGES[422]);
+    const runs = startBackupRuns(parsed.data.targetIds, session.user.id);
+    if (runs === 'notFound') return apiError(404, BACKUP_MESSAGES.targetNotFound);
+    if (runs === 'busy') return apiError(409, BACKUP_MESSAGES.busy);
+    if (runs === 'driveNotConnected') return apiError(409, BACKUP_MESSAGES.driveNotConnected);
+    return HttpResponse.json<BackupRun[]>(runs, { status: 202 });
   }),
 
   // Sao lưu rồi tải về máy

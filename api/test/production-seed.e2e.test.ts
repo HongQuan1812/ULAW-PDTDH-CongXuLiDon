@@ -83,17 +83,22 @@ describe('seedProduction', () => {
     }
   });
 
-  it('chưa có lịch sao lưu thì tạo nơi lưu trên máy chủ và lịch 02:00 hằng ngày; đã có thì giữ nguyên', async () => {
-    const scheduleBefore = await prisma.backupSchedule.findUniqueOrThrow({ where: { id: 1 } });
-    await prisma.backupSchedule.delete({ where: { id: 1 } });
+  it('chưa có nơi lưu lẫn lịch sao lưu nào thì tạo nơi lưu trên máy chủ và lịch 02:00 hằng ngày; đã có thì giữ nguyên', async () => {
+    const [targetsBefore, schedulesBefore] = await Promise.all([prisma.backupTarget.findMany(), prisma.backupSchedule.findMany()]);
+    await prisma.backupSchedule.deleteMany();
+    await prisma.backupTarget.deleteMany();
     try {
       const report = await seedProduction(prisma, NEW_ADMIN_EMAIL);
 
       expect(report.backups).toBe('created');
-      expect(await prisma.backupSchedule.findUniqueOrThrow({ where: { id: 1 } })).toMatchObject({ enabled: true, time: '02:00', targetIds: ['backup-target-server'] });
+      expect(await prisma.backupSchedule.findMany()).toMatchObject([{ enabled: true, time: '02:00', targetIds: ['backup-target-server'] }]);
       expect(await prisma.backupTarget.count({ where: { id: 'backup-target-server' } })).toBe(1);
+      expect((await seedProduction(prisma, NEW_ADMIN_EMAIL)).backups).toBe('unchanged');
     } finally {
-      await prisma.backupSchedule.upsert({ where: { id: 1 }, create: scheduleBefore, update: scheduleBefore });
+      await prisma.backupSchedule.deleteMany();
+      await prisma.backupTarget.deleteMany();
+      await prisma.backupTarget.createMany({ data: targetsBefore });
+      await prisma.backupSchedule.createMany({ data: schedulesBefore });
     }
   });
 

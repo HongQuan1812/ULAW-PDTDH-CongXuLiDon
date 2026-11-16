@@ -1,7 +1,7 @@
 /* Dữ liệu ban đầu cho bản thật: Admin đầu tiên, dòng cấu hình email, nơi lưu và lịch sao lưu mặc định. Không xóa, không ghi đè dữ liệu nào đã có,
    nên chạy lại nhiều lần vẫn an toàn. Chạy bằng prisma/seed-production.ts. */
 import { randomUUID } from 'node:crypto';
-import { BACKUP_SCHEDULE_SEED, BACKUP_TARGETS_SEED, EMAIL_SETTINGS_SEED, isSchoolEmail } from '@ulaw/shared';
+import { BACKUP_SCHEDULES_SEED, BACKUP_TARGETS_SEED, EMAIL_SETTINGS_SEED, isSchoolEmail } from '@ulaw/shared';
 import type { Prisma, PrismaClient } from '../src/generated/prisma/client';
 
 /** Dòng cấu hình email duy nhất (cùng id với SETTINGS_ROW_ID của api/src/email/email-settings.service.ts). */
@@ -66,10 +66,11 @@ export async function seedProduction(
     emailSettings = 'created';
   }
 
-  // Sao lưu: chưa có lịch thì tạo nơi lưu trên máy chủ và lịch 02:00 hằng ngày; đã có (có thể Admin đã sửa, đã tắt) thì giữ nguyên
-  const existingSchedule = await prisma.backupSchedule.findUnique({ where: { id: 1 } });
-  if (existingSchedule) return { admin, emailSettings, backups: 'unchanged' };
+  // Sao lưu: chưa có nơi lưu lẫn lịch nào (lần đầu cài) thì tạo nơi lưu trên máy chủ và lịch 02:00 hằng ngày;
+  // đã có (có thể Admin đã sửa, đã tắt, đã bỏ bớt) thì giữ nguyên
+  const [targetCount, scheduleCount] = await Promise.all([prisma.backupTarget.count(), prisma.backupSchedule.count()]);
+  if (targetCount || scheduleCount) return { admin, emailSettings, backups: 'unchanged' };
   await prisma.backupTarget.createMany({ data: [...BACKUP_TARGETS_SEED], skipDuplicates: true });
-  await prisma.backupSchedule.create({ data: { id: 1, ...BACKUP_SCHEDULE_SEED } });
+  await prisma.backupSchedule.createMany({ data: BACKUP_SCHEDULES_SEED.map((schedule) => ({ ...schedule })), skipDuplicates: true });
   return { admin, emailSettings, backups: 'created' };
 }

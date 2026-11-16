@@ -27,6 +27,17 @@ const DRIVE_UPLOAD_URL = 'https://www.googleapis.com/upload/drive/v3/files?uploa
 
 type BackupTargetRow = Prisma.BackupTargetGetPayload<object>;
 
+/** Một lần kết nối tài khoản Drive chưa gắn vào nơi lưu nào (chờ Admin bấm Lưu). */
+export interface DriveGrant {
+  /** email tài khoản Google */
+  email: string;
+  /** refresh token đã mã hóa; null = bản giả dev-backup-drive (không có quyền thật) */
+  encryptedRefreshToken: string | null;
+}
+
+/** Lần kết nối giữ được bao lâu nếu chưa bấm Lưu, mili giây. */
+const DRIVE_GRANT_TTL_MS = 30 * 60 * 1000;
+
 /** Những gì cần nhớ giữa hai lần chuyển trang. */
 export interface DriveConnectState {
   state: string;
@@ -120,6 +131,8 @@ async function googleError(response: Response, action: string): Promise<Error> {
 
 @Injectable()
 export class GoogleDriveBackupService {
+  /** Các lần kết nối đang chờ Lưu, theo driveGrantId. Giữ trong bộ nhớ: backend khởi động lại thì phải kết nối lại. */
+  private readonly grants = new Map<string, DriveGrant & { userId: string; expiresAt: number }>();
   /**
    * @param config  OAuth client của Google, địa chỉ gốc của cổng
    * @param prisma  lưu tài khoản, token, thư mục của nơi lưu
@@ -132,6 +145,33 @@ export class GoogleDriveBackupService {
   /** Máy chủ đã có OAuth client Google chưa. */
   get available(): boolean {
     return this.config.google !== null;
+  }
+
+  /**
+   * Giữ một lần kết nối tài khoản Drive để Admin gắn vào nơi lưu khi bấm Lưu.
+   * @param userId  người kết nối (chỉ người này dùng được)
+   * @param grant   email và refresh token đã mã hóa
+   * @returns       driveGrantId (ngẫu nhiên, dùng một lần)
+   */
+  createGrant(userId: string, grant: DriveGrant): string {
+    const now = Date.now();
+    for (const [grantId, stored] of this.grants) if (stored.expiresAt <= now) this.grants.delete(grantId);
+    const grantId = randomBytes(24).toString('base64url');
+    this.grants.set(grantId, { ...grant, userId, expiresAt: now + DRIVE_GRANT_TTL_MS });
+    return grantId;
+  }
+
+  /**
+   * Lấy (và bỏ) một lần kết nối để gắn vào nơi lưu.
+   * @param grantId  driveGrantId giao diện gửi kèm
+   * @param userId   người đang lưu
+   * @returns        email, refresh token; không có, quá hạn hoặc của người khác thì null
+   */
+  takeGrant(grantId: string, userId: string): DriveGrant | null {
+    const stored = this.grants.get(grantId);
+    if (!stored || stored.userId !== userId || stored.expiresAt <= Date.now()) return null;
+    this.grants.delete(grantId);
+    return { email: stored.email, encryptedRefreshToken: stored.encryptedRefreshToken };
   }
 
   /**
@@ -213,6 +253,9 @@ export class GoogleDriveBackupService {
     const google = this.google;
     if (!google) throw new Error('Máy chủ chưa cấu hình Google (GOOGLE_CLIENT_ID).');
     const refreshToken = target.googleRefreshToken ? decryptToken(target.googleRefreshToken, google.clientSecret) : null;
+    if (!refreshToken && target.googleAccount && !target.googleRefreshToken) {
+      throw new Error('Tài khoản Google này được kết nối bằng bản giả (dev-backup-drive), không lưu thật lên Drive được.');
+    }
     if (!refreshToken) throw new Error('Chưa kết nối tài khoản Google Drive (hoặc cần kết nối lại).');
     const response = await fetch(GOOGLE_TOKEN_URL, {
       method: 'POST',
@@ -220,7 +263,7 @@ export class GoogleDriveBackupService {
       body: new URLSearchParams({ client_id: google.clientId, client_secret: google.clientSecret, refresh_token: refreshToken, grant_type: 'refresh_token' }),
       signal: AbortSignal.timeout(GOOGLE_TIMEOUT_MS),
     });
-    if (response.status === 400) throw new Error('Tài khoản Google đã thu hồi quyền hoặc hết hạn: bấm “Đổi tài khoản Google” để kết nối lại.');
+    if (response.status === 400) throw new Error('Tài khoản Google đã thu hồi quyền hoặc hết hạn: sửa nơi lưu, bấm “Đổi tài khoản” để kết nối lại.');
     if (!response.ok) throw await googleError(response, 'cấp quyền');
     return ((await response.json()) as { access_token: string }).access_token;
   }

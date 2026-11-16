@@ -1,28 +1,44 @@
-/* Hook gọi API Sao lưu (chỉ vai trò có quyền manageBackups): tổng quan, nơi lưu, lịch, sao lưu ngay, tải về. */
+/* Hook gọi API Sao lưu (chỉ vai trò có quyền manageBackups): tổng quan, lịch sử theo trang, nơi lưu, lịch, sao lưu ngay, tải về. */
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   ENDPOINTS,
   backupRunFilePath,
+  backupSchedulePath,
   backupTargetPath,
-  connectGoogleDrivePath,
+  DRIVE_CONNECTED_MESSAGE_TYPE,
   type BackupRun,
+  type BackupRunsResponse,
   type BackupSchedule,
   type BackupTarget,
   type BackupTargetInput,
   type BackupsResponse,
+  type ConnectGoogleDriveRequest,
   type ConnectGoogleDriveResponse,
 } from '@ulaw/shared';
 import { apiFetch, fetchFile, type DownloadedFile } from './client';
+import { listPath, toListPage, type ListSource } from './lists';
 
-/** Khóa lưu tạm tổng quan sao lưu trong TanStack Query. */
+/** Khóa lưu tạm tổng quan sao lưu trong TanStack Query; các trang lịch sử nằm dưới khóa này nên làm mới tổng quan là làm mới cả lịch sử. */
 export const BACKUPS_KEY = ['backups'] as const;
+
+/** Khóa gốc các trang lịch sử. */
+export const BACKUP_RUNS_KEY = [...BACKUPS_KEY, 'runs'] as const;
+
+/** Nguồn của bảng lịch sử (useServerTable): mỗi lần lấy một trang. */
+export const BACKUP_RUNS_SOURCE: ListSource<BackupRun> = {
+  queryKey: BACKUP_RUNS_KEY,
+  fetchPage: async (listQuery) => {
+    const { runs, ...pageMeta } = await apiFetch<BackupRunsResponse>(listPath(ENDPOINTS.backups.runs, listQuery));
+    return toListPage(runs, pageMeta);
+  },
+};
 
 /** Đang có bản sao lưu chạy thì tải lại sau chừng này mili giây để thấy lúc xong. */
 const RUNNING_REFETCH_MS = 3000;
 
 /**
  * Tổng quan trang Sao lưu; đang có bản chạy thì tự tải lại tới khi xong.
- * @returns  kết quả useQuery; data = { targets, schedule, nextScheduledAt, lastSuccessAt, running, runs… }
+ * @returns  kết quả useQuery; data = { targets, schedules, nextScheduledAt, lastSuccessAt, running… }
  */
 export function useBackups() {
   return useQuery({
@@ -63,36 +79,85 @@ export function useRemoveBackupTarget() {
   return useBackupMutation((targetId: string) => apiFetch<void>(backupTargetPath(targetId), { method: 'DELETE' }));
 }
 
+/** Tài khoản Google Drive vừa kết nối: gửi driveGrantId kèm nơi lưu khi bấm Lưu. */
+export interface DriveConnection {
+  driveGrantId: string;
+  email: string;
+}
+
 /**
- * Lấy đường dẫn sang Google để kết nối Drive cho một nơi lưu (giao diện chuyển trang sang đó).
- * @returns  kết quả useMutation; gọi mutateAsync(targetId) → { url }
+ * Chờ cửa sổ popup sang Google báo kết nối xong (bản thật): trang callback gửi postMessage rồi tự đóng.
+ * @param url  đường dẫn sang Google
+ * @returns    tài khoản đã kết nối
+ * @throws     trình duyệt chặn popup, hoặc người dùng đóng popup trước khi xong
  */
-export function useConnectGoogleDrive() {
-  return useMutation({
-    mutationFn: (targetId: string) => apiFetch<ConnectGoogleDriveResponse>(connectGoogleDrivePath(targetId), { method: 'POST' }),
+function connectInPopup(url: string): Promise<DriveConnection> {
+  return new Promise((resolve, reject) => {
+    const popup = window.open(url, 'ulaw-google-drive', 'width=520,height=680');
+    if (!popup) {
+      reject(new Error('Trình duyệt đã chặn cửa sổ đăng nhập Google. Cho phép cửa sổ bật lên rồi bấm Kết nối lại.'));
+      return;
+    }
+
+    // Tin báo từ trang callback (cùng địa chỉ với cổng); popup đóng mà chưa có tin thì coi như bỏ
+    const finish = () => {
+      window.removeEventListener('message', onMessage);
+      clearInterval(closedTimer);
+    };
+    const onMessage = (event: MessageEvent) => {
+      const data = event.data as Partial<DriveConnection> & { type?: string };
+      if (event.origin !== window.location.origin || data?.type !== DRIVE_CONNECTED_MESSAGE_TYPE || !data.driveGrantId || !data.email) return;
+      finish();
+      resolve({ driveGrantId: data.driveGrantId, email: data.email });
+    };
+    const closedTimer = setInterval(() => {
+      if (!popup.closed) return;
+      finish();
+      reject(new Error('Chưa kết nối: cửa sổ Google đã đóng.'));
+    }, 500);
+    window.addEventListener('message', onMessage);
   });
 }
 
 /**
- * Lưu lịch định kì. Lưu xong thì thay tổng quan bằng bản máy chủ trả về.
- * @returns  kết quả useMutation; gọi mutateAsync(schedule) → tổng quan
+ * Kết nối một tài khoản Google Drive (từ hộp thêm / sửa nơi lưu, trước khi Lưu).
+ * Bản giả của máy chủ trả ngay tài khoản; bản thật trả đường dẫn sang Google, mở trong popup rồi chờ báo về.
+ * @returns  kết quả useMutation; gọi mutateAsync({ email? }) → { driveGrantId, email }
+ */
+export function useConnectGoogleDrive() {
+  return useMutation({
+    mutationFn: async (connectRequest: ConnectGoogleDriveRequest): Promise<DriveConnection> => {
+      const response = await apiFetch<ConnectGoogleDriveResponse>(ENDPOINTS.backups.driveConnect, { method: 'POST', body: JSON.stringify(connectRequest) });
+      return response.kind === 'connected' ? { driveGrantId: response.driveGrantId, email: response.email } : connectInPopup(response.url);
+    },
+  });
+}
+
+/**
+ * Thêm, sửa hoặc bỏ một lịch định kì. Xong thì thay tổng quan bằng bản máy chủ trả về.
+ * @returns  kết quả useMutation; gọi mutateAsync({ schedule, scheduleId? }) để thêm / sửa, mutateAsync({ scheduleId, remove: true }) để bỏ
  */
 export function useSaveBackupSchedule() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (schedule: BackupSchedule) =>
-      apiFetch<BackupsResponse>(ENDPOINTS.backups.schedule, { method: 'PUT', body: JSON.stringify(schedule) }),
+    mutationFn: (change: { schedule: BackupSchedule; scheduleId?: string } | { scheduleId: string; remove: true }) => {
+      if ('remove' in change) return apiFetch<BackupsResponse>(backupSchedulePath(change.scheduleId), { method: 'DELETE' });
+      return apiFetch<BackupsResponse>(change.scheduleId ? backupSchedulePath(change.scheduleId) : ENDPOINTS.backups.schedules, {
+        method: change.scheduleId ? 'PUT' : 'POST',
+        body: JSON.stringify(change.schedule),
+      });
+    },
     onSuccess: (response) => queryClient.setQueryData(BACKUPS_KEY, response),
   });
 }
 
 /**
- * Sao lưu ngay vào một nơi lưu (chạy nền; tổng quan tự tải lại tới khi xong).
- * @returns  kết quả useMutation; gọi mutateAsync(targetId) → lần sao lưu vừa bắt đầu
+ * Sao lưu ngay vào các nơi đã chọn (chạy nền; tổng quan tự tải lại tới khi xong).
+ * @returns  kết quả useMutation; gọi mutateAsync(targetIds) → các lần sao lưu vừa bắt đầu, mỗi nơi một dòng
  */
 export function useRunBackup() {
-  return useBackupMutation((targetId: string) =>
-    apiFetch<BackupRun>(ENDPOINTS.backups.run, { method: 'POST', body: JSON.stringify({ targetId }) }),
+  return useBackupMutation((targetIds: string[]) =>
+    apiFetch<BackupRun[]>(ENDPOINTS.backups.run, { method: 'POST', body: JSON.stringify({ targetIds }) }),
   );
 }
 

@@ -1,71 +1,129 @@
-/* Trang Sao lưu. Khung trang, thẻ dùng chung ProfilePage.module.css. */
+/* Trang Sao lưu. Khung trang, thẻ dùng chung ProfilePage.module.css; bảng lịch sử dùng chung table.module.css. */
 
+/* đầu trang: tên trang bên trái, nút Sao lưu ngay… bên phải */
+.head{display:flex;align-items:flex-end;justify-content:space-between;gap:12px 16px;flex-wrap:wrap}
 .titleBlock{display:grid;gap:4px;min-width:0}
 .title{font-size:clamp(24px,2.6vw,30px);line-height:1.2;font-weight:600;letter-spacing:-.03em}
 .subtitle{font-size:13px;color:var(--muted)}
 
-/* đầu thẻ: tên, mô tả bên trái; nút bên phải */
-.cardHead{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:16px}
-.cardTitleBlock{display:grid;gap:4px;min-width:0;flex:1 1 260px}
-.cardTitleBlock h2{font-size:17px;font-weight:600}
-.cardDescription{font-size:13px;color:var(--muted)}
-.cardActions{display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap;margin-top:16px}
+/* thanh trạng thái: lần gần nhất | lần tới | (đang chạy) */
+.statusBar{display:flex;align-items:center;gap:10px 28px;flex-wrap:wrap;padding:14px 24px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);font-size:13.5px}
+.statusItem{display:flex;align-items:center;gap:8px;min-width:0}
+.statusItem>span{color:var(--muted)}
+.statusItem strong{font-weight:600}
+.statusDivider{width:1px;height:20px;background:var(--line)}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--faint);flex:none}
+.dotOk{background:var(--s-duyet-fg)}
+@media (max-width:620px){.statusDivider{display:none}}
 
-/* thẻ tóm tắt: ba ô, hẹp thì xếp dọc */
-.summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
-.summaryItem{display:grid;gap:4px;align-content:start;min-width:0}
-.summaryItem>span:first-child{font-size:12.5px;color:var(--muted)}
-.summaryItem strong{font-size:15px;font-weight:600;overflow-wrap:anywhere}
-@media (max-width:720px){.summary{grid-template-columns:minmax(0,1fr)}}
-.runningPill{display:inline-flex;align-items:center;gap:8px;width:max-content;font-size:12.5px;font-weight:500;padding:3px 11px;border-radius:999px;color:var(--s-xet-fg);background:var(--s-xet-bg)}
-.runningPill i{width:7px;height:7px;border-radius:50%;background:currentColor;animation:pulse 1.2s ease-in-out infinite}
+/* nút ở đầu trang: Lịch và nơi lưu, Sao lưu ngay… */
+.headActions{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+
+/* lịch sử chiếm hết bề ngang; khung "Lịch và nơi lưu" đang hiện ở màn hình rộng thì nằm cột phải (FormInfoPanel) */
+.columns{display:grid;grid-template-columns:minmax(0,1fr);gap:20px;align-items:start}
+.withSide{grid-template-columns:minmax(0,1fr) 360px}
+
+/* các mục trong khung "Lịch và nơi lưu", kiểu OUTLINE / TIMELINE của VS Code (PanelSection) */
+/* khung không đủ cao thì mỗi mục đang mở tự co lại: hàng tiêu đề đứng yên, danh sách bên dưới cuộn riêng */
+.panelSection{border-bottom:1px solid var(--line);display:flex;flex-direction:column;flex:0 1 auto;min-height:0}
+.panelSection:last-child{border-bottom:0}
+/* hàng tiêu đề nền xám, tách khỏi danh sách bên dưới */
+.panelSectionHead{flex:none;display:flex;align-items:center;gap:4px;padding:4px 8px 4px 6px;background:var(--surface-2);border-bottom:1px solid var(--line)}
+.panelSectionToggle{flex:1;min-width:0;display:flex;align-items:center;gap:4px;height:36px;padding:0 6px;border:0;border-radius:8px;background:none;color:var(--fg);cursor:pointer;text-align:left}
+.panelSectionToggle:hover{background:var(--hover)}
+.panelSectionToggle h3{font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase}
+.chevron{flex:none;color:var(--muted);transition:transform .15s}
+.panelSectionToggle[aria-expanded="true"] .chevron{transform:rotate(90deg)}
+@media (prefers-reduced-motion:reduce){.chevron{transition:none}}
+.panelSectionCount{margin-left:4px;padding:0 7px;border-radius:999px;background:var(--surface);color:var(--muted);font-size:11.5px;font-weight:500;line-height:18px}
+.panelSectionAdd{display:inline-grid;place-items:center;width:32px;height:32px;border:0;border-radius:8px;background:none;color:var(--muted);cursor:pointer;flex:none}
+.panelSectionAdd:hover{background:var(--hover);color:var(--accent)}
+.panelSectionBody{padding:12px 14px;min-height:0;overflow-y:auto;overscroll-behavior:contain}
+
+/* danh sách lịch / nơi lưu: mỗi mục một khối có viền, nút Sửa bên phải */
+.itemList{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.item{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--surface);font-size:12.5px}
+.item[data-off="true"] .itemTitle{color:var(--muted)}
+.itemInfo{display:grid;gap:2px;min-width:0}
+.itemTitle{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:13.5px;font-weight:500;overflow-wrap:anywhere}
+.pillSmall{padding:1px 8px;font-size:11.5px}
+
+/* nút chữ (Sửa, Kết nối, Tải về, + Thêm nơi lưu) */
+.linkButton{border:0;background:none;padding:0;font:inherit;color:var(--accent);cursor:pointer;white-space:nowrap}
+.linkButton:hover:not(:disabled){text-decoration:underline;text-underline-offset:3px}
+.linkButton:disabled{color:var(--muted);cursor:not-allowed}
+
+/* nhãn màu (tình trạng, bật / tắt) */
+.pill{display:inline-flex;align-items:center;gap:6px;width:max-content;padding:3px 11px;border-radius:999px;font-size:12.5px;font-weight:500;white-space:nowrap}
+.pill_ok{background:var(--s-duyet-bg);color:var(--s-duyet-fg)}
+.pill_error{background:var(--s-tc-bg);color:var(--s-tc-fg)}
+.pill_running{background:var(--s-xet-bg);color:var(--s-xet-fg)}
+.pill_pruned,.pill_off{background:var(--surface-2);color:var(--muted)}
+.pill_running i{width:7px;height:7px;border-radius:50%;background:currentColor;animation:pulse 1.2s ease-in-out infinite}
 @keyframes pulse{50%{opacity:.3}}
-@media (prefers-reduced-motion:reduce){.runningPill i{animation:none}}
+@media (prefers-reduced-motion:reduce){.pill_running i{animation:none}}
 
-/* ô chọn có nhãn ngắn đứng trước */
-.inlineField{display:flex;align-items:center;gap:10px;min-width:0}
-.inlineField>span{font-size:13.5px;color:var(--muted);white-space:nowrap}
-.inlineField select,.inlineField input{min-width:0}
+/* nơi lưu: mỗi nơi một dòng, nút Sửa bên phải */
+.targetMeta{color:var(--muted);overflow-wrap:anywhere}
+.warning{font-size:12.5px;color:var(--s-bs-fg);overflow-wrap:anywhere}
+.emptyNote{padding:6px 0 4px;font-size:13px;color:var(--muted)}
 
-/* sao lưu ngay */
-.runNow{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
-.runNow .inlineField{flex:1 1 280px}
-.runNow select{flex:1}
+/* bảng lịch sử: dòng phụ nhỏ dưới chữ chính, câu lỗi xuống dòng */
+.historyTable td{vertical-align:top}
+.cellSub{display:block;margin-top:2px;font-size:12px;color:var(--muted)}
+.cellError{display:block;margin-top:4px;font-size:12px;color:var(--s-tc-fg);white-space:normal;overflow-wrap:anywhere;max-width:280px}
 
-/* nơi lưu: mỗi nơi một dòng, nút bên phải; hẹp thì nút xuống dưới */
-.targetList{list-style:none;margin:0;padding:0;display:grid;border-top:1px solid var(--line)}
-.target{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:12px 0;border-bottom:1px solid var(--line)}
-.targetInfo{display:grid;gap:3px;min-width:0;flex:1 1 280px}
-.targetInfo strong{font-weight:600}
-.targetMeta{font-size:13px;color:var(--muted);overflow-wrap:anywhere}
-.targetActions{display:flex;gap:8px;flex-wrap:wrap}
-.warning{font-size:13px;color:var(--s-bs-fg)}
-
-/* lịch định kì */
-.switch{display:inline-flex;align-items:center;gap:8px;font-size:13.5px;font-weight:500;cursor:pointer}
-.scheduleGrid{border:0;margin:0;padding:0;display:flex;gap:12px 20px;flex-wrap:wrap}
-.scheduleTargets{border:0;margin:16px 0 0;padding:0;display:grid;gap:8px}
-.scheduleTargets legend{font-size:13.5px;color:var(--muted);padding:0;margin-bottom:8px}
-.scheduleGrid:disabled,.scheduleTargets:disabled{opacity:.55}
-.checkRow{display:flex;align-items:center;gap:10px;font-size:14px;cursor:pointer}
-.checkRow small{color:var(--muted)}
-.formError{margin-top:12px;font-size:13px;color:var(--s-tc-fg)}
-
-/* lịch sử: bảng cuộn ngang trong thẻ khi hẹp */
-.tableWrap{overflow-x:auto;margin:0 -4px}
-.history{width:100%;border-collapse:collapse;font-size:13.5px}
-.history th{text-align:left;font-weight:500;font-size:12.5px;color:var(--muted);padding:8px;border-bottom:1px solid var(--line-2);white-space:nowrap}
-.history td{padding:10px 8px;border-bottom:1px solid var(--line);vertical-align:top}
-.nowrap{white-space:nowrap}
-.cellSub,.cellError{display:block;font-size:12px;margin-top:2px}
-.cellSub{color:var(--muted)}
-.cellError{color:var(--s-tc-fg);overflow-wrap:anywhere;max-width:320px}
-.statusOk,.statusError,.statusRunning{font-weight:500}
-.statusOk{color:var(--s-duyet-fg)}
-.statusError{color:var(--s-tc-fg)}
-.statusRunning{color:var(--s-xet-fg)}
+/* hộp chọn nhiều dòng (sao lưu ngay, nơi lưu của lịch) */
+.choiceList{display:grid;border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.choice{display:flex;align-items:flex-start;gap:12px;padding:14px 16px;cursor:pointer}
+.choice+.choice{border-top:1px solid var(--line)}
+.choice input{width:18px;height:18px;margin:2px 0 0;accent-color:var(--accent);flex:none}
+.choice[data-disabled="true"]{cursor:not-allowed;opacity:.6}
+.choiceDownload{background:var(--bg);border-bottom:1px solid var(--line-2)}
+.choiceText{display:grid;gap:2px;min-width:0}
+.choiceName{font-size:14px;font-weight:500}
+.choiceMeta{font-size:12.5px;color:var(--muted);overflow-wrap:anywhere}
+.choiceWarn{color:var(--s-bs-fg)}
 
 /* hộp thoại */
-.dialogForm{display:grid;gap:16px}
+.dialogBody{display:grid;gap:18px}
 .dialogText{font-size:13.5px;color:var(--muted)}
-.dialogButtons{display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap;margin-top:8px}
+.dialogButtons{display:flex;align-items:center;justify-content:flex-end;gap:10px;flex-wrap:wrap}
+.spacer{flex:1}
+.formError{font-size:13px;color:var(--s-tc-fg)}
+.fieldLabel{display:grid;gap:6px;font-size:13.5px;font-weight:500}
+.fieldHint{font-size:12.5px;font-weight:400;color:var(--muted)}
+.fieldError{font-size:12.5px;font-weight:400;color:var(--s-tc-fg)}
+.fieldRow{display:flex;gap:12px;flex-wrap:wrap}
+.switch{display:inline-flex;align-items:center;gap:8px;flex-shrink:0;white-space:nowrap;font-size:13.5px;font-weight:500;cursor:pointer}
+.switch input{width:18px;height:18px;accent-color:var(--accent)}
+.dialogHeadRow{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.plain{border:0;margin:0;padding:0;min-width:0;display:grid;gap:16px}
+.plain:disabled{opacity:.55}
+.plain legend{padding:0;margin-bottom:8px;font-size:13.5px;font-weight:500}
+
+/* chọn kiểu nơi lưu: hai thẻ */
+.kindCards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.kindCard{display:flex;align-items:flex-start;gap:10px;padding:12px 14px;border-radius:12px;border:1px solid var(--line-2);background:var(--surface);cursor:pointer}
+.kindCard:has(input:checked){border-color:var(--accent);background:var(--accent-soft)}
+.kindCard input{margin:2px 0 0;accent-color:var(--accent)}
+.kindCard span{display:grid;gap:2px}
+.kindCard strong{font-size:14px;font-weight:600}
+.kindCard small{font-size:12.5px;color:var(--muted)}
+@media (max-width:480px){.kindCards{grid-template-columns:minmax(0,1fr)}}
+
+/* ô thư mục máy chủ có chữ "backups/" đứng trước */
+.prefixInput{display:flex;align-items:stretch;border:1px solid var(--line-2);border-radius:10px;overflow:hidden;background:var(--surface)}
+.prefixInput:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px var(--focus)}
+.prefixInput>span{display:flex;align-items:center;padding:0 10px;background:var(--surface-2);color:var(--muted);font-weight:400;border-right:1px solid var(--line-2)}
+.prefixInput input,.prefixInput input:focus{flex:1;min-width:0;min-height:40px;border:0;border-radius:0;box-shadow:none;outline:0}
+.keepInput{width:120px}
+.driveNote{padding:12px 14px;border-radius:10px;background:var(--s-xet-bg);color:var(--s-xet-fg);font-size:13px}
+.requiredMark{color:var(--danger)}
+
+/* tài khoản Google của nơi lưu Drive */
+.driveAccount{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 14px;border-radius:10px;background:var(--s-duyet-bg);font-weight:400}
+.driveAccountEmail{display:flex;align-items:center;gap:8px;color:var(--s-duyet-fg);font-weight:500;overflow-wrap:anywhere;min-width:0}
+.driveAccountEmail i{font-style:normal;font-weight:700}
+.demoGoogle{display:grid;gap:10px;padding:14px 16px;border:1px dashed var(--line-2);border-radius:12px;background:var(--bg);font-weight:400}
+.demoGoogle strong{font-weight:600}

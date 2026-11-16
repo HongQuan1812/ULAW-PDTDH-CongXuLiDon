@@ -159,9 +159,9 @@ Nơi lưu:
 | Google Drive | Admin bấm kết nối tài khoản Google (OAuth client của trường, quyền `drive.file`), chọn thư mục; refresh token lưu mã hóa ở máy chủ, không trả về giao diện |
 | Tải về máy Admin | chỉ có khi sao lưu ngay: tạo bản rồi tải thẳng về trình duyệt, không giữ trên máy chủ; bản đã lưu ở thư mục máy chủ cũng có nút tải về |
 
-- **Sao lưu ngay**: chọn một nơi lưu rồi bấm. Mỗi lúc chỉ chạy một bản, đang chạy thì nút khóa lại.
-- **Lịch định kì**: bật / tắt, hằng ngày hoặc hằng tuần (thứ mấy), giờ chạy, nơi lưu (một hoặc nhiều, không có Tải về). Mỗi nơi lưu đặt giữ N bản gần nhất (bản cũ hơn tự xóa sau mỗi lần sao lưu thành công, chạy tay hay định kì đều vậy). Giờ theo `Asia/Ho_Chi_Minh`.
-- **Lịch sử**: mỗi lần chạy một dòng: lúc bắt đầu, thời gian chạy, chạy tay (ai bấm) hay định kì, nơi lưu, dung lượng, thành công / lỗi (kèm câu lỗi). Trên đầu trang: lần sao lưu thành công gần nhất, lần chạy định kì tới.
+- **Sao lưu ngay**: popup chọn một hoặc nhiều nơi lưu, hoặc chỉ tải về máy này (tích tải về thì các nơi lưu bị khóa). Mỗi lúc chỉ chạy một bản, đang chạy thì nút khóa lại.
+- **Lịch định kì**: nhiều lịch; mỗi lịch bật / tắt, hằng ngày hoặc hằng tuần (thứ mấy), giờ chạy, nơi lưu (một hoặc nhiều, không có Tải về). Mỗi nơi lưu đặt giữ N bản gần nhất (bản cũ hơn tự xóa sau mỗi lần sao lưu thành công, chạy tay hay định kì đều vậy). Giờ theo `Asia/Ho_Chi_Minh`.
+- **Lịch sử**: mỗi lần chạy một dòng: lúc bắt đầu, thời gian chạy, chạy tay (ai bấm) hay định kì, nơi lưu, dung lượng, thành công / lỗi (kèm câu lỗi). Bảng phân trang ở máy chủ, tìm, lọc, sắp xếp như các bảng khác. Trên đầu trang: lần sao lưu thành công gần nhất, lần chạy định kì tới.
 - Lỗi khi sao lưu (hết chỗ, mất kết nối Drive…) ghi vào lịch sử, không làm hỏng các trang khác.
 
 | # | Việc | Gồm | |

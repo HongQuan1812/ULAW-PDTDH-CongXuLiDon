@@ -205,16 +205,23 @@ Mỗi loại đơn có hai nhóm mẫu, lưu ở máy chủ theo loại đơn, d
 
 - Trang **Sao lưu** (`#/sao-luu`, chỉ Admin). Mỗi bản sao lưu luôn gồm **cả database lẫn tệp tải lên**, là một tệp `sao-luu-<YYYYMMDD-HHmmss>.tar.gz`
   chứa `manifest.json`, `database.dump` (`pg_dump` dạng custom, khôi phục bằng `pg_restore`) và thư mục `uploads/`.
-- **Nơi lưu**: thư mục trên máy chủ (thư mục con trong `BACKUP_DIR`, không ra ngoài được) hoặc Google Drive (Admin bấm kết nối tài khoản Google,
+- **Nơi lưu**: thư mục trên máy chủ (thư mục con trong `BACKUP_DIR`, không ra ngoài được) hoặc Google Drive (trong hộp thêm / sửa nơi lưu, Admin bấm
+  **Kết nối Google**, chọn tài khoản, thấy email rồi mới bấm Lưu; chưa kết nối thì không lưu được. Bản giả `dev-backup-drive` không qua Google: gõ email bất kì,
+  sao lưu vào đó báo lỗi trong lịch sử vì không có quyền thật; bản thật mở cửa sổ popup sang Google, chưa làm.
   cổng chỉ xin quyền `drive.file`: chỉ thấy tệp, thư mục do chính nó tạo; thư mục chưa có thì tự tạo). Mỗi nơi lưu đặt **giữ N bản gần nhất**:
   sau mỗi lần sao lưu thành công vào đó, bản cũ hơn bị xóa (lịch sử vẫn ghi, đánh dấu đã xóa). Hai nơi lưu không được cùng kiểu cùng thư mục.
   Bỏ nơi lưu: lịch không lưu vào đó nữa, bản đã lưu và lịch sử giữ nguyên.
-- **Sao lưu ngay**: chọn một nơi lưu, hoặc **Tải về máy này** (tạo bản rồi tải thẳng về trình duyệt, không giữ trên máy chủ). Mỗi lúc chỉ chạy một bản;
-  đang chạy thì bấm lại báo 409. Bản lưu ở thư mục máy chủ có nút Tải về trong lịch sử.
-- **Lịch định kì**: bật / tắt, hằng ngày hoặc hằng tuần (thứ mấy), giờ chạy theo giờ Việt Nam, lưu vào một hoặc nhiều nơi (một tệp, chép vào từng nơi;
-  nơi nào lỗi thì chỉ dòng đó lỗi). Backend kiểm mỗi 30 giây; tắt đúng phút chạy thì lần ấy bỏ qua; khởi động lại trong cùng phút không chạy trùng.
-  Bản thật mặc định (seed:production, chỉ thêm khi chưa có lịch): một nơi lưu "Trên máy chủ" (`hang-ngay`, giữ 14 bản), chạy 02:00 hằng ngày.
-- **Lịch sử**: mỗi lần sao lưu vào mỗi nơi một dòng: lúc bắt đầu, nơi lưu (tên chép lại lúc chạy), chạy tay (ai bấm) hay định kì, dung lượng, thành công / lỗi kèm câu lỗi.
+- **Sao lưu ngay** (popup): chọn **một hoặc nhiều nơi lưu** (một tệp, chép vào từng nơi, mỗi nơi một dòng lịch sử), hoặc **Tải về máy này**
+  (tạo bản rồi tải thẳng về trình duyệt, không giữ trên máy chủ). Tải về đi một mình: tích ô này thì các nơi lưu bị khóa. Nơi lưu Drive chưa kết nối không chọn được;
+  gửi lên vẫn có thì cả lần bị từ chối (409). Mỗi lúc chỉ chạy một bản; đang chạy thì bấm lại báo 409. Bản lưu ở thư mục máy chủ có nút Tải về trong lịch sử.
+- **Lịch định kì**: một danh sách lịch (thêm, sửa, bỏ). Mỗi lịch: bật / tắt, hằng ngày hoặc hằng tuần (thứ mấy), giờ chạy theo giờ Việt Nam,
+  lưu vào một hoặc nhiều nơi (một tệp, chép vào từng nơi; nơi nào lỗi thì chỉ dòng đó lỗi). Nhiều lịch trúng cùng một phút thì chạy chung một lần,
+  lưu vào mọi nơi của các lịch đó. "Lần tới" là lần sớm nhất trong các lịch đang bật. Backend kiểm mỗi 30 giây; tắt đúng phút chạy thì lần ấy bỏ qua; khởi động lại trong cùng phút không chạy trùng.
+  Bản thật mặc định (seed:production, chỉ thêm khi chưa có nơi lưu lẫn lịch nào): một nơi lưu "Trên máy chủ" (`hang-ngay`, giữ 14 bản), một lịch 02:00 hằng ngày.
+- Giao diện: lịch sử bên trái; khung "Lịch và nơi lưu" bên phải (hẹp thì trượt ra từ bên phải) gồm hai mục thu gọn được kiểu VS Code, mỗi mục có nút + để thêm.
+- **Lịch sử**: mỗi lần sao lưu vào mỗi nơi một dòng: lúc bắt đầu, nơi lưu (tên chép lại lúc chạy), chạy tay (ai bấm) hay định kì, dung lượng,
+  tình trạng (Đang chạy / Thành công / Lỗi kèm câu lỗi / Đã xóa vì quá số bản giữ). Bảng phân trang ở máy chủ (`GET /backups/runs`, 10 dòng mỗi trang),
+  tìm kiếm (cả câu lỗi), Sắp xếp, Lọc như các bảng khác; mặc định mới nhất trước.
   Backend tắt khi đang sao lưu thì lần đó ghi lỗi lúc bật lại.
 - Google Drive: refresh token lưu mã hóa (khóa băm từ `GOOGLE_CLIENT_SECRET`), không trả về giao diện; đổi bí mật hoặc thu hồi quyền thì phải kết nối lại.
   Cần thêm redirect URI `<địa chỉ cổng>/api/backups/google-drive/callback` vào OAuth client (README, mục Đăng nhập Google).

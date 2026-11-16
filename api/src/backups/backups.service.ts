@@ -9,15 +9,21 @@ import { randomUUID } from 'node:crypto';
 import { Injectable, Logger, type OnModuleDestroy, type OnModuleInit } from '@nestjs/common';
 import {
   BACKUP_MESSAGES,
-  BACKUP_RUNS_LIMIT,
+  BACKUP_RUN_LIST_DEFAULT_SORTING,
+  BACKUP_RUN_LIST_FIELDS,
+  applyListQuery,
   backupFileName,
+  backupRunExtraSearchText,
   isScheduledMinute,
-  nextScheduledAt,
+  nextScheduledAtOf,
   type BackupRun,
+  type BackupRunsResponse,
   type BackupSchedule,
+  type BackupScheduleItem,
   type BackupTarget,
   type BackupTargetInput,
   type BackupsResponse,
+  type ListQuery,
 } from '@ulaw/shared';
 import { ApiException } from '../common/api-exception';
 import { PrismaService } from '../common/prisma.service';
@@ -26,12 +32,6 @@ import { AppConfig } from '../config/app-config';
 import type { Prisma, User } from '../generated/prisma/client';
 import { createBackupArchive } from './backup-archive';
 import { GoogleDriveBackupService } from './google-drive-backup.service';
-
-/** Id dòng lịch duy nhất. */
-const SCHEDULE_ROW_ID = 1;
-
-/** Lịch khi chưa có dòng nào (database chưa seed): tắt. */
-const EMPTY_SCHEDULE: BackupSchedule = { enabled: false, frequency: 'daily', weekday: 1, time: '02:00', targetIds: [] };
 
 /** Bao lâu kiểm lịch một lần, mili giây (nhỏ hơn một phút để không lỡ phút nào). */
 const SCHEDULE_CHECK_MS = 30_000;
@@ -106,13 +106,19 @@ export class BackupsService implements OnModuleInit, OnModuleDestroy {
   }
 
   /**
-   * Lịch đang dùng.
-   * @returns  lịch; chưa có dòng nào thì lịch tắt
+   * Các lịch định kì, theo thứ tự thêm.
+   * @returns  các lịch (có id)
    */
-  private async readSchedule(): Promise<BackupSchedule> {
-    const row = await this.prisma.backupSchedule.findUnique({ where: { id: SCHEDULE_ROW_ID } });
-    if (!row) return EMPTY_SCHEDULE;
-    return { enabled: row.enabled, frequency: row.frequency as BackupSchedule['frequency'], weekday: row.weekday, time: row.time, targetIds: row.targetIds };
+  private async readSchedules(): Promise<BackupScheduleItem[]> {
+    const rows = await this.prisma.backupSchedule.findMany({ orderBy: { createdAt: 'asc' } });
+    return rows.map((row) => ({
+      id: row.id,
+      enabled: row.enabled,
+      frequency: row.frequency as BackupSchedule['frequency'],
+      weekday: row.weekday,
+      time: row.time,
+      targetIds: row.targetIds,
+    }));
   }
 
   /**
@@ -127,10 +133,12 @@ export class BackupsService implements OnModuleInit, OnModuleDestroy {
 
   /**
    * Đổi dòng lịch sử sang câu trả.
-   * @param row  dòng lần sao lưu kèm người bấm
-   * @returns    theo BackupRunSchema; fileAvailable = tệp còn trên ổ đĩa máy chủ
+   * @param row        dòng lần sao lưu kèm người bấm
+   * @param checkFile  true thì fileAvailable kiểm thêm tệp còn trên ổ đĩa; false thì chỉ theo database (để kiểm sau, cho các dòng của một trang)
+   * @returns          theo BackupRunSchema
    */
-  private toRun(row: BackupRunRow): BackupRun {
+  private toRun(row: BackupRunRow, checkFile = true): BackupRun {
+    const storedOnServer = row.status === 'ok' && !row.pruned && !!row.storagePath;
     return {
       id: row.id,
       startedAt: toVietnamSeconds(row.startedAt),
@@ -143,87 +151,150 @@ export class BackupsService implements OnModuleInit, OnModuleDestroy {
       sizeBytes: row.sizeBytes === null ? null : Number(row.sizeBytes),
       status: row.status,
       error: row.error,
-      fileAvailable: row.status === 'ok' && !row.pruned && !!row.storagePath && existsSync(path.join(this.backupRoot, row.storagePath)),
+      fileAvailable: storedOnServer && (!checkFile || existsSync(path.join(this.backupRoot, row.storagePath!))),
       pruned: row.pruned,
     };
   }
 
   /**
    * Tổng quan trang Sao lưu.
-   * @returns  nơi lưu, lịch, lần tới, lần thành công gần nhất, đang chạy không, lịch sử gần nhất
+   * @returns  nơi lưu, lịch, lần tới, lần thành công gần nhất, đang chạy không (lịch sử lấy riêng theo trang: findRunsPage)
    */
   async overview(): Promise<BackupsResponse> {
-    const [targets, counts, schedule, runs, lastSuccess] = await Promise.all([
+    const [targets, counts, schedules, lastSuccess] = await Promise.all([
       this.prisma.backupTarget.findMany({ orderBy: { createdAt: 'asc' } }),
       this.prisma.backupRun.groupBy({ by: ['targetId'], where: { status: 'ok', pruned: false }, _count: true }),
-      this.readSchedule(),
-      this.prisma.backupRun.findMany({ orderBy: { startedAt: 'desc' }, take: BACKUP_RUNS_LIMIT, include: WITH_STARTED_BY }),
+      this.readSchedules(),
       this.prisma.backupRun.findFirst({ where: { status: 'ok' }, orderBy: { startedAt: 'desc' } }),
     ]);
     const countOf = (targetId: string) => counts.find((count) => count.targetId === targetId)?._count ?? 0;
     return {
       targets: targets.map((target) => this.toTarget(target, countOf(target.id))),
-      schedule,
-      nextScheduledAt: nextScheduledAt(schedule, toVietnamTime(new Date())),
+      schedules,
+      nextScheduledAt: nextScheduledAtOf(schedules, toVietnamTime(new Date())),
       lastSuccessAt: lastSuccess ? toVietnamSeconds(lastSuccess.startedAt) : null,
       running: this.busy,
-      googleDriveAvailable: this.googleDrive.available,
-      runs: runs.map((run) => this.toRun(run)),
+      // Bản giả dev-backup-drive không cần OAuth client
+      googleDriveAvailable: this.googleDrive.available || this.config.usesDemoApi('dev-backup-drive'),
     };
+  }
+
+  /**
+   * Một trang lịch sử: tìm, lọc, sắp xếp trên mọi lần sao lưu (applyListQuery, như bảng tài khoản).
+   * Chỉ kiểm tệp trên ổ đĩa cho các dòng của trang trả về.
+   * @param listQuery  trang, số dòng, chữ tìm, sắp xếp, lọc (đã kiểm tra)
+   * @returns          các dòng của trang, tổng số dòng khớp, trang thật sự, lựa chọn lọc
+   */
+  async findRunsPage(listQuery: ListQuery): Promise<BackupRunsResponse> {
+    const rows = await this.prisma.backupRun.findMany({ include: WITH_STARTED_BY });
+    const rowById = new Map(rows.map((row) => [row.id, row]));
+    const { rows: pageRuns, ...pageMeta } = applyListQuery(
+      rows.map((row) => this.toRun(row, false)),
+      BACKUP_RUN_LIST_FIELDS,
+      listQuery,
+      BACKUP_RUN_LIST_DEFAULT_SORTING,
+      backupRunExtraSearchText,
+    );
+    return { ...pageMeta, runs: pageRuns.map((run) => this.toRun(rowById.get(run.id)!)) };
   }
 
   /* ---------- Nơi lưu, lịch ---------- */
 
   /**
-   * Thêm hoặc sửa một nơi lưu. Đổi kiểu hoặc thư mục Drive thì phải kết nối lại tài khoản Google.
+   * Thêm hoặc sửa một nơi lưu. Nơi lưu Google Drive phải có tài khoản: lần kết nối vừa làm (driveGrantId), hoặc tài khoản cũ khi sửa nơi Drive đã kết nối.
    * @param input     thông tin nơi lưu (đã kiểm tra)
+   * @param user      người đang lưu (lần kết nối phải của người này)
    * @param targetId  id nơi lưu cần sửa; không có = thêm mới
    * @returns         nơi lưu sau khi lưu
-   * @throws          404 không có nơi lưu · 409 trùng kiểu và thư mục với nơi khác
+   * @throws          404 không có nơi lưu · 409 trùng kiểu và thư mục với nơi khác · 422 Drive chưa kết nối, kết nối hết hạn
    */
-  async saveTarget(input: BackupTargetInput, targetId?: string): Promise<BackupTarget> {
+  async saveTarget(input: BackupTargetInput, user: User, targetId?: string): Promise<BackupTarget> {
+    const { driveGrantId, ...fields } = input;
     const existing = targetId ? await this.prisma.backupTarget.findUnique({ where: { id: targetId } }) : null;
     if (targetId && !existing) throw new ApiException(404, BACKUP_MESSAGES.targetNotFound);
-    const duplicate = await this.prisma.backupTarget.findFirst({ where: { kind: input.kind, folder: input.folder, NOT: { id: targetId ?? '' } } });
+    const duplicate = await this.prisma.backupTarget.findFirst({ where: { kind: fields.kind, folder: fields.folder, NOT: { id: targetId ?? '' } } });
     if (duplicate) throw new ApiException(409, BACKUP_MESSAGES.duplicateTarget);
 
-    // Drive: đổi kiểu thì bỏ tài khoản đã kết nối; đổi tên thư mục thì tạo thư mục mới ở lần lưu tới
-    const keepsGoogle = existing?.kind === input.kind;
-    const googleFields = keepsGoogle
-      ? { googleFolderId: existing!.folder === input.folder ? existing!.googleFolderId : null }
-      : { googleAccount: null, googleRefreshToken: null, googleFolderId: null };
+    // Tài khoản Google: kết nối mới, giữ tài khoản cũ, hoặc bỏ (kiểu thư mục máy chủ)
+    const googleFields = this.googleFieldsFor(fields, existing, driveGrantId, user);
     const saved = existing
-      ? await this.prisma.backupTarget.update({ where: { id: existing.id }, data: { ...input, ...googleFields } })
-      : await this.prisma.backupTarget.create({ data: { id: `backup-target-${randomUUID()}`, ...input } });
+      ? await this.prisma.backupTarget.update({ where: { id: existing.id }, data: { ...fields, ...googleFields } })
+      : await this.prisma.backupTarget.create({ data: { id: `backup-target-${randomUUID()}`, ...fields, ...googleFields } });
     const backupCount = await this.prisma.backupRun.count({ where: { targetId: saved.id, status: 'ok', pruned: false } });
     return this.toTarget(saved, backupCount);
   }
 
   /**
-   * Bỏ một nơi lưu; lịch không còn lưu vào đó. Bản đã lưu và lịch sử giữ nguyên.
+   * Các cột tài khoản Google của nơi lưu sắp lưu.
+   * @param fields        kiểu, thư mục mới
+   * @param existing      nơi lưu đang sửa; null = thêm mới
+   * @param driveGrantId  lần kết nối vừa làm (nếu có)
+   * @param user          người đang lưu
+   * @returns             googleAccount, googleRefreshToken, googleFolderId cần ghi (đổi thư mục Drive thì tạo thư mục mới ở lần lưu tới)
+   * @throws              422 kết nối hết hạn · 422 Drive mà chưa có tài khoản
+   */
+  private googleFieldsFor(
+    fields: Omit<BackupTargetInput, 'driveGrantId'>,
+    existing: BackupTargetRow | null,
+    driveGrantId: string | undefined,
+    user: User,
+  ): Pick<BackupTargetRow, 'googleAccount' | 'googleRefreshToken' | 'googleFolderId'> | Pick<BackupTargetRow, 'googleFolderId'> {
+    if (fields.kind !== 'googleDrive') return { googleAccount: null, googleRefreshToken: null, googleFolderId: null };
+    if (driveGrantId) {
+      const grant = this.googleDrive.takeGrant(driveGrantId, user.id);
+      if (!grant) throw new ApiException(422, BACKUP_MESSAGES.driveGrantExpired);
+      return { googleAccount: grant.email, googleRefreshToken: grant.encryptedRefreshToken, googleFolderId: null };
+    }
+    if (existing?.kind === 'googleDrive' && existing.googleAccount) {
+      return { googleFolderId: existing.folder === fields.folder ? existing.googleFolderId : null };
+    }
+    throw new ApiException(422, BACKUP_MESSAGES.driveConnectFirst);
+  }
+
+  /**
+   * Bỏ một nơi lưu; các lịch không còn lưu vào đó. Bản đã lưu và lịch sử giữ nguyên.
    * @param targetId  id nơi lưu
    * @throws          404 không có nơi lưu
    */
   async removeTarget(targetId: string): Promise<void> {
     const existing = await this.prisma.backupTarget.findUnique({ where: { id: targetId } });
     if (!existing) throw new ApiException(404, BACKUP_MESSAGES.targetNotFound);
-    const schedule = await this.readSchedule();
+    const schedules = await this.readSchedules();
     await this.prisma.$transaction([
       this.prisma.backupTarget.delete({ where: { id: targetId } }),
-      this.prisma.backupSchedule.updateMany({ where: { id: SCHEDULE_ROW_ID }, data: { targetIds: schedule.targetIds.filter((id) => id !== targetId) } }),
+      ...schedules
+        .filter((schedule) => schedule.targetIds.includes(targetId))
+        .map((schedule) =>
+          this.prisma.backupSchedule.update({ where: { id: schedule.id }, data: { targetIds: schedule.targetIds.filter((id) => id !== targetId) } }),
+        ),
     ]);
   }
 
   /**
-   * Lưu lịch định kì.
-   * @param schedule  lịch (đã kiểm tra)
-   * @returns         tổng quan sau khi lưu
-   * @throws          422 lịch chọn nơi lưu không có
+   * Thêm hoặc sửa một lịch định kì.
+   * @param schedule    lịch (đã kiểm tra)
+   * @param scheduleId  id lịch cần sửa; không có = thêm mới
+   * @returns           tổng quan sau khi lưu
+   * @throws            404 không có lịch · 422 lịch chọn nơi lưu không có
    */
-  async saveSchedule(schedule: BackupSchedule): Promise<BackupsResponse> {
+  async saveSchedule(schedule: BackupSchedule, scheduleId?: string): Promise<BackupsResponse> {
+    if (scheduleId && !(await this.prisma.backupSchedule.findUnique({ where: { id: scheduleId } }))) throw new ApiException(404, BACKUP_MESSAGES.scheduleNotFound);
     const known = await this.prisma.backupTarget.count({ where: { id: { in: schedule.targetIds } } });
     if (known !== new Set(schedule.targetIds).size) throw new ApiException(422, BACKUP_MESSAGES.unknownScheduleTarget);
-    await this.prisma.backupSchedule.upsert({ where: { id: SCHEDULE_ROW_ID }, create: { id: SCHEDULE_ROW_ID, ...schedule }, update: schedule });
+    if (scheduleId) await this.prisma.backupSchedule.update({ where: { id: scheduleId }, data: schedule });
+    else await this.prisma.backupSchedule.create({ data: { id: `backup-schedule-${randomUUID()}`, ...schedule } });
+    return this.overview();
+  }
+
+  /**
+   * Bỏ một lịch định kì (lịch sử giữ nguyên).
+   * @param scheduleId  id lịch
+   * @returns           tổng quan sau khi bỏ
+   * @throws            404 không có lịch
+   */
+  async removeSchedule(scheduleId: string): Promise<BackupsResponse> {
+    const removed = await this.prisma.backupSchedule.deleteMany({ where: { id: scheduleId } });
+    if (!removed.count) throw new ApiException(404, BACKUP_MESSAGES.scheduleNotFound);
     return this.overview();
   }
 
@@ -239,22 +310,22 @@ export class BackupsService implements OnModuleInit, OnModuleDestroy {
   }
 
   /**
-   * Sao lưu ngay vào một nơi lưu, chạy nền.
-   * @param targetId  id nơi lưu
-   * @param starter   người bấm
-   * @returns         lần sao lưu vừa bắt đầu (status 'running')
-   * @throws          404 không có nơi lưu · 409 đang có lần khác chạy, nơi lưu Drive chưa kết nối
+   * Sao lưu ngay: tạo một bản rồi lưu vào các nơi đã chọn, chạy nền.
+   * @param targetIds  id các nơi lưu (đã kiểm tra: ít nhất một, không trùng)
+   * @param starter    người bấm
+   * @returns          các lần sao lưu vừa bắt đầu (status 'running'), mỗi nơi một dòng
+   * @throws           404 có nơi lưu không còn · 409 đang có lần khác chạy, có nơi lưu Drive chưa kết nối
    */
-  async runNow(targetId: string, starter: User): Promise<BackupRun> {
-    const target = await this.prisma.backupTarget.findUnique({ where: { id: targetId } });
-    if (!target) throw new ApiException(404, BACKUP_MESSAGES.targetNotFound);
-    if (target.kind === 'googleDrive' && !target.googleRefreshToken) throw new ApiException(409, BACKUP_MESSAGES.driveNotConnected);
+  async runNow(targetIds: readonly string[], starter: User): Promise<BackupRun[]> {
+    const targets = await this.prisma.backupTarget.findMany({ where: { id: { in: [...targetIds] } }, orderBy: { createdAt: 'asc' } });
+    if (targets.length !== targetIds.length) throw new ApiException(404, BACKUP_MESSAGES.targetNotFound);
+    if (targets.some((target) => target.kind === 'googleDrive' && !target.googleAccount)) throw new ApiException(409, BACKUP_MESSAGES.driveNotConnected);
     this.claim();
     try {
       const startedAt = new Date();
-      const [run] = await this.startRuns([target], { startedAt, trigger: 'manual', startedById: starter.id });
-      void this.finishRuns([target], [run!], startedAt).finally(() => (this.busy = false));
-      return this.toRun(run!);
+      const runs = await this.startRuns(targets, { startedAt, trigger: 'manual', startedById: starter.id });
+      void this.finishRuns(targets, runs, startedAt).finally(() => (this.busy = false));
+      return runs.map((run) => this.toRun(run));
     } catch (error) {
       this.busy = false;
       throw error;
@@ -414,25 +485,26 @@ export class BackupsService implements OnModuleInit, OnModuleDestroy {
   /* ---------- Lịch ---------- */
 
   /**
-   * Kiểm lịch: tới phút chạy mà chưa chạy phút đó (kể cả trước khi backend khởi động lại) thì sao lưu vào các nơi trong lịch.
-   * Đang có lần khác chạy thì bỏ qua lần này. Nơi lưu Drive chưa kết nối ghi lỗi trong lịch sử.
+   * Kiểm lịch: các lịch tới phút chạy mà chưa chạy phút đó (kể cả trước khi backend khởi động lại) thì sao lưu một lần
+   * vào mọi nơi của các lịch đó. Đang có lần khác chạy thì bỏ qua lần này. Nơi lưu Drive chưa kết nối ghi lỗi trong lịch sử.
    * @param now  lúc kiểm (để test)
    */
   async checkSchedule(now = new Date()): Promise<void> {
     const minute = toVietnamTime(now);
-    const schedule = await this.readSchedule();
-    if (!isScheduledMinute(schedule, minute) || this.busy) return;
+    const dueSchedules = (await this.readSchedules()).filter((schedule) => isScheduledMinute(schedule, minute));
+    if (!dueSchedules.length || this.busy) return;
     const scheduledAt = fromVietnamTime(minute);
     if (await this.prisma.backupRun.findFirst({ where: { trigger: 'scheduled', scheduledAt } })) return;
 
-    const targets = await this.prisma.backupTarget.findMany({ where: { id: { in: schedule.targetIds } }, orderBy: { createdAt: 'asc' } });
+    const targetIds = [...new Set(dueSchedules.flatMap((schedule) => schedule.targetIds))];
+    const targets = await this.prisma.backupTarget.findMany({ where: { id: { in: targetIds } }, orderBy: { createdAt: 'asc' } });
     if (!targets.length) return;
     this.busy = true;
     try {
       const runs = await this.startRuns(targets, { startedAt: now, trigger: 'scheduled', scheduledAt });
 
       // Drive chưa kết nối: ghi lỗi ngay, các nơi khác vẫn chạy
-      const notConnected = targets.filter((target) => target.kind === 'googleDrive' && !target.googleRefreshToken);
+      const notConnected = targets.filter((target) => target.kind === 'googleDrive' && !target.googleAccount);
       if (notConnected.length) {
         await this.prisma.backupRun.updateMany({
           where: { id: { in: runs.filter((_, index) => notConnected.includes(targets[index]!)).map((run) => run.id) } },

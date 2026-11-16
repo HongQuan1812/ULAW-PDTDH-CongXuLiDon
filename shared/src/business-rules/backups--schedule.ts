@@ -63,6 +63,17 @@ export function nextScheduledAt(schedule: BackupSchedule, now: string): string |
 }
 
 /**
+ * Lần chạy định kì tới của nhiều lịch: sớm nhất trong các lịch đang bật.
+ * @param schedules  các lịch
+ * @param now        lúc tính, giờ Việt Nam 'YYYY-MM-DDTHH:mm'
+ * @returns          'YYYY-MM-DDTHH:mm'; null khi không lịch nào chạy
+ */
+export function nextScheduledAtOf(schedules: readonly BackupSchedule[], now: string): string | null {
+  const upcoming = schedules.map((schedule) => nextScheduledAt(schedule, now)).filter((at): at is string => at !== null);
+  return upcoming.length ? upcoming.sort()[0]! : null;
+}
+
+/**
  * Tên tệp sao lưu theo lúc bắt đầu.
  * @param startedAt  giờ Việt Nam 'YYYY-MM-DDTHH:mm:ss'
  * @returns          vd 'sao-luu-20261116-093000.tar.gz'

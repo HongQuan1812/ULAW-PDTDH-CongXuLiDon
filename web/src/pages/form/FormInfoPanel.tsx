@@ -121,7 +121,7 @@ export function FormInfoPanel({ panel, title = DEFAULT_PANEL_TITLE, children }: 
   if (panel.isNarrow) {
     return (
       <Sheet open={panel.isOpen} onClose={panel.closePanel} title={title}>
-        <div className={styles.sections}>{children}</div>
+        <div className={`${styles.sections} ${styles.sheetSections}`}>{children}</div>
       </Sheet>
     );
   }

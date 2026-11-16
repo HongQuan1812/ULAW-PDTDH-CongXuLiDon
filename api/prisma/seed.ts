@@ -2,7 +2,7 @@
    Chạy: pnpm --filter api prisma db seed. Xóa sạch dữ liệu cũ rồi nạp lại, chỉ dùng khi phát triển. */
 import { PrismaPg } from '@prisma/adapter-pg';
 import {
-  BACKUP_SCHEDULE_SEED,
+  BACKUP_SCHEDULES_SEED,
   BACKUP_TARGETS_SEED,
   EMAIL_SETTINGS_SEED,
   EMAIL_SETTINGS_SEED_UPDATE,
@@ -157,7 +157,7 @@ async function seedAll(prisma: PrismaClient): Promise<void> {
 
   // Sao lưu: nơi lưu và lịch mẫu, chưa có lần sao lưu nào
   await prisma.backupTarget.createMany({ data: [...BACKUP_TARGETS_SEED] });
-  await prisma.backupSchedule.create({ data: { id: 1, ...BACKUP_SCHEDULE_SEED } });
+  await prisma.backupSchedule.createMany({ data: BACKUP_SCHEDULES_SEED.map((schedule) => ({ ...schedule })) });
 }
 
 const prisma = new PrismaClient({ adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL }) });

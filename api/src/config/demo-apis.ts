@@ -15,6 +15,9 @@ export const DEMO_APIS = [
   /** thư tự động không tới người nộp đơn: gửi về DEV_EMAIL_REDIRECT_TO, trống thì in ra console; chưa có SMTP_HOST thì mọi thư chỉ in ra
       · bản thật: gửi tới email người nộp đơn qua SMTP */
   'dev-email',
+  /** kết nối Google Drive cho nơi lưu sao lưu không qua Google: tài khoản là email gửi kèm (mặc định email người đang đăng nhập),
+      không có quyền thật nên sao lưu vào nơi đó báo lỗi trong lịch sử · bản thật: popup sang Google (chưa làm) */
+  'dev-backup-drive',
 ] as const satisfies readonly `dev-${string}`[];
 export type DemoApi = (typeof DEMO_APIS)[number];
 

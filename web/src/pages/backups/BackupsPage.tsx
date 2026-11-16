@@ -1,49 +1,33 @@
-/* Trang Sao lưu (#/sao-luu, vai trò có quyền manageBackups: Admin).
-   Mỗi bản sao lưu gồm cả database lẫn tệp tải lên. Trên đầu: lần thành công gần nhất, lần định kì tới, đang chạy không.
-   Rồi: sao lưu ngay (chọn nơi lưu hoặc tải về máy) · các nơi lưu (thêm, sửa, bỏ, kết nối Google Drive) · lịch định kì · lịch sử.
-   Đang có bản chạy thì trang tự tải lại tới khi xong. Khôi phục: chưa làm. */
-import { useEffect, useState } from 'react';
+/* Trang Sao lưu (#/sao-luu, vai trò có quyền manageBackups: Admin). Mỗi bản sao lưu gồm cả database lẫn tệp tải lên.
+   Đầu trang: tên trang, nút "Sao lưu ngay…" (popup chọn nhiều nơi lưu, hoặc chỉ tải về máy này).
+   Thanh trạng thái: lần thành công gần nhất, lần định kì tới; nhãn "Đang sao lưu…" chỉ hiện khi có bản đang chạy.
+   Lịch sử (tìm, lọc, sắp xếp, phân trang) bên trái; khung "Lịch và nơi lưu" (lịch định kì, nơi lưu) bên phải, giống khung Thông tin đơn
+   ở trang chi tiết đơn: rộng thì nằm bên phải (bấm › để ẩn), hẹp (≤ 1100px) thì ẩn sẵn, bấm nút ở đầu trang để trượt ra từ bên phải.
+   Đang có bản chạy thì trang tự tải lại tới khi xong, xong thì tải lại lịch sử. Khôi phục: chưa làm. */
+import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router';
-import {
-  BACKUP_MESSAGES,
-  BACKUP_TARGET_KIND_LABEL,
-  DRIVE_ERROR_PARAM,
-  formatFileSize,
-  type BackupRun,
-  type BackupTarget,
-  type BackupsResponse,
-} from '@ulaw/shared';
-import {
-  fetchBackupFile,
-  useBackups,
-  useConnectGoogleDrive,
-  useDownloadBackup,
-  useRemoveBackupTarget,
-  useRunBackup,
-} from '../../api/backups';
+import { BACKUP_MESSAGES, DRIVE_ERROR_PARAM, type BackupTarget, type BackupsResponse } from '@ulaw/shared';
+import { BACKUP_RUNS_KEY, useBackups, useDownloadBackup, useRunBackup } from '../../api/backups';
 import { Button } from '../../components/Button';
 import { LoadError, loadErrorMessage } from '../../components/LoadError';
-import { Modal } from '../../components/Modal';
 import { RefreshButton } from '../../components/RefreshButton';
 import { useToast } from '../../components/Toast';
 import { formatDateTime } from '../../lib/format';
 import { saveToDevice } from '../../lib/saveToDevice';
+import { FormInfoPanel, FormInfoPanelToggle, useFormInfoPanel } from '../form/FormInfoPanel';
 import profileStyles from '../profile/ProfilePage.module.css';
+import { BackupHistoryCard } from './BackupHistoryCard';
 import { BackupScheduleCard } from './BackupScheduleCard';
-import { BackupTargetDialog } from './BackupTargetDialog';
+import { BackupTargetsCard, errorText } from './BackupTargetsCard';
+import { RunBackupDialog } from './RunBackupDialog';
 import styles from './BackupsPage.module.css';
 
-/** Giá trị ô "Lưu vào" khi chọn tải về máy. */
-const DOWNLOAD_CHOICE = 'download';
+/** Tên khung bên phải và nút hiện khung. */
+const SIDE_PANEL_TITLE = 'Lịch và nơi lưu';
 
-/**
- * Câu báo lỗi của một lệnh.
- * @param error  lỗi bắt được
- * @returns      câu báo của máy chủ, hoặc câu chung
- */
-function errorText(error: unknown): string {
-  return error instanceof Error ? error.message : BACKUP_MESSAGES[422];
-}
+/** Khóa localStorage nhớ việc đã ẩn khung bên phải ở màn hình rộng. */
+const SIDE_PANEL_STORAGE_KEY = 'backupsPanel.hiddenOnWideScreen';
 
 /**
  * Trang Sao lưu.
@@ -53,31 +37,156 @@ export function BackupsPage() {
   const backupsQuery = useBackups();
   const loadError = loadErrorMessage(backupsQuery);
   useDriveErrorToast();
+  useRefreshHistoryWhenDone(backupsQuery.data?.running ?? false);
 
   return (
     <div className={profileStyles.page}>
-      <div className={styles.titleBlock}>
-        <h1 className={styles.title}>Sao lưu</h1>
-        <p className={styles.subtitle}>Mỗi bản sao lưu gồm cả database lẫn tệp người dùng tải lên.</p>
-      </div>
-
       {backupsQuery.isPending ? (
-        <p className={profileStyles.muted}>Đang tải…</p>
-      ) : loadError || !backupsQuery.data ? (
-        <section className={`${profileStyles.card} ${profileStyles.errorCard}`}>
-          <LoadError message={loadError ?? 'Không tải được trang sao lưu.'} />
-          <RefreshButton query={backupsQuery} label="Sao lưu" />
-        </section>
-      ) : (
         <>
-          <SummaryCard overview={backupsQuery.data} />
-          <RunNowCard overview={backupsQuery.data} />
-          <TargetsCard overview={backupsQuery.data} />
-          <BackupScheduleCard overview={backupsQuery.data} />
-          <HistoryCard overview={backupsQuery.data} backupsQuery={backupsQuery} />
+          <PageTitle />
+          <p className={profileStyles.muted}>Đang tải…</p>
         </>
+      ) : loadError || !backupsQuery.data ? (
+        <>
+          <PageTitle />
+          <section className={`${profileStyles.card} ${profileStyles.errorCard}`}>
+            <LoadError message={loadError ?? 'Không tải được trang sao lưu.'} />
+            <RefreshButton query={backupsQuery} label="Sao lưu" />
+          </section>
+        </>
+      ) : (
+        <BackupsContent overview={backupsQuery.data} />
       )}
     </div>
+  );
+}
+
+/**
+ * Tên trang và dòng giải thích.
+ * @param children  tùy chọn: nút bên phải (Sao lưu ngay…)
+ * @returns         đầu trang
+ */
+function PageTitle({ children }: { children?: ReactNode }) {
+  return (
+    <div className={styles.head}>
+      <div className={styles.titleBlock}>
+        <h1 className={styles.title}>Sao lưu</h1>
+        <p className={styles.subtitle}>Mỗi bản gồm cả database lẫn tệp người dùng tải lên.</p>
+      </div>
+      {children}
+    </div>
+  );
+}
+
+/**
+ * Nội dung trang khi đã có tổng quan: đầu trang, thanh trạng thái, hai cột, popup Sao lưu ngay.
+ * Trang giữ việc sao lưu / tải về (không phải popup), để popup đóng rồi nút đầu trang vẫn báo "Đang tạo bản để tải về…".
+ * @param overview  tổng quan
+ * @returns         nội dung trang
+ */
+function BackupsContent({ overview }: { overview: BackupsResponse }) {
+  const toast = useToast();
+  const runBackup = useRunBackup();
+  const downloadBackup = useDownloadBackup();
+  const [runOpen, setRunOpen] = useState(false);
+  // Hộp thêm / sửa nơi lưu: undefined = đóng, null = thêm mới, nơi lưu = sửa nơi đó
+  const [editingTarget, setEditingTarget] = useState<BackupTarget | null | undefined>(undefined);
+  const sidePanel = useFormInfoPanel(SIDE_PANEL_STORAGE_KEY);
+  const busy = overview.running || runBackup.isPending || downloadBackup.isPending;
+
+  /**
+   * Sao lưu vào các nơi đã chọn (chạy nền).
+   * @param targetIds  id các nơi lưu
+   * @returns          true khi máy chủ đã nhận
+   */
+  const run = async (targetIds: string[]): Promise<boolean> => {
+    try {
+      await runBackup.mutateAsync(targetIds);
+      toast(BACKUP_MESSAGES.started(targetIds.length), 'info');
+      return true;
+    } catch (error) {
+      toast(errorText(error), 'error');
+      return false;
+    }
+  };
+
+  /** Đóng popup, tạo bản rồi tải về máy. */
+  const download = async () => {
+    setRunOpen(false);
+    try {
+      const archive = await downloadBackup.mutateAsync();
+      saveToDevice(archive.content, archive.fileName);
+    } catch (error) {
+      toast(errorText(error), 'error');
+    }
+  };
+
+  const runButtonLabel = downloadBackup.isPending ? 'Đang tạo bản để tải về…' : overview.running || runBackup.isPending ? 'Đang sao lưu…' : 'Sao lưu ngay…';
+
+  return (
+    <>
+      <PageTitle>
+        <div className={styles.headActions}>
+          <FormInfoPanelToggle panel={sidePanel} label={SIDE_PANEL_TITLE} />
+          <Button variant="primary" onClick={() => setRunOpen(true)} disabled={busy}>
+            {runButtonLabel}
+          </Button>
+        </div>
+      </PageTitle>
+
+      <StatusBar overview={overview} />
+
+      <div className={`${styles.columns} ${!sidePanel.isNarrow && sidePanel.isOpen ? styles.withSide : ''}`}>
+        <BackupHistoryCard />
+        <FormInfoPanel panel={sidePanel} title={SIDE_PANEL_TITLE}>
+          <BackupScheduleCard overview={overview} />
+          <BackupTargetsCard overview={overview} editing={editingTarget} onEdit={setEditingTarget} />
+        </FormInfoPanel>
+      </div>
+
+      <RunBackupDialog
+        open={runOpen}
+        overview={overview}
+        onClose={() => setRunOpen(false)}
+        onRun={run}
+        onDownload={() => void download()}
+        onAddTarget={() => {
+          setRunOpen(false);
+          setEditingTarget(null);
+        }}
+      />
+    </>
+  );
+}
+
+/**
+ * Thanh trạng thái: lần thành công gần nhất (chấm xanh khi đã có), lần định kì tới, nhãn "Đang sao lưu…" khi có bản đang chạy.
+ * @param overview  tổng quan
+ * @returns         thanh
+ */
+function StatusBar({ overview }: { overview: BackupsResponse }) {
+  return (
+    <section className={styles.statusBar} aria-label="Tình trạng sao lưu" aria-live="polite">
+      <div className={styles.statusItem}>
+        <span className={`${styles.dot} ${overview.lastSuccessAt ? styles.dotOk : ''}`} aria-hidden="true" />
+        <span>Gần nhất</span>
+        <strong>{overview.lastSuccessAt ? formatDateTime(overview.lastSuccessAt) : 'Chưa có'}</strong>
+      </div>
+      <span className={styles.statusDivider} aria-hidden="true" />
+      <div className={styles.statusItem}>
+        <span>Lần tới</span>
+        <strong>{overview.nextScheduledAt ? formatDateTime(overview.nextScheduledAt) : 'Lịch đang tắt'}</strong>
+      </div>
+      {overview.running && (
+        <>
+          <span className={styles.statusDivider} aria-hidden="true" />
+          <span className={`${styles.pill} ${styles.pill_running}`}>
+            <i aria-hidden="true" />
+            Đang sao lưu…
+          </span>
+        </>
+      )}
+    </section>
   );
 }
 
@@ -94,289 +203,14 @@ function useDriveErrorToast() {
 }
 
 /**
- * Thẻ tóm tắt: lần thành công gần nhất, lần định kì tới, đang chạy không.
- * @param overview  tổng quan
- * @returns         thẻ
+ * Bản sao lưu vừa chạy xong (running đổi từ true sang false): tải lại lịch sử để dòng "Đang chạy" thành kết quả.
+ * @param running  tổng quan đang báo có bản chạy
  */
-function SummaryCard({ overview }: { overview: BackupsResponse }) {
-  const items = [
-    { label: 'Sao lưu thành công gần nhất', text: overview.lastSuccessAt ? formatDateTime(overview.lastSuccessAt) : 'Chưa có' },
-    { label: 'Lần định kì tới', text: overview.nextScheduledAt ? formatDateTime(overview.nextScheduledAt) : 'Lịch đang tắt' },
-  ];
-  return (
-    <section className={`${profileStyles.card} ${styles.summary}`} aria-label="Tóm tắt sao lưu">
-      {items.map((item) => (
-        <div key={item.label} className={styles.summaryItem}>
-          <span>{item.label}</span>
-          <strong>{item.text}</strong>
-        </div>
-      ))}
-      <div className={styles.summaryItem} aria-live="polite">
-        <span>Tình trạng</span>
-        {overview.running ? (
-          <span className={styles.runningPill}>
-            <i aria-hidden="true" />
-            Đang sao lưu…
-          </span>
-        ) : (
-          <strong>Không có bản nào đang chạy</strong>
-        )}
-      </div>
-    </section>
-  );
-}
-
-/**
- * Thẻ Sao lưu ngay: chọn nơi lưu (hoặc tải về máy) rồi bấm.
- * @param overview  tổng quan
- * @returns         thẻ
- */
-function RunNowCard({ overview }: { overview: BackupsResponse }) {
-  const toast = useToast();
-  const runBackup = useRunBackup();
-  const downloadBackup = useDownloadBackup();
-  const [choice, setChoice] = useState(overview.targets[0]?.id ?? DOWNLOAD_CHOICE);
-  const busy = overview.running || runBackup.isPending || downloadBackup.isPending;
-
-  // Nơi lưu đang chọn bị bỏ thì về lựa chọn đầu
-  const chosen = choice === DOWNLOAD_CHOICE || overview.targets.some((target) => target.id === choice) ? choice : (overview.targets[0]?.id ?? DOWNLOAD_CHOICE);
-
-  /** Bắt đầu sao lưu: vào nơi lưu thì chạy nền; tải về thì chờ tệp rồi lưu về máy. */
-  const start = async () => {
-    try {
-      if (chosen === DOWNLOAD_CHOICE) {
-        const archive = await downloadBackup.mutateAsync();
-        saveToDevice(archive.content, archive.fileName);
-        return;
-      }
-      await runBackup.mutateAsync(chosen);
-      toast(BACKUP_MESSAGES.started(overview.targets.find((target) => target.id === chosen)?.name ?? ''), 'info');
-    } catch (error) {
-      toast(errorText(error), 'error');
-    }
-  };
-
-  return (
-    <section className={profileStyles.card} aria-labelledby="run-now-title">
-      <div className={styles.cardHead}>
-        <div className={styles.cardTitleBlock}>
-          <h2 id="run-now-title">Sao lưu ngay</h2>
-          <p className={styles.cardDescription}>Tạo một bản sao lưu ngay bây giờ. Mỗi lúc chỉ chạy một bản.</p>
-        </div>
-      </div>
-      <div className={styles.runNow}>
-        <label className={styles.inlineField}>
-          <span>Lưu vào</span>
-          <select value={chosen} onChange={(event) => setChoice(event.target.value)} disabled={busy}>
-            {overview.targets.map((target) => (
-              <option key={target.id} value={target.id}>
-                {target.name} ({BACKUP_TARGET_KIND_LABEL[target.kind]})
-              </option>
-            ))}
-            <option value={DOWNLOAD_CHOICE}>Tải về máy này</option>
-          </select>
-        </label>
-        <Button variant="primary" onClick={() => void start()} disabled={busy}>
-          {downloadBackup.isPending ? 'Đang tạo bản để tải về…' : overview.running ? 'Đang sao lưu…' : 'Sao lưu ngay'}
-        </Button>
-      </div>
-    </section>
-  );
-}
-
-/**
- * Thẻ Nơi lưu: mỗi nơi một dòng (tên, kiểu, thư mục, giữ bao nhiêu bản, đang có bao nhiêu bản), nút sửa, bỏ, kết nối Drive.
- * @param overview  tổng quan
- * @returns         thẻ
- */
-function TargetsCard({ overview }: { overview: BackupsResponse }) {
-  const toast = useToast();
-  const removeTarget = useRemoveBackupTarget();
-  const connectDrive = useConnectGoogleDrive();
-  // Hộp sửa: undefined = đóng, null = thêm mới, nơi lưu = sửa nơi đó
-  const [editing, setEditing] = useState<BackupTarget | null | undefined>(undefined);
-  const [removing, setRemoving] = useState<BackupTarget | null>(null);
-
-  /** Sang Google để kết nối Drive cho một nơi lưu. */
-  const connect = async (target: BackupTarget) => {
-    try {
-      const { url } = await connectDrive.mutateAsync(target.id);
-      window.location.assign(url);
-    } catch (error) {
-      toast(errorText(error), 'error');
-    }
-  };
-
-  /** Bỏ nơi lưu đang hỏi. */
-  const confirmRemove = async () => {
-    if (!removing) return;
-    try {
-      await removeTarget.mutateAsync(removing.id);
-      toast(BACKUP_MESSAGES.targetRemoved, 'success');
-      setRemoving(null);
-    } catch (error) {
-      toast(errorText(error), 'error');
-    }
-  };
-
-  return (
-    <section className={profileStyles.card} aria-labelledby="targets-title">
-      <div className={styles.cardHead}>
-        <div className={styles.cardTitleBlock}>
-          <h2 id="targets-title">Nơi lưu</h2>
-          <p className={styles.cardDescription}>
-            Thư mục trên máy chủ hoặc Google Drive. Mỗi nơi giữ một số bản gần nhất, bản cũ hơn tự xóa.
-          </p>
-        </div>
-        <Button onClick={() => setEditing(null)}>+ Thêm nơi lưu</Button>
-      </div>
-
-      {overview.targets.length === 0 ? (
-        <p className={profileStyles.muted}>Chưa có nơi lưu nào. Vẫn tải bản sao lưu về máy được.</p>
-      ) : (
-        <ul className={styles.targetList}>
-          {overview.targets.map((target) => (
-            <li key={target.id} className={styles.target}>
-              <div className={styles.targetInfo}>
-                <strong>{target.name}</strong>
-                <span className={styles.targetMeta}>
-                  {BACKUP_TARGET_KIND_LABEL[target.kind]} · {target.kind === 'googleDrive' ? 'thư mục' : 'thư mục con'} “{target.folder}” · giữ{' '}
-                  {target.keepLatest} bản · đang có {target.backupCount} bản
-                </span>
-                {target.kind === 'googleDrive' &&
-                  (target.googleAccount ? (
-                    <span className={styles.targetMeta}>Tài khoản Google: {target.googleAccount}</span>
-                  ) : (
-                    <span className={styles.warning}>Chưa kết nối tài khoản Google, chưa lưu vào đây được.</span>
-                  ))}
-              </div>
-              <div className={styles.targetActions}>
-                {target.kind === 'googleDrive' && (
-                  <Button onClick={() => void connect(target)} disabled={!overview.googleDriveAvailable || connectDrive.isPending}>
-                    {target.googleAccount ? 'Đổi tài khoản Google' : 'Kết nối Google Drive'}
-                  </Button>
-                )}
-                <Button variant="ghost" onClick={() => setEditing(target)}>
-                  Sửa
-                </Button>
-                <Button variant="danger" onClick={() => setRemoving(target)}>
-                  Bỏ
-                </Button>
-              </div>
-            </li>
-          ))}
-        </ul>
-      )}
-      {!overview.googleDriveAvailable && <p className={styles.warning}>{BACKUP_MESSAGES.driveUnavailable}</p>}
-
-      <BackupTargetDialog open={editing !== undefined} target={editing ?? null} onClose={() => setEditing(undefined)} />
-
-      <Modal open={removing !== null} onClose={() => setRemoving(null)} title={`Bỏ nơi lưu “${removing?.name ?? ''}”?`}>
-        <p className={styles.dialogText}>
-          Lịch định kì sẽ không lưu vào đây nữa. Các bản đã lưu ở đó không bị xóa, lịch sử vẫn giữ nguyên.
-        </p>
-        <div className={styles.dialogButtons}>
-          <Button variant="ghost" onClick={() => setRemoving(null)}>
-            Hủy
-          </Button>
-          <Button variant="danger" onClick={() => void confirmRemove()} disabled={removeTarget.isPending}>
-            Bỏ nơi lưu
-          </Button>
-        </div>
-      </Modal>
-    </section>
-  );
-}
-
-/**
- * Chữ ở cột Tình trạng của một lần sao lưu.
- * @param run  lần sao lưu
- * @returns    nhãn và kiểu màu
- */
-function runStatusOf(run: BackupRun): { text: string; className: string } {
-  if (run.status === 'running') return { text: 'Đang chạy', className: styles.statusRunning! };
-  if (run.status === 'error') return { text: 'Lỗi', className: styles.statusError! };
-  return { text: run.pruned ? 'Thành công · đã xóa (quá số bản giữ lại)' : 'Thành công', className: styles.statusOk! };
-}
-
-/**
- * Thẻ Lịch sử: mỗi lần sao lưu một dòng; bản còn ở thư mục máy chủ có nút tải về.
- * @param overview      tổng quan
- * @param backupsQuery  kết quả useBackups, cho nút ↻
- * @returns             thẻ
- */
-function HistoryCard({ overview, backupsQuery }: { overview: BackupsResponse; backupsQuery: ReturnType<typeof useBackups> }) {
-  const toast = useToast();
-  const [downloadingId, setDownloadingId] = useState<string | null>(null);
-
-  /** Tải về một bản đã lưu. */
-  const download = async (run: BackupRun) => {
-    setDownloadingId(run.id);
-    try {
-      const archive = await fetchBackupFile(run.id);
-      saveToDevice(archive.content, archive.fileName);
-    } catch (error) {
-      toast(errorText(error), 'error');
-    } finally {
-      setDownloadingId(null);
-    }
-  };
-
-  return (
-    <section className={profileStyles.card} aria-labelledby="history-title">
-      <div className={styles.cardHead}>
-        <div className={styles.cardTitleBlock}>
-          <h2 id="history-title">Lịch sử</h2>
-          <p className={styles.cardDescription}>Các lần sao lưu gần nhất, mới nhất trước.</p>
-        </div>
-        <RefreshButton query={backupsQuery} label="lịch sử sao lưu" size="small" />
-      </div>
-
-      {overview.runs.length === 0 ? (
-        <p className={profileStyles.muted}>Chưa có lần sao lưu nào.</p>
-      ) : (
-        <div className={styles.tableWrap}>
-          <table className={styles.history}>
-            <thead>
-              <tr>
-                <th>Bắt đầu</th>
-                <th>Lưu vào</th>
-                <th>Chạy</th>
-                <th>Dung lượng</th>
-                <th>Tình trạng</th>
-                <th aria-label="Tải về" />
-              </tr>
-            </thead>
-            <tbody>
-              {overview.runs.map((run) => {
-                const status = runStatusOf(run);
-                return (
-                  <tr key={run.id}>
-                    <td className={styles.nowrap}>{formatDateTime(run.startedAt)}</td>
-                    <td>
-                      {run.targetName}
-                      <small className={styles.cellSub}>{run.targetKind === 'download' ? 'Tải về máy' : BACKUP_TARGET_KIND_LABEL[run.targetKind]}</small>
-                    </td>
-                    <td>{run.trigger === 'scheduled' ? 'Định kì' : `Bấm tay · ${run.startedBy?.name ?? ''}`}</td>
-                    <td className={styles.nowrap}>{run.sizeBytes === null ? '—' : formatFileSize(run.sizeBytes)}</td>
-                    <td>
-                      <span className={status.className}>{status.text}</span>
-                      {run.error && <small className={styles.cellError}>{run.error}</small>}
-                    </td>
-                    <td>
-                      {run.fileAvailable && (
-                        <Button variant="ghost" onClick={() => void download(run)} disabled={downloadingId === run.id}>
-                          {downloadingId === run.id ? 'Đang tải…' : 'Tải về'}
-                        </Button>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      )}
-    </section>
-  );
+function useRefreshHistoryWhenDone(running: boolean) {
+  const queryClient = useQueryClient();
+  const wasRunning = useRef(running);
+  useEffect(() => {
+    if (wasRunning.current && !running) void queryClient.invalidateQueries({ queryKey: BACKUP_RUNS_KEY });
+    wasRunning.current = running;
+  }, [running, queryClient]);
 }
