@@ -64,10 +64,10 @@ async function readSheet(bytes: ArrayBuffer): Promise<ExcelJS.Worksheet> {
 
 describe('renderXlsxTemplate', () => {
   test('nhân hàng mẫu theo số đơn, giữ định dạng; mã chung điền một lần; bảng gộp vào một ô; số giữ là số', async () => {
-    const template = await makeTemplate(['{stt}', '{ma_don}', '{ly_do}', '{mon}', '{tong_so_tin_chi}']);
+    const template = await makeTemplate(['{stt}', '{ma_don}', '{ly_do}', '{mon}', '{tong_mon_so_tin_chi}']);
     const forms = [
-      { ma_don: 'A-1', ly_do: 'Chuyển trường', mon: [{ stt: 1, ten_mon: 'Triết', so_tin_chi: 3 }], tong_so_tin_chi: 3 },
-      { ma_don: 'A-2', ly_do: '', mon: [], tong_so_tin_chi: 0 },
+      { ma_don: 'A-1', ly_do: 'Chuyển trường', mon: [{ stt: 1, mon_ten_mon: 'Triết', mon_so_tin_chi: 3 }], tong_mon_so_tin_chi: 3 },
+      { ma_don: 'A-2', ly_do: '', mon: [], tong_mon_so_tin_chi: 0 },
     ];
     const sheet = await readSheet(await renderXlsxTemplate(template, forms, { so_don: 2, loai_don: 'Xét miễn môn', ngay_xuat: '13/11/2026' }));
 
@@ -86,19 +86,19 @@ describe('renderXlsxTemplate', () => {
 
 describe('bảng nhiều dòng (gộp ô)', () => {
   test('đơn có bảng n dòng thì chiếm n hàng: cột của bảng điền từng dòng, các ô khác gộp dọc lại', async () => {
-    const template = await makeTemplate(['{stt}', '{ma_don}', '{ten_mon}', '{so_tin_chi}', '{tong_so_tin_chi}']);
+    const template = await makeTemplate(['{stt}', '{ma_don}', '{mon_ten_mon}', '{mon_so_tin_chi}', '{tong_mon_so_tin_chi}']);
     const forms = [
       {
         ma_don: 'A-1',
         mon: [
-          { stt: 1, ten_mon: 'Triết', so_tin_chi: 3 },
-          { stt: 2, ten_mon: 'Luật', so_tin_chi: 2 },
-          { stt: 3, ten_mon: 'Tin', so_tin_chi: 4 },
+          { stt: 1, mon_ten_mon: 'Triết', mon_so_tin_chi: 3 },
+          { stt: 2, mon_ten_mon: 'Luật', mon_so_tin_chi: 2 },
+          { stt: 3, mon_ten_mon: 'Tin', mon_so_tin_chi: 4 },
         ],
-        tong_so_tin_chi: 9,
+        tong_mon_so_tin_chi: 9,
       },
-      { ma_don: 'A-2', mon: [], tong_so_tin_chi: 0 },
-      { ma_don: 'A-3', mon: [{ stt: 1, ten_mon: 'Anh', so_tin_chi: 5 }], tong_so_tin_chi: 5 },
+      { ma_don: 'A-2', mon: [], tong_mon_so_tin_chi: 0 },
+      { ma_don: 'A-3', mon: [{ stt: 1, mon_ten_mon: 'Anh', mon_so_tin_chi: 5 }], tong_mon_so_tin_chi: 5 },
     ];
     const sheet = await readSheet(await renderXlsxTemplate(template, forms, { so_don: 3 }));
 
@@ -116,19 +116,19 @@ describe('bảng nhiều dòng (gộp ô)', () => {
   });
 
   test('{stt_dong} là số thứ tự dòng của bảng, đánh lại từ 1 ở mỗi đơn', async () => {
-    const template = await makeTemplate(['{ma_don}', '{stt_dong}', '{ten_mon}']);
+    const template = await makeTemplate(['{ma_don}', '{stt_dong}', '{mon_ten_mon}']);
     const forms = [
-      { ma_don: 'A-1', mon: [{ stt: 1, ten_mon: 'Triết' }, { stt: 2, ten_mon: 'Luật' }] },
-      { ma_don: 'A-2', mon: [{ stt: 1, ten_mon: 'Anh' }] },
+      { ma_don: 'A-1', mon: [{ stt: 1, mon_ten_mon: 'Triết' }, { stt: 2, mon_ten_mon: 'Luật' }] },
+      { ma_don: 'A-2', mon: [{ stt: 1, mon_ten_mon: 'Anh' }] },
     ];
     const sheet = await readSheet(await renderXlsxTemplate(template, forms, { so_don: 2 }));
     expect([3, 4, 5].map((row) => [sheet.getCell(`B${row}`).value, sheet.getCell(`C${row}`).value])).toEqual([[1, 'Triết'], [2, 'Luật'], [1, 'Anh']]);
   });
 
   test('hai bảng trong một đơn thì số hàng theo bảng dài hơn, bảng ngắn để trống phần còn lại', async () => {
-    const template = await makeTemplate(['{ma_don}', '{ten_mon}', '{ten_giay_to}']);
+    const template = await makeTemplate(['{ma_don}', '{mon_ten_mon}', '{giay_to_ten_giay_to}']);
     const forms = [
-      { ma_don: 'A-1', mon: [{ stt: 1, ten_mon: 'Triết' }, { stt: 2, ten_mon: 'Luật' }], giay_to: [{ stt: 1, ten_giay_to: 'Bảng điểm' }] },
+      { ma_don: 'A-1', mon: [{ stt: 1, mon_ten_mon: 'Triết' }, { stt: 2, mon_ten_mon: 'Luật' }], giay_to: [{ stt: 1, giay_to_ten_giay_to: 'Bảng điểm' }] },
     ];
     const sheet = await readSheet(await renderXlsxTemplate(template, forms, { so_don: 1 }));
     expect([3, 4].map((row) => [sheet.getCell(`B${row}`).value, sheet.getCell(`C${row}`).value])).toEqual([['Triết', 'Bảng điểm'], ['Luật', '']]);
@@ -152,7 +152,7 @@ describe('createStatsStarterXlsx', () => {
 
     // Tầng dưới: tên cột của bảng; hàng mẫu: mã
     expect([sheet.getCell('I5').value, sheet.getCell('J5').value]).toEqual(['Tên môn', 'Số tín chỉ']);
-    expect([sheet.getCell('I6').value, sheet.getCell('J6').value, sheet.getCell('K6').value]).toEqual(['{ten_mon}', '{so_tin_chi}', '{tong_so_tin_chi}']);
+    expect([sheet.getCell('I6').value, sheet.getCell('J6').value, sheet.getCell('K6').value]).toEqual(['{mon_ten_mon}', '{mon_so_tin_chi}', '{tong_mon_so_tin_chi}']);
 
     const check = await checkXlsxTemplate(starter, sections);
     expect(check.unknown).toEqual([]);
@@ -160,8 +160,8 @@ describe('createStatsStarterXlsx', () => {
 
     // Xuất: đơn có 2 môn chiếm 2 hàng, đơn không có môn chiếm 1 hàng
     const forms = [
-      { ma_don: 'A-1', mon: [{ stt: 1, ten_mon: 'Triết', so_tin_chi: 3 }, { stt: 2, ten_mon: 'Luật', so_tin_chi: 2 }], tong_so_tin_chi: 5 },
-      { ma_don: 'A-2', mon: [], tong_so_tin_chi: 0 },
+      { ma_don: 'A-1', mon: [{ stt: 1, mon_ten_mon: 'Triết', mon_so_tin_chi: 3 }, { stt: 2, mon_ten_mon: 'Luật', mon_so_tin_chi: 2 }], tong_mon_so_tin_chi: 5 },
+      { ma_don: 'A-2', mon: [], tong_mon_so_tin_chi: 0 },
     ];
     const filled = await readSheet(await renderXlsxTemplate(starter, forms, { so_don: 2, loai_don: 'X', ngay_xuat: '13/11/2026' }));
     expect(filled.getCell('A2').value).toBe('Ngày xuất: 13/11/2026 · Số đơn: 2');
@@ -172,7 +172,7 @@ describe('createStatsStarterXlsx', () => {
 
 describe('checkXlsxTemplate', () => {
   test('mã cột của bảng và {stt_dong} dùng được; mã lạ thì báo; báo ô thiếu ngoặc', async () => {
-    const check = await checkXlsxTemplate(await makeTemplate(['{stt_dong}', '{ten_mon}', '{ma_la}', '{ly_do']), sections);
+    const check = await checkXlsxTemplate(await makeTemplate(['{stt_dong}', '{mon_ten_mon}', '{ma_la}', '{ly_do']), sections);
     expect(check.unknown).toEqual(['ma_la']);
     expect(check.found).toContain('so_don');
     expect(check.error).toContain('D3');

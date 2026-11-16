@@ -102,7 +102,7 @@ function columnTypeChanges(column: TableColumn, type: TableColumnType): Partial<
 
 /**
  * Cài đặt bảng: tên gọi mỗi dòng, rồi mỗi cột một hàng (tên, mô tả nhỏ, kiểu Chữ / Số / Chọn, tính tổng, nút bỏ).
- * Dưới tên cột là mã của cột trong file Word (lấy theo tên cột).
+ * Dưới tên cột là mã của cột trong file Word (mã bảng + tên cột).
  * Tên cột và mô tả dài thì tự xuống hàng như ô chữ trong bảng trả lời.
  * Chỉ cột Số mới tính tổng được. Cột Chọn có thêm danh sách lựa chọn cho người nộp đơn chọn, ngay dưới hàng của cột.
  * Còn một cột thì không bỏ được.
@@ -145,7 +145,7 @@ function TableSettings({ question, onChange }: { question: QuestionOf<'table'>; 
             aria-invalid={invalidTargets.has(FORM_TYPE_ISSUE_TARGET.column(question.id, i)) || undefined}
             onValueChange={(label) => changeColumn(i, { label })}
           />
-          <code className={styles.columnCode} title="Mã của cột trong file Word">{`{${columnTag(column)}}`}</code>
+          <code className={styles.columnCode} title="Mã của cột trong file Word">{`{${columnTag(question, column)}}`}</code>
           <GrowingTextarea value={column.sub ?? ''} placeholder="Mô tả ngắn" aria-label={`Mô tả ngắn cột ${i + 1}`} onValueChange={(sub) => changeColumn(i, { sub })} />
           <select
             value={column.type}

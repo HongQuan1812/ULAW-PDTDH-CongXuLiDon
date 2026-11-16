@@ -41,7 +41,7 @@ describe('createFormStarterDocx', () => {
 
     // Assert
     expect(check).toMatchObject({ unknown: [], outside: [], error: '' });
-    expect(check.found).toEqual(expect.arrayContaining(['ho_ten', 'mssv', 'ma_don', 'loai_don', 'ly_do_ngan_ro', 'mon', 'ten_mon', 'so_tin_chi']));
+    expect(check.found).toEqual(expect.arrayContaining(['ho_ten', 'mssv', 'ma_don', 'loai_don', 'ly_do_ngan_ro', 'mon', 'mon_ten_mon', 'mon_so_tin_chi']));
   });
 
   test('có đủ mọi mã chung của Bảng mã (người nộp đơn, thông tin đơn)', () => {
@@ -75,8 +75,8 @@ describe('createFormStarterDocx', () => {
       loai_don: 'Xét miễn môn',
       ly_do_ngan_ro: 'Đã học',
       mon: [
-        { stt: 1, ten_mon: 'Luật Dân sự', so_tin_chi: 3 },
-        { stt: 2, ten_mon: 'Luật Hình sự', so_tin_chi: 2 },
+        { stt: 1, mon_ten_mon: 'Luật Dân sự', mon_so_tin_chi: 3 },
+        { stt: 2, mon_ten_mon: 'Luật Hình sự', mon_so_tin_chi: 2 },
       ],
     };
 

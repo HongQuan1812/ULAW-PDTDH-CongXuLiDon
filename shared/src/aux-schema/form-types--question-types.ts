@@ -90,7 +90,7 @@ export const TableColumnSchema = z.object({
   sum: z.boolean().optional(),
   /** Đơn vị khi ghi tổng, vd "tín chỉ" → "tổng 6 tín chỉ" */
   sumLabel: z.string().optional(),
-  /** Mã của cột trong file Word; bỏ trống thì lấy theo tên cột */
+  /** Mã của cột trong file Word; bỏ trống thì lấy theo mã bảng + tên cột (columnTag) */
   tag: TagSchema.optional(),
 });
 export type TableColumn = z.infer<typeof TableColumnSchema>;

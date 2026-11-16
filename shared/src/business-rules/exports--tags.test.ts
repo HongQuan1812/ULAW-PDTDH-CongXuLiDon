@@ -42,11 +42,11 @@ describe('textToTag', () => {
 describe('knownExportTags, columnTagOwners', () => {
   test('gồm mã chung, mã câu hỏi, mã bảng (stt, cột, so_, tong_); bỏ khối thông báo', () => {
     const known = knownExportTags(sections);
-    for (const tag of ['ho_ten', 'ngay_bat_dau', 'hoc_ky', 'tep_bang_diem', 'mon', 'stt', 'mon_hoc_cua_truong', 'so_mon', 'tong_so_tin_chi']) {
+    for (const tag of ['ho_ten', 'ngay_bat_dau', 'hoc_ky', 'tep_bang_diem', 'mon', 'stt', 'mon_mon_hoc_cua_truong', 'so_mon', 'tong_mon_so_tin_chi']) {
       expect(known.has(tag)).toBe(true);
     }
     expect(known.has('luu_y')).toBe(false);
-    expect(columnTagOwners(sections).get('so_tin_chi')).toEqual(['mon']);
+    expect(columnTagOwners(sections).get('mon_so_tin_chi')).toEqual(['mon']);
   });
 });
 
@@ -100,11 +100,11 @@ describe('buildExportData', () => {
     expect(exportData.hoc_ky).toBe('HK1, HK2');
     expect(exportData.tep_bang_diem).toBe('bang-diem.pdf');
     expect(exportData.mon).toEqual([
-      { stt: 1, mon_hoc_cua_truong: 'Triết học', so_tin_chi: 3 },
-      { stt: 2, mon_hoc_cua_truong: 'Kinh tế', so_tin_chi: '' },
+      { stt: 1, mon_mon_hoc_cua_truong: 'Triết học', mon_so_tin_chi: 3 },
+      { stt: 2, mon_mon_hoc_cua_truong: 'Kinh tế', mon_so_tin_chi: '' },
     ]);
     expect(exportData.so_mon).toBe(2);
-    expect(exportData.tong_so_tin_chi).toBe(3);
+    expect(exportData.tong_mon_so_tin_chi).toBe(3);
   });
 
   test('đoạn văn → chữ thường (đoạn nối bằng xuống dòng), câu trả lời cũ dạng chuỗi vẫn điền được', () => {

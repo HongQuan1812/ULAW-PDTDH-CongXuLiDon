@@ -148,7 +148,7 @@ Mỗi loại đơn có hai nhóm mẫu, lưu ở máy chủ theo loại đơn, d
   - **Mã chung**: thông tin người nộp đơn và thông tin đơn; ngày nộp tách thêm `{ngay}` `{thang}` `{nam}`.
   - **Mã câu hỏi**: ô "Mã dùng trong file Word" của câu hỏi; bỏ trống thì lấy theo nội dung câu hỏi bỏ dấu (`Tệp bảng điểm` → `tep_bang_diem`).
     Mã sai dạng, trùng nhau hoặc trùng mã chung thì không lưu được loại đơn. Đổi tên câu hỏi khi chưa đặt mã riêng thì mã đổi theo.
-  - **Câu hỏi dạng bảng**: vòng lặp `{#mã bảng}` … `{/mã bảng}`, bên trong có `{stt}` và mã từng cột (theo tên cột);
+  - **Câu hỏi dạng bảng**: vòng lặp `{#mã bảng}` … `{/mã bảng}`, bên trong có `{stt}` và mã từng cột (mã bảng + tên cột, vd bảng `{#ielts}` có cột `{ielts_so_hieu}`, nên hai bảng có cột cùng tên không trùng mã);
     ngoài vòng lặp có `{so_<mã bảng>}` (số dòng) và `{tong_<mã cột>}` (tổng cột). Mã cột đặt ngoài vòng lặp sẽ để trống.
 - **Kiểm tra** mẫu báo mã không có trong loại đơn và lỗi ngoặc. **Xuất thử** điền bằng một đơn của loại đơn, chưa có đơn thì bằng dữ liệu giả.
 

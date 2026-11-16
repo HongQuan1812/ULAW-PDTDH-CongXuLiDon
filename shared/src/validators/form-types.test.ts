@@ -81,7 +81,7 @@ describe('validateFormTypeDraft', () => {
       title: 'A',
       questions: [
         { id: 'q1', type: 'text', label: 'Họ tên', tag: 'ho_ten' },
-        { id: 'q2', type: 'text', label: 'Môn học' },
+        { id: 'q2', type: 'text', label: 'Bảng môn học' },
         { id: 'q3', type: 'table', label: 'Bảng', rowName: 'dòng', columns: [{ label: 'Môn học', type: 'text' }] },
         { id: 'q4', type: 'text', label: 'Số', tag: '1so' },
       ],
@@ -89,9 +89,21 @@ describe('validateFormTypeDraft', () => {
     const issues = validateFormTypeDraft({ ...validDraft(), sections: [section] }, []);
     expect(issues).toEqual([
       { target: FORM_TYPE_ISSUE_TARGET.questionTag('q1'), message: FORM_TYPE_DRAFT_MESSAGES.tagReserved(1, 1, 'ho_ten') },
-      { target: FORM_TYPE_ISSUE_TARGET.questionTag('q3'), message: FORM_TYPE_DRAFT_MESSAGES.tagTaken(1, 3, 'mon_hoc', 'phần 1, câu 2', true) },
+      { target: FORM_TYPE_ISSUE_TARGET.questionTag('q3'), message: FORM_TYPE_DRAFT_MESSAGES.tagTaken(1, 3, 'bang_mon_hoc', 'phần 1, câu 2', true) },
       { target: FORM_TYPE_ISSUE_TARGET.questionTag('q4'), message: FORM_TYPE_DRAFT_MESSAGES.tagFormat(1, 4) },
     ]);
+  });
+
+  it('hai bảng có cột cùng tên (IELTS, TOEIC cùng có "Số hiệu"): mã cột gồm mã bảng nên không trùng', () => {
+    const section = FormSectionSchema.parse({
+      id: 's1',
+      title: 'A',
+      questions: [
+        { id: 'q1', type: 'table', label: 'Chứng chỉ IELTS', tag: 'ielts', rowName: 'chứng chỉ', columns: [{ label: 'Số hiệu', type: 'text' }, { label: 'Ngày thi', type: 'text' }] },
+        { id: 'q2', type: 'table', label: 'Chứng chỉ TOEIC', tag: 'toeic', rowName: 'chứng chỉ', columns: [{ label: 'Số hiệu', type: 'text' }, { label: 'Ngày thi', type: 'text' }] },
+      ],
+    });
+    expect(validateFormTypeDraft({ ...validDraft(), sections: [section] }, [])).toEqual([]);
   });
 
   it('loại đơn đang mở phải có câu hỏi; nháp thì không cần', () => {

@@ -39,7 +39,6 @@ export const FORM_TYPE_SEED: readonly FormType[] = [
         questions: [
           {
             id: 'mon',
-            tag: 'mon',
             type: 'table',
             label: 'Các môn xin miễn',
             required: true,
@@ -61,7 +60,6 @@ export const FORM_TYPE_SEED: readonly FormType[] = [
         questions: [
           {
             id: 'files',
-            tag: 'tep_bang_diem',
             type: 'file',
             label: 'Tệp bảng điểm',
             required: true,
@@ -102,19 +100,19 @@ export const FORM_TYPE_SEED: readonly FormType[] = [
               ],
             },
           },
-          { id: 'tieu-de', tag: 'tieu_de', type: 'text', label: 'Tiêu đề đơn', required: true, help: 'Trả lời ngắn: không xuống dòng bằng Enter.' },
-          { id: 'li-do', tag: 'li_do', type: 'para', label: 'Lí do', help: 'Đoạn văn, viết được nhiều dòng.' },
-          { id: 'so-tin-chi', tag: 'so_tin_chi_tich_luy', type: 'number', label: 'Số tín chỉ đã tích lũy', required: true },
-          { id: 'ngay-nghi', tag: 'ngay_nghi', type: 'date', label: 'Ngày bắt đầu nghỉ học' },
+          { id: 'tieu-de', type: 'text', label: 'Tiêu đề đơn', required: true, help: 'Trả lời ngắn: không xuống dòng bằng Enter.' },
+          { id: 'li-do', type: 'para', label: 'Lí do', help: 'Đoạn văn, viết được nhiều dòng.' },
+          { id: 'so-tin-chi', type: 'number', label: 'Số tín chỉ đã tích lũy', required: true },
+          { id: 'ngay-nghi', type: 'date', label: 'Ngày bắt đầu nghỉ học' },
         ],
       },
       {
         id: 's-chon',
         title: 'Lựa chọn',
         questions: [
-          { id: 'hoc-ky', tag: 'hoc_ky', type: 'radio', label: 'Học kỳ đăng ký', required: true, options: ['Học kỳ 1', 'Học kỳ 2', 'Học kỳ hè'] },
+          { id: 'hoc-ky', type: 'radio', label: 'Học kỳ đăng ký', required: true, options: ['Học kỳ 1', 'Học kỳ 2', 'Học kỳ hè'] },
           {
-            id: 'giay-to', tag: 'giay_to',
+            id: 'giay-to',
             type: 'check',
             label: 'Giấy tờ đã có',
             required: true,
@@ -122,7 +120,7 @@ export const FORM_TYPE_SEED: readonly FormType[] = [
             options: ['Bảng điểm', 'Giấy xác nhận sinh viên', 'Đơn có chữ ký phụ huynh'],
           },
           {
-            id: 'co-so', tag: 'co_so',
+            id: 'co-so',
             type: 'select',
             label: 'Cơ sở học',
             options: ['Cơ sở Nguyễn Tất Thành', 'Cơ sở Bình Thạnh', 'Cơ sở Thủ Đức'],
@@ -134,7 +132,7 @@ export const FORM_TYPE_SEED: readonly FormType[] = [
         title: 'Bảng và tệp',
         questions: [
           {
-            id: 'mon-hoc', tag: 'cac_mon_dang_ky',
+            id: 'mon-hoc',
             type: 'table',
             label: 'Các môn đã đăng ký',
             help: 'Không bắt buộc: để trống bảng cũng được.',
@@ -145,7 +143,7 @@ export const FORM_TYPE_SEED: readonly FormType[] = [
               { label: 'Ghi chú', sub: 'Lớp, giảng viên…', type: 'text' },
             ],
           },
-          { id: 'tep-dinh-kem', tag: 'tep_dinh_kem', type: 'file', label: 'Tệp đính kèm', accept: ['pdf', 'docx'], maxMB: 5 },
+          { id: 'tep-dinh-kem', type: 'file', label: 'Tệp đính kèm', accept: ['pdf', 'docx'], maxMB: 5 },
         ],
       },
     ],

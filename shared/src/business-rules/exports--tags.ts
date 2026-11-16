@@ -2,7 +2,7 @@
    Cán bộ gõ mã trong ngoặc nhọn vào file Word, vd {ho_ten}, {mssv}; khi xuất file, máy chủ thay mã bằng dữ liệu của đơn.
    - Mã chung (mọi loại đơn): thông tin người nộp đơn và thông tin đơn (COMMON_EXPORT_TAG_GROUPS).
    - Mã câu hỏi: ô "Mã dùng trong file Word" của câu hỏi; bỏ trống thì lấy theo nội dung câu hỏi bỏ dấu.
-   - Câu hỏi dạng bảng: vòng lặp {#mã bảng} … {/mã bảng}; trong vòng lặp có {stt} và mã từng cột (theo tên cột);
+   - Câu hỏi dạng bảng: vòng lặp {#mã bảng} … {/mã bảng}; trong vòng lặp có {stt} và mã từng cột (mã bảng + tên cột, vd {ielts_so_hieu});
      ngoài vòng lặp có {so_<mã bảng>} (số dòng) và {tong_<mã cột>} (tổng cột có tính tổng).
    Trình soạn (bảng mã, kiểm tra trùng mã), API giả và backend (điền mẫu, kiểm tra mẫu) cùng dùng file này. */
 import type { AnswerValue, FormAnswers, TableCell } from '../aux-schema/forms--answers';
@@ -46,12 +46,13 @@ export function questionTag(question: Pick<AnswerableQuestion, 'label'> & { tag?
 }
 
 /**
- * Mã của một cột bảng trong file Word.
+ * Mã của một cột bảng trong file Word. Mã tự đặt gồm mã bảng và tên cột, nên hai bảng có cột cùng tên (vd IELTS, TOEIC cùng có "Số hiệu") không trùng mã.
+ * @param table   câu hỏi dạng bảng chứa cột (có thể có mã riêng)
  * @param column  cột (có thể có mã riêng)
- * @returns       mã riêng, hoặc mã lấy theo tên cột
+ * @returns       mã riêng của cột, hoặc "<mã bảng>_<tên cột bỏ dấu>", vd 'ielts_so_hieu'
  */
-export function columnTag(column: Pick<TableColumn, 'label' | 'tag'>): string {
-  return column.tag || textToTag(column.label);
+export function columnTag(table: Pick<AnswerableQuestion, 'label'> & { tag?: string }, column: Pick<TableColumn, 'label' | 'tag'>): string {
+  return column.tag || `${questionTag(table)}_${textToTag(column.label).replace(/^_/, '')}`;
 }
 
 /* ---------- Mã chung ---------- */
@@ -149,7 +150,7 @@ export function questionExportTags(sections: readonly FormSection[]): QuestionEx
         {
           ...base,
           rowName: question.rowName,
-          columns: question.columns.map((column) => ({ tag: columnTag(column), label: column.label, sum: Boolean(column.sum) })),
+          columns: question.columns.map((column) => ({ tag: columnTag(question, column), label: column.label, sum: Boolean(column.sum) })),
         },
       ];
     }),
@@ -321,11 +322,11 @@ export function buildExportData(source: ExportSource, exportedOn: string): Expor
       }
       const rows = (Array.isArray(value) ? value : []) as TableCell[][];
       exportData[tag] = rows.map((row, rowIndex) =>
-        Object.fromEntries([[ROW_NUMBER_TAG, rowIndex + 1], ...question.columns.map((column, i) => [columnTag(column), row[i] ?? ''])]),
+        Object.fromEntries([[ROW_NUMBER_TAG, rowIndex + 1], ...question.columns.map((column, i) => [columnTag(question, column), row[i] ?? ''])]),
       );
       exportData[`so_${tag}`] = rows.length;
       question.columns.forEach((column, i) => {
-        if (column.sum) exportData[`tong_${columnTag(column)}`] = rows.reduce((total, row) => total + (Number(row[i]) || 0), 0);
+        if (column.sum) exportData[`tong_${columnTag(question, column)}`] = rows.reduce((total, row) => total + (Number(row[i]) || 0), 0);
       });
     }
   }

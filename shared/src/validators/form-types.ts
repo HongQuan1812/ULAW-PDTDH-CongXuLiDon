@@ -125,7 +125,7 @@ export function validateFormTypeDraft(draft: FormTypeDraftInput, otherPrefixes: 
       const ownTag = questionTag(question);
       if (!EXPORT_TAG_PATTERN.test(ownTag)) add(target, FORM_TYPE_DRAFT_MESSAGES.tagFormat(sectionNumber, questionNumber));
       // Câu hỏi / cột chưa có tên (đã báo lỗi ở trên) thì chưa có mã để so trùng
-      const tags = [question.tag || question.label.trim() ? ownTag : null, ...(question.type === 'table' ? question.columns.map((column) => (column.tag || column.label.trim() ? columnTag(column) : null)) : [])];
+      const tags = [question.tag || question.label.trim() ? ownTag : null, ...(question.type === 'table' ? question.columns.map((column) => (column.tag || column.label.trim() ? columnTag(question, column) : null)) : [])];
       tags.forEach((tag, i) => {
         if (tag === null) return;
         const usedAt = tagUsedAt.get(tag);
