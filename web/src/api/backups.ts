@@ -5,7 +5,9 @@ import {
   backupRunFilePath,
   backupSchedulePath,
   backupTargetPath,
-  DRIVE_CONNECTED_MESSAGE_TYPE,
+  BACKUP_MESSAGES,
+  DRIVE_CONNECT_CHANNEL,
+  DriveConnectMessageSchema,
   type BackupRun,
   type BackupRunsResponse,
   type BackupSchedule,
@@ -85,11 +87,15 @@ export interface DriveConnection {
   email: string;
 }
 
+/** Popup đã đóng thì còn chờ tin muộn bao lâu (trang callback gửi tin rồi mới tự đóng), mili giây. */
+const POPUP_CLOSED_GRACE_MS = 1000;
+
 /**
- * Chờ cửa sổ popup sang Google báo kết nối xong (bản thật): trang callback gửi postMessage rồi tự đóng.
+ * Chờ cửa sổ popup sang Google báo kết quả (bản thật): trang callback gửi DriveConnectMessage (postMessage cho cửa sổ này
+ * và BroadcastChannel) rồi tự đóng.
  * @param url  đường dẫn sang Google
  * @returns    tài khoản đã kết nối
- * @throws     trình duyệt chặn popup, hoặc người dùng đóng popup trước khi xong
+ * @throws     trình duyệt chặn popup, bấm Hủy ở Google, kết nối lỗi, hoặc đóng popup trước khi xong
  */
 function connectInPopup(url: string): Promise<DriveConnection> {
   return new Promise((resolve, reject) => {
@@ -98,24 +104,41 @@ function connectInPopup(url: string): Promise<DriveConnection> {
       reject(new Error('Trình duyệt đã chặn cửa sổ đăng nhập Google. Cho phép cửa sổ bật lên rồi bấm Kết nối lại.'));
       return;
     }
+    const channel = typeof BroadcastChannel === 'undefined' ? null : new BroadcastChannel(DRIVE_CONNECT_CHANNEL);
+    let closedTimer: ReturnType<typeof setInterval> | undefined;
+    let graceTimer: ReturnType<typeof setTimeout> | undefined;
 
-    // Tin báo từ trang callback (cùng địa chỉ với cổng); popup đóng mà chưa có tin thì coi như bỏ
+    // Dọn dẹp khi đã có kết quả
     const finish = () => {
-      window.removeEventListener('message', onMessage);
+      window.removeEventListener('message', onWindowMessage);
+      channel?.close();
       clearInterval(closedTimer);
+      clearTimeout(graceTimer);
     };
-    const onMessage = (event: MessageEvent) => {
-      const data = event.data as Partial<DriveConnection> & { type?: string };
-      if (event.origin !== window.location.origin || data?.type !== DRIVE_CONNECTED_MESSAGE_TYPE || !data.driveGrantId || !data.email) return;
+
+    // Nhận tin (chỉ tin đúng dạng); lỗi thì báo câu theo loại lỗi
+    const receive = (received: unknown) => {
+      const parsed = DriveConnectMessageSchema.safeParse(received);
+      if (!parsed.success) return;
       finish();
-      resolve({ driveGrantId: data.driveGrantId, email: data.email });
+      if (parsed.data.ok) resolve({ driveGrantId: parsed.data.driveGrantId, email: parsed.data.email });
+      else reject(new Error(BACKUP_MESSAGES.driveError[parsed.data.error]));
     };
-    const closedTimer = setInterval(() => {
+    const onWindowMessage = (event: MessageEvent) => {
+      if (event.origin === window.location.origin) receive(event.data);
+    };
+    window.addEventListener('message', onWindowMessage);
+    if (channel) channel.onmessage = (event: MessageEvent) => receive(event.data);
+
+    // Popup đóng mà chưa có tin (chờ thêm một chút cho tin muộn) thì coi như bỏ
+    closedTimer = setInterval(() => {
       if (!popup.closed) return;
-      finish();
-      reject(new Error('Chưa kết nối: cửa sổ Google đã đóng.'));
+      clearInterval(closedTimer);
+      graceTimer = setTimeout(() => {
+        finish();
+        reject(new Error('Chưa kết nối: cửa sổ Google đã đóng.'));
+      }, POPUP_CLOSED_GRACE_MS);
     }, 500);
-    window.addEventListener('message', onMessage);
   });
 }
 

@@ -31,7 +31,7 @@ import { fromVietnamTime, toVietnamSeconds, toVietnamTime } from '../common/viet
 import { AppConfig } from '../config/app-config';
 import type { Prisma, User } from '../generated/prisma/client';
 import { createBackupArchive } from './backup-archive';
-import { GoogleDriveBackupService } from './google-drive-backup.service';
+import { GoogleDriveBackupService, driveFolderUrlOf } from './google-drive-backup.service';
 
 /** Bao lâu kiểm lịch một lần, mili giây (nhỏ hơn một phút để không lỡ phút nào). */
 const SCHEDULE_CHECK_MS = 30_000;
@@ -128,7 +128,8 @@ export class BackupsService implements OnModuleInit, OnModuleDestroy {
    * @returns            theo BackupTargetSchema
    */
   private toTarget(row: BackupTargetRow, backupCount: number): BackupTarget {
-    return { id: row.id, name: row.name, kind: row.kind, folder: row.folder, keepLatest: row.keepLatest, googleAccount: row.googleAccount, backupCount };
+    const driveFolderUrl = row.kind === 'googleDrive' && row.googleFolderId ? driveFolderUrlOf(row.googleFolderId) : null;
+    return { id: row.id, name: row.name, kind: row.kind, folder: row.folder, keepLatest: row.keepLatest, googleAccount: row.googleAccount, driveFolderUrl, backupCount };
   }
 
   /**

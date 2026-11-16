@@ -40,8 +40,10 @@ const KIND_TEXT: Record<BackupTargetKind, { hint: string; namePlaceholder: strin
     hint: 'Lưu lên Drive của một tài khoản Google',
     namePlaceholder: 'vd Drive phòng',
     folderLabel: 'Thư mục trên Drive',
-    folderPlaceholder: 'Sao lưu cổng xử lí đơn',
-    folderHint: 'Chưa có thì máy chủ tự tạo.',
+    folderPlaceholder: 'vd Công việc/Sao lưu cổng',
+    folderHint:
+      'Tính từ My Drive, các cấp cách nhau bằng /; để trống thì lưu thẳng vào My Drive. Cấp nào chưa có thì cổng tự tạo ở lần sao lưu đầu tiên. ' +
+      'Cổng chỉ thấy thư mục do chính nó tạo: gõ trùng tên một thư mục cậu tự tạo sẵn thì cổng tạo thêm một thư mục mới cùng tên.',
   },
 };
 
@@ -148,14 +150,17 @@ function BackupTargetForm({ target, onClose, onRemove }: Omit<BackupTargetDialog
         <input {...register('name')} placeholder={kindText.namePlaceholder} aria-invalid={!!errors.name} />
       </Field>
 
-      <Field label={kindText.folderLabel} required hint={kindText.folderHint} error={errors.folder?.message}>
+      <Field label={kindText.folderLabel} required={kind === 'serverFolder'} hint={kindText.folderHint} error={errors.folder?.message}>
         {kind === 'serverFolder' ? (
           <span className={styles.prefixInput}>
             <span aria-hidden="true">backups/</span>
             <input {...register('folder')} placeholder={kindText.folderPlaceholder} aria-invalid={!!errors.folder} />
           </span>
         ) : (
-          <input {...register('folder')} placeholder={kindText.folderPlaceholder} aria-invalid={!!errors.folder} />
+          <span className={styles.prefixInput}>
+            <span aria-hidden="true">My Drive/</span>
+            <input {...register('folder')} placeholder={kindText.folderPlaceholder} aria-invalid={!!errors.folder} />
+          </span>
         )}
       </Field>
 
@@ -231,7 +236,7 @@ function DriveAccountField({ account, error, onConnected }: { account: string | 
            Bản thật: bấm Kết nối Google mở cửa sổ Google, chọn tài khoản xong cửa sổ tự đóng và báo email về đây */
         <div className={styles.demoGoogle}>
           <strong>Chọn tài khoản Google (giả lập)</strong>
-          <span className={styles.fieldHint}>Bản thật mở cửa sổ đăng nhập Google. Ở đây gõ email bất kì để thử.</span>
+          <span className={styles.fieldHint}>Gõ email bất kì để thử. Nếu máy chủ đang dùng bản thật, bấm Tiếp tục sẽ mở cửa sổ Google (email ở đây bỏ qua).</span>
           <input type="email" value={demoEmail} onChange={(event) => setDemoEmail(event.target.value)} aria-label="Email tài khoản Google" />
           <div className={styles.dialogButtons}>
             <Button variant="ghost" onClick={() => setChoosing(false)} disabled={connectDrive.isPending}>

@@ -30,18 +30,27 @@ export function targetMetaText(target: BackupTarget): string {
   const where =
     target.kind === 'serverFolder'
       ? `${BACKUP_TARGET_KIND_LABEL.serverFolder} · backups/${target.folder}`
-      : `${BACKUP_TARGET_KIND_LABEL.googleDrive}${target.googleAccount ? ` · ${target.googleAccount}` : ''} · “${target.folder}”`;
+      : `${BACKUP_TARGET_KIND_LABEL.googleDrive}${target.googleAccount ? ` · ${target.googleAccount}` : ''} · ${driveFolderText(target.folder)}`;
   return `${where} · giữ ${target.keepLatest} · có ${target.backupCount}`;
+}
+
+/**
+ * Thư mục của nơi lưu Drive, tính từ My Drive.
+ * @param folder  đường dẫn đã lưu; trống = My Drive
+ * @returns       vd 'My Drive/Công việc/Sao lưu', 'My Drive'
+ */
+function driveFolderText(folder: string): string {
+  return folder ? `My Drive/${folder}` : 'My Drive';
 }
 
 /**
  * Mô tả một nơi lưu ở thẻ Nơi lưu, ba dòng: loại nơi lưu (Drive kèm tài khoản), thư mục, giữ bao nhiêu / đang có bao nhiêu.
  * @param target  nơi lưu
- * @returns       vd ['Google Drive · an@gmail.com', '“Sao lưu cổng”', 'Giữ 14 bản · đang có 3']
+ * @returns       vd ['Google Drive · an@gmail.com', 'My Drive/Sao lưu cổng', 'Giữ 14 bản · đang có 3']
  */
 function targetMetaLines(target: BackupTarget): string[] {
   const kindLine = target.kind === 'googleDrive' && target.googleAccount ? `${BACKUP_TARGET_KIND_LABEL.googleDrive} · ${target.googleAccount}` : BACKUP_TARGET_KIND_LABEL[target.kind];
-  const folderLine = target.kind === 'serverFolder' ? `backups/${target.folder}` : `“${target.folder}”`;
+  const folderLine = target.kind === 'serverFolder' ? `backups/${target.folder}` : driveFolderText(target.folder);
   return [kindLine, folderLine, `Giữ ${target.keepLatest} bản · đang có ${target.backupCount}`];
 }
 
@@ -96,9 +105,16 @@ export function BackupTargetsCard({
             <li key={target.id} className={styles.item}>
               <div className={styles.itemInfo}>
                 <span className={styles.itemTitle}>{target.name}</span>
-                {targetMetaLines(target).map((line) => (
+                {targetMetaLines(target).map((line, index) => (
                   <span key={line} className={styles.targetMeta}>
-                    {line}
+                    {/* dòng thứ hai là thư mục: Drive đã có thư mục thì bấm để mở trên Drive */}
+                    {index === 1 && target.driveFolderUrl ? (
+                      <a href={target.driveFolderUrl} target="_blank" rel="noopener noreferrer" className={styles.folderLink} title="Mở thư mục trên Google Drive">
+                        {line} ↗
+                      </a>
+                    ) : (
+                      line
+                    )}
                   </span>
                 ))}
                 {target.kind === 'googleDrive' && !target.googleAccount && (

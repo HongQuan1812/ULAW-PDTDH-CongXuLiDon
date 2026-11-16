@@ -207,8 +207,12 @@ Mỗi loại đơn có hai nhóm mẫu, lưu ở máy chủ theo loại đơn, d
   chứa `manifest.json`, `database.dump` (`pg_dump` dạng custom, khôi phục bằng `pg_restore`) và thư mục `uploads/`.
 - **Nơi lưu**: thư mục trên máy chủ (thư mục con trong `BACKUP_DIR`, không ra ngoài được) hoặc Google Drive (trong hộp thêm / sửa nơi lưu, Admin bấm
   **Kết nối Google**, chọn tài khoản, thấy email rồi mới bấm Lưu; chưa kết nối thì không lưu được. Bản giả `dev-google-drive-connect` không qua Google: gõ email bất kì,
-  sao lưu vào đó báo lỗi trong lịch sử vì không có quyền thật; bản thật mở cửa sổ popup sang Google, chưa làm.
-  cổng chỉ xin quyền `drive.file`: chỉ thấy tệp, thư mục do chính nó tạo; thư mục chưa có thì tự tạo). Mỗi nơi lưu đặt **giữ N bản gần nhất**:
+  sao lưu vào đó báo lỗi trong lịch sử vì không có quyền thật. Bản thật mở cửa sổ popup sang Google; chọn tài khoản, đồng ý xong thì Google chuyển về
+  `/api/backups/google-drive/callback`, máy chủ đổi mã lấy refresh token, trang đó báo email về hộp thoại rồi tự đóng; bấm Hủy hoặc lỗi thì hộp thoại báo lỗi.
+  Kết nối chỉ người bấm dùng được, giữ 30 phút trong bộ nhớ máy chủ (khởi động lại backend thì phải kết nối lại);
+  cổng chỉ xin quyền `drive.file`: chỉ thấy tệp, thư mục do chính nó tạo. Thư mục Drive là đường dẫn tính từ My Drive, các cấp cách nhau bằng `/`,
+  vd `Công việc/Sao lưu cổng`; trống thì lưu thẳng vào My Drive. Cấp nào cổng chưa tạo thì tự tạo ở lần sao lưu đầu tiên; thư mục Admin tự tạo sẵn
+  cùng tên thì cổng không thấy, nên tạo thêm một thư mục mới. Sao lưu lần đầu xong, thẻ Nơi lưu có đường dẫn ↗ mở thẳng thư mục trên Drive). Mỗi nơi lưu đặt **giữ N bản gần nhất**:
   sau mỗi lần sao lưu thành công vào đó, bản cũ hơn bị xóa (lịch sử vẫn ghi, đánh dấu đã xóa). Hai nơi lưu không được cùng kiểu cùng thư mục.
   Bỏ nơi lưu: lịch không lưu vào đó nữa, bản đã lưu và lịch sử giữ nguyên.
 - **Sao lưu ngay** (popup): chọn **một hoặc nhiều nơi lưu** (một tệp, chép vào từng nơi, mỗi nơi một dòng lịch sử), hoặc **Tải về máy này**

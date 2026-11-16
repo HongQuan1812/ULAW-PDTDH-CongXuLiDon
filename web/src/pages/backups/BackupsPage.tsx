@@ -6,8 +6,7 @@
    Đang có bản chạy thì trang tự tải lại tới khi xong, xong thì tải lại lịch sử. Khôi phục: chưa làm. */
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { useSearchParams } from 'react-router';
-import { BACKUP_MESSAGES, DRIVE_ERROR_PARAM, type BackupTarget, type BackupsResponse } from '@ulaw/shared';
+import { BACKUP_MESSAGES, type BackupTarget, type BackupsResponse } from '@ulaw/shared';
 import { BACKUP_RUNS_KEY, useBackups, useDownloadBackup, useRunBackup } from '../../api/backups';
 import { Button } from '../../components/Button';
 import { LoadError, loadErrorMessage } from '../../components/LoadError';
@@ -36,7 +35,6 @@ const SIDE_PANEL_STORAGE_KEY = 'backupsPanel.hiddenOnWideScreen';
 export function BackupsPage() {
   const backupsQuery = useBackups();
   const loadError = loadErrorMessage(backupsQuery);
-  useDriveErrorToast();
   useRefreshHistoryWhenDone(backupsQuery.data?.running ?? false);
 
   return (
@@ -188,18 +186,6 @@ function StatusBar({ overview }: { overview: BackupsResponse }) {
       )}
     </section>
   );
-}
-
-/** Kết nối Google Drive lỗi thì máy chủ chuyển về trang kèm ?driveError=…: hiện câu báo một lần rồi bỏ tham số. */
-function useDriveErrorToast() {
-  const [searchParams, setSearchParams] = useSearchParams();
-  const toast = useToast();
-  const driveError = searchParams.get(DRIVE_ERROR_PARAM);
-  useEffect(() => {
-    if (!driveError) return;
-    toast(driveError === 'denied' ? BACKUP_MESSAGES.driveError.denied : BACKUP_MESSAGES.driveError.failed, 'error');
-    setSearchParams({}, { replace: true });
-  }, [driveError, setSearchParams, toast]);
 }
 
 /**

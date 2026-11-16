@@ -4,11 +4,11 @@
   "scripts": {
     "dev:up": "docker compose -f docker-compose.dev.yml --env-file .env.dev up -d --build",
     "dev:down": "docker compose -f docker-compose.dev.yml --env-file .env.dev down",
-    "dev:reset": "docker compose -f docker-compose.dev.yml --env-file .env.dev restart api",
-    "dev:logs": "docker compose -f docker-compose.dev.yml --env-file .env.dev logs -f api web",
+    "dev:reset": "docker compose -f docker-compose.dev.yml --env-file .env.dev restart api web",
+    "dev:logs": "docker compose -f docker-compose.dev.yml --env-file .env.dev logs -f",
     "dev:test": "docker compose -f docker-compose.dev.yml --env-file .env.dev exec api pnpm test",
     "prod:up": "docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --build",
     "prod:down": "docker compose -f docker-compose.prod.yml --env-file .env.prod down",
-    "prod:logs": "docker compose -f docker-compose.prod.yml --env-file .env.prod logs -f api"
+    "prod:logs": "docker compose -f docker-compose.prod.yml --env-file .env.prod logs -f"
   }
 }

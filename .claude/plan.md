@@ -170,7 +170,7 @@ Nơi lưu:
 | 1 | API giả, giao diện | handler MSW · hook · trang Sao lưu trong menu Admin: thẻ tóm tắt, nơi lưu, lịch, bảng lịch sử | ✓ |
 | 2 | Bảng, chạy sao lưu | `schema.prisma`: `BackupTarget`, `BackupSchedule`, `BackupRun` · `pg_dump` trong image api (bản `postgresql-client` khớp Postgres 18) · volume `backups` · tạo tệp `.tar.gz`, lưu vào thư mục máy chủ, tải về | |
 | 3 | Lịch định kì | api tự kiểm mỗi phút, tới giờ thì chạy · giữ N bản gần nhất · restart không chạy trùng | |
-| 4 | Google Drive | kết nối tài khoản, chọn thư mục, tải tệp lên · xóa bản cũ trên Drive · mất quyền thì báo trong lịch sử | |
+| 4 | Google Drive | kết nối tài khoản ngay trong hộp thêm / sửa nơi lưu (popup sang Google, callback báo email về hộp thoại; bản giả `dev-google-drive-connect`) ✓ · chọn thư mục, tải tệp lên · xóa bản cũ trên Drive · mất quyền thì báo trong lịch sử · chưa thử với tài khoản Google thật | |
 | 5 | Test, tài liệu | test api (quyền, lịch, giữ N bản) · thử trên bản prod ở máy mình · README, `docs/business-rules.md` | |
 
 ### Lưu ý khi triển khai

@@ -6,7 +6,7 @@ import { execFileSync } from 'node:child_process';
 import { existsSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import type { INestApplication } from '@nestjs/common';
 import request, { type Response } from 'supertest';
 import {
@@ -24,6 +24,7 @@ import {
   backupTargetPath,
   COMMON_MESSAGES,
   ConnectGoogleDriveResponseSchema,
+  DriveConnectMessageSchema,
   listQueryParams,
   type BackupTargetInput,
   type ListQuery,
@@ -33,6 +34,7 @@ import { BackupsService } from '../src/backups/backups.service';
 import { AppConfig } from '../src/config/app-config';
 import { PrismaService } from '../src/common/prisma.service';
 import { fromVietnamTime } from '../src/common/vietnam-time';
+import { DRIVE_CONNECT_RESULT_ID } from '../src/backups/drive-connect-page';
 import { createTestApp } from './create-test-app';
 
 /** Máy chạy test có pg_dump không. */
@@ -208,15 +210,140 @@ describe('backups', () => {
     await request(server()).delete(api(backupTargetPath(added.id))).set('Cookie', adminCookie).expect(204);
   });
 
-  it('Google Drive bản thật chưa phát triển: 501', async () => {
-    const appConfig = app.get(AppConfig);
-    const original = appConfig.demoApisEnabled;
-    (appConfig as { demoApisEnabled: boolean }).demoApisEnabled = false;
-    try {
-      await request(server()).post(api(BACKUP_ENDPOINTS.driveConnect)).set('Cookie', adminCookie).send({}).expect(501);
-    } finally {
-      (appConfig as { demoApisEnabled: boolean }).demoApisEnabled = original;
-    }
+  describe('Google Drive bản thật (tắt ENABLE_DEMO_APIS, giả lập phản hồi của Google)', () => {
+    const CLIENT_ID = 'test-drive-client.apps.googleusercontent.com';
+    const CLIENT_SECRET = 'test-drive-secret';
+    const DRIVE_EMAIL = 'drive.that@gmail.com';
+    let appConfig: AppConfig;
+    let original: { demoApisEnabled: boolean; google: AppConfig['google'] };
+
+    /**
+     * Dựng ID token giả (JWT không ký) Google trả về khi đổi code.
+     * @param email  email của tài khoản
+     * @returns      ID token
+     */
+    const fakeIdToken = (email: string) => {
+      const encode = (part: object) => Buffer.from(JSON.stringify(part)).toString('base64url');
+      return `${encode({ alg: 'RS256' })}.${encode({ iss: 'https://accounts.google.com', aud: CLIENT_ID, exp: Date.now() / 1000 + 600, email, email_verified: true })}.chu-ky`;
+    };
+
+    /**
+     * Đọc tin DriveConnectMessage trong trang callback.
+     * @param response  response của GET callback
+     * @returns         tin đã kiểm tra
+     */
+    const messageInPage = (response: Response) => {
+      expect(response.headers['content-type']).toContain('text/html');
+      expect(response.headers['content-security-policy']).toContain("script-src 'nonce-");
+      const json = new RegExp(`<script type="application/json" id="${DRIVE_CONNECT_RESULT_ID}">(.*?)</script>`).exec(response.text)?.[1];
+      return DriveConnectMessageSchema.parse(JSON.parse(json ?? 'null'));
+    };
+
+    /**
+     * Bấm Kết nối Google: lấy đường dẫn sang Google và cookie state.
+     * @returns  đường dẫn, cookie "tên=giá trị"
+     */
+    const startConnect = async () => {
+      const response = await request(server()).post(api(BACKUP_ENDPOINTS.driveConnect)).set('Cookie', adminCookie).send({}).expect(200);
+      const connectResponse = ConnectGoogleDriveResponseSchema.parse(response.body);
+      if (connectResponse.kind !== 'redirect') throw new Error('Bản thật phải trả redirect');
+      const stateCookie = ((response.headers['set-cookie'] as unknown as string[]) ?? []).find((cookie) => cookie.startsWith('ulaw_drive_oauth='));
+      expect(stateCookie).toContain(`Path=/api${BACKUP_ENDPOINTS.googleDriveCallback}`);
+      expect(stateCookie).toContain('HttpOnly');
+      return { googleUrl: new URL(connectResponse.url), stateCookie: stateCookie!.split(';')[0]! };
+    };
+
+    /**
+     * Google chuyển về callback.
+     * @param query        tham số Google gửi kèm
+     * @param stateCookie  cookie state; trống = không gửi
+     * @returns            response (200, trang HTML)
+     */
+    const callback = (query: Record<string, string>, stateCookie?: string) =>
+      request(server())
+        .get(api(BACKUP_ENDPOINTS.googleDriveCallback))
+        .query(query)
+        .set('Cookie', [adminCookie, stateCookie].filter(Boolean).join('; '))
+        .expect(200);
+
+    /** Dùng OAuth client thử (redirectUri của đăng nhập không dùng ở đây: Drive có redirect riêng). */
+    const useTestGoogle = () => {
+      (appConfig as { google: AppConfig['google'] }).google = { clientId: CLIENT_ID, clientSecret: CLIENT_SECRET, redirectUri: 'khong-dung' };
+    };
+
+    beforeAll(() => {
+      appConfig = app.get(AppConfig);
+      original = { demoApisEnabled: appConfig.demoApisEnabled, google: appConfig.google };
+      (appConfig as { demoApisEnabled: boolean }).demoApisEnabled = false;
+      useTestGoogle();
+    });
+
+    afterEach(() => {
+      vi.restoreAllMocks();
+      useTestGoogle();
+    });
+
+    afterAll(() => {
+      (appConfig as { demoApisEnabled: boolean }).demoApisEnabled = original.demoApisEnabled;
+      (appConfig as { google: AppConfig['google'] }).google = original.google;
+    });
+
+    it('chưa cấu hình Google: 503', async () => {
+      (appConfig as { google: AppConfig['google'] }).google = null;
+      const response = await request(server()).post(api(BACKUP_ENDPOINTS.driveConnect)).set('Cookie', adminCookie).send({}).expect(503);
+      expect(messageOf(response)).toBe(BACKUP_MESSAGES.driveUnavailable);
+    });
+
+    it('kết nối: sang Google xin drive.file, Google chuyển về thì trang báo driveGrantId; lưu nơi lưu kèm driveGrantId thì có tài khoản, token mã hóa', async () => {
+      const { googleUrl, stateCookie } = await startConnect();
+      expect(googleUrl.origin).toBe('https://accounts.google.com');
+      expect(googleUrl.searchParams.get('scope')).toContain('https://www.googleapis.com/auth/drive.file');
+      expect(googleUrl.searchParams.get('redirect_uri')).toBe(new URL(`/api${BACKUP_ENDPOINTS.googleDriveCallback}`, appConfig.webBaseUrl).toString());
+      expect(googleUrl.searchParams.get('access_type')).toBe('offline');
+      expect(googleUrl.searchParams.get('code_challenge_method')).toBe('S256');
+
+      // Google đổi code: trả refresh token và ID token
+      const googleFetch = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+        new globalThis.Response(JSON.stringify({ refresh_token: '1//refresh-that', id_token: fakeIdToken(DRIVE_EMAIL) }), { status: 200 }),
+      );
+      const message = messageInPage(await callback({ code: 'ma-google', state: googleUrl.searchParams.get('state')! }, stateCookie));
+      expect(googleFetch).toHaveBeenCalledOnce();
+      expect(message).toMatchObject({ ok: true, email: DRIVE_EMAIL });
+      if (!message.ok) throw new Error('Phải kết nối được');
+
+      // Lưu nơi lưu: có tài khoản; database chỉ giữ token đã mã hóa
+      const added = BackupTargetSchema.parse(
+        (
+          await request(server())
+            .post(api(BACKUP_ENDPOINTS.targets))
+            .set('Cookie', adminCookie)
+            .send({ name: 'Drive thật', kind: 'googleDrive', folder: 'Sao lưu cổng', keepLatest: 3, driveGrantId: message.driveGrantId })
+            .expect(201)
+        ).body,
+      );
+      expect(added.googleAccount).toBe(DRIVE_EMAIL);
+      const row = await prisma.backupTarget.findUniqueOrThrow({ where: { id: added.id } });
+      expect(row.googleRefreshToken).toBeTruthy();
+      expect(row.googleRefreshToken).not.toContain('refresh-that');
+
+      // Chưa sao lưu lần nào thì chưa có thư mục; có thư mục rồi thì tổng quan trả đường dẫn mở trên Drive
+      expect(added.driveFolderUrl).toBeNull();
+      await prisma.backupTarget.update({ where: { id: added.id }, data: { googleFolderId: 'thu-muc-drive' } });
+      const overview = BackupsResponseSchema.parse((await request(server()).get(api(BACKUP_ENDPOINTS.overview)).set('Cookie', adminCookie).expect(200)).body);
+      expect(overview.targets.find((target) => target.id === added.id)?.driveFolderUrl).toBe('https://drive.google.com/drive/folders/thu-muc-drive');
+      await request(server()).delete(api(backupTargetPath(added.id))).set('Cookie', adminCookie).expect(204);
+    });
+
+    it('bấm Hủy ở Google: denied · state sai, thiếu cookie, Google từ chối đổi code: failed', async () => {
+      const { googleUrl, stateCookie } = await startConnect();
+      const state = googleUrl.searchParams.get('state')!;
+      expect(messageInPage(await callback({ error: 'access_denied', state }, stateCookie))).toMatchObject({ ok: false, error: 'denied' });
+      expect(messageInPage(await callback({ code: 'ma', state: 'sai' }, stateCookie))).toMatchObject({ ok: false, error: 'failed' });
+      expect(messageInPage(await callback({ code: 'ma', state }))).toMatchObject({ ok: false, error: 'failed' });
+
+      vi.spyOn(globalThis, 'fetch').mockResolvedValue(new globalThis.Response('{"error":"invalid_grant"}', { status: 400 }));
+      expect(messageInPage(await callback({ code: 'ma', state }, stateCookie))).toMatchObject({ ok: false, error: 'failed' });
+    });
   });
 
   it.skipIf(!HAS_PG_DUMP)('sao lưu ngay vào thư mục trên máy chủ: chạy nền, xong thì có tệp, tải về được; quá số bản giữ lại thì bản cũ bị xóa', async () => {

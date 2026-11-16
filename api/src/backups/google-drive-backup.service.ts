@@ -8,7 +8,7 @@ import { stat } from 'node:fs/promises';
 import { Readable } from 'node:stream';
 import { Injectable } from '@nestjs/common';
 import type { CookieOptions } from 'express';
-import { BACKUP_ENDPOINTS } from '@ulaw/shared';
+import { BACKUP_ENDPOINTS, driveFolderSegments } from '@ulaw/shared';
 import { GOOGLE_AUTHORIZE_URL, GOOGLE_TOKEN_URL, readGoogleIdToken } from '../auth/google-oauth';
 import { AppConfig, type GoogleOAuthConfig } from '../config/app-config';
 import type { Prisma } from '../generated/prisma/client';
@@ -16,7 +16,7 @@ import { PrismaService } from '../common/prisma.service';
 
 /** Quyền xin Google: email (biết tài khoản nào) và drive.file (chỉ tệp do cổng tạo). */
 const DRIVE_SCOPES = 'openid email https://www.googleapis.com/auth/drive.file';
-/** Cookie giữ state, mã PKCE, nơi lưu đang kết nối, từ lúc sang Google tới lúc Google chuyển về. */
+/** Cookie giữ state, mã PKCE, người đang kết nối, từ lúc sang Google tới lúc Google chuyển về. */
 export const DRIVE_STATE_COOKIE_NAME = 'ulaw_drive_oauth';
 /** Đường dẫn Google chuyển về (sau địa chỉ gốc của cổng). */
 const DRIVE_CALLBACK_PATH = `/api${BACKUP_ENDPOINTS.googleDriveCallback}`;
@@ -24,6 +24,9 @@ const DRIVE_CALLBACK_PATH = `/api${BACKUP_ENDPOINTS.googleDriveCallback}`;
 const GOOGLE_TIMEOUT_MS = 15_000;
 const DRIVE_FILES_URL = 'https://www.googleapis.com/drive/v3/files';
 const DRIVE_UPLOAD_URL = 'https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable';
+const DRIVE_FOLDER_MIME = 'application/vnd.google-apps.folder';
+/** id đặc biệt của My Drive (thư mục gốc). */
+export const DRIVE_ROOT_ID = 'root';
 
 type BackupTargetRow = Prisma.BackupTargetGetPayload<object>;
 
@@ -38,11 +41,21 @@ export interface DriveGrant {
 /** Lần kết nối giữ được bao lâu nếu chưa bấm Lưu, mili giây. */
 const DRIVE_GRANT_TTL_MS = 30 * 60 * 1000;
 
-/** Những gì cần nhớ giữa hai lần chuyển trang. */
+/** Những gì cần nhớ giữa lúc bấm Kết nối và lúc Google chuyển về. */
 export interface DriveConnectState {
   state: string;
   codeVerifier: string;
-  targetId: string;
+  /** người bấm Kết nối (chỉ người này dùng được driveGrantId) */
+  userId: string;
+}
+
+/**
+ * Đường dẫn mở một thư mục trên Google Drive.
+ * @param folderId  id thư mục Drive
+ * @returns         vd https://drive.google.com/drive/folders/<id>; My Drive thì đường dẫn My Drive
+ */
+export function driveFolderUrlOf(folderId: string): string {
+  return folderId === DRIVE_ROOT_ID ? 'https://drive.google.com/drive/my-drive' : `https://drive.google.com/drive/folders/${encodeURIComponent(folderId)}`;
 }
 
 /**
@@ -86,7 +99,7 @@ export function decryptToken(stored: string, clientSecret: string): string | nul
 
 /**
  * Đóng gói / mở gói state đặt trong cookie.
- * @param connectState  state, mã PKCE, nơi lưu
+ * @param connectState  state, mã PKCE, người kết nối
  * @returns             chuỗi base64url
  */
 export function encodeDriveState(connectState: DriveConnectState): string {
@@ -101,9 +114,9 @@ export function decodeDriveState(cookieValue: string | null): DriveConnectState 
   if (!cookieValue) return null;
   try {
     const parsed = JSON.parse(Buffer.from(cookieValue, 'base64url').toString('utf8')) as Record<string, unknown>;
-    const { state, codeVerifier, targetId } = parsed;
-    if (typeof state !== 'string' || typeof codeVerifier !== 'string' || typeof targetId !== 'string') return null;
-    return { state, codeVerifier, targetId };
+    const { state, codeVerifier, userId } = parsed;
+    if (typeof state !== 'string' || typeof codeVerifier !== 'string' || typeof userId !== 'string') return null;
+    return { state, codeVerifier, userId };
   } catch {
     return null;
   }
@@ -185,13 +198,13 @@ export class GoogleDriveBackupService {
 
   /**
    * Bắt đầu kết nối: tạo state, mã PKCE và đường dẫn sang Google.
-   * @param targetId  nơi lưu kiểu googleDrive
-   * @returns         state cần đặt vào cookie và đường dẫn; chưa có OAuth client thì null
+   * @param userId  người bấm Kết nối
+   * @returns       state cần đặt vào cookie và đường dẫn; chưa có OAuth client thì null
    */
-  startConnect(targetId: string): { connectState: DriveConnectState; url: string } | null {
+  startConnect(userId: string): { connectState: DriveConnectState; url: string } | null {
     const google = this.google;
     if (!google) return null;
-    const connectState = { state: randomBytes(24).toString('base64url'), codeVerifier: randomBytes(48).toString('base64url'), targetId };
+    const connectState = { state: randomBytes(24).toString('base64url'), codeVerifier: randomBytes(48).toString('base64url'), userId };
     const url = new URL(GOOGLE_AUTHORIZE_URL);
     url.search = new URLSearchParams({
       client_id: google.clientId,
@@ -209,14 +222,14 @@ export class GoogleDriveBackupService {
   }
 
   /**
-   * Google chuyển về: đổi code lấy refresh token và email, lưu vào nơi lưu (mã hóa).
+   * Google chuyển về: đổi code lấy refresh token và email, giữ thành một lần kết nối chờ Admin bấm Lưu (refresh token mã hóa).
    * @param connectState  state đọc từ cookie
    * @param code          mã Google gửi kèm
-   * @returns             true khi đã lưu; Google từ chối, không có refresh token, nơi lưu không còn thì false
+   * @returns             driveGrantId và email; Google từ chối, không có refresh token hoặc email chưa xác minh thì null
    */
-  async finishConnect(connectState: DriveConnectState, code: string): Promise<boolean> {
+  async finishConnect(connectState: DriveConnectState, code: string): Promise<{ driveGrantId: string; email: string } | null> {
     const google = this.google;
-    if (!google) return false;
+    if (!google) return null;
     const tokenResponse = await fetch(GOOGLE_TOKEN_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -230,17 +243,14 @@ export class GoogleDriveBackupService {
       }),
       signal: AbortSignal.timeout(GOOGLE_TIMEOUT_MS),
     }).catch(() => null);
-    if (!tokenResponse?.ok) return false;
+    if (!tokenResponse?.ok) return null;
 
     // Cần cả refresh token và email đã xác minh
     const tokens = (await tokenResponse.json()) as { refresh_token?: unknown; id_token?: unknown };
     const identity = typeof tokens.id_token === 'string' ? readGoogleIdToken(tokens.id_token, google.clientId, new Date()) : null;
-    if (typeof tokens.refresh_token !== 'string' || !identity) return false;
-    const updated = await this.prisma.backupTarget.updateMany({
-      where: { id: connectState.targetId, kind: 'googleDrive' },
-      data: { googleAccount: identity.email, googleRefreshToken: encryptToken(tokens.refresh_token, google.clientSecret), googleFolderId: null },
-    });
-    return updated.count === 1;
+    if (typeof tokens.refresh_token !== 'string' || !identity) return null;
+    const driveGrantId = this.createGrant(connectState.userId, { email: identity.email, encryptedRefreshToken: encryptToken(tokens.refresh_token, google.clientSecret) });
+    return { driveGrantId, email: identity.email };
   }
 
   /**
@@ -269,27 +279,53 @@ export class GoogleDriveBackupService {
   }
 
   /**
-   * Thư mục của nơi lưu trên Drive: đã tạo và còn thì dùng lại, không thì tạo mới (ở thư mục gốc của Drive) rồi nhớ id.
+   * Thư mục của nơi lưu trên Drive. Đường dẫn tính từ My Drive (trống = My Drive); đã tìm ra và còn thì dùng lại id đã nhớ,
+   * không thì đi từng cấp từ My Drive: cấp nào cổng đã tạo trước đó thì dùng lại, chưa có thì tạo mới; xong nhớ id.
+   * Quyền drive.file chỉ thấy thư mục do cổng tạo: thư mục Admin tự tạo cùng tên không thấy được, nên cổng tạo thêm một thư mục mới.
    * @param target       nơi lưu Drive
    * @param accessToken  access token
-   * @returns            id thư mục
+   * @returns            id thư mục ('root' = My Drive)
    */
   private async folderId(target: BackupTargetRow, accessToken: string): Promise<string> {
     const headers = { Authorization: `Bearer ${accessToken}` };
+    if (target.googleFolderId === DRIVE_ROOT_ID) return DRIVE_ROOT_ID;
     if (target.googleFolderId) {
       const existing = await fetch(`${DRIVE_FILES_URL}/${target.googleFolderId}?fields=id,trashed`, { headers, signal: AbortSignal.timeout(GOOGLE_TIMEOUT_MS) });
       if (existing.ok && !((await existing.json()) as { trashed?: boolean }).trashed) return target.googleFolderId;
     }
+
+    // Đi từng cấp từ My Drive
+    let parentId = DRIVE_ROOT_ID;
+    for (const segment of driveFolderSegments(target.folder)) parentId = await this.childFolderId(parentId, segment, headers);
+    await this.prisma.backupTarget.update({ where: { id: target.id }, data: { googleFolderId: parentId } });
+    return parentId;
+  }
+
+  /**
+   * Một thư mục con do cổng tạo: có rồi thì dùng lại, chưa có thì tạo.
+   * @param parentId  id thư mục cha ('root' = My Drive)
+   * @param name      tên thư mục con
+   * @param headers   header có access token
+   * @returns         id thư mục con
+   */
+  private async childFolderId(parentId: string, name: string, headers: Record<string, string>): Promise<string> {
+    const query = `name = '${name.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}' and mimeType = '${DRIVE_FOLDER_MIME}' and '${parentId}' in parents and trashed = false`;
+    const found = await fetch(`${DRIVE_FILES_URL}?${new URLSearchParams({ q: query, fields: 'files(id)', pageSize: '1', spaces: 'drive' })}`, {
+      headers,
+      signal: AbortSignal.timeout(GOOGLE_TIMEOUT_MS),
+    });
+    if (!found.ok) throw await googleError(found, 'tìm thư mục');
+    const existingId = ((await found.json()) as { files?: { id: string }[] }).files?.[0]?.id;
+    if (existingId) return existingId;
+
     const created = await fetch(DRIVE_FILES_URL, {
       method: 'POST',
       headers: { ...headers, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: target.folder, mimeType: 'application/vnd.google-apps.folder' }),
+      body: JSON.stringify({ name, mimeType: DRIVE_FOLDER_MIME, parents: [parentId] }),
       signal: AbortSignal.timeout(GOOGLE_TIMEOUT_MS),
     });
     if (!created.ok) throw await googleError(created, 'tạo thư mục');
-    const { id } = (await created.json()) as { id: string };
-    await this.prisma.backupTarget.update({ where: { id: target.id }, data: { googleFolderId: id } });
-    return id;
+    return ((await created.json()) as { id: string }).id;
   }
 
   /**

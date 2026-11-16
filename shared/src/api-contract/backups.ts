@@ -21,8 +21,8 @@ export const BACKUP_ENDPOINTS = {
   target: '/backups/targets/:targetId',
   /** POST ConnectGoogleDriveRequest → ConnectGoogleDriveResponse: kết nối một tài khoản Google Drive (gọi từ hộp thêm / sửa nơi lưu, trước khi Lưu).
       Kết nối xong có driveGrantId (dùng một lần, có hạn) và email; bấm Lưu thì gửi driveGrantId kèm nơi lưu.
-      Bản giả (dev-google-drive-connect): trả ngay 'connected' với email gửi kèm. Bản thật (chưa làm): trả 'redirect', giao diện mở đường dẫn
-      trong cửa sổ popup sang Google; Google gọi về /backups/google-drive/callback, trang đó báo driveGrantId, email cho hộp thoại rồi tự đóng */
+      Bản giả (dev-google-drive-connect): trả ngay 'connected' với email gửi kèm. Bản thật: trả 'redirect', giao diện mở đường dẫn
+      trong cửa sổ popup sang Google; Google gọi về /backups/google-drive/callback, trang đó gửi DriveConnectMessage cho hộp thoại rồi tự đóng */
   driveConnect: '/backups/google-drive/connect',
   /** GET (Google gọi về sau khi Admin đồng ý), không gọi từ giao diện */
   googleDriveCallback: '/backups/google-drive/callback',
@@ -82,6 +82,16 @@ export const BACKUP_TARGET_KIND_LABEL: Record<BackupTargetKind, string> = {
 /** Thư mục con trong BACKUP_DIR: chữ không dấu, số, - _, các cấp cách nhau bằng /; không có .. nên không ra ngoài BACKUP_DIR. */
 const SERVER_FOLDER_PATTERN = /^[A-Za-z0-9_-]+(?:\/[A-Za-z0-9_-]+)*$/;
 
+/**
+ * Các cấp thư mục của nơi lưu Google Drive, tính từ My Drive.
+ * @param folder  đường dẫn Admin gõ, vd 'Công việc/Sao lưu'; trống = thẳng trong My Drive
+ * @returns       vd ['Công việc', 'Sao lưu']; trống thì []
+ */
+export function driveFolderSegments(folder: string): string[] {
+  const trimmed = folder.trim();
+  return trimmed ? trimmed.split('/').map((segment) => segment.trim()) : [];
+}
+
 /** Số bản giữ lại nhiều nhất ở một nơi lưu. */
 export const BACKUP_KEEP_MAX = 365;
 
@@ -90,15 +100,21 @@ export const BackupTargetInputSchema = z
   .object({
     name: z.string().trim().min(1, 'Nhập tên nơi lưu.').max(100),
     kind: z.enum(BACKUP_TARGET_KINDS),
-    /** serverFolder: thư mục con trong BACKUP_DIR, vd 'hang-ngay' · googleDrive: tên thư mục trên Drive, máy chủ tự tạo nếu chưa có */
-    folder: z.string().trim().min(1, 'Nhập thư mục.').max(200),
+    /** serverFolder: thư mục con trong BACKUP_DIR, vd 'hang-ngay' (bắt buộc) · googleDrive: đường dẫn tính từ My Drive, các cấp cách nhau bằng /,
+        vd 'Công việc/Sao lưu'; trống = thẳng trong My Drive; cấp nào chưa có thì máy chủ tự tạo */
+    folder: z.string().trim().max(200),
     /** giữ bao nhiêu bản gần nhất ở nơi này (bản cũ hơn tự xóa sau mỗi lần sao lưu thành công) */
     keepLatest: z.number().int().min(1, 'Giữ ít nhất 1 bản.').max(BACKUP_KEEP_MAX, `Giữ nhiều nhất ${BACKUP_KEEP_MAX} bản.`),
     /** googleDrive: tài khoản vừa kết nối (POST /backups/google-drive/connect). Thêm mới, hoặc đổi sang kiểu Drive thì bắt buộc;
         sửa nơi Drive đã có tài khoản thì bỏ trống = giữ tài khoản cũ. serverFolder: bỏ qua */
     driveGrantId: z.string().min(1).optional(),
   })
-  .refine((target) => target.kind !== 'serverFolder' || SERVER_FOLDER_PATTERN.test(target.folder), {
+  .refine((target) => target.kind !== 'serverFolder' || target.folder !== '', { path: ['folder'], message: 'Nhập thư mục.' })
+  .refine((target) => target.kind !== 'googleDrive' || driveFolderSegments(target.folder).every(Boolean), {
+    path: ['folder'],
+    message: 'Đường dẫn có một cấp trống (vd hai dấu / liền nhau).',
+  })
+  .refine((target) => target.kind !== 'serverFolder' || target.folder === '' || SERVER_FOLDER_PATTERN.test(target.folder), {
     path: ['folder'],
     message: 'Thư mục chỉ gồm chữ không dấu, số, dấu - và _, các cấp cách nhau bằng /.',
   });
@@ -113,13 +129,14 @@ export const BackupTargetSchema = z.object({
   keepLatest: z.number().int(),
   /** googleDrive: email tài khoản Google đã kết nối; null = chưa kết nối (chưa lưu được). serverFolder: luôn null */
   googleAccount: z.string().nullable(),
+  /** googleDrive: đường dẫn mở thư mục trên Drive; null = chưa có (thư mục tạo ở lần sao lưu đầu tiên vào đây). serverFolder: luôn null */
+  driveFolderUrl: z.string().nullable(),
   /** số bản đang có ở nơi này (theo lịch sử, chưa bị xóa) */
   backupCount: z.number().int(),
 });
 export type BackupTarget = z.infer<typeof BackupTargetSchema>;
 
-/** Tên tham số mang lỗi kết nối Drive khi máy chủ chuyển về trang Sao lưu, vd #/sao-luu?driveError=denied */
-export const DRIVE_ERROR_PARAM = 'driveError';
+/** Lỗi khi kết nối Drive: denied = bấm Hủy ở Google, failed = hết hạn, sai state, Google từ chối. */
 export const DRIVE_ERRORS = ['denied', 'failed'] as const;
 export type DriveError = (typeof DRIVE_ERRORS)[number];
 
@@ -141,8 +158,17 @@ export const ConnectGoogleDriveResponseSchema = z.discriminatedUnion('kind', [
 ]);
 export type ConnectGoogleDriveResponse = z.infer<typeof ConnectGoogleDriveResponseSchema>;
 
-/** Kết nối Drive xong (bản thật): trang callback trong popup gửi tin này cho cửa sổ mở nó (postMessage) rồi tự đóng. */
-export const DRIVE_CONNECTED_MESSAGE_TYPE = 'ulaw-backup-drive-connected';
+/** Kết nối Drive xong hoặc lỗi (bản thật): trang callback trong popup gửi tin DriveConnectMessage cho cửa sổ mở nó rồi tự đóng.
+    Gửi hai đường: postMessage cho window.opener, và BroadcastChannel DRIVE_CONNECT_CHANNEL (phòng khi trình duyệt cắt opener sau khi qua trang Google). */
+export const DRIVE_CONNECT_MESSAGE_TYPE = 'ulaw-backup-drive-connect';
+export const DRIVE_CONNECT_CHANNEL = 'ulaw-backup-drive-connect';
+
+/** Tin trang callback gửi về: kết nối được (driveGrantId, email) hoặc lỗi. */
+export const DriveConnectMessageSchema = z.discriminatedUnion('ok', [
+  z.object({ type: z.literal(DRIVE_CONNECT_MESSAGE_TYPE), ok: z.literal(true), driveGrantId: z.string().min(1), email: z.string().min(1) }),
+  z.object({ type: z.literal(DRIVE_CONNECT_MESSAGE_TYPE), ok: z.literal(false), error: z.enum(DRIVE_ERRORS) }),
+]);
+export type DriveConnectMessage = z.infer<typeof DriveConnectMessageSchema>;
 
 /* ---------- Lịch định kì ---------- */
 
@@ -387,7 +413,7 @@ export const BACKUP_MESSAGES = {
   driveConnected: (email: string) => `Đã kết nối ${email}. Bấm Lưu để lưu nơi lưu.`,
   /** Máy chủ chưa có OAuth client Google (503) */
   driveUnavailable: 'Máy chủ chưa cấu hình Google (GOOGLE_CLIENT_ID), chưa kết nối được Drive.',
-  /** Lỗi khi kết nối Drive, theo ?driveError=… */
+  /** Lỗi khi kết nối Drive (tin từ trang callback trong popup) */
   driveError: {
     denied: 'Bạn chưa đồng ý cho cổng lưu vào Google Drive.',
     failed: 'Không kết nối được Google Drive, thử lại.',

@@ -12,7 +12,7 @@ describe('Google Drive của trang Sao lưu', () => {
   });
 
   test('state trong cookie: đóng gói, mở gói; hỏng thì null', () => {
-    const connectState = { state: 's', codeVerifier: 'v', targetId: 't' };
+    const connectState = { state: 's', codeVerifier: 'v', userId: 'u' };
     expect(decodeDriveState(encodeDriveState(connectState))).toEqual(connectState);
     expect(decodeDriveState('hong')).toBeNull();
     expect(decodeDriveState(null)).toBeNull();

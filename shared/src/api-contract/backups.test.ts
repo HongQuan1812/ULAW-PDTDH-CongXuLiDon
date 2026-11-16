@@ -3,6 +3,8 @@ import { applyListQuery } from '../business-rules/lists--query';
 import {
   BACKUP_RUN_LIST_DEFAULT_SORTING,
   BACKUP_RUN_LIST_FIELDS,
+  BackupTargetInputSchema,
+  driveFolderSegments,
   RunBackupRequestSchema,
   backupRunExtraSearchText,
   backupRunStatusView,
@@ -51,6 +53,25 @@ function idsOf(search: string, filters: { fieldKey: string; operator: 'equals'; 
   const listQuery = { page: 1, pageSize: 20, search, sort: [], filters: filters.map((filter) => ({ ...filter, from: '', to: '' })) };
   return applyListQuery(RUNS, BACKUP_RUN_LIST_FIELDS, listQuery, BACKUP_RUN_LIST_DEFAULT_SORTING, backupRunExtraSearchText).rows.map((run) => run.id);
 }
+
+describe('thư mục của nơi lưu', () => {
+  const drive = (folder: string) => BackupTargetInputSchema.safeParse({ name: 'Drive', kind: 'googleDrive', folder, keepLatest: 3 });
+  const server = (folder: string) => BackupTargetInputSchema.safeParse({ name: 'Ổ', kind: 'serverFolder', folder, keepLatest: 3 });
+
+  test('Drive: đường dẫn tính từ My Drive, trống = My Drive; không được có cấp trống', () => {
+    expect(driveFolderSegments(' Công việc / Sao lưu ')).toEqual(['Công việc', 'Sao lưu']);
+    expect(driveFolderSegments('  ')).toEqual([]);
+    expect(drive('').success).toBe(true);
+    expect(drive('Công việc/Sao lưu cổng').success).toBe(true);
+    expect(drive('Công việc//Sao lưu').success).toBe(false);
+  });
+
+  test('thư mục máy chủ: bắt buộc, chỉ chữ không dấu', () => {
+    expect(server('').error?.issues[0]?.message).toBe('Nhập thư mục.');
+    expect(server('hang-ngay/thang-11').success).toBe(true);
+    expect(server('Sao lưu').success).toBe(false);
+  });
+});
 
 describe('RunBackupRequestSchema', () => {
   test('cần ít nhất một nơi lưu, không trùng', () => {

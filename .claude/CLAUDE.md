@@ -136,7 +136,7 @@ pnpm --filter web dev                   # chỉ chạy frontend: đặt VITE_USE
 
 # dev bằng container: postgres + api + web, bật / restart api là seed lại
 pnpm dev:up                             # = docker compose -f docker-compose.dev.yml --env-file .env.dev up -d --build
-pnpm dev:reset                          # về dữ liệu mẫu · dev:logs · dev:test · dev:down · prod:up · prod:logs · prod:down
+pnpm dev:reset                          # restart api + web, về dữ liệu mẫu · dev:logs · dev:test · dev:down · prod:up · prod:logs · prod:down
 
 # hoặc chạy thẳng trên máy
 pnpm dev:up postgres

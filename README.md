@@ -30,10 +30,9 @@ pnpm dev:up
 | Việc | Lệnh |
 |---|---|
 | Bật / bật lại, đổi `.env.dev` (vd thử đăng nhập Google) | `pnpm dev:up` |
-| Về dữ liệu mẫu | `pnpm dev:reset` |
-| Đổi thư viện (`package.json`) | `pnpm dev:reset web` |
+| Về dữ liệu mẫu, khởi động lại `api` và `web` (vd đổi thư viện trong `package.json`, Vite giữ bản cũ) | `pnpm dev:reset` |
 | Chạy test | `pnpm dev:test` |
-| Xem log | `pnpm dev:logs` |
+| Xem log (mọi container; chỉ một cái thì thêm tên, vd `pnpm dev:logs api`) | `pnpm dev:logs` |
 | Tắt | `pnpm dev:down` |
 
 Các lệnh `pnpm dev:*`, `pnpm prod:*` ghi trong `package.json` ở thư mục gốc, là lệnh `docker compose` viết gọn. Thêm chữ phía sau thì nối vào cuối lệnh, vd `pnpm dev:up postgres` chỉ bật postgres.
@@ -76,7 +75,7 @@ Các lần sau:
 | Bật lại, đổi `.env.prod` | `pnpm prod:up` |
 | Có mã mới | `pnpm prod:up` (build lại, migration tự chạy) |
 | Đổi chứng chỉ | `docker compose -f docker-compose.prod.yml --env-file .env.prod restart nginx` |
-| Xem log | `pnpm prod:logs` |
+| Xem log (mọi container; chỉ một cái thì thêm tên, vd `pnpm prod:logs api`) | `pnpm prod:logs` |
 | Tắt | `pnpm prod:down` |
 
 Không dùng `down -v`: xóa luôn dữ liệu và tệp tải lên.
@@ -86,6 +85,7 @@ Không dùng `down -v`: xóa luôn dữ liệu và tệp tải lên.
 1. Google Cloud Console → Credentials → OAuth client ID, loại **Web application**.
 2. Redirect URI: `https://localhost:5173/api/auth/google/callback` (dev) hoặc `https://<tên miền>/api/auth/google/callback` (bản thật).
    Muốn sao lưu vào Google Drive (trang Sao lưu) thì thêm `…/api/backups/google-drive/callback` (cùng địa chỉ gốc), và bật **Google Drive API** trong cùng project.
+   Dev muốn thử kết nối Drive thật thì thêm `dev-google-drive-connect` vào `ALWAYS_REAL_APIS` rồi `up -d api`.
 3. Điền `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` vào `.env.dev` / `.env.prod`.
 
 Chỉ email trường (`SCHOOL_EMAIL_DOMAINS`, `shared/src/validators/auth.ts`) đăng nhập được.

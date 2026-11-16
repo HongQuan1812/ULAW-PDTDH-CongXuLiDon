@@ -1246,7 +1246,7 @@ export function saveEmailSettings(settings: EmailSettings, staffId: string): Ema
 /* ---------- Sao lưu ---------- */
 
 /** Nơi lưu trong API giả (không có backupCount, tính lúc trả về). */
-type MockBackupTarget = Omit<BackupTarget, 'backupCount'>;
+type MockBackupTarget = Omit<BackupTarget, 'backupCount' | 'driveFolderUrl'>;
 
 /** Lần sao lưu trong API giả: thêm id nơi lưu (null = tải về máy). */
 type MockBackupRun = BackupRun & { targetId: string | null };
@@ -1285,6 +1285,7 @@ function vietnamNowSeconds(): string {
 export function getBackupsOverview(): BackupsResponse {
   const targets = backupTargets.map((target) => ({
     ...target,
+    driveFolderUrl: null,
     backupCount: backupRuns.filter((run) => run.targetId === target.id && run.status === 'ok' && !run.pruned).length,
   }));
   return structuredClone({

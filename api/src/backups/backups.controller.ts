@@ -1,7 +1,7 @@
 /* Nhóm API Sao lưu: tổng quan, nơi lưu, kết nối Google Drive, lịch định kì, sao lưu ngay, tải về. Mọi lệnh cần quyền manageBackups.
    Các lệnh trả tệp gửi .tar.gz, tên tệp trong Content-Disposition. */
 import { Body, Controller, Delete, Get, HttpCode, Param, Post, Put, Query, Req, Res, StreamableFile } from '@nestjs/common';
-import { ApiFoundResponse, ApiOkResponse, ApiTags } from '@nestjs/swagger';
+import { ApiOkResponse, ApiProduces, ApiTags } from '@nestjs/swagger';
 import type { Request, Response } from 'express';
 import {
   BACKUP_ENDPOINTS,
@@ -16,7 +16,7 @@ import {
   BackupsResponseSchema,
   ConnectGoogleDriveRequestSchema,
   ConnectGoogleDriveResponseSchema,
-  DRIVE_ERROR_PARAM,
+  DRIVE_CONNECT_MESSAGE_TYPE,
   RunBackupRequestSchema,
   parseListQuery,
   type BackupRun,
@@ -24,21 +24,18 @@ import {
   type BackupTarget,
   type BackupsResponse,
   type ConnectGoogleDriveResponse,
-  type DriveError,
+  type DriveConnectMessage,
 } from '@ulaw/shared';
 import type { ZodType } from 'zod';
 import { CurrentUser, RequirePermission } from '../auth/require-permission.decorator';
 import { readCookie } from '../auth/session-cookie';
 import { ApiException } from '../common/api-exception';
 import { openApiSchemaOf } from '../common/swagger';
-import { realApiNotBuilt } from '../config/demo-apis';
 import { AppConfig } from '../config/app-config';
 import type { User } from '../generated/prisma/client';
 import { BackupsService, type BackupDownload } from './backups.service';
-import { DRIVE_STATE_COOKIE_NAME, GoogleDriveBackupService, decodeDriveState, driveStateCookieOptions } from './google-drive-backup.service';
-
-/** Trang Sao lưu của giao diện (hash router: #/sao-luu), nơi Google Drive chuyển về. */
-const WEB_BACKUPS_HASH_PATH = '/sao-luu';
+import { driveConnectPage } from './drive-connect-page';
+import { DRIVE_STATE_COOKIE_NAME, GoogleDriveBackupService, decodeDriveState, driveStateCookieOptions, encodeDriveState } from './google-drive-backup.service';
 
 /**
  * Kiểm tra body theo schema, giống API giả.
@@ -133,15 +130,17 @@ export class BackupsController {
 
   /**
    * Kết nối một tài khoản Google Drive (từ hộp thêm / sửa nơi lưu, trước khi Lưu).
-   * @param user         người đang đăng nhập (chỉ người này dùng được driveGrantId trả về)
+   * Bản thật: đặt cookie state (state, mã PKCE, người bấm), trả đường dẫn sang Google để giao diện mở trong popup.
+   * @param user         người đang đăng nhập (chỉ người này dùng được driveGrantId)
    * @param requestBody  ConnectGoogleDriveRequest
-   * @returns            bản giả: 'connected' kèm driveGrantId, email
-   * @throws             422 email sai dạng · 501 bản thật chưa phát triển
+   * @param response     để đặt cookie state
+   * @returns            bản giả: 'connected' kèm driveGrantId, email · bản thật: 'redirect' kèm đường dẫn sang Google
+   * @throws             422 email sai dạng · 503 máy chủ chưa cấu hình Google
    */
   @Post(BACKUP_ENDPOINTS.driveConnect)
   @HttpCode(200)
   @ApiOkResponse({ schema: openApiSchemaOf(ConnectGoogleDriveResponseSchema) })
-  connectGoogleDrive(@CurrentUser() user: User, @Body() requestBody: unknown): ConnectGoogleDriveResponse {
+  connectGoogleDrive(@CurrentUser() user: User, @Body() requestBody: unknown, @Res({ passthrough: true }) response: Response): ConnectGoogleDriveResponse {
     const connectRequest = parseOrReject(requestBody ?? {}, ConnectGoogleDriveRequestSchema);
 
     /* JUST FOR DEMO: START · bản giả dev-google-drive-connect: không qua Google, tài khoản là email gửi kèm (mặc định email người đang đăng nhập),
@@ -152,18 +151,27 @@ export class BackupsController {
     }
     /* JUST FOR DEMO: END */
 
-    throw realApiNotBuilt('dev-google-drive-connect');
+    const started = this.googleDrive.startConnect(user.id);
+    if (!started) throw new ApiException(503, BACKUP_MESSAGES.driveUnavailable);
+    response.cookie(DRIVE_STATE_COOKIE_NAME, encodeDriveState(started.connectState), driveStateCookieOptions(this.appConfig.isDev));
+    return { kind: 'redirect', url: started.url };
   }
 
   /**
-   * (Bản thật sẽ làm lại theo cách popup) Google chuyển về sau khi Admin đồng ý (hoặc bấm Hủy): lưu quyền, rồi về trang Sao lưu (lỗi thì kèm ?driveError=…).
+   * Google chuyển về (trong popup) sau khi Admin chọn tài khoản, đồng ý hoặc bấm Hủy: đổi code lấy quyền, giữ thành driveGrantId,
+   * rồi trả trang nhỏ gửi kết quả cho hộp thoại và tự đóng. Không gọi từ giao diện.
+   * @param user      người đang đăng nhập (phải là người đã bấm Kết nối)
    * @param code      mã Google gửi kèm (không có khi bấm Hủy)
    * @param state     phải trùng state trong cookie
    * @param error     Google gửi 'access_denied' khi bấm Hủy
+   * @param request   để đọc cookie state
+   * @param response  để xóa cookie state, gửi trang
    */
   @Get(BACKUP_ENDPOINTS.googleDriveCallback)
-  @ApiFoundResponse({ description: 'Về trang Sao lưu; lỗi thì kèm driveError' })
+  @ApiProduces('text/html')
+  @ApiOkResponse({ description: 'Trang nhỏ gửi DriveConnectMessage cho hộp thoại rồi tự đóng' })
   async finishGoogleDrive(
+    @CurrentUser() user: User,
     @Query('code') code: unknown,
     @Query('state') state: unknown,
     @Query('error') error: unknown,
@@ -174,13 +182,22 @@ export class BackupsController {
     const connectState = decodeDriveState(readCookie(request.headers.cookie, DRIVE_STATE_COOKIE_NAME));
     const { maxAge: _maxAge, ...clearOptions } = driveStateCookieOptions(this.appConfig.isDev);
     response.clearCookie(DRIVE_STATE_COOKIE_NAME, clearOptions);
-    const backTo = (driveError?: DriveError) =>
-      response.redirect(302, new URL(`/#${WEB_BACKUPS_HASH_PATH}${driveError ? `?${DRIVE_ERROR_PARAM}=${driveError}` : ''}`, this.appConfig.webBaseUrl).toString());
 
-    // Bấm Hủy; state không khớp hoặc hết 10 phút; Google từ chối
-    if (error === 'access_denied') return backTo('denied');
-    if (!connectState || typeof code !== 'string' || !code || state !== connectState.state) return backTo('failed');
-    return backTo((await this.googleDrive.finishConnect(connectState, code)) ? undefined : 'failed');
+    // Bấm Hủy; state không khớp, hết 10 phút hoặc người khác; Google từ chối
+    const message = await (async (): Promise<DriveConnectMessage> => {
+      const failed = (driveError: 'denied' | 'failed'): DriveConnectMessage => ({ type: DRIVE_CONNECT_MESSAGE_TYPE, ok: false, error: driveError });
+      if (error === 'access_denied') return failed('denied');
+      if (!connectState || typeof code !== 'string' || !code || state !== connectState.state || connectState.userId !== user.id) return failed('failed');
+      const connected = await this.googleDrive.finishConnect(connectState, code);
+      return connected ? { type: DRIVE_CONNECT_MESSAGE_TYPE, ok: true, ...connected } : failed('failed');
+    })();
+
+    // Trang gửi kết quả; không lưu cache, chỉ chạy đúng script của trang
+    const page = driveConnectPage(message, new URL(this.appConfig.webBaseUrl).origin);
+    response.setHeader('Content-Type', 'text/html; charset=utf-8');
+    response.setHeader('Cache-Control', 'no-store');
+    response.setHeader('Content-Security-Policy', page.contentSecurityPolicy);
+    response.status(200).send(page.html);
   }
 
   /**
