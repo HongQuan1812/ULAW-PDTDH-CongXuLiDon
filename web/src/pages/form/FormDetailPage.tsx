@@ -31,6 +31,7 @@ import styles from './FormPage.module.css';
 import { TransferDialog } from './TransferDialog';
 import { SubmitBar, checkBeforeSending, useCommitment } from './SubmitBar';
 import { useLeavePage } from './useLeavePage';
+import { BackButton } from '../../components/BackButton';
 
 /** Câu báo khi không tải được đơn mà máy chủ không gửi kèm câu báo lỗi (vd mất mạng). */
 const LOAD_FAILED_TEXT = 'Không tải được đơn.';
@@ -66,9 +67,7 @@ export function FormDetailPage() {
 
   return (
     <div className={styles.page}>
-      <button type="button" className={styles.back} onClick={goBack}>
-        ‹ Quay lại {backLabel}
-      </button>
+      <BackButton label={backLabel} onClick={goBack} />
       {formQuery.isPending ? (
         <p className={styles.muted}>Đang tải đơn…</p>
       ) : formQuery.data ? (

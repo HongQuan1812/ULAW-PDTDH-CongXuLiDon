@@ -60,6 +60,9 @@ Giao diện ẩn / hiện nút theo quyền; **máy chủ kiểm tra lại mọi
 | Sao lưu: nơi lưu, sao lưu ngay, lịch định kì, lịch sử, tải bản sao lưu về | `manageBackups` | ✗ | ✗ | ✓ |
 
 Ghi chú:
+- Cấu hình email, Nguồn dữ liệu, Sao lưu không có mục riêng trên menu: menu có một mục **Cấu hình** (`#/cau-hinh`), trong đó mỗi trang một thẻ,
+  bấm thẻ thì mở trang đó (`#/cau-hinh/email`, `#/cau-hinh/nguon-du-lieu`, `#/cau-hinh/sao-luu`), đầu mỗi trang có nút "‹ Quay lại Cấu hình". Mỗi vai trò chỉ thấy thẻ của trang mình được vào;
+  không được vào trang nào thì không có mục Cấu hình.
 - **Admin không tự đổi được vai trò của chính mình**, để không tự khóa mình khỏi trang Quản lí tài khoản (`canChangeAccountRole`).
 - Tài khoản có quyền xử lí đơn tự có trong danh sách **Chuyển giao**. Đổi một cán bộ sang Người nộp đơn thì họ không còn trong danh sách đó,
   nhưng các đơn họ đang phụ trách vẫn giữ nguyên.
@@ -203,7 +206,7 @@ Mỗi loại đơn có hai nhóm mẫu, lưu ở máy chủ theo loại đơn, d
 
 ## Sao lưu
 
-- Trang **Sao lưu** (`#/sao-luu`, chỉ Admin). Mỗi bản sao lưu luôn gồm **cả database lẫn tệp tải lên**, là một tệp `sao-luu-<YYYYMMDD-HHmmss>.tar.gz`
+- Trang **Sao lưu** (`#/cau-hinh/sao-luu`, chỉ Admin). Mỗi bản sao lưu luôn gồm **cả database lẫn tệp tải lên**, là một tệp `sao-luu-<YYYYMMDD-HHmmss>.tar.gz`
   chứa `manifest.json`, `database.dump` (`pg_dump` dạng custom, khôi phục bằng `pg_restore`) và thư mục `uploads/`.
 - **Nơi lưu**: thư mục trên máy chủ (thư mục con trong `BACKUP_DIR`, không ra ngoài được) hoặc Google Drive (trong hộp thêm / sửa nơi lưu, Admin bấm
   **Kết nối Google**, chọn tài khoản, thấy email rồi mới bấm Lưu; chưa kết nối thì không lưu được. Bản giả `dev-google-drive-connect` không qua Google: gõ email bất kì,

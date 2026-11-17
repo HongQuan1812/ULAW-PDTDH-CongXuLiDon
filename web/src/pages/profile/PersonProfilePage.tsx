@@ -25,6 +25,7 @@ import { PersonHandledForms } from './HandledForms';
 import { NewFormButton } from './NewFormButton';
 import { CccdValue, StudentInfoButton, StudentPicker, StudentRow, StudentsLoadState, findMainStudent } from './ProfilePage';
 import styles from './ProfilePage.module.css';
+import { BackButton } from '../../components/BackButton';
 
 /** Câu báo khi không tải được hồ sơ mà máy chủ không gửi kèm câu báo lỗi (vd mất mạng). */
 const LOAD_FAILED_TEXT = 'Không tải được thông tin người nộp đơn.';
@@ -55,9 +56,7 @@ export function PersonProfilePage() {
   return (
     <div className={styles.page}>
       {previousPageLabel && (
-        <button type="button" className={styles.back} onClick={() => navigate(-1)}>
-          ‹ Quay lại {previousPageLabel}
-        </button>
+        <BackButton label={previousPageLabel} onClick={() => navigate(-1)} />
       )}
       <h1 className="sr-only">{PERSON_PROFILE_LABEL}</h1>
 

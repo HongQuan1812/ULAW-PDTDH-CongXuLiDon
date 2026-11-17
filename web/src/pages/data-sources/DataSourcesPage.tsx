@@ -1,4 +1,4 @@
-/* Trang Nguồn dữ liệu (#/nguon-du-lieu, vai trò có quyền manageDataSources: Admin).
+/* Trang Nguồn dữ liệu (#/cau-hinh/nguon-du-lieu, vai trò có quyền manageDataSources: Admin).
    Các nguồn dữ liệu bên ngoài cổng đọc tới, chỉ xem. Trước mắt có database trường: cấu hình kết nối (không có mật khẩu),
    đang kết nối được không, mất bao lâu. Máy chủ thử kết nối mỗi lần tải, nút ↻ là kiểm tra lại. */
 import { DATA_SOURCE_MESSAGES, type SchoolDatabaseStatus } from '@ulaw/shared';
@@ -6,6 +6,7 @@ import { useDataSources } from '../../api/data-sources';
 import { LoadError, loadErrorMessage } from '../../components/LoadError';
 import { RefreshButton } from '../../components/RefreshButton';
 import { formatDateTime } from '../../lib/format';
+import { BackToSettings } from '../settings/BackToSettings';
 import profileStyles from '../profile/ProfilePage.module.css';
 import styles from './DataSourcesPage.module.css';
 
@@ -19,6 +20,7 @@ export function DataSourcesPage() {
 
   return (
     <div className={profileStyles.page}>
+      <BackToSettings />
       <div className={styles.titleBlock}>
         <h1 className={styles.title}>Nguồn dữ liệu</h1>
         <p className={styles.subtitle}>Dữ liệu bên ngoài cổng đọc tới. Cổng chỉ đọc, không ghi gì vào các nguồn này.</p>

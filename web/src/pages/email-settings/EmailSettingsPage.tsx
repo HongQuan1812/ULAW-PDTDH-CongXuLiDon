@@ -1,4 +1,4 @@
-/* Trang Cấu hình email (#/cau-hinh-email, vai trò có quyền manageEmail: Người xử lí đơn, Admin).
+/* Trang Cấu hình email (#/cau-hinh/email, vai trò có quyền manageEmail: Người xử lí đơn, Admin).
    Cấu hình phía GỬI: người gửi, và bốn lúc gửi email báo cho người nộp đơn (Đã nộp · Cần bổ sung · Từ chối · Đã duyệt),
    mỗi lúc bật / tắt riêng, soạn tiêu đề + nội dung có mã {...}, xem trước bằng dữ liệu mẫu, gửi thư thử.
    Người nhận không cấu hình: thư luôn gửi tới email trên trang Thông tin cá nhân của người nộp đơn.
@@ -23,6 +23,7 @@ import { RefreshButton } from '../../components/RefreshButton';
 import { useToast } from '../../components/Toast';
 import { formatDateTime } from '../../lib/format';
 import { EmailEventEditor } from './EmailEventEditor';
+import { BackToSettings } from '../settings/BackToSettings';
 import profileStyles from '../profile/ProfilePage.module.css';
 import styles from './EmailSettingsPage.module.css';
 
@@ -42,6 +43,7 @@ export function EmailSettingsPage() {
   if (settingsQuery.isPending) {
     return (
       <div className={profileStyles.page}>
+        <BackToSettings />
         <p className={profileStyles.muted}>Đang tải cấu hình email…</p>
       </div>
     );
@@ -49,6 +51,7 @@ export function EmailSettingsPage() {
   if (loadError || !settingsQuery.data) {
     return (
       <div className={profileStyles.page}>
+        <BackToSettings />
         <section className={`${profileStyles.card} ${profileStyles.errorCard}`}>
           <LoadError message={loadError ?? 'Không tải được cấu hình email.'} />
           <RefreshButton query={settingsQuery} label="Cấu hình email" />
@@ -166,6 +169,7 @@ function EmailSettingsEditor({
 
   return (
     <div className={profileStyles.page}>
+      <BackToSettings />
       {/* Đầu trang: tiêu đề và lần lưu gần nhất bên trái; nhãn "Chưa lưu" bên phải khi có thay đổi */}
       <div className={styles.head}>
         <div className={styles.titleBlock}>

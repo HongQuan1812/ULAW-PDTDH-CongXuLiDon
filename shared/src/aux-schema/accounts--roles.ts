@@ -28,11 +28,16 @@ export const PAGES = [
   'forms', //      Quản lí đơn (tất cả đơn)
   'formTypes', // Quản lí loại đơn
   'accounts', //   Quản lí tài khoản
+  'settings', //   Cấu hình: thẻ dẫn tới các trang trong SETTINGS_PAGES
   'emailSettings', // Cấu hình email
   'dataSources', //  Nguồn dữ liệu
   'backups', //      Sao lưu
 ] as const;
 export type Page = (typeof PAGES)[number];
+
+/* Các trang nằm trong trang Cấu hình: không hiện riêng trên menu, mở từ thẻ trong trang Cấu hình.
+   Vai trò thấy trang nào trong này thì phải thấy cả 'settings'. */
+export const SETTINGS_PAGES = ['emailSettings', 'dataSources', 'backups'] as const satisfies readonly Page[];
 
 export const ROLE_IDS = ['nguoiNopDon', 'nguoiXuLiDon', 'admin'] as const;
 export type RoleId = (typeof ROLE_IDS)[number];

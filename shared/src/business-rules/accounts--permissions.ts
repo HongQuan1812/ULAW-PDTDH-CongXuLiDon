@@ -23,13 +23,13 @@ export const ROLES: Record<RoleId, Role> = {
   },
   nguoiXuLiDon: {
     name: 'Người xử lí đơn',
-    pages: ['profile', 'forms', 'formTypes', 'emailSettings'],
+    pages: ['profile', 'forms', 'formTypes', 'settings', 'emailSettings'],
     home: 'forms',
     permissions: ['submit', 'editOwn', 'viewAll', 'receive', 'viewApplicant', 'decide', 'transfer', 'internalNotes', 'manageFormTypes', 'manageEmail'],
   },
   admin: {
     name: 'Admin',
-    pages: ['profile', 'forms', 'formTypes', 'accounts', 'emailSettings', 'dataSources', 'backups'],
+    pages: ['profile', 'forms', 'formTypes', 'accounts', 'settings', 'emailSettings', 'dataSources', 'backups'],
     home: 'forms',
     permissions: [
       'manageFormTypes', 'submit', 'editOwn', 'viewAll', 'receive', 'viewApplicant', 'editApplicant',

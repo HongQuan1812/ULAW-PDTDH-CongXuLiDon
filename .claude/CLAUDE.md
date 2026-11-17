@@ -89,6 +89,7 @@ Cổng xử lí đơn/
 │       ├── pages/                # mỗi trang một thư mục:
 │       │                         #   login · onboarding · profile · form (nộp / chi tiết / xử lí)
 │       │                         #   forms (Quản lí đơn) · form-types · form-editor · accounts
+│       │                         #   settings (Cấu hình: thẻ dẫn tới email-settings · data-sources · backups)
 │       ├── features/             # logic dùng lại giữa các trang:
 │       │                         #   auth (useAuth, useCan) · form-renderer
 │       │                         #   file-preview · export · transfer

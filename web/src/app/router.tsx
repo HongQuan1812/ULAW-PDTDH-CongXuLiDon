@@ -13,6 +13,7 @@ import { LoginPage } from '../pages/login/LoginPage';
 import { OnboardingPage } from '../pages/onboarding/OnboardingPage';
 import { PersonProfilePage } from '../pages/profile/PersonProfilePage';
 import { ProfilePage } from '../pages/profile/ProfilePage';
+import { SettingsPage } from '../pages/settings/SettingsPage';
 import { AppLayout } from './AppLayout';
 import { HomeRedirect, PageGuard } from './guards';
 import {
@@ -58,6 +59,8 @@ export const router = createHashRouter([
         path: PAGE_PATH.accounts,
         element: <PageGuard page="accounts" permission="manageAccounts"><AccountsPage /></PageGuard>,
       },
+      // Cấu hình: thẻ dẫn tới các trang bên dưới, mỗi vai trò chỉ thấy thẻ của trang mình được vào
+      { path: PAGE_PATH.settings, element: <PageGuard page="settings"><SettingsPage /></PageGuard> },
       {
         path: PAGE_PATH.emailSettings,
         element: <PageGuard page="emailSettings" permission="manageEmail"><EmailSettingsPage /></PageGuard>,

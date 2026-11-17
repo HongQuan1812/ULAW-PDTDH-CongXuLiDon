@@ -59,6 +59,7 @@ import {
 } from './formTypeDrafts';
 import { SectionEditor, type SectionAction } from './SectionEditor';
 import styles from './FormTypeEditor.module.css';
+import { BackButton } from '../../components/BackButton';
 
 /** Câu báo khi không tải được loại đơn mà máy chủ không gửi kèm câu báo lỗi (vd mất mạng). */
 const LOAD_FAILED_TEXT = 'Không tải được loại đơn.';
@@ -83,9 +84,7 @@ export function FormTypeEditorPage() {
 
   return (
     <div className={styles.page}>
-      <button type="button" className={styles.back} onClick={goBack}>
-        ‹ Quay lại {backLabel}
-      </button>
+      <BackButton label={backLabel} onClick={goBack} />
       {isNew ? (
         <FormTypeEditor key="new" managed={null} requestedVersion={null} />
       ) : (

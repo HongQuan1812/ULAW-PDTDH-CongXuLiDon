@@ -2,9 +2,9 @@
    Đủ chỗ: menu nằm ngang trên cùng; thiếu chỗ thì ẩn tên tài khoản và nhãn ô vai trò trước;
    vẫn không đủ: thanh trên cùng + menu trượt ra từ bên trái; thanh trên cùng thiếu chỗ thì ẩn dải icon, rồi ẩn tên ứng dụng.
    Chỉ xét theo chỗ trống, không theo bề rộng màn hình cố định, nên vai trò nào (nhiều hay ít mục) cũng thu gọn theo cùng một luật. */
-import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Navigate, NavLink, Outlet, useLocation } from 'react-router';
-import { PAGES, canSeePage, type Page } from '@ulaw/shared';
+import { PAGES, SETTINGS_PAGES, canSeePage, type Page } from '@ulaw/shared';
 import { useSession } from '../api/auth';
 import { Avatar } from '../components/Avatar';
 import { LoadError } from '../components/LoadError';
@@ -13,6 +13,7 @@ import { AccountMenu } from './AccountMenu';
 import { DemoRoleSwitch } from '../features/auth/DemoRoleSwitch';
 import { useLogoutAction } from '../features/auth/useLogoutAction';
 import { SHOW_DEMO } from '../lib/env';
+import { Icon, PAGE_ICON } from './pageIcons';
 import { LOGIN_PATH, ONBOARDING_PATH, PAGE_LABEL, PAGE_PATH } from './paths';
 import styles from './AppLayout.module.css';
 
@@ -66,7 +67,9 @@ export function AppLayout() {
   // Lần đầu đăng nhập, chưa xác nhận họ tên: sang màn Bổ sung thông tin
   if (!session.data.profileCompleted) return <Navigate to={ONBOARDING_PATH} replace />;
   const { user, role } = session.data;
-  const visiblePages = PAGES.filter((page) => canSeePage(role, page));
+  // Các trang trong Cấu hình không có mục riêng, mở từ trang Cấu hình
+  const settingsPages: readonly Page[] = SETTINGS_PAGES;
+  const visiblePages = PAGES.filter((page) => canSeePage(role, page) && !settingsPages.includes(page));
 
   /** Đóng menu trượt và trả con trỏ bàn phím về nút mở menu. */
   function closeDrawer() {
@@ -244,72 +247,6 @@ function useMenuStage(role: string | undefined) {
 }
 
 /* ---------- biểu tượng ---------- */
-
-/**
- * Khung SVG chung cho các biểu tượng nét.
- * @param children  các nét vẽ (path, circle…)
- * @param size      cỡ, mặc định 20px
- * @returns         thẻ <svg> trình đọc màn hình bỏ qua
- */
-function Icon({ children, size = 20, strokeWidth = 1.8 }: { children: ReactNode; size?: number; strokeWidth?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      {children}
-    </svg>
-  );
-}
-
-const PAGE_ICON: Record<Page, ReactNode> = {
-  profile: (
-    <Icon>
-      <circle cx="12" cy="8" r="4" />
-      <path d="M4 21c0-4 4-6 8-6s8 2 8 6" />
-    </Icon>
-  ),
-  forms: (
-    <Icon>
-      <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" />
-      <path d="M14 3v5h5M9 13h6M9 17h6" />
-    </Icon>
-  ),
-  // Loại đơn: khung có cây bút (soạn mẫu đơn), khác hình tờ giấy của Quản lí đơn
-  formTypes: (
-    <Icon>
-      <path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-      <path d="M18.4 2.6a2.1 2.1 0 0 1 3 3L12 15l-4 1 1-4z" />
-    </Icon>
-  ),
-  accounts: (
-    <Icon>
-      <circle cx="9" cy="8" r="3.5" />
-      <path d="M2.5 20c0-3.6 3-5.5 6.5-5.5s6.5 1.9 6.5 5.5" />
-      <path d="M16 4.5a3.5 3.5 0 0 1 0 7M18 14.8c2.2.6 3.5 2.4 3.5 5.2" />
-    </Icon>
-  ),
-  // Cấu hình email: phong bì
-  emailSettings: (
-    <Icon>
-      <rect x="3" y="5" width="18" height="14" rx="2" />
-      <path d="m3 7 9 6 9-6" />
-    </Icon>
-  ),
-  // Nguồn dữ liệu: hình trụ database
-  dataSources: (
-    <Icon>
-      <ellipse cx="12" cy="5.5" rx="7.5" ry="2.5" />
-      <path d="M4.5 5.5v13c0 1.4 3.4 2.5 7.5 2.5s7.5-1.1 7.5-2.5v-13" />
-      <path d="M4.5 12c0 1.4 3.4 2.5 7.5 2.5s7.5-1.1 7.5-2.5" />
-    </Icon>
-  ),
-  // Sao lưu: mũi tên vòng quanh đồng hồ
-  backups: (
-    <Icon>
-      <path d="M3.5 12a8.5 8.5 0 1 0 2.5-6" />
-      <path d="M3.5 4v4h4" />
-      <path d="M12 8v4l3 2" />
-    </Icon>
-  ),
-};
 
 function MenuIcon() {
   return (

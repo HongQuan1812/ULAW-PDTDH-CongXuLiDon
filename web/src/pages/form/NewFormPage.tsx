@@ -23,6 +23,7 @@ import { FormInfoPanel, FormInfoPanelToggle, FormInfoSection, useFormInfoPanel }
 import styles from './FormPage.module.css';
 import { SubmitBar, checkBeforeSending, useCommitment } from './SubmitBar';
 import { useLeavePage } from './useLeavePage';
+import { BackButton } from '../../components/BackButton';
 
 /** Câu báo khi không tải được loại đơn mà máy chủ không gửi kèm câu báo lỗi (vd mất mạng). */
 const LOAD_FAILED_TEXT = 'Không tải được loại đơn.';
@@ -50,9 +51,7 @@ export function NewFormPage() {
 
   return (
     <div className={styles.page}>
-      <button type="button" className={styles.back} onClick={goBack}>
-        ‹ Quay lại {backLabel}
-      </button>
+      <BackButton label={backLabel} onClick={goBack} />
       {formTypeQuery.isPending ? (
         <p className={styles.muted}>Đang tải loại đơn…</p>
       ) : formTypeQuery.data ? (

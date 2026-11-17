@@ -1,4 +1,4 @@
-/* Trang Sao lưu (#/sao-luu, vai trò có quyền manageBackups: Admin). Mỗi bản sao lưu gồm cả database lẫn tệp tải lên.
+/* Trang Sao lưu (#/cau-hinh/sao-luu, vai trò có quyền manageBackups: Admin). Mỗi bản sao lưu gồm cả database lẫn tệp tải lên.
    Đầu trang: tên trang, nút "Sao lưu ngay…" (popup chọn nhiều nơi lưu, hoặc chỉ tải về máy này).
    Thanh trạng thái: lần thành công gần nhất, lần định kì tới; nhãn "Đang sao lưu…" chỉ hiện khi có bản đang chạy.
    Lịch sử (tìm, lọc, sắp xếp, phân trang) bên trái; khung "Lịch và nơi lưu" (lịch định kì, nơi lưu) bên phải, giống khung Thông tin đơn
@@ -15,6 +15,7 @@ import { useToast } from '../../components/Toast';
 import { formatDateTime } from '../../lib/format';
 import { saveToDevice } from '../../lib/saveToDevice';
 import { FormInfoPanel, FormInfoPanelToggle, useFormInfoPanel } from '../form/FormInfoPanel';
+import { BackToSettings } from '../settings/BackToSettings';
 import profileStyles from '../profile/ProfilePage.module.css';
 import { BackupHistoryCard } from './BackupHistoryCard';
 import { BackupScheduleCard } from './BackupScheduleCard';
@@ -39,6 +40,7 @@ export function BackupsPage() {
 
   return (
     <div className={profileStyles.page}>
+      <BackToSettings />
       {backupsQuery.isPending ? (
         <>
           <PageTitle />

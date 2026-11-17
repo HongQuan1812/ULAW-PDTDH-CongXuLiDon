@@ -26,6 +26,7 @@ import { readPreviousPageLabel } from '../../app/paths';
 import { HandledForms } from './HandledForms';
 import { SubmittedForms } from './SubmittedForms';
 import styles from './ProfilePage.module.css';
+import { BackButton } from '../../components/BackButton';
 
 /** Câu báo khi không tải được hồ sơ mà máy chủ không gửi kèm câu báo lỗi (vd mất mạng). */
 const LOAD_FAILED_TEXT = 'Không tải được thông tin cá nhân.';
@@ -46,9 +47,7 @@ export function ProfilePage() {
   return (
     <div className={styles.page}>
       {previousPageLabel && (
-        <button type="button" className={styles.back} onClick={() => navigate(-1)}>
-          ‹ Quay lại {previousPageLabel}
-        </button>
+        <BackButton label={previousPageLabel} onClick={() => navigate(-1)} />
       )}
       <h1 className="sr-only">Thông tin cá nhân</h1>
       {profileQuery.isPending ? (

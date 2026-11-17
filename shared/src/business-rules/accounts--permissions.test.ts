@@ -1,5 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import { can, canChangeAccountRole, canEditForm, canEditFormNote, canReceiveForm, canTransferForm } from './accounts--permissions';
+import { ROLE_IDS, SETTINGS_PAGES } from '../aux-schema/accounts--roles';
+import { ROLES, can, canChangeAccountRole, canEditForm, canEditFormNote, canReceiveForm, canTransferForm } from './accounts--permissions';
+
+describe('trang Cấu hình', () => {
+  it('vai trò thấy một trang trong Cấu hình thì thấy cả trang Cấu hình', () => {
+    for (const role of ROLE_IDS) {
+      const pages: readonly string[] = ROLES[role].pages;
+      if (SETTINGS_PAGES.some((page) => pages.includes(page))) expect(pages, role).toContain('settings');
+    }
+  });
+});
 
 describe('canTransferForm', () => {
   const handler = { email: 'thuha.pham.pdt@hcmulaw.edu.vn' };
