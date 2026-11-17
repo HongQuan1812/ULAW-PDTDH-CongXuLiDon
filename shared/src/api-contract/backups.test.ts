@@ -29,6 +29,7 @@ function runOf(changes: Partial<BackupRun>): BackupRun {
     status: 'ok',
     error: null,
     fileAvailable: true,
+    driveFileUrl: null,
     pruned: false,
     ...changes,
   };

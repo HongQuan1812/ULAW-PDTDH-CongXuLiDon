@@ -56,6 +56,15 @@ export function projectNumberOf(clientId: string): string {
 }
 
 /**
+ * Đường dẫn mở một tệp trên Google Drive.
+ * @param fileId  id tệp Drive
+ * @returns       vd https://drive.google.com/file/d/<id>/view
+ */
+export function driveFileUrlOf(fileId: string): string {
+  return `https://drive.google.com/file/d/${encodeURIComponent(fileId)}/view`;
+}
+
+/**
  * Đường dẫn mở một thư mục trên Google Drive.
  * @param folderId  id thư mục Drive
  * @returns         vd https://drive.google.com/drive/folders/<id>; My Drive thì đường dẫn My Drive

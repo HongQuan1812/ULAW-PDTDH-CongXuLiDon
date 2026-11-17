@@ -1457,6 +1457,7 @@ export function startBackupRuns(targetIds: readonly string[], staffId: string): 
     status: 'running',
     error: null,
     fileAvailable: false,
+    driveFileUrl: null,
     pruned: false,
   }));
   backupRuns = [...runs, ...backupRuns];
@@ -1466,11 +1467,18 @@ export function startBackupRuns(targetIds: readonly string[], staffId: string): 
   setTimeout(() => {
     runs.forEach((run, index) => {
       const target = targets[index]!;
-      Object.assign(run, { status: 'ok', finishedAt: vietnamNowSeconds(), sizeBytes, fileAvailable: target.kind === 'serverFolder' });
+      Object.assign(run, {
+        status: 'ok',
+        finishedAt: vietnamNowSeconds(),
+        sizeBytes,
+        fileAvailable: target.kind === 'serverFolder',
+        // Drive giả: đường dẫn tệp giả (mở ra Google báo không có tệp)
+        driveFileUrl: target.kind === 'googleDrive' ? `https://drive.google.com/file/d/demo-${run.id}/view` : null,
+      });
       backupRuns
         .filter((stored) => stored.targetId === target.id && stored.status === 'ok' && !stored.pruned)
         .slice(target.keepLatest)
-        .forEach((stored) => Object.assign(stored, { pruned: true, fileAvailable: false }));
+        .forEach((stored) => Object.assign(stored, { pruned: true, fileAvailable: false, driveFileUrl: null }));
     });
   }, MOCK_BACKUP_RUN_MS);
   return structuredClone(runs.map(({ targetId: _targetId, ...run }) => run));
@@ -1498,6 +1506,7 @@ export function recordBackupDownload(staffId: string): string {
     status: 'ok',
     error: null,
     fileAvailable: false,
+    driveFileUrl: null,
     pruned: false,
   };
   backupRuns = [run, ...backupRuns];

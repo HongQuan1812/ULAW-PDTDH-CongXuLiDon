@@ -273,6 +273,8 @@ export const BackupRunSchema = z.object({
   error: z.string().nullable(),
   /** còn tệp ở thư mục máy chủ để tải về không (bản ở Drive, bản đã tải về, bản đã bị xóa vì quá số bản giữ lại: false) */
   fileAvailable: z.boolean(),
+  /** bản còn trên Google Drive: đường dẫn mở tệp trên Drive · bản ở nơi khác, lỗi, đã bị xóa vì quá số bản giữ lại: null */
+  driveFileUrl: z.string().nullable(),
   /** bản này đã bị xóa khỏi nơi lưu vì quá số bản giữ lại */
   pruned: z.boolean(),
 });

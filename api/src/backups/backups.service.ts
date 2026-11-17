@@ -35,7 +35,7 @@ import { fromVietnamTime, toVietnamSeconds, toVietnamTime } from '../common/viet
 import { AppConfig } from '../config/app-config';
 import type { Prisma, User } from '../generated/prisma/client';
 import { createBackupArchive } from './backup-archive';
-import { GoogleDriveBackupService, accountOf, driveFolderUrlOf, type DriveGrant } from './google-drive-backup.service';
+import { GoogleDriveBackupService, accountOf, driveFileUrlOf, driveFolderUrlOf, type DriveGrant } from './google-drive-backup.service';
 
 /** Bao lâu kiểm lịch một lần, mili giây (nhỏ hơn một phút để không lỡ phút nào). */
 const SCHEDULE_CHECK_MS = 30_000;
@@ -156,7 +156,8 @@ export class BackupsService implements OnModuleInit, OnModuleDestroy {
    * @returns          theo BackupRunSchema
    */
   private toRun(row: BackupRunRow, checkFile = true): BackupRun {
-    const storedOnServer = row.status === 'ok' && !row.pruned && !!row.storagePath;
+    const stored = row.status === 'ok' && !row.pruned;
+    const storedOnServer = stored && !!row.storagePath;
     return {
       id: row.id,
       startedAt: toVietnamSeconds(row.startedAt),
@@ -170,6 +171,7 @@ export class BackupsService implements OnModuleInit, OnModuleDestroy {
       status: row.status,
       error: row.error,
       fileAvailable: storedOnServer && (!checkFile || existsSync(path.join(this.backupRoot, row.storagePath!))),
+      driveFileUrl: stored && row.driveFileId ? driveFileUrlOf(row.driveFileId) : null,
       pruned: row.pruned,
     };
   }

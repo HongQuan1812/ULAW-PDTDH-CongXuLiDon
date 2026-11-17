@@ -147,6 +147,11 @@ export function BackupHistoryCard() {
                         {downloadingId === run.id ? 'Đang tải…' : 'Tải về'}
                       </button>
                     )}
+                    {run.driveFileUrl && (
+                      <a href={run.driveFileUrl} target="_blank" rel="noopener noreferrer" className={styles.linkButton} title="Mở tệp trên Google Drive">
+                        Mở trên Drive
+                      </a>
+                    )}
                   </td>
                 </tr>
               ))

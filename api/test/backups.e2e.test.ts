@@ -530,6 +530,25 @@ describe('backups', () => {
     await prisma.backupRun.deleteMany();
   });
 
+  it('lịch sử: bản còn trên Drive có đường dẫn mở tệp, bản đã xóa vì quá số bản thì không', async () => {
+    // Ghi thẳng hai dòng Drive: một còn, một đã xóa
+    await prisma.backupRun.deleteMany();
+    const startedAt = fromVietnamTime('2026-11-17T02:00');
+    const driveRun = { startedAt, finishedAt: startedAt, trigger: 'scheduled' as const, targetName: 'Drive phòng', targetKind: 'googleDrive', fileName: 'sao-luu-20261117-020000.tar.gz', sizeBytes: 1_000_000, status: 'ok' as const };
+    await prisma.backupRun.createMany({
+      data: [
+        { ...driveRun, id: 'backup-run-drive-con', driveFileId: 'tep-con' },
+        { ...driveRun, id: 'backup-run-drive-xoa', driveFileId: 'tep-xoa', pruned: true },
+      ],
+    });
+
+    // Còn: đường dẫn tệp; đã xóa: null; cả hai không tải về từ máy chủ được
+    const { runs } = await runsPage({});
+    expect(runs.find((run) => run.id === 'backup-run-drive-con')).toMatchObject({ driveFileUrl: 'https://drive.google.com/file/d/tep-con/view', fileAvailable: false });
+    expect(runs.find((run) => run.id === 'backup-run-drive-xoa')).toMatchObject({ driveFileUrl: null, fileAvailable: false });
+    await prisma.backupRun.deleteMany();
+  });
+
   it.skipIf(!HAS_PG_DUMP)('chạy theo lịch: đúng phút thì chạy một lần, kiểm lại cùng phút (vd backend khởi động lại) không chạy trùng', async () => {
     const at = fromVietnamTime('2026-11-17T02:00');
     await backupsService.checkSchedule(at);

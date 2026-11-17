@@ -223,7 +223,7 @@ Mỗi loại đơn có hai nhóm mẫu, lưu ở máy chủ theo loại đơn, d
   Bỏ nơi lưu: lịch không lưu vào đó nữa, bản đã lưu và lịch sử giữ nguyên.
 - **Sao lưu ngay** (popup): chọn **một hoặc nhiều nơi lưu** (một tệp, chép vào từng nơi, mỗi nơi một dòng lịch sử), hoặc **Tải về máy này**
   (tạo bản rồi tải thẳng về trình duyệt, không giữ trên máy chủ; lịch sử: Đang chạy từ lúc bấm, trình duyệt nhận đủ tệp thì Thành công, đứt giữa chừng thì Lỗi; trang không biết người dùng bấm Hủy ở hộp lưu của trình duyệt). Tải về đi một mình: tích ô này thì các nơi lưu bị khóa. Nơi lưu Drive chưa kết nối không chọn được;
-  gửi lên vẫn có thì cả lần bị từ chối (409). Mỗi lúc chỉ chạy một bản; đang chạy thì bấm lại báo 409. Bản lưu ở thư mục máy chủ có nút Tải về trong lịch sử.
+  gửi lên vẫn có thì cả lần bị từ chối (409). Mỗi lúc chỉ chạy một bản; đang chạy thì bấm lại báo 409. Bản lưu ở thư mục máy chủ có nút Tải về trong lịch sử, bản trên Google Drive có nút Mở trên Drive (mở tệp trên Drive ở thẻ mới); bản đã bị xóa vì quá số bản giữ lại thì không có.
 - **Lịch định kì**: một danh sách lịch (thêm, sửa, bỏ). Mỗi lịch: bật / tắt, hằng ngày hoặc hằng tuần (thứ mấy), giờ chạy theo giờ Việt Nam,
   lưu vào một hoặc nhiều nơi (một tệp, chép vào từng nơi; nơi nào lỗi thì chỉ dòng đó lỗi). Nhiều lịch trúng cùng một phút thì chạy chung một lần,
   lưu vào mọi nơi của các lịch đó. "Lần tới" là lần sớm nhất trong các lịch đang bật. Backend kiểm mỗi 30 giây; tắt đúng phút chạy thì lần ấy bỏ qua; khởi động lại trong cùng phút không chạy trùng.
