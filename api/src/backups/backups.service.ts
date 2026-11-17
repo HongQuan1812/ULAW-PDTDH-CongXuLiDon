@@ -1,5 +1,6 @@
-/* Sao lưu: nơi lưu, lịch định kì, lịch sử, chạy sao lưu (tay hoặc theo lịch), giữ N bản gần nhất ở mỗi nơi lưu.
-   Mỗi lúc chỉ chạy một lần sao lưu (một tệp, lưu vào một hoặc nhiều nơi). Lịch: kiểm mỗi 30 giây, tới phút chạy thì chạy;
+/* Sao lưu: nơi lưu, lịch định kì, lịch sử, chạy sao lưu (tay, theo lịch, hoặc trước khi cập nhật phiên bản mới), giữ N bản gần nhất ở mỗi nơi lưu.
+   Mỗi lúc chỉ chạy một lần sao lưu (một tệp, lưu vào một hoặc nhiều nơi); lần trước cập nhật chạy ngoài backend (lệnh backup-before-update),
+   nên ngoài cờ busy còn kiểm dòng 'running' trong database. Lịch: kiểm mỗi 30 giây, tới phút chạy thì chạy;
    backend tắt đúng phút đó thì lần ấy bỏ qua. Bật backend: lần sao lưu còn 'running' (backend tắt giữa chừng) ghi thành lỗi.
    Quyền manageBackups đã được guard kiểm tra ở controller. */
 import { createReadStream, existsSync } from 'node:fs';
@@ -39,6 +40,10 @@ import { GoogleDriveBackupService, accountOf, driveFileUrlOf, driveFolderUrlOf, 
 
 /** Bao lâu kiểm lịch một lần, mili giây (nhỏ hơn một phút để không lỡ phút nào). */
 const SCHEDULE_CHECK_MS = 30_000;
+
+/** Sao lưu trước cập nhật: chờ lần đang chạy xong tối đa bao lâu, kiểm lại sau bao lâu, mili giây. */
+const BEFORE_UPDATE_WAIT_MS = 10 * 60_000;
+const BEFORE_UPDATE_POLL_MS = 2_000;
 
 /** Thư mục tạm trong BACKUP_DIR: tệp đang tạo, tệp tải về máy (xóa ngay sau khi gửi). */
 const TEMP_FOLDER = '.tam';
@@ -423,11 +428,19 @@ export class BackupsService implements OnModuleInit, OnModuleDestroy {
   /* ---------- Chạy sao lưu ---------- */
 
   /**
+   * Có lần sao lưu đang chạy không: trong backend này (busy), hoặc ở nơi khác (dòng 'running', vd lệnh backup-before-update).
+   * @returns  true nếu đang có
+   */
+  private async isRunning(): Promise<boolean> {
+    return this.busy || (await this.prisma.backupRun.count({ where: { status: 'running' } })) > 0;
+  }
+
+  /**
    * Giữ chỗ chạy (mỗi lúc một lần).
    * @throws  409 đang có lần khác chạy
    */
-  private claim(): void {
-    if (this.busy) throw new ApiException(409, BACKUP_MESSAGES.busy);
+  private async claim(): Promise<void> {
+    if (await this.isRunning()) throw new ApiException(409, BACKUP_MESSAGES.busy);
     this.busy = true;
   }
 
@@ -442,7 +455,7 @@ export class BackupsService implements OnModuleInit, OnModuleDestroy {
     const targets = await this.prisma.backupTarget.findMany({ where: { id: { in: [...targetIds] } }, orderBy: { createdAt: 'asc' } });
     if (targets.length !== targetIds.length) throw new ApiException(404, BACKUP_MESSAGES.targetNotFound);
     if (targets.some((target) => target.kind === 'googleDrive' && !target.googleAccount)) throw new ApiException(409, BACKUP_MESSAGES.driveNotConnected);
-    this.claim();
+    await this.claim();
     try {
       const startedAt = new Date();
       const runs = await this.startRuns(targets, { startedAt, trigger: 'manual', startedById: starter.id });
@@ -457,12 +470,12 @@ export class BackupsService implements OnModuleInit, OnModuleDestroy {
   /**
    * Ghi các dòng 'running', mỗi nơi lưu một dòng.
    * @param targets  các nơi lưu
-   * @param fields   lúc bắt đầu, chạy tay hay theo lịch, người bấm, phút theo lịch
+   * @param fields   lúc bắt đầu, cách chạy, người bấm, phút theo lịch
    * @returns        các dòng vừa ghi, cùng thứ tự với targets
    */
   private startRuns(
     targets: readonly BackupTargetRow[],
-    fields: { startedAt: Date; trigger: 'manual' | 'scheduled'; startedById?: string; scheduledAt?: Date },
+    fields: { startedAt: Date; trigger: BackupRun['trigger']; startedById?: string; scheduledAt?: Date },
   ): Promise<BackupRunRow[]> {
     const fileName = backupFileName(toVietnamSeconds(fields.startedAt));
     return this.prisma.$transaction(
@@ -568,7 +581,7 @@ export class BackupsService implements OnModuleInit, OnModuleDestroy {
    * @throws         409 đang có lần khác chạy · 500 kèm câu lỗi khi không tạo được
    */
   async download(starter: User): Promise<BackupDownload> {
-    this.claim();
+    await this.claim();
     const startedAt = new Date();
     const fileName = backupFileName(toVietnamSeconds(startedAt));
     const tempPath = path.join(this.backupRoot, TEMP_FOLDER, `${randomUUID()}-${fileName}`);
@@ -621,6 +634,36 @@ export class BackupsService implements OnModuleInit, OnModuleDestroy {
     return { fileName: row.fileName, sizeBytes: Number(row.sizeBytes ?? 0), stream: createReadStream(filePath) };
   }
 
+  /**
+   * Sao lưu trước khi cập nhật phiên bản mới: một bản vào mọi nơi lưu kiểu thư mục máy chủ, chờ xong mới trả (lệnh backup-before-update,
+   * docker/deploy.sh gọi trước khi kéo image mới). Đang có lần khác chạy thì chờ, quá BEFORE_UPDATE_WAIT_MS thì báo lỗi.
+   * @returns  các lần sao lưu đã chạy, mỗi nơi một dòng; rỗng = chưa có nơi lưu kiểu thư mục máy chủ
+   * @throws   Error khi chờ lần khác quá lâu
+   */
+  async runBeforeUpdate(): Promise<BackupRun[]> {
+    const targets = await this.prisma.backupTarget.findMany({ where: { kind: 'serverFolder' }, orderBy: { createdAt: 'asc' } });
+    if (!targets.length) return [];
+
+    // Chờ lần đang chạy (bấm tay, theo lịch) xong
+    const deadline = Date.now() + BEFORE_UPDATE_WAIT_MS;
+    while (await this.isRunning()) {
+      if (Date.now() > deadline) throw new Error(BACKUP_MESSAGES.busy);
+      await new Promise((resolve) => setTimeout(resolve, BEFORE_UPDATE_POLL_MS));
+    }
+
+    // Chạy, chờ xong rồi đọc lại kết quả
+    this.busy = true;
+    try {
+      const startedAt = new Date();
+      const runs = await this.startRuns(targets, { startedAt, trigger: 'beforeUpdate' });
+      await this.finishRuns(targets, runs, startedAt);
+      const finished = await this.prisma.backupRun.findMany({ where: { id: { in: runs.map((run) => run.id) } }, include: WITH_STARTED_BY });
+      return runs.map((run) => this.toRun(finished.find((row) => row.id === run.id)!));
+    } finally {
+      this.busy = false;
+    }
+  }
+
   /* ---------- Lịch ---------- */
 
   /**
@@ -631,7 +674,7 @@ export class BackupsService implements OnModuleInit, OnModuleDestroy {
   async checkSchedule(now = new Date()): Promise<void> {
     const minute = toVietnamTime(now);
     const dueSchedules = (await this.readSchedules()).filter((schedule) => isScheduledMinute(schedule, minute));
-    if (!dueSchedules.length || this.busy) return;
+    if (!dueSchedules.length || (await this.isRunning())) return;
     const scheduledAt = fromVietnamTime(minute);
     if (await this.prisma.backupRun.findFirst({ where: { trigger: 'scheduled', scheduledAt } })) return;
 

@@ -264,9 +264,11 @@ enum BackupRunStatus {
   error
 }
 
+// manual: Admin bấm · scheduled: lịch định kì · beforeUpdate: tự chạy trước khi cập nhật phiên bản mới (docker/deploy.sh)
 enum BackupRunTrigger {
   manual
   scheduled
+  beforeUpdate
 }
 
 // Một lần sao lưu vào một nơi lưu

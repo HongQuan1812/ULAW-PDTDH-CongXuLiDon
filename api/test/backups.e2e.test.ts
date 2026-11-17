@@ -571,4 +571,53 @@ describe('backups', () => {
     expect(await prisma.backupRun.count({ where: { trigger: 'scheduled' } })).toBe(1);
     await request(server()).put(dailyPath).set('Cookie', adminCookie).send(SEED_SCHEDULE).expect(200);
   });
+
+  it('có dòng đang chạy ở nơi khác (vd lệnh backup-before-update): sao lưu ngay 409, lịch tới giờ không chạy', async () => {
+    // Ghi thẳng một dòng 'running' như lệnh chạy ngoài backend
+    await prisma.backupRun.deleteMany();
+    await prisma.backupRun.create({
+      data: { id: 'backup-run-ngoai', startedAt: new Date(), trigger: 'beforeUpdate', targetName: 'Trên máy chủ', targetKind: 'serverFolder', fileName: 'sao-luu-ngoai.tar.gz', status: 'running' },
+    });
+
+    // Bấm tay: 409 · lịch bật, tới giờ: không chạy
+    const busy = await request(server()).post(api(BACKUP_ENDPOINTS.run)).set('Cookie', adminCookie).send({ targetIds: ['backup-target-server'] }).expect(409);
+    expect(messageOf(busy)).toBe(BACKUP_MESSAGES.busy);
+    const dailyPath = api(backupSchedulePath(DAILY_SCHEDULE_ID));
+    await request(server()).put(dailyPath).set('Cookie', adminCookie).send(DAILY_SCHEDULE).expect(200);
+    await backupsService.checkSchedule(fromVietnamTime('2026-11-18T02:00'));
+    expect(await prisma.backupRun.count({ where: { trigger: 'scheduled' } })).toBe(0);
+    await request(server()).put(dailyPath).set('Cookie', adminCookie).send(SEED_SCHEDULE).expect(200);
+    await prisma.backupRun.deleteMany();
+  });
+
+  it('trước cập nhật: chưa có nơi lưu kiểu thư mục máy chủ thì không chạy', async () => {
+    await prisma.backupTarget.updateMany({ data: { kind: 'googleDrive' } });
+    expect(await backupsService.runBeforeUpdate()).toEqual([]);
+    expect(await prisma.backupRun.count()).toBe(0);
+    await resetBackups();
+  });
+
+  it.skipIf(!HAS_PG_DUMP)('trước cập nhật: một bản vào mọi thư mục máy chủ (không vào Drive), chờ xong, ghi "Trước cập nhật", giữ N bản', async () => {
+    // Thêm một nơi lưu thư mục máy chủ (giữ 2 bản) và một nơi Drive
+    const added = BackupTargetSchema.parse((await request(server()).post(api(BACKUP_ENDPOINTS.targets)).set('Cookie', adminCookie).send(TEST_TARGET).expect(201)).body);
+    await prisma.backupTarget.create({ data: { id: 'backup-target-drive-thu', name: 'Drive thử', kind: 'googleDrive', folder: 'Sao lưu', keepLatest: 5, googleAccount: 'a@hcmulaw.edu.vn', googleFolderId: 'thu-muc' } });
+
+    // Chạy: mỗi thư mục máy chủ một dòng thành công, không ai bấm, tệp có trên ổ đĩa
+    const runs = await backupsService.runBeforeUpdate();
+    expect(runs.map((run) => BackupRunSchema.parse(run).targetName).sort()).toEqual(['Thử', 'Trên máy chủ'].sort());
+    for (const run of runs) expect(run).toMatchObject({ trigger: 'beforeUpdate', startedBy: null, status: 'ok', fileAvailable: true });
+    expect(await prisma.backupRun.count({ where: { targetId: 'backup-target-drive-thu' } })).toBe(0);
+
+    // Lịch sử: lọc theo cách chạy được
+    const page = await runsPage({ filters: [{ fieldKey: 'trigger', operator: 'equals', value: 'beforeUpdate', from: '', to: '' }] });
+    expect(page.total).toBe(2);
+
+    // Chạy thêm 2 lần: nơi giữ 2 bản xóa bản cũ nhất
+    await new Promise((resolve) => setTimeout(resolve, 1_000));
+    await backupsService.runBeforeUpdate();
+    await new Promise((resolve) => setTimeout(resolve, 1_000));
+    await backupsService.runBeforeUpdate();
+    expect(await prisma.backupRun.count({ where: { targetId: added.id, pruned: false } })).toBe(2);
+    await resetBackups();
+  });
 });
