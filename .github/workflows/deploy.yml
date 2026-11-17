@@ -126,11 +126,12 @@ jobs:
       - name: Lấy mã nguồn
         uses: actions/checkout@v4
 
-      # Tên chủ repo trên GHCR phải viết thường
+      # Tên chủ repo trên GHCR phải viết thường (dùng tr, không dùng ${…,,}: bash 3 của macOS không có)
       - name: Đặt tên image
         id: names
         run: |
-          prefix="ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/${IMAGE_NAME}"
+          owner="$(echo "$GITHUB_REPOSITORY_OWNER" | tr "[:upper:]" "[:lower:]")"
+          prefix="ghcr.io/${owner}/${IMAGE_NAME}"
           echo "api=${prefix}-api:${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
           echo "web=${prefix}-web:${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
 
@@ -197,12 +198,22 @@ jobs:
       - name: Lấy mã nguồn
         uses: actions/checkout@v4
 
+      # Windows: "bash" trên PATH thường là bash của WSL (C:\Windows\System32\bash.exe), không chạy được các bước bash bên dưới;
+      # đưa thư mục bin của Git for Windows (Git Bash) lên trước PATH cho các bước sau
+      - name: Dùng Git Bash (máy Windows)
+        if: runner.os == 'Windows'
+        shell: powershell
+        run: |
+          $gitRoot = Split-Path (Split-Path (Get-Command git).Source)
+          Add-Content -Path $env:GITHUB_PATH -Value (Join-Path $gitRoot 'bin')
+
       # Cùng tên với job build
       - name: Đặt tên image
         id: names
         shell: bash
         run: |
-          prefix="ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/${IMAGE_NAME}"
+          owner="$(echo "$GITHUB_REPOSITORY_OWNER" | tr "[:upper:]" "[:lower:]")"
+          prefix="ghcr.io/${owner}/${IMAGE_NAME}"
           echo "api=${prefix}-api:${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
           echo "web=${prefix}-web:${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
 
