@@ -40,7 +40,8 @@ export const BACKUP_ENDPOINTS = {
   run: '/backups/run',
   /** GET ?<một trang> (xem listQueryParams() ở common.ts) → BackupRunsResponse: một trang lịch sử, cột theo BACKUP_RUN_LIST_FIELDS */
   runs: '/backups/runs',
-  /** POST → tệp .tar.gz: sao lưu rồi tải thẳng về (không giữ trên máy chủ), có ghi vào lịch sử */
+  /** POST → tệp .tar.gz: sao lưu rồi tải thẳng về (không giữ trên máy chủ). Lịch sử: 'running' từ lúc bấm,
+      'ok' khi trình duyệt nhận đủ tệp, 'error' khi tạo lỗi hoặc đường truyền đứt giữa chừng */
   download: '/backups/download',
   /** GET → tệp .tar.gz: tải về một bản đã lưu ở thư mục trên máy chủ (fileAvailable = true) */
   runFile: '/backups/runs/:runId/file',
@@ -426,6 +427,8 @@ export const BACKUP_MESSAGES = {
   /** Không có nơi lưu, bản sao lưu (404) */
   targetNotFound: 'Không tìm thấy nơi lưu này.',
   runNotFound: 'Không tìm thấy bản sao lưu này.',
+  /** Tải về máy: trình duyệt ngắt khi chưa nhận đủ tệp (ghi vào lịch sử) */
+  downloadAborted: 'Trình duyệt ngắt khi đang tải về, tệp chưa tải xong.',
   /** Tệp của bản sao lưu không còn ở máy chủ (404) */
   fileGone: 'Tệp của bản sao lưu này không còn trên máy chủ.',
   /** Đang có bản khác chạy (409) */

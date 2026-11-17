@@ -465,10 +465,11 @@ describe('backups', () => {
     expect(messageOf(await request(server()).get(api(backupRunFilePath(older!.id))).set('Cookie', adminCookie).expect(404))).toBe(BACKUP_MESSAGES.fileGone);
   });
 
-  it.skipIf(!HAS_PG_DUMP)('sao lưu rồi tải về máy: trả tệp .tar.gz, ghi vào lịch sử, không giữ lại trên máy chủ', async () => {
+  it.skipIf(!HAS_PG_DUMP)('sao lưu rồi tải về máy: trả tệp .tar.gz, nhận đủ tệp mới ghi thành công, không giữ lại trên máy chủ', async () => {
     const response = await request(server()).post(api(BACKUP_ENDPOINTS.download)).set('Cookie', adminCookie).buffer(true).expect(200);
     expect(response.headers['content-disposition']).toMatch(/sao-luu-\d{8}-\d{6}\.tar\.gz/);
     expect(Number(response.headers['content-length'])).toBeGreaterThan(0);
+    await backupsService.waitIdle();
     const run = await prisma.backupRun.findFirstOrThrow({ where: { targetKind: 'download' }, orderBy: { startedAt: 'desc' } });
     expect(run).toMatchObject({ status: 'ok', storagePath: null });
   });

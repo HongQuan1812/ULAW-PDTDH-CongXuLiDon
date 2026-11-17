@@ -63,6 +63,11 @@ function sendBackupFile(backupFile: BackupDownload, response: Response): Streama
   response.setHeader('Content-Type', 'application/gzip');
   response.setHeader('Content-Length', String(backupFile.sizeBytes));
   response.setHeader('Content-Disposition', `attachment; filename*=UTF-8''${encodeURIComponent(backupFile.fileName)}`);
+
+  // Đường truyền đóng: báo để ghi lịch sử (gửi đủ hay đứt giữa chừng do onSent tự đếm)
+  const { onSent } = backupFile;
+  if (onSent) response.once('close', () => void onSent());
+
   return new StreamableFile(backupFile.stream as never);
 }
 

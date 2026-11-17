@@ -53,6 +53,8 @@ export interface BackupDownload {
   fileName: string;
   sizeBytes: number;
   stream: NodeJS.ReadableStream;
+  /** sao lưu rồi tải về: gọi khi đường truyền đóng (gửi xong hoặc đứt), để ghi lịch sử · tải bản đã lưu: không có */
+  onSent?: () => Promise<void>;
 }
 
 @Injectable()
@@ -557,9 +559,10 @@ export class BackupsService implements OnModuleInit, OnModuleDestroy {
   }
 
   /**
-   * Sao lưu rồi trả tệp để tải về máy (không giữ trên máy chủ), ghi vào lịch sử.
+   * Sao lưu rồi trả tệp để tải về máy (không giữ trên máy chủ). Lịch sử: 'running' tới khi trình duyệt nhận đủ tệp thì 'ok',
+   * tạo lỗi hoặc đường truyền đứt giữa chừng thì 'error'. Vẫn tính là đang chạy tới lúc gửi xong.
    * @param starter  người bấm
-   * @returns        tệp: đọc dần, xóa khỏi ổ đĩa sau khi gửi xong
+   * @returns        tệp: đọc dần, xóa khỏi ổ đĩa sau khi gửi xong; onSent để ghi kết quả gửi
    * @throws         409 đang có lần khác chạy · 500 kèm câu lỗi khi không tạo được
    */
   async download(starter: User): Promise<BackupDownload> {
@@ -571,19 +574,35 @@ export class BackupsService implements OnModuleInit, OnModuleDestroy {
     await this.prisma.backupRun.create({
       data: { id: runId, startedAt, trigger: 'manual', startedById: starter.id, targetName: 'Tải về máy', targetKind: 'download', fileName, status: 'running' },
     });
+    let sizeBytes: number;
     try {
-      const sizeBytes = await this.createArchive(tempPath, startedAt);
-      await this.prisma.backupRun.update({ where: { id: runId }, data: { status: 'ok', finishedAt: new Date(), sizeBytes } });
-      const stream = createReadStream(tempPath);
-      stream.on('close', () => void rm(tempPath, { force: true }));
-      return { fileName, sizeBytes, stream };
+      sizeBytes = await this.createArchive(tempPath, startedAt);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       await this.prisma.backupRun.update({ where: { id: runId }, data: { status: 'error', finishedAt: new Date(), error: message } });
-      throw new ApiException(500, message);
-    } finally {
       this.busy = false;
+      throw new ApiException(500, message);
     }
+
+    // Đường truyền đóng: đã đọc và gửi đi đủ số byte của tệp là gửi xong (không chờ luồng đọc báo hết tệp: trình duyệt nhận đủ
+    // Content-Length là đóng kết nối ngay, có khi trước nhịp đó); chưa đủ là đứt giữa chừng. Ghi kết quả, xóa tệp tạm, cho chạy lần khác
+    const stream = createReadStream(tempPath);
+    const onSent = async () => {
+      const complete = stream.bytesRead >= sizeBytes;
+      try {
+        await this.prisma.backupRun.update({
+          where: { id: runId },
+          data: complete
+            ? { status: 'ok', finishedAt: new Date(), sizeBytes }
+            : { status: 'error', finishedAt: new Date(), sizeBytes, error: BACKUP_MESSAGES.downloadAborted },
+        });
+      } finally {
+        stream.destroy();
+        await rm(tempPath, { force: true });
+        this.busy = false;
+      }
+    };
+    return { fileName, sizeBytes, stream, onSent };
   }
 
   /**
