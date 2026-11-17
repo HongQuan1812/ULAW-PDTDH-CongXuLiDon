@@ -7,8 +7,11 @@
 FROM node:24.16.0-slim AS base
 
 # Prisma cần openssl; trang Sao lưu cần pg_dump cùng bản với PostgreSQL (18, lấy từ kho apt.postgresql.org) và tar;
-# pnpm cùng phiên bản với máy phát triển
-RUN apt-get update \
+# pnpm cùng phiên bản với máy phát triển.
+# Max-Age: apt mặc định gửi "Cache-Control: max-age=0"; mạng của Docker Desktop trên Windows chặn request mang header này
+# (apt báo Connection failed, trên WSL thì không). Đổi chỉ ảnh hưởng bộ nhớ đệm trên đường, chữ kí gói vẫn được kiểm như thường
+RUN echo 'Acquire::http::Max-Age "86400";' > /etc/apt/apt.conf.d/99max-age \
+  && apt-get update \
   && apt-get install -y --no-install-recommends openssl ca-certificates curl \
   && install -d /usr/share/postgresql-common/pgdg \
   && curl -fsSL -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc https://www.postgresql.org/media/keys/ACCC4CF8.asc \
