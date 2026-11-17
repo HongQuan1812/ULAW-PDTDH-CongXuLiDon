@@ -25,6 +25,7 @@ import {
   COMMON_MESSAGES,
   ConnectGoogleDriveResponseSchema,
   DriveConnectMessageSchema,
+  DrivePickerResponseSchema,
   listQueryParams,
   type BackupTargetInput,
   type ListQuery,
@@ -176,8 +177,8 @@ describe('backups', () => {
     await request(server()).put(dailyPath).set('Cookie', adminCookie).send(DAILY_SCHEDULE).expect(200);
   });
 
-  it('Google Drive: phải kết nối (bản giả dev-google-drive-connect) rồi mới lưu được; kết nối dùng một lần; sửa thì giữ tài khoản cũ', async () => {
-    const driveTarget = { name: 'Drive', kind: 'googleDrive' as const, folder: 'Sao lưu', keepLatest: 3 };
+  it('Google Drive: phải kết nối (bản giả dev-google-drive-connect) và chọn thư mục rồi mới lưu được; kết nối dùng một lần; sửa thì giữ tài khoản cũ', async () => {
+    const driveTarget = { name: 'Drive', kind: 'googleDrive' as const, folder: 'Sao lưu', driveFolderId: 'demo-thu-muc-1', keepLatest: 3 };
     const connect = async (body: object) =>
       ConnectGoogleDriveResponseSchema.parse((await request(server()).post(api(BACKUP_ENDPOINTS.driveConnect)).set('Cookie', adminCookie).send(body).expect(200)).body);
 
@@ -185,18 +186,47 @@ describe('backups', () => {
     const notConnected = await request(server()).post(api(BACKUP_ENDPOINTS.targets)).set('Cookie', adminCookie).send(driveTarget).expect(422);
     expect(messageOf(notConnected)).toBe(BACKUP_MESSAGES.driveConnectFirst);
 
-    // Kết nối (bản giả trả ngay email gửi kèm), rồi lưu kèm driveGrantId
+    // Kết nối (bản giả trả ngay email gửi kèm); Picker của tài khoản giả: 'demo' (gõ tên thư mục)
     const connected = await connect({ email: 'Phong.DaoTao@gmail.com' });
     expect(connected).toMatchObject({ kind: 'connected', email: 'phong.daotao@gmail.com' });
     if (connected.kind !== 'connected') throw new Error('Bản giả phải trả connected');
+    const picker = await request(server()).post(api(BACKUP_ENDPOINTS.drivePicker)).set('Cookie', adminCookie).send({ driveGrantId: connected.driveGrantId }).expect(200);
+    expect(DrivePickerResponseSchema.parse(picker.body)).toEqual({ kind: 'demo' });
+    await request(server()).post(api(BACKUP_ENDPOINTS.drivePicker)).set('Cookie', adminCookie).send({}).expect(422);
+
+    // Chưa chọn thư mục thì không lưu được (lần kết nối vẫn còn); chọn rồi thì lưu kèm driveGrantId
+    const { driveFolderId: _driveFolderId, ...withoutFolder } = driveTarget;
+    const noFolder = await request(server()).post(api(BACKUP_ENDPOINTS.targets)).set('Cookie', adminCookie).send({ ...withoutFolder, driveGrantId: connected.driveGrantId }).expect(422);
+    expect(messageOf(noFolder)).toBe('Chọn chỗ lưu trên Drive.');
     const added = BackupTargetSchema.parse(
       (await request(server()).post(api(BACKUP_ENDPOINTS.targets)).set('Cookie', adminCookie).send({ ...driveTarget, driveGrantId: connected.driveGrantId }).expect(201)).body,
     );
-    expect(added.googleAccount).toBe('phong.daotao@gmail.com');
+    expect(added).toMatchObject({ googleAccount: 'phong.daotao@gmail.com', folder: 'Sao lưu', driveFolderId: 'demo-thu-muc-1' });
 
     // driveGrantId chỉ dùng một lần
-    const reused = await request(server()).post(api(BACKUP_ENDPOINTS.targets)).set('Cookie', adminCookie).send({ ...driveTarget, folder: 'Khác', driveGrantId: connected.driveGrantId }).expect(422);
+    const reused = await request(server()).post(api(BACKUP_ENDPOINTS.targets)).set('Cookie', adminCookie).send({ ...driveTarget, driveFolderId: 'khac', driveGrantId: connected.driveGrantId }).expect(422);
     expect(messageOf(reused)).toBe(BACKUP_MESSAGES.driveGrantExpired);
+
+    // Hai nơi lưu cùng thư mục Drive (cùng id): 409; cùng tên thư mục nhưng khác id thì được
+    const second = await connect({});
+    if (second.kind !== 'connected') throw new Error('Bản giả phải trả connected');
+    const sameFolder = await request(server()).post(api(BACKUP_ENDPOINTS.targets)).set('Cookie', adminCookie).send({ ...driveTarget, driveGrantId: second.driveGrantId }).expect(409);
+    expect(messageOf(sameFolder)).toBe(BACKUP_MESSAGES.duplicateTarget);
+
+    // Picker cho nơi lưu đang sửa: theo tài khoản của nơi lưu
+    const editPicker = await request(server()).post(api(BACKUP_ENDPOINTS.drivePicker)).set('Cookie', adminCookie).send({ targetId: added.id }).expect(200);
+    expect(editPicker.body).toEqual({ kind: 'demo' });
+
+    // Lưu vào My Drive, kèm tên thư mục mới: tài khoản giả không gọi Google, thư mục giả mang tên đã gõ
+    const inNewFolder = await request(server())
+      .put(api(backupTargetPath(added.id)))
+      .set('Cookie', adminCookie)
+      .send({ ...driveTarget, driveFolderId: 'root', newDriveFolderName: ' Sao lưu mới ' })
+      .expect(200);
+    expect(inNewFolder.body.folder).toBe('Sao lưu mới');
+    expect(inNewFolder.body.driveFolderId).toMatch(/^demo-/);
+    const inMyDrive = await request(server()).put(api(backupTargetPath(added.id))).set('Cookie', adminCookie).send({ ...driveTarget, driveFolderId: 'root', folder: '' }).expect(200);
+    expect(inMyDrive.body).toMatchObject({ folder: 'My Drive', driveFolderId: 'root' });
 
     // Sửa tên, không kết nối lại: giữ tài khoản; đổi sang thư mục máy chủ rồi về Drive thì phải kết nối lại
     const renamed = await request(server()).put(api(backupTargetPath(added.id))).set('Cookie', adminCookie).send({ ...driveTarget, name: 'Drive 2' }).expect(200);
@@ -211,7 +241,9 @@ describe('backups', () => {
   });
 
   describe('Google Drive bản thật (tắt ENABLE_DEMO_APIS, giả lập phản hồi của Google)', () => {
-    const CLIENT_ID = 'test-drive-client.apps.googleusercontent.com';
+    const PROJECT_NUMBER = '123456789012';
+    const CLIENT_ID = `${PROJECT_NUMBER}-test-drive.apps.googleusercontent.com`;
+    const PICKER_API_KEY = 'khoa-picker-thu';
     const CLIENT_SECRET = 'test-drive-secret';
     const DRIVE_EMAIL = 'drive.that@gmail.com';
     let appConfig: AppConfig;
@@ -266,9 +298,12 @@ describe('backups', () => {
         .set('Cookie', [adminCookie, stateCookie].filter(Boolean).join('; '))
         .expect(200);
 
-    /** Dùng OAuth client thử (redirectUri của đăng nhập không dùng ở đây: Drive có redirect riêng). */
-    const useTestGoogle = () => {
-      (appConfig as { google: AppConfig['google'] }).google = { clientId: CLIENT_ID, clientSecret: CLIENT_SECRET, redirectUri: 'khong-dung' };
+    /**
+     * Dùng OAuth client thử (redirectUri của đăng nhập không dùng ở đây: Drive có redirect riêng).
+     * @param pickerApiKey  API key của Picker; mặc định chưa có
+     */
+    const useTestGoogle = (pickerApiKey: string | null = null) => {
+      (appConfig as { google: AppConfig['google'] }).google = { clientId: CLIENT_ID, clientSecret: CLIENT_SECRET, redirectUri: 'khong-dung', pickerApiKey };
     };
 
     beforeAll(() => {
@@ -311,26 +346,79 @@ describe('backups', () => {
       expect(message).toMatchObject({ ok: true, email: DRIVE_EMAIL });
       if (!message.ok) throw new Error('Phải kết nối được');
 
-      // Lưu nơi lưu: có tài khoản; database chỉ giữ token đã mã hóa
-      const added = BackupTargetSchema.parse(
-        (
-          await request(server())
-            .post(api(BACKUP_ENDPOINTS.targets))
-            .set('Cookie', adminCookie)
-            .send({ name: 'Drive thật', kind: 'googleDrive', folder: 'Sao lưu cổng', keepLatest: 3, driveGrantId: message.driveGrantId })
-            .expect(201)
-        ).body,
-      );
-      expect(added.googleAccount).toBe(DRIVE_EMAIL);
+      // Picker: chưa có API key thì 503; có thì trả access token (đổi từ refresh token), API key, appId = số hiệu project
+      vi.restoreAllMocks();
+      const pickerRequest = () => request(server()).post(api(BACKUP_ENDPOINTS.drivePicker)).set('Cookie', adminCookie).send({ driveGrantId: message.driveGrantId });
+      expect(messageOf(await pickerRequest().expect(503))).toBe(BACKUP_MESSAGES.pickerUnavailable);
+      useTestGoogle(PICKER_API_KEY);
+      const tokenFetch = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new globalThis.Response(JSON.stringify({ access_token: 'ya29.ngan-han' }), { status: 200 }));
+      expect(DrivePickerResponseSchema.parse((await pickerRequest().expect(200)).body)).toEqual({
+        kind: 'picker',
+        accessToken: 'ya29.ngan-han',
+        apiKey: PICKER_API_KEY,
+        appId: PROJECT_NUMBER,
+      });
+      expect(String(tokenFetch.mock.calls[0]?.[1]?.body)).toContain('refresh_token=1%2F%2Frefresh-that');
+
+      /**
+       * Giả lập Google: cấp access token, rồi trả thông tin thư mục.
+       * @param folder  thư mục Drive trả về; null = 404 (cổng không mở được)
+       */
+      const mockDrive = (folder: object | null) => {
+        vi.restoreAllMocks();
+        vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) =>
+          String(input).startsWith('https://oauth2.googleapis.com')
+            ? new globalThis.Response(JSON.stringify({ access_token: 'ya29.ngan-han' }), { status: 200 })
+            : new globalThis.Response(JSON.stringify(folder ?? { error: 'notFound' }), { status: folder ? 200 : 404 }),
+        );
+      };
+      const driveTarget = { name: 'Drive thật', kind: 'googleDrive', folder: 'tên giao diện gửi', driveFolderId: 'thu-muc-drive', keepLatest: 3, driveGrantId: message.driveGrantId };
+
+      // Cổng không mở được thư mục, hoặc chọn nhầm tệp: 422, lần kết nối vẫn còn
+      mockDrive(null);
+      expect(messageOf(await request(server()).post(api(BACKUP_ENDPOINTS.targets)).set('Cookie', adminCookie).send(driveTarget).expect(422))).toBe(BACKUP_MESSAGES.driveFolderInvalid);
+      mockDrive({ name: 'a.pdf', mimeType: 'application/pdf', trashed: false });
+      await request(server()).post(api(BACKUP_ENDPOINTS.targets)).set('Cookie', adminCookie).send(driveTarget).expect(422);
+
+      // Lưu nơi lưu: có tài khoản, tên thư mục lấy từ Drive; database chỉ giữ token đã mã hóa
+      mockDrive({ name: 'WorkingSpace', mimeType: 'application/vnd.google-apps.folder', trashed: false });
+      const added = BackupTargetSchema.parse((await request(server()).post(api(BACKUP_ENDPOINTS.targets)).set('Cookie', adminCookie).send(driveTarget).expect(201)).body);
+      expect(added).toMatchObject({
+        googleAccount: DRIVE_EMAIL,
+        folder: 'WorkingSpace',
+        driveFolderId: 'thu-muc-drive',
+        driveFolderUrl: 'https://drive.google.com/drive/folders/thu-muc-drive',
+      });
       const row = await prisma.backupTarget.findUniqueOrThrow({ where: { id: added.id } });
       expect(row.googleRefreshToken).toBeTruthy();
       expect(row.googleRefreshToken).not.toContain('refresh-that');
 
-      // Chưa sao lưu lần nào thì chưa có thư mục; có thư mục rồi thì tổng quan trả đường dẫn mở trên Drive
-      expect(added.driveFolderUrl).toBeNull();
-      await prisma.backupTarget.update({ where: { id: added.id }, data: { googleFolderId: 'thu-muc-drive' } });
-      const overview = BackupsResponseSchema.parse((await request(server()).get(api(BACKUP_ENDPOINTS.overview)).set('Cookie', adminCookie).expect(200)).body);
-      expect(overview.targets.find((target) => target.id === added.id)?.driveFolderUrl).toBe('https://drive.google.com/drive/folders/thu-muc-drive');
+      // Sửa tên, giữ thư mục: không hỏi Drive
+      vi.restoreAllMocks();
+      const noGoogle = vi.spyOn(globalThis, 'fetch');
+      const { driveGrantId: _driveGrantId, ...keepAccount } = driveTarget;
+      const renamed = await request(server()).put(api(backupTargetPath(added.id))).set('Cookie', adminCookie).send({ ...keepAccount, name: 'Drive 2' }).expect(200);
+      expect(renamed.body).toMatchObject({ name: 'Drive 2', folder: 'WorkingSpace' });
+      expect(noGoogle).not.toHaveBeenCalled();
+
+      // Giữ chỗ lưu, kèm tên thư mục mới: tạo bên trong chỗ lưu (gửi Drive đúng tên, kiểu thư mục, thư mục cha) rồi lưu vào thư mục mới
+      vi.restoreAllMocks();
+      const createFetch = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) =>
+        String(input).startsWith('https://oauth2.googleapis.com')
+          ? new globalThis.Response(JSON.stringify({ access_token: 'ya29.ngan-han' }), { status: 200 })
+          : new globalThis.Response(JSON.stringify({ id: 'thu-muc-moi', name: 'Sao lưu cổng' }), { status: 200 }),
+      );
+      const inNewFolder = await request(server())
+        .put(api(backupTargetPath(added.id)))
+        .set('Cookie', adminCookie)
+        .send({ ...keepAccount, newDriveFolderName: 'Sao lưu cổng' })
+        .expect(200);
+      expect(inNewFolder.body).toMatchObject({ folder: 'Sao lưu cổng', driveFolderId: 'thu-muc-moi' });
+      expect(JSON.parse(String(createFetch.mock.calls[1]?.[1]?.body))).toEqual({
+        name: 'Sao lưu cổng',
+        mimeType: 'application/vnd.google-apps.folder',
+        parents: ['thu-muc-drive'],
+      });
       await request(server()).delete(api(backupTargetPath(added.id))).set('Cookie', adminCookie).expect(204);
     });
 

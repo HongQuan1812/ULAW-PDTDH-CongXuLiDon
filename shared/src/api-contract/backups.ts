@@ -1,6 +1,7 @@
 /* HỢP ĐỒNG nhóm API Sao lưu (chỉ vai trò có quyền manageBackups): nơi lưu, sao lưu ngay, lịch định kì, lịch sử.
    Mỗi bản sao lưu luôn gồm cả database lẫn tệp tải lên, đóng thành một tệp sao-luu-<YYYYMMDD-HHmmss>.tar.gz.
-   Nơi lưu: thư mục trên máy chủ (nằm trong BACKUP_DIR) hoặc Google Drive (tài khoản Google Admin kết nối ngay trong hộp thêm / sửa nơi lưu, trước khi Lưu).
+   Nơi lưu: thư mục trên máy chủ (nằm trong BACKUP_DIR) hoặc Google Drive (tài khoản Google Admin kết nối ngay trong hộp thêm / sửa nơi lưu, trước khi Lưu;
+   thư mục chọn bằng Google Picker: thư mục Admin chọn được cấp cho cổng, nên cổng lưu thẳng vào thư mục có sẵn mà vẫn chỉ xin quyền drive.file).
    Tải về máy Admin không phải nơi lưu: chỉ có khi sao lưu ngay (chọn riêng, không đi cùng nơi lưu nào), máy chủ tạo bản rồi trả thẳng về trình duyệt.
    Khôi phục: chưa làm.
    API giả (MSW), frontend và backend cùng theo file này. */
@@ -26,6 +27,10 @@ export const BACKUP_ENDPOINTS = {
   driveConnect: '/backups/google-drive/connect',
   /** GET (Google gọi về sau khi Admin đồng ý), không gọi từ giao diện */
   googleDriveCallback: '/backups/google-drive/callback',
+  /** POST DrivePickerRequest → DrivePickerResponse: mở Google Picker để chọn thư mục Drive cho nơi lưu (tài khoản vừa kết nối hoặc tài khoản của nơi lưu đang sửa).
+      Bản thật: trả access token ngắn hạn (quyền drive.file) của tài khoản đó, API key và appId cho Picker.
+      Tài khoản kết nối bằng bản giả (dev-google-drive-connect): trả 'demo', giao diện cho gõ tên thư mục thay cho Picker */
+  drivePicker: '/backups/google-drive/picker',
   /** POST BackupSchedule → BackupsResponse: thêm một lịch định kì */
   schedules: '/backups/schedules',
   /** PUT BackupSchedule → BackupsResponse: sửa một lịch · DELETE → BackupsResponse: bỏ một lịch */
@@ -82,16 +87,6 @@ export const BACKUP_TARGET_KIND_LABEL: Record<BackupTargetKind, string> = {
 /** Thư mục con trong BACKUP_DIR: chữ không dấu, số, - _, các cấp cách nhau bằng /; không có .. nên không ra ngoài BACKUP_DIR. */
 const SERVER_FOLDER_PATTERN = /^[A-Za-z0-9_-]+(?:\/[A-Za-z0-9_-]+)*$/;
 
-/**
- * Các cấp thư mục của nơi lưu Google Drive, tính từ My Drive.
- * @param folder  đường dẫn Admin gõ, vd 'Công việc/Sao lưu'; trống = thẳng trong My Drive
- * @returns       vd ['Công việc', 'Sao lưu']; trống thì []
- */
-export function driveFolderSegments(folder: string): string[] {
-  const trimmed = folder.trim();
-  return trimmed ? trimmed.split('/').map((segment) => segment.trim()) : [];
-}
-
 /** Số bản giữ lại nhiều nhất ở một nơi lưu. */
 export const BACKUP_KEEP_MAX = 365;
 
@@ -100,9 +95,14 @@ export const BackupTargetInputSchema = z
   .object({
     name: z.string().trim().min(1, 'Nhập tên nơi lưu.').max(100),
     kind: z.enum(BACKUP_TARGET_KINDS),
-    /** serverFolder: thư mục con trong BACKUP_DIR, vd 'hang-ngay' (bắt buộc) · googleDrive: đường dẫn tính từ My Drive, các cấp cách nhau bằng /,
-        vd 'Công việc/Sao lưu'; trống = thẳng trong My Drive; cấp nào chưa có thì máy chủ tự tạo */
+    /** serverFolder: thư mục con trong BACKUP_DIR, vd 'hang-ngay' (bắt buộc) · googleDrive: tên chỗ lưu đã chọn
+        (để hiện; bản thật máy chủ lấy lại tên trên Drive) */
     folder: z.string().trim().max(200),
+    /** googleDrive: chỗ lưu trên Drive (bắt buộc): DRIVE_ROOT_FOLDER_ID = My Drive, hoặc id thư mục chọn bằng Picker. serverFolder: bỏ qua */
+    driveFolderId: z.string().min(1).optional(),
+    /** googleDrive: tên thư mục mới, bấm Lưu thì máy chủ tạo thư mục này bên trong chỗ lưu rồi lưu vào đó (Picker không tạo được thư mục);
+        trống = lưu thẳng vào chỗ lưu. serverFolder: bỏ qua */
+    newDriveFolderName: z.string().trim().max(100, 'Tên thư mục dài quá 100 kí tự.').optional(),
     /** giữ bao nhiêu bản gần nhất ở nơi này (bản cũ hơn tự xóa sau mỗi lần sao lưu thành công) */
     keepLatest: z.number().int().min(1, 'Giữ ít nhất 1 bản.').max(BACKUP_KEEP_MAX, `Giữ nhiều nhất ${BACKUP_KEEP_MAX} bản.`),
     /** googleDrive: tài khoản vừa kết nối (POST /backups/google-drive/connect). Thêm mới, hoặc đổi sang kiểu Drive thì bắt buộc;
@@ -110,10 +110,7 @@ export const BackupTargetInputSchema = z
     driveGrantId: z.string().min(1).optional(),
   })
   .refine((target) => target.kind !== 'serverFolder' || target.folder !== '', { path: ['folder'], message: 'Nhập thư mục.' })
-  .refine((target) => target.kind !== 'googleDrive' || driveFolderSegments(target.folder).every(Boolean), {
-    path: ['folder'],
-    message: 'Đường dẫn có một cấp trống (vd hai dấu / liền nhau).',
-  })
+  .refine((target) => target.kind !== 'googleDrive' || !!target.driveFolderId, { path: ['driveFolderId'], message: 'Chọn chỗ lưu trên Drive.' })
   .refine((target) => target.kind !== 'serverFolder' || target.folder === '' || SERVER_FOLDER_PATTERN.test(target.folder), {
     path: ['folder'],
     message: 'Thư mục chỉ gồm chữ không dấu, số, dấu - và _, các cấp cách nhau bằng /.',
@@ -129,7 +126,9 @@ export const BackupTargetSchema = z.object({
   keepLatest: z.number().int(),
   /** googleDrive: email tài khoản Google đã kết nối; null = chưa kết nối (chưa lưu được). serverFolder: luôn null */
   googleAccount: z.string().nullable(),
-  /** googleDrive: đường dẫn mở thư mục trên Drive; null = chưa có (thư mục tạo ở lần sao lưu đầu tiên vào đây). serverFolder: luôn null */
+  /** googleDrive: id thư mục đã chọn trên Drive; null = chưa chọn. serverFolder: luôn null */
+  driveFolderId: z.string().nullable(),
+  /** googleDrive: đường dẫn mở thư mục trên Drive; null = chưa chọn thư mục. serverFolder: luôn null */
   driveFolderUrl: z.string().nullable(),
   /** số bản đang có ở nơi này (theo lịch sử, chưa bị xóa) */
   backupCount: z.number().int(),
@@ -169,6 +168,38 @@ export const DriveConnectMessageSchema = z.discriminatedUnion('ok', [
   z.object({ type: z.literal(DRIVE_CONNECT_MESSAGE_TYPE), ok: z.literal(false), error: z.enum(DRIVE_ERRORS) }),
 ]);
 export type DriveConnectMessage = z.infer<typeof DriveConnectMessageSchema>;
+
+/** Body của POST /backups/google-drive/picker: tài khoản nào (đúng một trong hai). */
+export const DrivePickerRequestSchema = z
+  .object({
+    /** tài khoản vừa kết nối trong hộp thoại, chưa Lưu (không làm mất driveGrantId) */
+    driveGrantId: z.string().min(1).optional(),
+    /** tài khoản của nơi lưu Drive đang sửa */
+    targetId: z.string().min(1).optional(),
+  })
+  .refine((pickerRequest) => !!pickerRequest.driveGrantId !== !!pickerRequest.targetId, 'Kết nối tài khoản Google trước khi chọn thư mục.');
+export type DrivePickerRequest = z.infer<typeof DrivePickerRequestSchema>;
+
+/** id đặc biệt của My Drive (thư mục gốc) trên Google Drive. */
+export const DRIVE_ROOT_FOLDER_ID = 'root';
+/** Tên hiện của My Drive. */
+export const DRIVE_ROOT_FOLDER_NAME = 'My Drive';
+
+/** Trả về từ POST /backups/google-drive/picker. */
+export const DrivePickerResponseSchema = z.discriminatedUnion('kind', [
+  z.object({
+    kind: z.literal('picker'),
+    /** access token ngắn hạn (khoảng 1 giờ), quyền drive.file, của tài khoản đã kết nối */
+    accessToken: z.string(),
+    /** API key của Google Cloud project (GOOGLE_PICKER_API_KEY) */
+    apiKey: z.string(),
+    /** số hiệu project (phần đầu của GOOGLE_CLIENT_ID): Picker cần để cấp thư mục đã chọn cho cổng */
+    appId: z.string(),
+  }),
+  /** tài khoản kết nối bằng bản giả: không có quyền Google thật, giao diện cho gõ tên thư mục */
+  z.object({ kind: z.literal('demo') }),
+]);
+export type DrivePickerResponse = z.infer<typeof DrivePickerResponseSchema>;
 
 /* ---------- Lịch định kì ---------- */
 
@@ -407,6 +438,12 @@ export const BACKUP_MESSAGES = {
   driveNotConnected: 'Nơi lưu này chưa kết nối tài khoản Google Drive.',
   /** Lưu nơi lưu Drive mà chưa kết nối tài khoản (422) */
   driveConnectFirst: 'Bấm “Kết nối Google” để chọn tài khoản trước khi lưu.',
+  /** Lưu nơi lưu Drive mà cổng không mở được thư mục đã chọn: không phải thư mục, đã xóa, hoặc chọn bằng tài khoản khác (422) */
+  driveFolderInvalid: 'Cổng không mở được thư mục này trên Drive, bấm “Chọn…” để chọn lại.',
+  /** Máy chủ chưa có API key cho Google Picker (503) */
+  pickerUnavailable: 'Máy chủ chưa cấu hình GOOGLE_PICKER_API_KEY, chưa chọn được thư mục Drive.',
+  /** Không tải được Google Picker trong trình duyệt */
+  pickerLoadFailed: 'Không mở được cửa sổ chọn thư mục của Google, thử lại.',
   /** driveGrantId không còn dùng được: quá hạn, đã dùng, của người khác, hoặc backend vừa khởi động lại (422) */
   driveGrantExpired: 'Kết nối Google đã hết hạn, bấm Kết nối lại.',
   /** Kết nối xong, hiện ở hộp thoại */

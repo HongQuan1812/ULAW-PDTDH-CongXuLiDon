@@ -84,9 +84,12 @@ Không dùng `down -v`: xóa luôn dữ liệu và tệp tải lên.
 
 1. Google Cloud Console → Credentials → OAuth client ID, loại **Web application**.
 2. Redirect URI: `https://localhost:5173/api/auth/google/callback` (dev) hoặc `https://<tên miền>/api/auth/google/callback` (bản thật).
-   Muốn sao lưu vào Google Drive (trang Sao lưu) thì thêm `…/api/backups/google-drive/callback` (cùng địa chỉ gốc), và bật **Google Drive API** trong cùng project.
+   Muốn sao lưu vào Google Drive (trang Sao lưu) thì thêm `…/api/backups/google-drive/callback` (cùng địa chỉ gốc), và bật **Google Drive API**, **Google Picker API** trong cùng project.
    Dev muốn thử kết nối Drive thật thì thêm `dev-google-drive-connect` vào `ALWAYS_REAL_APIS` rồi `up -d api`.
 3. Điền `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` vào `.env.dev` / `.env.prod`.
+4. Sao lưu vào Drive: Credentials → Create credentials → **API key** (cùng project). Giới hạn: Application restrictions = **Websites**,
+   thêm `https://localhost:5173/*` (dev) hoặc `https://<tên miền>/*` (bản thật); API restrictions = **Google Picker API**. Điền vào `GOOGLE_PICKER_API_KEY`.
+   Key này gửi xuống trình duyệt cho Picker (cửa sổ chọn thư mục của Google), không phải bí mật như `GOOGLE_CLIENT_SECRET`, nhưng nên giới hạn như trên.
 
 Chỉ email trường (`SCHOOL_EMAIL_DOMAINS`, `shared/src/validators/auth.ts`) đăng nhập được.
 
@@ -108,6 +111,7 @@ Chỉ email trường (`SCHOOL_EMAIL_DOMAINS`, `shared/src/validators/auth.ts`) 
 | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD` | máy chủ gửi thư · `SMTP_HOST` trống: không gửi |
 | `DEV_EMAIL_REDIRECT_TO` | bản giả `dev-email`: thư tự động gửi về địa chỉ này thay cho người nộp đơn · trống: chỉ in ra console |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | OAuth client của Google · trống: chưa bật đăng nhập Google |
+| `GOOGLE_PICKER_API_KEY` | API key cho Google Picker (chọn thư mục Drive của nơi lưu sao lưu) · trống: chưa chọn được thư mục Drive |
 | `SCHOOL_DB_HOST`, `SCHOOL_DB_PORT`, `SCHOOL_DB_USER`, `SCHOOL_DB_PASSWORD` | database trường (SQL Server, chỉ đọc) cho thông tin sinh viên; tên database, bảng, cột ở `api/src/student-directory/school-database.json` · `SCHOOL_DB_HOST` trống: chưa kết nối, trang hồ sơ báo chưa lấy được thông tin sinh viên. Bản thật dùng tài khoản chỉ có quyền SELECT |
 | `FIRST_ADMIN_EMAIL` | email Admin đầu tiên (bản thật, bắt buộc): container `api` tạo khi bật nếu chưa có |
 | `FIRST_ADMIN_NAME` | họ tên Admin đầu tiên (bản thật): có thì đăng nhập là vào thẳng · trống: lần đầu tự nhập · chỉ dùng khi tạo mới |

@@ -8,6 +8,7 @@ import {
   BackupScheduleSchema,
   BackupTargetInputSchema,
   ConnectGoogleDriveRequestSchema,
+  DrivePickerRequestSchema,
   ENDPOINTS,
   COMMON_MESSAGES,
   RunBackupRequestSchema,
@@ -19,9 +20,12 @@ import {
   type BackupTarget,
   type BackupsResponse,
   type ConnectGoogleDriveResponse,
+  type DrivePickerResponse,
 } from '@ulaw/shared';
 import {
+  backupDriveTargetState,
   createBackupDriveGrant,
+  hasBackupDriveGrant,
   findBackupRun,
   getBackupRuns,
   getBackupsOverview,
@@ -130,6 +134,23 @@ export const backupHandlers = [
     if (!parsed.success) return apiError(422, parsed.error.issues[0]?.message ?? BACKUP_MESSAGES[422]);
     const email = parsed.data.email ?? session.user.email;
     return HttpResponse.json<ConnectGoogleDriveResponse>({ kind: 'connected', driveGrantId: createBackupDriveGrant(session.user.id, email), email });
+  }),
+
+  // Mở Picker chọn thư mục Drive: tài khoản trong API giả đều là tài khoản giả, trả 'demo' (giao diện cho gõ tên thư mục)
+  http.post(api(ENDPOINTS.backups.drivePicker), async ({ request }) => {
+    await delay(MOCK_DELAY_MS);
+    const session = await backupSession();
+    if (session instanceof Response) return session;
+    const parsed = DrivePickerRequestSchema.safeParse(await request.json().catch(() => ({})));
+    if (!parsed.success) return apiError(422, parsed.error.issues[0]?.message ?? BACKUP_MESSAGES[422]);
+    if (parsed.data.driveGrantId) {
+      if (!hasBackupDriveGrant(parsed.data.driveGrantId, session.user.id)) return apiError(422, BACKUP_MESSAGES.driveGrantExpired);
+    } else {
+      const targetState = backupDriveTargetState(parsed.data.targetId!);
+      if (targetState === 'notFound') return apiError(404, BACKUP_MESSAGES.targetNotFound);
+      if (targetState === 'notConnected') return apiError(409, BACKUP_MESSAGES.driveNotConnected);
+    }
+    return HttpResponse.json<DrivePickerResponse>({ kind: 'demo' });
   }),
 
   // Thêm lịch

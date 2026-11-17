@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { decodeDriveState, decryptToken, encodeDriveState, encryptToken } from './google-drive-backup.service';
+import { decodeDriveState, decryptToken, encodeDriveState, encryptToken, projectNumberOf } from './google-drive-backup.service';
 import { pgEnvOf } from './backup-archive';
 
 describe('Google Drive của trang Sao lưu', () => {
@@ -16,6 +16,12 @@ describe('Google Drive của trang Sao lưu', () => {
     expect(decodeDriveState(encodeDriveState(connectState))).toEqual(connectState);
     expect(decodeDriveState('hong')).toBeNull();
     expect(decodeDriveState(null)).toBeNull();
+  });
+});
+
+describe('projectNumberOf', () => {
+  test('appId của Picker là phần đầu của client id', () => {
+    expect(projectNumberOf('123456789012-abc.apps.googleusercontent.com')).toBe('123456789012');
   });
 });
 

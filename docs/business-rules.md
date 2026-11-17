@@ -210,10 +210,16 @@ Mỗi loại đơn có hai nhóm mẫu, lưu ở máy chủ theo loại đơn, d
   sao lưu vào đó báo lỗi trong lịch sử vì không có quyền thật. Bản thật mở cửa sổ popup sang Google; chọn tài khoản, đồng ý xong thì Google chuyển về
   `/api/backups/google-drive/callback`, máy chủ đổi mã lấy refresh token, trang đó báo email về hộp thoại rồi tự đóng; bấm Hủy hoặc lỗi thì hộp thoại báo lỗi.
   Kết nối chỉ người bấm dùng được, giữ 30 phút trong bộ nhớ máy chủ (khởi động lại backend thì phải kết nối lại);
-  cổng chỉ xin quyền `drive.file`: chỉ thấy tệp, thư mục do chính nó tạo. Thư mục Drive là đường dẫn tính từ My Drive, các cấp cách nhau bằng `/`,
-  vd `Công việc/Sao lưu cổng`; trống thì lưu thẳng vào My Drive. Cấp nào cổng chưa tạo thì tự tạo ở lần sao lưu đầu tiên; thư mục Admin tự tạo sẵn
-  cùng tên thì cổng không thấy, nên tạo thêm một thư mục mới. Sao lưu lần đầu xong, thẻ Nơi lưu có đường dẫn ↗ mở thẳng thư mục trên Drive). Mỗi nơi lưu đặt **giữ N bản gần nhất**:
-  sau mỗi lần sao lưu thành công vào đó, bản cũ hơn bị xóa (lịch sử vẫn ghi, đánh dấu đã xóa). Hai nơi lưu không được cùng kiểu cùng thư mục.
+  cổng chỉ xin quyền `drive.file`: chỉ thấy tệp do chính nó tạo và thư mục Admin chọn. Ô thư mục kiểu hộp "Lưu thành…": **Lưu vào** (mặc định My Drive;
+  nút **Chọn…**: máy chủ cấp access token ngắn hạn của tài khoản đó (`POST /backups/google-drive/picker`), giao diện mở **Google Picker**
+  (cửa sổ duyệt Drive của Google, chỉ hiện thư mục); thư mục chọn được cấp cho cổng, nên cổng lưu thẳng vào thư mục có sẵn) và **Thư mục mới bên trong**
+  (không bắt buộc: Picker không tạo được thư mục, nên gõ tên ở đây, bấm Lưu thì máy chủ tạo thư mục đó bên trong chỗ lưu rồi lưu vào đó).
+  Dòng "Sẽ lưu vào: …" cho thấy trước kết quả. Bấm Lưu thì máy chủ hỏi Drive xem mở được thư mục không, lấy tên thật;
+  không mở được (đã xóa, chọn bằng tài khoản khác) thì báo chọn lại. Đổi tài khoản thì chỗ lưu về My Drive. Tài khoản kết nối bằng bản giả thì
+  không có Picker, gõ tên thư mục bất kì; thư mục mới là thư mục giả, không gọi Google. Thẻ Nơi lưu có đường dẫn ↗ mở thẳng thư mục trên Drive; thư mục bị xóa hoặc mất quyền thì lần sao lưu sau báo lỗi
+  trong lịch sử, sửa nơi lưu chọn lại). Mỗi nơi lưu đặt **giữ N bản gần nhất**:
+  sau mỗi lần sao lưu thành công vào đó, bản cũ hơn bị xóa (lịch sử vẫn ghi, đánh dấu đã xóa). Hai nơi lưu không được dùng chung thư mục
+  (thư mục máy chủ theo đường dẫn, Drive theo thư mục đã chọn; hai thư mục Drive khác nhau cùng tên thì được).
   Bỏ nơi lưu: lịch không lưu vào đó nữa, bản đã lưu và lịch sử giữ nguyên.
 - **Sao lưu ngay** (popup): chọn **một hoặc nhiều nơi lưu** (một tệp, chép vào từng nơi, mỗi nơi một dòng lịch sử), hoặc **Tải về máy này**
   (tạo bản rồi tải thẳng về trình duyệt, không giữ trên máy chủ). Tải về đi một mình: tích ô này thì các nơi lưu bị khóa. Nơi lưu Drive chưa kết nối không chọn được;
@@ -228,7 +234,8 @@ Mỗi loại đơn có hai nhóm mẫu, lưu ở máy chủ theo loại đơn, d
   tìm kiếm (cả câu lỗi), Sắp xếp, Lọc như các bảng khác; mặc định mới nhất trước.
   Backend tắt khi đang sao lưu thì lần đó ghi lỗi lúc bật lại.
 - Google Drive: refresh token lưu mã hóa (khóa băm từ `GOOGLE_CLIENT_SECRET`), không trả về giao diện; đổi bí mật hoặc thu hồi quyền thì phải kết nối lại.
-  Cần thêm redirect URI `<địa chỉ cổng>/api/backups/google-drive/callback` vào OAuth client (README, mục Đăng nhập Google).
+  Cần thêm redirect URI `<địa chỉ cổng>/api/backups/google-drive/callback` vào OAuth client, bật Google Drive API, Google Picker API
+  và tạo API key `GOOGLE_PICKER_API_KEY` (README, mục Đăng nhập Google).
 - Khôi phục từ bản sao lưu: chưa làm.
 - Backend: bảng `BackupTarget`, `BackupSchedule` (một dòng), `BackupRun`, module `api/src/backups/`. Image api cài sẵn `pg_dump` 18 (khớp PostgreSQL).
 

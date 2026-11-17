@@ -230,19 +230,17 @@ model BackupTarget {
   id                 String           @id
   name               String
   kind               BackupTargetKind
-  // serverFolder: thư mục con trong BACKUP_DIR · googleDrive: tên thư mục trên Drive
+  // serverFolder: thư mục con trong BACKUP_DIR (không trùng giữa các nơi lưu) · googleDrive: tên thư mục trên Drive (để hiện)
   folder             String
   // giữ bao nhiêu bản gần nhất ở đây
   keepLatest         Int
-  // googleDrive: tài khoản đã kết nối, refresh token (đã mã hóa, không bao giờ trả về giao diện), id thư mục cổng đã tạo trên Drive
+  // googleDrive: tài khoản đã kết nối, refresh token (đã mã hóa, không bao giờ trả về giao diện), id thư mục Admin chọn bằng Picker (không trùng)
   googleAccount      String?
   googleRefreshToken String?
   googleFolderId     String?
   createdAt          DateTime         @default(now()) @db.Timestamptz(3)
 
   runs BackupRun[]
-
-  @@unique([kind, folder])
 }
 
 // Lịch định kì (một dòng duy nhất, id = 1); giờ theo giờ Việt Nam

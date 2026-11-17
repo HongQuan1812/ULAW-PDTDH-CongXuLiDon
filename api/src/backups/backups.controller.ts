@@ -17,6 +17,8 @@ import {
   ConnectGoogleDriveRequestSchema,
   ConnectGoogleDriveResponseSchema,
   DRIVE_CONNECT_MESSAGE_TYPE,
+  DrivePickerRequestSchema,
+  DrivePickerResponseSchema,
   RunBackupRequestSchema,
   parseListQuery,
   type BackupRun,
@@ -25,6 +27,7 @@ import {
   type BackupsResponse,
   type ConnectGoogleDriveResponse,
   type DriveConnectMessage,
+  type DrivePickerResponse,
 } from '@ulaw/shared';
 import type { ZodType } from 'zod';
 import { CurrentUser, RequirePermission } from '../auth/require-permission.decorator';
@@ -198,6 +201,20 @@ export class BackupsController {
     response.setHeader('Cache-Control', 'no-store');
     response.setHeader('Content-Security-Policy', page.contentSecurityPolicy);
     response.status(200).send(page.html);
+  }
+
+  /**
+   * Mở Google Picker chọn thư mục Drive cho nơi lưu: access token ngắn hạn (drive.file) của tài khoản đã kết nối, API key, appId.
+   * @param user         người đang đăng nhập (lần kết nối phải của người này)
+   * @param requestBody  DrivePickerRequest
+   * @returns            'picker' · tài khoản kết nối bằng bản giả: 'demo'
+   * @throws             422 sai dạng, kết nối hết hạn · 404 không có nơi lưu · 409 chưa kết nối, Google từ chối · 503 chưa có GOOGLE_PICKER_API_KEY
+   */
+  @Post(BACKUP_ENDPOINTS.drivePicker)
+  @HttpCode(200)
+  @ApiOkResponse({ schema: openApiSchemaOf(DrivePickerResponseSchema) })
+  drivePicker(@CurrentUser() user: User, @Body() requestBody: unknown): Promise<DrivePickerResponse> {
+    return this.backupsService.drivePicker(parseOrReject(requestBody, DrivePickerRequestSchema), user);
   }
 
   /**

@@ -1,20 +1,24 @@
 /* Hộp thoại "Thêm nơi lưu" / "Sửa nơi lưu": kiểu (thư mục trên máy chủ / Google Drive, chọn bằng hai thẻ), tên, thư mục, giữ bao nhiêu bản.
    Thư mục máy chủ nằm trong thư mục sao lưu (BACKUP_DIR) nên ô nhập có chữ "backups/" đứng trước.
-   Google Drive: ô "Kết nối Google Drive" có nút Kết nối Google; kết nối xong hiện email (kèm nút Đổi tài khoản), rồi bấm Lưu.
-   Chưa kết nối thì không lưu được. Đang sửa thì có nút "Bỏ nơi lưu" (hỏi lại ở hộp khác). */
+   Google Drive: ô "Kết nối Google Drive" có nút Kết nối Google; kết nối xong hiện email (kèm nút Đổi tài khoản). Tiếp theo ô "Thư mục trên Drive"
+   kiểu hộp "Lưu thành…": "Lưu vào" (mặc định My Drive, nút Chọn… mở Google Picker) và ô "Thư mục mới bên trong" (không bắt buộc:
+   gõ tên thì bấm Lưu máy chủ tạo thư mục đó rồi lưu vào đó, vì Picker không tạo được thư mục); dòng "Sẽ lưu vào" cho thấy trước kết quả.
+   Chưa kết nối thì không lưu được; đổi tài khoản thì chỗ lưu về My Drive. Đang sửa thì có nút "Bỏ nơi lưu" (hỏi lại ở hộp khác). */
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { useForm } from 'react-hook-form';
 import {
   BACKUP_MESSAGES,
   BACKUP_TARGET_KINDS,
   BACKUP_TARGET_KIND_LABEL,
   BackupTargetInputSchema,
+  DRIVE_ROOT_FOLDER_ID,
+  DRIVE_ROOT_FOLDER_NAME,
   type BackupTarget,
   type BackupTargetInput,
   type BackupTargetKind,
 } from '@ulaw/shared';
-import { useConnectGoogleDrive, useSaveBackupTarget, type DriveConnection } from '../../api/backups';
+import { useConnectGoogleDrive, useDrivePicker, useSaveBackupTarget, type DriveConnection } from '../../api/backups';
 import { ApiError } from '../../api/client';
 import { Button } from '../../components/Button';
 import { Field } from '../../components/Field';
@@ -22,28 +26,24 @@ import { Modal } from '../../components/Modal';
 import { useToast } from '../../components/Toast';
 import { useAuth } from '../../features/auth/useAuth';
 import { SHOW_DEMO } from '../../lib/env';
+import { pickDriveFolder, type PickedDriveFolder } from '../../lib/googlePicker';
 import styles from './BackupsPage.module.css';
+
+/** Chỗ lưu mặc định trên Drive. */
+const MY_DRIVE: PickedDriveFolder = { id: DRIVE_ROOT_FOLDER_ID, name: DRIVE_ROOT_FOLDER_NAME };
 
 /** Nơi lưu mới: thư mục trên máy chủ, giữ 14 bản. */
 const NEW_TARGET: BackupTargetInput = { name: '', kind: 'serverFolder', folder: '', keepLatest: 14 };
 
-/** Chữ theo kiểu nơi lưu: dòng giải thích ở thẻ kiểu, gợi ý các ô. */
-const KIND_TEXT: Record<BackupTargetKind, { hint: string; namePlaceholder: string; folderLabel: string; folderPlaceholder: string; folderHint: string }> = {
+/** Chữ theo kiểu nơi lưu: dòng giải thích ở thẻ kiểu, gợi ý ô tên. */
+const KIND_TEXT: Record<BackupTargetKind, { hint: string; namePlaceholder: string }> = {
   serverFolder: {
     hint: 'Lưu trên ổ đĩa của máy chủ',
     namePlaceholder: 'vd Ổ máy chủ · hằng ngày',
-    folderLabel: 'Thư mục trên máy chủ',
-    folderPlaceholder: 'hang-ngay',
-    folderHint: 'Chữ không dấu, số, - và _, các cấp cách nhau bằng /.',
   },
   googleDrive: {
     hint: 'Lưu lên Drive của một tài khoản Google',
     namePlaceholder: 'vd Drive phòng',
-    folderLabel: 'Thư mục trên Drive',
-    folderPlaceholder: 'vd Công việc/Sao lưu cổng',
-    folderHint:
-      'Tính từ My Drive, các cấp cách nhau bằng /; để trống thì lưu thẳng vào My Drive. Cấp nào chưa có thì cổng tự tạo ở lần sao lưu đầu tiên. ' +
-      'Cổng chỉ thấy thư mục do chính nó tạo: gõ trùng tên một thư mục cậu tự tạo sẵn thì cổng tạo thêm một thư mục mới cùng tên.',
   },
 };
 
@@ -89,7 +89,9 @@ function BackupTargetForm({ target, onClose, onRemove }: Omit<BackupTargetDialog
     formState: { errors },
   } = useForm<BackupTargetInput>({
     resolver: zodResolver(BackupTargetInputSchema),
-    defaultValues: target ? { name: target.name, kind: target.kind, folder: target.folder, keepLatest: target.keepLatest } : NEW_TARGET,
+    defaultValues: target
+      ? { name: target.name, kind: target.kind, folder: target.folder, keepLatest: target.keepLatest, driveFolderId: target.driveFolderId ?? DRIVE_ROOT_FOLDER_ID }
+      : { ...NEW_TARGET, driveFolderId: DRIVE_ROOT_FOLDER_ID },
   });
   const kind = watch('kind');
   const kindText = KIND_TEXT[kind];
@@ -98,15 +100,35 @@ function BackupTargetForm({ target, onClose, onRemove }: Omit<BackupTargetDialog
   const [connection, setConnection] = useState<DriveConnection | null>(null);
   const driveAccount = connection?.email ?? (target?.kind === 'googleDrive' ? target.googleAccount : null);
 
+  // Chỗ lưu trên Drive: nơi Drive đang sửa thì thư mục đang dùng, không thì My Drive (ô folder dùng chung với thư mục máy chủ nên giữ riêng tên)
+  const [driveLocation, setDriveLocation] = useState<PickedDriveFolder>(
+    target?.kind === 'googleDrive' && target.driveFolderId ? { id: target.driveFolderId, name: target.folder } : MY_DRIVE,
+  );
+
   /**
-   * Kết nối xong: nhớ driveGrantId để gửi kèm khi Lưu.
+   * Đổi chỗ lưu: nhớ id để gửi kèm khi Lưu.
+   * @param location  My Drive hoặc thư mục vừa chọn
+   */
+  const changeDriveLocation = (location: PickedDriveFolder) => {
+    setDriveLocation(location);
+    setValue('driveFolderId', location.id);
+    clearErrors('driveFolderId');
+  };
+
+  /**
+   * Kết nối xong: nhớ driveGrantId để gửi kèm khi Lưu; thư mục của tài khoản cũ không dùng được nữa, chỗ lưu về My Drive.
    * @param connected  tài khoản vừa kết nối
    */
   const onConnected = (connected: DriveConnection) => {
     setConnection(connected);
     setValue('driveGrantId', connected.driveGrantId);
     clearErrors('driveGrantId');
+    changeDriveLocation(MY_DRIVE);
   };
+
+  // Picker mở theo tài khoản vừa kết nối, không thì tài khoản của nơi Drive đang sửa
+  const pickerAccount = connection ? { driveGrantId: connection.driveGrantId } : target?.kind === 'googleDrive' && driveAccount ? { targetId: target.id } : null;
+  const newDriveFolderName = watch('newDriveFolderName') ?? '';
 
   // Lưu: Drive phải có tài khoản; trùng thư mục (409) báo dưới ô thư mục; kết nối hết hạn thì bỏ để kết nối lại
   const onSubmit = handleSubmit(async (input) => {
@@ -115,12 +137,18 @@ function BackupTargetForm({ target, onClose, onRemove }: Omit<BackupTargetDialog
       return;
     }
     try {
-      await saveTarget.mutateAsync({ input: input.kind === 'googleDrive' ? input : { ...input, driveGrantId: undefined }, targetId: target?.id });
+      // Drive: gửi tên chỗ lưu; thư mục máy chủ: bỏ các ô của Drive
+      const targetInput =
+        input.kind === 'googleDrive'
+          ? { ...input, folder: driveLocation.name }
+          : { ...input, driveGrantId: undefined, driveFolderId: undefined, newDriveFolderName: undefined };
+      await saveTarget.mutateAsync({ input: targetInput, targetId: target?.id });
       toast(target ? BACKUP_MESSAGES.targetSaved : BACKUP_MESSAGES.targetAdded, 'success');
       onClose();
     } catch (error) {
       const message = error instanceof Error ? error.message : BACKUP_MESSAGES[422];
-      if (error instanceof ApiError && error.status === 409) setError('folder', { message });
+      if (error instanceof ApiError && error.status === 409) setError(input.kind === 'googleDrive' ? 'driveFolderId' : 'folder', { message });
+      else if (message === BACKUP_MESSAGES.driveFolderInvalid) setError('driveFolderId', { message });
       else if (message === BACKUP_MESSAGES.driveGrantExpired) {
         setConnection(null);
         setValue('driveGrantId', undefined);
@@ -150,19 +178,26 @@ function BackupTargetForm({ target, onClose, onRemove }: Omit<BackupTargetDialog
         <input {...register('name')} placeholder={kindText.namePlaceholder} aria-invalid={!!errors.name} />
       </Field>
 
-      <Field label={kindText.folderLabel} required={kind === 'serverFolder'} hint={kindText.folderHint} error={errors.folder?.message}>
-        {kind === 'serverFolder' ? (
+      {kind === 'serverFolder' ? (
+        <Field label="Thư mục trên máy chủ" required hint="Chữ không dấu, số, - và _, các cấp cách nhau bằng /." error={errors.folder?.message}>
           <span className={styles.prefixInput}>
             <span aria-hidden="true">backups/</span>
-            <input {...register('folder')} placeholder={kindText.folderPlaceholder} aria-invalid={!!errors.folder} />
+            <input {...register('folder')} placeholder="hang-ngay" aria-invalid={!!errors.folder} />
           </span>
-        ) : (
-          <span className={styles.prefixInput}>
-            <span aria-hidden="true">My Drive/</span>
-            <input {...register('folder')} placeholder={kindText.folderPlaceholder} aria-invalid={!!errors.folder} />
-          </span>
-        )}
-      </Field>
+        </Field>
+      ) : (
+        <>
+          <DriveAccountField account={driveAccount} error={errors.driveGrantId?.message} onConnected={onConnected} />
+          <DriveFolderField
+            location={driveLocation}
+            pickerAccount={pickerAccount}
+            newFolderName={newDriveFolderName.trim()}
+            newFolderInput={<input {...register('newDriveFolderName')} placeholder="vd Sao lưu cổng" maxLength={100} aria-invalid={!!errors.newDriveFolderName} />}
+            error={errors.driveFolderId?.message ?? errors.newDriveFolderName?.message}
+            onLocationChange={changeDriveLocation}
+          />
+        </>
+      )}
 
       <Field label="Giữ bao nhiêu bản gần nhất" required hint="Bản cũ hơn tự xóa sau mỗi lần sao lưu thành công." error={errors.keepLatest?.message}>
         <input
@@ -174,8 +209,6 @@ function BackupTargetForm({ target, onClose, onRemove }: Omit<BackupTargetDialog
           aria-invalid={!!errors.keepLatest}
         />
       </Field>
-
-      {kind === 'googleDrive' && <DriveAccountField account={driveAccount} error={errors.driveGrantId?.message} onConnected={onConnected} />}
 
       <div className={styles.dialogButtons}>
         {target && (
@@ -265,6 +298,135 @@ function DriveAccountField({ account, error, onConnected }: { account: string | 
         </div>
       )}
       {!choosing && <span className={styles.fieldHint}>Mỗi nơi lưu một tài khoản riêng. Cổng chỉ thấy các tệp, thư mục do chính nó tạo trên Drive.</span>}
+      {error && (
+        <span className={styles.fieldError} role="alert">
+          {error}
+        </span>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Ô "Thư mục trên Drive" của nơi lưu Drive, kiểu hộp "Lưu thành…":
+ * "Lưu vào" (chỗ lưu, mặc định My Drive; nút Chọn… xin máy chủ token rồi mở Google Picker; về My Drive bằng một nút) và ô "Thư mục mới bên trong"
+ * (không bắt buộc, Picker không tạo được thư mục nên gõ tên ở đây, bấm Lưu thì máy chủ tạo). Dòng "Sẽ lưu vào" cho thấy trước kết quả.
+ * Tài khoản kết nối bằng bản giả (máy chủ trả 'demo') thì Chọn… hiện ô gõ tên thư mục (JUST FOR DEMO).
+ * @param location          chỗ lưu đang chọn
+ * @param pickerAccount     tài khoản (vừa kết nối, hoặc của nơi lưu đang sửa); null = chưa kết nối (nút Chọn… khóa)
+ * @param newFolderName     tên thư mục mới đang gõ (đã cắt khoảng trắng), để hiện dòng "Sẽ lưu vào"
+ * @param newFolderInput    ô nhập tên thư mục mới (đã gắn vào form)
+ * @param error             câu báo dưới ô (không mở được thư mục, trùng nơi lưu khác, tên dài quá)
+ * @param onLocationChange  gọi khi đổi chỗ lưu
+ * @returns                 ô thư mục
+ */
+function DriveFolderField({
+  location,
+  pickerAccount,
+  newFolderName,
+  newFolderInput,
+  error,
+  onLocationChange,
+}: {
+  location: PickedDriveFolder;
+  pickerAccount: { driveGrantId: string } | { targetId: string } | null;
+  newFolderName: string;
+  newFolderInput: ReactNode;
+  error?: string;
+  onLocationChange: (location: PickedDriveFolder) => void;
+}) {
+  const toast = useToast();
+  const drivePicker = useDrivePicker();
+  const [opening, setOpening] = useState(false);
+  const [typingDemoName, setTypingDemoName] = useState(false);
+  const [demoFolderName, setDemoFolderName] = useState('');
+
+  /** Bấm Chọn…: xin token, mở Picker; tài khoản giả thì mở ô gõ tên. */
+  const choose = async () => {
+    if (!pickerAccount) return;
+    setOpening(true);
+    try {
+      const session = await drivePicker.mutateAsync(pickerAccount);
+      /* JUST FOR DEMO: START · tài khoản kết nối bằng bản giả dev-google-drive-connect: không có Picker thật, gõ tên thư mục.
+         Bản thật: máy chủ luôn trả 'picker' */
+      if (session.kind === 'demo') {
+        setTypingDemoName(true);
+        return;
+      }
+      /* JUST FOR DEMO: END */
+      const pickedFolder = await pickDriveFolder(session).catch(() => {
+        throw new Error(BACKUP_MESSAGES.pickerLoadFailed);
+      });
+      if (pickedFolder) onLocationChange(pickedFolder);
+    } catch (pickerError) {
+      toast(pickerError instanceof Error ? pickerError.message : BACKUP_MESSAGES[422], 'error');
+    } finally {
+      setOpening(false);
+    }
+  };
+
+  const isMyDrive = location.id === DRIVE_ROOT_FOLDER_ID;
+  return (
+    <div className={styles.fieldLabel}>
+      <span>
+        Thư mục trên Drive <span className={styles.requiredMark}>*</span>
+      </span>
+      {typingDemoName ? (
+        /* JUST FOR DEMO: START · khung giả lập Google Picker, chỉ hiện khi tài khoản kết nối bằng bản giả.
+           Bản thật: cửa sổ Picker của Google, chọn xong báo tên, id thư mục về đây */
+        <div className={styles.demoGoogle}>
+          <strong>Chọn thư mục trên Drive (giả lập)</strong>
+          <span className={styles.fieldHint}>Tài khoản này kết nối bằng bản giả nên không mở được Drive thật. Gõ tên thư mục bất kì để thử.</span>
+          <input value={demoFolderName} onChange={(event) => setDemoFolderName(event.target.value)} aria-label="Tên thư mục trên Drive" />
+          <div className={styles.dialogButtons}>
+            <Button variant="ghost" onClick={() => setTypingDemoName(false)}>
+              Hủy
+            </Button>
+            <Button
+              variant="primary"
+              disabled={!demoFolderName.trim()}
+              onClick={() => {
+                onLocationChange({ id: `demo-${crypto.randomUUID()}`, name: demoFolderName.trim() });
+                setTypingDemoName(false);
+              }}
+            >
+              Chọn
+            </Button>
+          </div>
+        </div>
+      ) : (
+        /* JUST FOR DEMO: END */ <div className={styles.saveAs}>
+          <div className={styles.saveAsRow}>
+            <span className={styles.saveAsLocation}>
+              <span className={styles.fieldHint}>Lưu vào</span>
+              <strong>📁 {location.name}</strong>
+            </span>
+            <span className={styles.folderActions}>
+              {!isMyDrive && (
+                <button type="button" className={styles.linkButton} onClick={() => onLocationChange(MY_DRIVE)} disabled={opening}>
+                  Về My Drive
+                </button>
+              )}
+              <Button onClick={() => void choose()} disabled={opening || !pickerAccount}>
+                {opening ? 'Đang mở…' : 'Chọn…'}
+              </Button>
+            </span>
+          </div>
+          <label className={styles.fieldLabel}>
+            <span>
+              Thư mục mới bên trong <span className={styles.fieldHint}>(không bắt buộc)</span>
+            </span>
+            {newFolderInput}
+          </label>
+        </div>
+      )}
+      {!typingDemoName && (
+        <span className={styles.fieldHint}>
+          {pickerAccount
+            ? `Sẽ lưu vào: ${location.name}${newFolderName ? ` / ${newFolderName} (tạo mới khi bấm Lưu)` : ''}`
+            : 'Kết nối tài khoản Google trước rồi chọn chỗ lưu.'}
+        </span>
+      )}
       {error && (
         <span className={styles.fieldError} role="alert">
           {error}

@@ -40,6 +40,8 @@ import type {
 } from '@ulaw/shared';
 import {
   ACCOUNT_MESSAGES,
+  DRIVE_ROOT_FOLDER_ID,
+  DRIVE_ROOT_FOLDER_NAME,
   backupFileName,
   nextScheduledAtOf,
   ENDPOINTS,
@@ -1264,7 +1266,7 @@ let backupSequence = 0;
 
 /** Đưa sao lưu về ban đầu: nơi lưu, lịch mẫu, chưa có lần sao lưu nào. */
 function resetBackups(): void {
-  backupTargets = BACKUP_TARGETS_SEED.map((target) => ({ ...target, googleAccount: null }));
+  backupTargets = BACKUP_TARGETS_SEED.map((target) => ({ ...target, googleAccount: null, driveFolderId: null }));
   backupSchedules = structuredClone([...BACKUP_SCHEDULES_SEED]);
   backupRuns = [];
 }
@@ -1322,21 +1324,56 @@ export function createBackupDriveGrant(userId: string, email: string): string {
 }
 
 /**
- * Thêm hoặc sửa một nơi lưu. Nơi lưu Google Drive phải có tài khoản: lần kết nối vừa làm, hoặc tài khoản cũ khi sửa nơi Drive đã kết nối.
+ * Lần kết nối Drive còn dùng được không (để mở Picker trước khi Lưu; không bỏ lần kết nối).
+ * @param driveGrantId  id lần kết nối
+ * @param userId        người đang chọn thư mục
+ * @returns             true nếu có và của người này
+ */
+export function hasBackupDriveGrant(driveGrantId: string, userId: string): boolean {
+  return backupDriveGrants.get(driveGrantId)?.userId === userId;
+}
+
+/**
+ * Nơi lưu Drive đã kết nối tài khoản chưa (để mở Picker khi sửa).
+ * @param targetId  id nơi lưu
+ * @returns         'notFound' · 'notConnected' · 'connected'
+ */
+export function backupDriveTargetState(targetId: string): 'notFound' | 'notConnected' | 'connected' {
+  const target = backupTargets.find((candidate) => candidate.id === targetId);
+  if (!target) return 'notFound';
+  return target.kind === 'googleDrive' && target.googleAccount ? 'connected' : 'notConnected';
+}
+
+/**
+ * Thêm hoặc sửa một nơi lưu. Nơi lưu Google Drive phải có tài khoản (lần kết nối vừa làm, hoặc tài khoản cũ khi sửa nơi Drive đã kết nối)
+ * và chỗ lưu (My Drive hoặc thư mục chọn bằng Picker; API giả không hỏi Drive, lấy tên giao diện gửi). Có tên thư mục mới thì coi như đã tạo
+ * thư mục đó bên trong chỗ lưu.
  * @param input     thông tin nơi lưu (đã kiểm tra bằng BackupTargetInputSchema)
  * @param userId    người đang lưu
  * @param targetId  id nơi lưu cần sửa; không có = thêm mới
- * @returns         nơi lưu sau khi lưu; 'notFound' · 'duplicate' (trùng kiểu và thư mục) · 'connectFirst' (Drive chưa kết nối) · 'grantExpired'
+ * @returns         nơi lưu sau khi lưu; 'notFound' · 'duplicate' (trùng thư mục: máy chủ theo đường dẫn, Drive theo id) · 'connectFirst' (Drive chưa kết nối) · 'grantExpired'
  */
 export function saveBackupTarget(
   input: BackupTargetInput,
   userId: string,
   targetId?: string,
 ): BackupTarget | 'notFound' | 'duplicate' | 'connectFirst' | 'grantExpired' {
-  const { driveGrantId, ...fields } = input;
+  const { driveGrantId, driveFolderId: inputFolderId, newDriveFolderName, ...inputFields } = input;
   const existing = targetId ? backupTargets.find((target) => target.id === targetId) : undefined;
   if (targetId && !existing) return 'notFound';
-  if (backupTargets.some((target) => target.id !== targetId && target.kind === fields.kind && target.folder === fields.folder)) return 'duplicate';
+
+  // Drive: thư mục mới (giả) bên trong chỗ lưu, hoặc chính chỗ lưu (My Drive mang tên cố định)
+  const isDrive = inputFields.kind === 'googleDrive';
+  const driveFolderId = !isDrive ? null : newDriveFolderName ? `demo-folder-${++backupSequence}` : (inputFolderId ?? null);
+  const driveFolderName = newDriveFolderName || (inputFolderId === DRIVE_ROOT_FOLDER_ID ? DRIVE_ROOT_FOLDER_NAME : inputFields.folder);
+  const fields = isDrive ? { ...inputFields, folder: driveFolderName } : inputFields;
+  const isDuplicate = backupTargets.some(
+    (target) =>
+      target.id !== targetId &&
+      target.kind === fields.kind &&
+      (fields.kind === 'googleDrive' ? target.driveFolderId === driveFolderId : target.folder === fields.folder),
+  );
+  if (isDuplicate) return 'duplicate';
 
   // Tài khoản Google: kết nối mới, giữ tài khoản cũ, hoặc bỏ (kiểu thư mục máy chủ)
   let googleAccount: string | null = null;
@@ -1348,7 +1385,7 @@ export function saveBackupTarget(
     if (!googleAccount) return 'connectFirst';
   }
 
-  const saved: MockBackupTarget = { ...fields, id: targetId ?? `backup-target-${++backupSequence}`, googleAccount };
+  const saved: MockBackupTarget = { ...fields, id: targetId ?? `backup-target-${++backupSequence}`, googleAccount, driveFolderId };
   backupTargets = existing ? backupTargets.map((target) => (target.id === targetId ? saved : target)) : [...backupTargets, saved];
   return getBackupsOverview().targets.find((target) => target.id === saved.id)!;
 }

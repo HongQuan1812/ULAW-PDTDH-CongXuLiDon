@@ -156,7 +156,7 @@ Nơi lưu:
 | Kiểu | Gồm |
 |---|---|
 | Thư mục trên máy chủ | Admin đặt tên và thư mục con, nằm trong `BACKUP_DIR` (volume `backups`, máy chủ thật có thể gắn ổ thứ hai vào đây); không cho ra ngoài `BACKUP_DIR` |
-| Google Drive | Admin bấm kết nối tài khoản Google (OAuth client của trường, quyền `drive.file`), chọn thư mục; refresh token lưu mã hóa ở máy chủ, không trả về giao diện |
+| Google Drive | Admin bấm kết nối tài khoản Google (OAuth client của trường, quyền `drive.file`), chọn thư mục có sẵn bằng Google Picker (thư mục chọn được cấp cho cổng); refresh token lưu mã hóa ở máy chủ, không trả về giao diện |
 | Tải về máy Admin | chỉ có khi sao lưu ngay: tạo bản rồi tải thẳng về trình duyệt, không giữ trên máy chủ; bản đã lưu ở thư mục máy chủ cũng có nút tải về |
 
 - **Sao lưu ngay**: popup chọn một hoặc nhiều nơi lưu, hoặc chỉ tải về máy này (tích tải về thì các nơi lưu bị khóa). Mỗi lúc chỉ chạy một bản, đang chạy thì nút khóa lại.
@@ -170,7 +170,7 @@ Nơi lưu:
 | 1 | API giả, giao diện | handler MSW · hook · trang Sao lưu trong menu Admin: thẻ tóm tắt, nơi lưu, lịch, bảng lịch sử | ✓ |
 | 2 | Bảng, chạy sao lưu | `schema.prisma`: `BackupTarget`, `BackupSchedule`, `BackupRun` · `pg_dump` trong image api (bản `postgresql-client` khớp Postgres 18) · volume `backups` · tạo tệp `.tar.gz`, lưu vào thư mục máy chủ, tải về | |
 | 3 | Lịch định kì | api tự kiểm mỗi phút, tới giờ thì chạy · giữ N bản gần nhất · restart không chạy trùng | |
-| 4 | Google Drive | kết nối tài khoản ngay trong hộp thêm / sửa nơi lưu (popup sang Google, callback báo email về hộp thoại; bản giả `dev-google-drive-connect`) ✓ · chọn thư mục, tải tệp lên · xóa bản cũ trên Drive · mất quyền thì báo trong lịch sử · chưa thử với tài khoản Google thật | |
+| 4 | Google Drive | kết nối tài khoản ngay trong hộp thêm / sửa nơi lưu (popup sang Google, callback báo email về hộp thoại; bản giả `dev-google-drive-connect`) ✓ · ô thư mục kiểu "Lưu thành…": chỗ lưu (My Drive hoặc chọn bằng Google Picker) + tên thư mục mới không bắt buộc, máy chủ tạo khi Lưu vì Picker không tạo được (`GOOGLE_PICKER_API_KEY`; trước đó gõ đường dẫn thì cổng tạo thư mục mới trùng tên vì `drive.file` không thấy thư mục có sẵn), tải tệp lên · xóa bản cũ trên Drive · mất quyền thì báo trong lịch sử · chưa thử với tài khoản Google thật | |
 | 5 | Test, tài liệu | test api (quyền, lịch, giữ N bản) · thử trên bản prod ở máy mình · README, `docs/business-rules.md` | |
 
 ### Lưu ý khi triển khai

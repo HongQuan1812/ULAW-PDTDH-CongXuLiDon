@@ -10,7 +10,7 @@ import {
   toSafeReturnPath,
 } from './google-oauth';
 
-const GOOGLE = { clientId: 'client-123', clientSecret: 'secret', redirectUri: 'https://localhost:5173/api/auth/google/callback' };
+const GOOGLE = { clientId: 'client-123', clientSecret: 'secret', redirectUri: 'https://localhost:5173/api/auth/google/callback', pickerApiKey: null };
 const NOW = new Date('2026-11-14T00:00:00Z');
 
 /** Dựng ID token giả (JWT không ký) với các claim cho trước. */

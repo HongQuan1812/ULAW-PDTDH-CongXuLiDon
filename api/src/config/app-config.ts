@@ -52,6 +52,8 @@ const AppEnvSchema = z.object({
   // OAuth client (loại Web application) tạo ở Google Cloud Console; bỏ trống: chưa bật đăng nhập Google (ENABLE_DEMO_APIS=true vẫn đăng nhập thử được)
   GOOGLE_CLIENT_ID: z.string().trim().default(''),
   GOOGLE_CLIENT_SECRET: z.string().trim().default(''),
+  // API key (cùng project với OAuth client) cho Google Picker: chọn thư mục Drive của nơi lưu sao lưu; bỏ trống: chưa chọn được thư mục Drive
+  GOOGLE_PICKER_API_KEY: z.string().trim().default(''),
   // Database trường (SQL Server, chỉ đọc), cho student-directory bản thật; tên database, bảng, cột lấy từ student-directory/school-database.json
   // · SCHOOL_DB_HOST bỏ trống: chưa kết nối (bản thật trả 503)
   SCHOOL_DB_HOST: z.string().trim().default(''),
@@ -66,6 +68,8 @@ export interface GoogleOAuthConfig {
   clientSecret: string;
   /** Địa chỉ Google chuyển về sau khi chọn tài khoản; phải khai báo y hệt ở mục Authorized redirect URIs của OAuth client */
   redirectUri: string;
+  /** API key cho Google Picker (GOOGLE_PICKER_API_KEY); null = chưa có */
+  pickerApiKey: string | null;
 }
 
 /** Đường dẫn (sau địa chỉ gốc của cổng) Google chuyển về; web server / Vite chuyển /api sang backend. */
@@ -143,6 +147,7 @@ export class AppConfig {
             clientId: parsed.data.GOOGLE_CLIENT_ID,
             clientSecret: parsed.data.GOOGLE_CLIENT_SECRET,
             redirectUri: new URL(GOOGLE_CALLBACK_PATH, this.webBaseUrl).toString(),
+            pickerApiKey: parsed.data.GOOGLE_PICKER_API_KEY || null,
           }
         : null;
     this.smtp = { host: parsed.data.SMTP_HOST, port: parsed.data.SMTP_PORT, user: parsed.data.SMTP_USER, password: parsed.data.SMTP_PASSWORD };

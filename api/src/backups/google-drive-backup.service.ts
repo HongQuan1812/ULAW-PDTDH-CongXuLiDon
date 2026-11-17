@@ -1,5 +1,5 @@
-/* Nơi lưu Google Drive của trang Sao lưu: kết nối tài khoản Google (OAuth, quyền drive.file: cổng chỉ thấy tệp, thư mục do chính nó tạo),
-   tải tệp sao lưu lên, xóa bản cũ. Dùng OAuth client của đăng nhập Google (GOOGLE_CLIENT_ID), với redirect URI riêng
+/* Nơi lưu Google Drive của trang Sao lưu: kết nối tài khoản Google (OAuth, quyền drive.file: cổng chỉ thấy tệp, thư mục do chính nó tạo
+   hoặc Admin chọn bằng Google Picker), cấp token cho Picker, kiểm thư mục đã chọn, tải tệp sao lưu lên, xóa bản cũ. Dùng OAuth client của đăng nhập Google (GOOGLE_CLIENT_ID), với redirect URI riêng
    <địa chỉ cổng>/api/backups/google-drive/callback (phải khai báo thêm trong OAuth client).
    Refresh token mã hóa AES-256-GCM (khóa băm từ GOOGLE_CLIENT_SECRET) trước khi lưu; đổi bí mật thì phải kết nối lại. */
 import { createCipheriv, createDecipheriv, createHash, randomBytes } from 'node:crypto';
@@ -8,11 +8,10 @@ import { stat } from 'node:fs/promises';
 import { Readable } from 'node:stream';
 import { Injectable } from '@nestjs/common';
 import type { CookieOptions } from 'express';
-import { BACKUP_ENDPOINTS, driveFolderSegments } from '@ulaw/shared';
+import { BACKUP_ENDPOINTS, DRIVE_ROOT_FOLDER_ID, type DrivePickerResponse } from '@ulaw/shared';
 import { GOOGLE_AUTHORIZE_URL, GOOGLE_TOKEN_URL, readGoogleIdToken } from '../auth/google-oauth';
 import { AppConfig, type GoogleOAuthConfig } from '../config/app-config';
 import type { Prisma } from '../generated/prisma/client';
-import { PrismaService } from '../common/prisma.service';
 
 /** Quyền xin Google: email (biết tài khoản nào) và drive.file (chỉ tệp do cổng tạo). */
 const DRIVE_SCOPES = 'openid email https://www.googleapis.com/auth/drive.file';
@@ -25,8 +24,6 @@ const GOOGLE_TIMEOUT_MS = 15_000;
 const DRIVE_FILES_URL = 'https://www.googleapis.com/drive/v3/files';
 const DRIVE_UPLOAD_URL = 'https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable';
 const DRIVE_FOLDER_MIME = 'application/vnd.google-apps.folder';
-/** id đặc biệt của My Drive (thư mục gốc). */
-export const DRIVE_ROOT_ID = 'root';
 
 type BackupTargetRow = Prisma.BackupTargetGetPayload<object>;
 
@@ -50,12 +47,21 @@ export interface DriveConnectState {
 }
 
 /**
+ * Số hiệu Google Cloud project, là phần đầu của client id ('<số hiệu>-<…>.apps.googleusercontent.com'); Picker cần làm appId.
+ * @param clientId  GOOGLE_CLIENT_ID
+ * @returns         vd '123456789012'
+ */
+export function projectNumberOf(clientId: string): string {
+  return clientId.split('-')[0] ?? '';
+}
+
+/**
  * Đường dẫn mở một thư mục trên Google Drive.
  * @param folderId  id thư mục Drive
  * @returns         vd https://drive.google.com/drive/folders/<id>; My Drive thì đường dẫn My Drive
  */
 export function driveFolderUrlOf(folderId: string): string {
-  return folderId === DRIVE_ROOT_ID ? 'https://drive.google.com/drive/my-drive' : `https://drive.google.com/drive/folders/${encodeURIComponent(folderId)}`;
+  return folderId === DRIVE_ROOT_FOLDER_ID ? 'https://drive.google.com/drive/my-drive' : `https://drive.google.com/drive/folders/${encodeURIComponent(folderId)}`;
 }
 
 /**
@@ -142,18 +148,23 @@ async function googleError(response: Response, action: string): Promise<Error> {
   return new Error(`Google Drive từ chối ${action} (${response.status}): ${body}`);
 }
 
+/**
+ * Tài khoản Google của một nơi lưu.
+ * @param target  nơi lưu Drive
+ * @returns       email và refresh token đã mã hóa
+ */
+export function accountOf(target: BackupTargetRow): DriveGrant {
+  return { email: target.googleAccount ?? '', encryptedRefreshToken: target.googleRefreshToken };
+}
+
 @Injectable()
 export class GoogleDriveBackupService {
   /** Các lần kết nối đang chờ Lưu, theo driveGrantId. Giữ trong bộ nhớ: backend khởi động lại thì phải kết nối lại. */
   private readonly grants = new Map<string, DriveGrant & { userId: string; expiresAt: number }>();
   /**
-   * @param config  OAuth client của Google, địa chỉ gốc của cổng
-   * @param prisma  lưu tài khoản, token, thư mục của nơi lưu
+   * @param config  OAuth client của Google, API key của Picker, địa chỉ gốc của cổng
    */
-  constructor(
-    private readonly config: AppConfig,
-    private readonly prisma: PrismaService,
-  ) {}
+  constructor(private readonly config: AppConfig) {}
 
   /** Máy chủ đã có OAuth client Google chưa. */
   get available(): boolean {
@@ -172,6 +183,18 @@ export class GoogleDriveBackupService {
     const grantId = randomBytes(24).toString('base64url');
     this.grants.set(grantId, { ...grant, userId, expiresAt: now + DRIVE_GRANT_TTL_MS });
     return grantId;
+  }
+
+  /**
+   * Xem một lần kết nối mà không bỏ (để mở Picker trước khi Lưu).
+   * @param grantId  driveGrantId giao diện gửi kèm
+   * @param userId   người đang chọn thư mục
+   * @returns        email, refresh token; không có, quá hạn hoặc của người khác thì null
+   */
+  peekGrant(grantId: string, userId: string): DriveGrant | null {
+    const stored = this.grants.get(grantId);
+    if (!stored || stored.userId !== userId || stored.expiresAt <= Date.now()) return null;
+    return { email: stored.email, encryptedRefreshToken: stored.encryptedRefreshToken };
   }
 
   /**
@@ -255,15 +278,15 @@ export class GoogleDriveBackupService {
 
   /**
    * Lấy access token mới từ refresh token đã lưu.
-   * @param target  nơi lưu Drive
-   * @returns       access token
-   * @throws        lỗi khi chưa kết nối, đã đổi GOOGLE_CLIENT_SECRET, hoặc tài khoản đã thu hồi quyền
+   * @param account  tài khoản: email và refresh token đã mã hóa (của nơi lưu, hoặc lần kết nối chưa Lưu)
+   * @returns        access token
+   * @throws         lỗi khi chưa kết nối, kết nối bằng bản giả, đã đổi GOOGLE_CLIENT_SECRET, hoặc tài khoản đã thu hồi quyền
    */
-  private async accessToken(target: BackupTargetRow): Promise<string> {
+  private async accessToken(account: { email: string | null; encryptedRefreshToken: string | null }): Promise<string> {
     const google = this.google;
     if (!google) throw new Error('Máy chủ chưa cấu hình Google (GOOGLE_CLIENT_ID).');
-    const refreshToken = target.googleRefreshToken ? decryptToken(target.googleRefreshToken, google.clientSecret) : null;
-    if (!refreshToken && target.googleAccount && !target.googleRefreshToken) {
+    const refreshToken = account.encryptedRefreshToken ? decryptToken(account.encryptedRefreshToken, google.clientSecret) : null;
+    if (account.email && !account.encryptedRefreshToken) {
       throw new Error('Tài khoản Google này được kết nối bằng bản giả (dev-google-drive-connect), không lưu thật lên Drive được.');
     }
     if (!refreshToken) throw new Error('Chưa kết nối tài khoản Google Drive (hoặc cần kết nối lại).');
@@ -279,53 +302,81 @@ export class GoogleDriveBackupService {
   }
 
   /**
-   * Thư mục của nơi lưu trên Drive. Đường dẫn tính từ My Drive (trống = My Drive); đã tìm ra và còn thì dùng lại id đã nhớ,
-   * không thì đi từng cấp từ My Drive: cấp nào cổng đã tạo trước đó thì dùng lại, chưa có thì tạo mới; xong nhớ id.
-   * Quyền drive.file chỉ thấy thư mục do cổng tạo: thư mục Admin tự tạo cùng tên không thấy được, nên cổng tạo thêm một thư mục mới.
-   * @param target       nơi lưu Drive
-   * @param accessToken  access token
-   * @returns            id thư mục ('root' = My Drive)
+   * Mở Google Picker cho một tài khoản: access token ngắn hạn, API key, appId.
+   * @param account  email và refresh token đã mã hóa (lần kết nối chưa Lưu, hoặc của nơi lưu đang sửa)
+   * @returns        'picker' kèm token; tài khoản kết nối bằng bản giả thì 'demo'; chưa có API key thì null
+   * @throws         lỗi khi Google từ chối cấp token (đã thu hồi quyền…)
    */
-  private async folderId(target: BackupTargetRow, accessToken: string): Promise<string> {
-    const headers = { Authorization: `Bearer ${accessToken}` };
-    if (target.googleFolderId === DRIVE_ROOT_ID) return DRIVE_ROOT_ID;
-    if (target.googleFolderId) {
-      const existing = await fetch(`${DRIVE_FILES_URL}/${target.googleFolderId}?fields=id,trashed`, { headers, signal: AbortSignal.timeout(GOOGLE_TIMEOUT_MS) });
-      if (existing.ok && !((await existing.json()) as { trashed?: boolean }).trashed) return target.googleFolderId;
-    }
+  async pickerSession(account: DriveGrant): Promise<DrivePickerResponse | null> {
+    /* JUST FOR DEMO: START · tài khoản kết nối bằng bản giả dev-google-drive-connect không có refresh token: giao diện cho gõ tên thư mục.
+       Bản thật: luôn có refresh token, trả token cho Picker */
+    if (!account.encryptedRefreshToken) return { kind: 'demo' };
+    /* JUST FOR DEMO: END */
 
-    // Đi từng cấp từ My Drive
-    let parentId = DRIVE_ROOT_ID;
-    for (const segment of driveFolderSegments(target.folder)) parentId = await this.childFolderId(parentId, segment, headers);
-    await this.prisma.backupTarget.update({ where: { id: target.id }, data: { googleFolderId: parentId } });
-    return parentId;
+    const google = this.google;
+    if (!google?.pickerApiKey) return null;
+    const accessToken = await this.accessToken(account);
+    return { kind: 'picker', accessToken, apiKey: google.pickerApiKey, appId: projectNumberOf(google.clientId) };
   }
 
   /**
-   * Một thư mục con do cổng tạo: có rồi thì dùng lại, chưa có thì tạo.
-   * @param parentId  id thư mục cha ('root' = My Drive)
-   * @param name      tên thư mục con
-   * @param headers   header có access token
-   * @returns         id thư mục con
+   * Kiểm một thư mục Admin vừa chọn bằng Picker: cổng mở được, là thư mục, chưa vào thùng rác.
+   * @param account   email và refresh token đã mã hóa của tài khoản sẽ lưu vào
+   * @param folderId  id thư mục
+   * @returns         tên thư mục trên Drive; không mở được thì null
+   * @throws          lỗi khi không lấy được access token
    */
-  private async childFolderId(parentId: string, name: string, headers: Record<string, string>): Promise<string> {
-    const query = `name = '${name.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}' and mimeType = '${DRIVE_FOLDER_MIME}' and '${parentId}' in parents and trashed = false`;
-    const found = await fetch(`${DRIVE_FILES_URL}?${new URLSearchParams({ q: query, fields: 'files(id)', pageSize: '1', spaces: 'drive' })}`, {
-      headers,
+  async checkFolder(account: DriveGrant, folderId: string): Promise<string | null> {
+    const accessToken = await this.accessToken(account);
+    const response = await fetch(`${DRIVE_FILES_URL}/${encodeURIComponent(folderId)}?fields=name,mimeType,trashed`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
       signal: AbortSignal.timeout(GOOGLE_TIMEOUT_MS),
     });
-    if (!found.ok) throw await googleError(found, 'tìm thư mục');
-    const existingId = ((await found.json()) as { files?: { id: string }[] }).files?.[0]?.id;
-    if (existingId) return existingId;
+    if (!response.ok) return null;
+    const folder = (await response.json()) as { name?: string; mimeType?: string; trashed?: boolean };
+    return folder.mimeType === DRIVE_FOLDER_MIME && !folder.trashed && folder.name ? folder.name : null;
+  }
 
-    const created = await fetch(DRIVE_FILES_URL, {
+  /**
+   * Tạo một thư mục mới trên Drive (quyền drive.file cho tạo trong My Drive hoặc trong thư mục Admin đã chọn bằng Picker).
+   * Picker không tạo được thư mục, nên Admin gõ tên thư mục mới và máy chủ tạo lúc lưu nơi lưu.
+   * @param account   email và refresh token đã mã hóa của tài khoản
+   * @param parentId  thư mục cha ('root' = My Drive)
+   * @param name      tên thư mục mới
+   * @returns         id và tên thư mục vừa tạo
+   * @throws          lỗi khi không lấy được access token, hoặc Drive từ chối (không có quyền vào thư mục cha…)
+   */
+  async createFolder(account: DriveGrant, parentId: string, name: string): Promise<{ id: string; name: string }> {
+    const accessToken = await this.accessToken(account);
+    const response = await fetch(`${DRIVE_FILES_URL}?fields=id,name`, {
       method: 'POST',
-      headers: { ...headers, 'Content-Type': 'application/json' },
+      headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({ name, mimeType: DRIVE_FOLDER_MIME, parents: [parentId] }),
       signal: AbortSignal.timeout(GOOGLE_TIMEOUT_MS),
     });
-    if (!created.ok) throw await googleError(created, 'tạo thư mục');
-    return ((await created.json()) as { id: string }).id;
+    if (!response.ok) throw await googleError(response, 'tạo thư mục');
+    const created = (await response.json()) as { id: string; name?: string };
+    return { id: created.id, name: created.name ?? name };
+  }
+
+  /**
+   * Thư mục của nơi lưu trên Drive (Admin chọn bằng Picker), kiểm lại còn mở được không.
+   * @param target       nơi lưu Drive
+   * @param accessToken  access token
+   * @returns            id thư mục ('root' = My Drive, của nơi lưu cũ)
+   * @throws             lỗi khi chưa chọn thư mục, thư mục đã xóa hoặc cổng không còn quyền
+   */
+  private async folderId(target: BackupTargetRow, accessToken: string): Promise<string> {
+    if (!target.googleFolderId) throw new Error('Nơi lưu chưa chọn thư mục trên Drive: sửa nơi lưu, bấm “Chọn thư mục”.');
+    if (target.googleFolderId === DRIVE_ROOT_FOLDER_ID) return DRIVE_ROOT_FOLDER_ID;
+    const existing = await fetch(`${DRIVE_FILES_URL}/${encodeURIComponent(target.googleFolderId)}?fields=trashed`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+      signal: AbortSignal.timeout(GOOGLE_TIMEOUT_MS),
+    });
+    if (!existing.ok || ((await existing.json()) as { trashed?: boolean }).trashed) {
+      throw new Error('Thư mục trên Drive đã bị xóa hoặc cổng không còn quyền vào: sửa nơi lưu, bấm “Chọn thư mục” để chọn lại.');
+    }
+    return target.googleFolderId;
   }
 
   /**
@@ -336,7 +387,7 @@ export class GoogleDriveBackupService {
    * @returns         id tệp trên Drive
    */
   async upload(target: BackupTargetRow, filePath: string, fileName: string): Promise<string> {
-    const accessToken = await this.accessToken(target);
+    const accessToken = await this.accessToken(accountOf(target));
     const parentId = await this.folderId(target, accessToken);
     const { size } = await stat(filePath);
 
@@ -365,7 +416,7 @@ export class GoogleDriveBackupService {
    * @param driveFileId  id tệp
    */
   async remove(target: BackupTargetRow, driveFileId: string): Promise<void> {
-    const accessToken = await this.accessToken(target);
+    const accessToken = await this.accessToken(accountOf(target));
     const response = await fetch(`${DRIVE_FILES_URL}/${driveFileId}`, {
       method: 'DELETE',
       headers: { Authorization: `Bearer ${accessToken}` },

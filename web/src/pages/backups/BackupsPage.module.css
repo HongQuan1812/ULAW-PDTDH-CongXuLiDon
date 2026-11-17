@@ -129,5 +129,11 @@
 .driveAccount{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 14px;border-radius:10px;background:var(--s-duyet-bg);font-weight:400}
 .driveAccountEmail{display:flex;align-items:center;gap:8px;color:var(--s-duyet-fg);font-weight:500;overflow-wrap:anywhere;min-width:0}
 .driveAccountEmail i{font-style:normal;font-weight:700}
+/* Ô thư mục Drive: các nút (Chọn / Đổi thư mục, Tạo thư mục mới) nằm cạnh nhau, hẹp thì xuống dòng */
+.folderActions{display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px}
+/* Ô thư mục Drive kiểu hộp "Lưu thành…": dòng Lưu vào (tên + nút Chọn…), ô thư mục mới bên trong */
+.saveAs{display:grid;gap:12px;padding:12px 14px;border:1px solid var(--line-2);border-radius:12px;font-weight:400}
+.saveAsRow{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 12px}
+.saveAsLocation{display:grid;gap:2px;min-width:0;overflow-wrap:anywhere}
 .demoGoogle{display:grid;gap:10px;padding:14px 16px;border:1px dashed var(--line-2);border-radius:12px;background:var(--bg);font-weight:400}
 .demoGoogle strong{font-weight:600}

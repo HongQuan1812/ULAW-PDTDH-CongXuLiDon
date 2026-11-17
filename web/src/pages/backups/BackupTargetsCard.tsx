@@ -35,18 +35,18 @@ export function targetMetaText(target: BackupTarget): string {
 }
 
 /**
- * Thư mục của nơi lưu Drive, tính từ My Drive.
- * @param folder  đường dẫn đã lưu; trống = My Drive
- * @returns       vd 'My Drive/Công việc/Sao lưu', 'My Drive'
+ * Thư mục của nơi lưu Drive (chọn bằng Picker).
+ * @param folder  tên thư mục đã lưu; trống = My Drive (nơi lưu cũ)
+ * @returns       vd 'Thư mục WorkingSpace', 'My Drive'
  */
 function driveFolderText(folder: string): string {
-  return folder ? `My Drive/${folder}` : 'My Drive';
+  return folder ? `Thư mục ${folder}` : 'My Drive';
 }
 
 /**
  * Mô tả một nơi lưu ở thẻ Nơi lưu, ba dòng: loại nơi lưu (Drive kèm tài khoản), thư mục, giữ bao nhiêu / đang có bao nhiêu.
  * @param target  nơi lưu
- * @returns       vd ['Google Drive · an@gmail.com', 'My Drive/Sao lưu cổng', 'Giữ 14 bản · đang có 3']
+ * @returns       vd ['Google Drive · an@gmail.com', 'Thư mục Sao lưu cổng', 'Giữ 14 bản · đang có 3']
  */
 function targetMetaLines(target: BackupTarget): string[] {
   const kindLine = target.kind === 'googleDrive' && target.googleAccount ? `${BACKUP_TARGET_KIND_LABEL.googleDrive} · ${target.googleAccount}` : BACKUP_TARGET_KIND_LABEL[target.kind];

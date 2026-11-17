@@ -16,6 +16,8 @@ import {
   type BackupsResponse,
   type ConnectGoogleDriveRequest,
   type ConnectGoogleDriveResponse,
+  type DrivePickerRequest,
+  type DrivePickerResponse,
 } from '@ulaw/shared';
 import { apiFetch, fetchFile, type DownloadedFile } from './client';
 import { listPath, toListPage, type ListSource } from './lists';
@@ -153,6 +155,17 @@ export function useConnectGoogleDrive() {
       const response = await apiFetch<ConnectGoogleDriveResponse>(ENDPOINTS.backups.driveConnect, { method: 'POST', body: JSON.stringify(connectRequest) });
       return response.kind === 'connected' ? { driveGrantId: response.driveGrantId, email: response.email } : connectInPopup(response.url);
     },
+  });
+}
+
+/**
+ * Xin máy chủ quyền mở Google Picker chọn thư mục Drive (tài khoản vừa kết nối hoặc của nơi lưu đang sửa).
+ * @returns  kết quả useMutation; gọi mutateAsync({ driveGrantId } | { targetId }) → 'picker' kèm token, hoặc 'demo' (tài khoản kết nối bằng bản giả)
+ */
+export function useDrivePicker() {
+  return useMutation({
+    mutationFn: (pickerRequest: DrivePickerRequest) =>
+      apiFetch<DrivePickerResponse>(ENDPOINTS.backups.drivePicker, { method: 'POST', body: JSON.stringify(pickerRequest) }),
   });
 }
 

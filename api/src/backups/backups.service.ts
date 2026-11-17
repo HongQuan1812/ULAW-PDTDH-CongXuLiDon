@@ -9,6 +9,8 @@ import { randomUUID } from 'node:crypto';
 import { Injectable, Logger, type OnModuleDestroy, type OnModuleInit } from '@nestjs/common';
 import {
   BACKUP_MESSAGES,
+  DRIVE_ROOT_FOLDER_ID,
+  DRIVE_ROOT_FOLDER_NAME,
   BACKUP_RUN_LIST_DEFAULT_SORTING,
   BACKUP_RUN_LIST_FIELDS,
   applyListQuery,
@@ -23,6 +25,8 @@ import {
   type BackupTarget,
   type BackupTargetInput,
   type BackupsResponse,
+  type DrivePickerRequest,
+  type DrivePickerResponse,
   type ListQuery,
 } from '@ulaw/shared';
 import { ApiException } from '../common/api-exception';
@@ -31,7 +35,7 @@ import { fromVietnamTime, toVietnamSeconds, toVietnamTime } from '../common/viet
 import { AppConfig } from '../config/app-config';
 import type { Prisma, User } from '../generated/prisma/client';
 import { createBackupArchive } from './backup-archive';
-import { GoogleDriveBackupService, driveFolderUrlOf } from './google-drive-backup.service';
+import { GoogleDriveBackupService, accountOf, driveFolderUrlOf, type DriveGrant } from './google-drive-backup.service';
 
 /** Bao lâu kiểm lịch một lần, mili giây (nhỏ hơn một phút để không lỡ phút nào). */
 const SCHEDULE_CHECK_MS = 30_000;
@@ -129,7 +133,18 @@ export class BackupsService implements OnModuleInit, OnModuleDestroy {
    */
   private toTarget(row: BackupTargetRow, backupCount: number): BackupTarget {
     const driveFolderUrl = row.kind === 'googleDrive' && row.googleFolderId ? driveFolderUrlOf(row.googleFolderId) : null;
-    return { id: row.id, name: row.name, kind: row.kind, folder: row.folder, keepLatest: row.keepLatest, googleAccount: row.googleAccount, driveFolderUrl, backupCount };
+    const driveFolderId = row.kind === 'googleDrive' ? row.googleFolderId : null;
+    return {
+      id: row.id,
+      name: row.name,
+      kind: row.kind,
+      folder: row.folder,
+      keepLatest: row.keepLatest,
+      googleAccount: row.googleAccount,
+      driveFolderId,
+      driveFolderUrl,
+      backupCount,
+    };
   }
 
   /**
@@ -202,54 +217,156 @@ export class BackupsService implements OnModuleInit, OnModuleDestroy {
   /* ---------- Nơi lưu, lịch ---------- */
 
   /**
-   * Thêm hoặc sửa một nơi lưu. Nơi lưu Google Drive phải có tài khoản: lần kết nối vừa làm (driveGrantId), hoặc tài khoản cũ khi sửa nơi Drive đã kết nối.
+   * Thêm hoặc sửa một nơi lưu. Nơi lưu Google Drive phải có tài khoản (lần kết nối vừa làm, hoặc tài khoản cũ khi sửa nơi Drive đã kết nối)
+   * và thư mục chọn bằng Picker (cổng phải mở được).
    * @param input     thông tin nơi lưu (đã kiểm tra)
    * @param user      người đang lưu (lần kết nối phải của người này)
    * @param targetId  id nơi lưu cần sửa; không có = thêm mới
    * @returns         nơi lưu sau khi lưu
-   * @throws          404 không có nơi lưu · 409 trùng kiểu và thư mục với nơi khác · 422 Drive chưa kết nối, kết nối hết hạn
+   * @throws          404 không có nơi lưu · 409 trùng thư mục với nơi khác · 422 Drive chưa kết nối, kết nối hết hạn, không mở được thư mục
    */
   async saveTarget(input: BackupTargetInput, user: User, targetId?: string): Promise<BackupTarget> {
-    const { driveGrantId, ...fields } = input;
+    const { driveGrantId, driveFolderId, newDriveFolderName, ...fields } = input;
     const existing = targetId ? await this.prisma.backupTarget.findUnique({ where: { id: targetId } }) : null;
     if (targetId && !existing) throw new ApiException(404, BACKUP_MESSAGES.targetNotFound);
-    const duplicate = await this.prisma.backupTarget.findFirst({ where: { kind: fields.kind, folder: fields.folder, NOT: { id: targetId ?? '' } } });
+
+    // Thư mục và tài khoản Google: Drive thì kiểm (chưa dùng lần kết nối), thư mục máy chủ thì bỏ tài khoản
+    const placeFields =
+      fields.kind === 'googleDrive'
+        ? await this.driveFieldsFor({ folderName: fields.folder, driveFolderId: driveFolderId!, newDriveFolderName }, existing, driveGrantId, user)
+        : { folder: fields.folder, googleAccount: null, googleRefreshToken: null, googleFolderId: null };
+
+    // Trùng: thư mục máy chủ theo đường dẫn, Drive theo id thư mục
+    const duplicate = await this.prisma.backupTarget.findFirst({
+      where: {
+        kind: fields.kind,
+        ...(fields.kind === 'googleDrive' ? { googleFolderId: placeFields.googleFolderId } : { folder: placeFields.folder }),
+        NOT: { id: targetId ?? '' },
+      },
+    });
     if (duplicate) throw new ApiException(409, BACKUP_MESSAGES.duplicateTarget);
 
-    // Tài khoản Google: kết nối mới, giữ tài khoản cũ, hoặc bỏ (kiểu thư mục máy chủ)
-    const googleFields = this.googleFieldsFor(fields, existing, driveGrantId, user);
+    // Lần kết nối dùng một lần: chỉ bỏ khi đã chắc lưu được
+    if (fields.kind === 'googleDrive' && driveGrantId) this.googleDrive.takeGrant(driveGrantId, user.id);
+    const data = { ...fields, ...placeFields };
     const saved = existing
-      ? await this.prisma.backupTarget.update({ where: { id: existing.id }, data: { ...fields, ...googleFields } })
-      : await this.prisma.backupTarget.create({ data: { id: `backup-target-${randomUUID()}`, ...fields, ...googleFields } });
+      ? await this.prisma.backupTarget.update({ where: { id: existing.id }, data })
+      : await this.prisma.backupTarget.create({ data: { id: `backup-target-${randomUUID()}`, ...data } });
     const backupCount = await this.prisma.backupRun.count({ where: { targetId: saved.id, status: 'ok', pruned: false } });
     return this.toTarget(saved, backupCount);
   }
 
   /**
-   * Các cột tài khoản Google của nơi lưu sắp lưu.
-   * @param fields        kiểu, thư mục mới
+   * Tài khoản Google của nơi lưu Drive: lần kết nối vừa làm, hoặc tài khoản cũ của nơi Drive đang sửa. Không bỏ lần kết nối.
    * @param existing      nơi lưu đang sửa; null = thêm mới
    * @param driveGrantId  lần kết nối vừa làm (nếu có)
    * @param user          người đang lưu
-   * @returns             googleAccount, googleRefreshToken, googleFolderId cần ghi (đổi thư mục Drive thì tạo thư mục mới ở lần lưu tới)
-   * @throws              422 kết nối hết hạn · 422 Drive mà chưa có tài khoản
+   * @returns             email, refresh token đã mã hóa; isNew = lần kết nối vừa làm
+   * @throws              422 kết nối hết hạn · 422 chưa có tài khoản
    */
-  private googleFieldsFor(
-    fields: Omit<BackupTargetInput, 'driveGrantId'>,
+  private driveAccountFor(existing: BackupTargetRow | null, driveGrantId: string | undefined, user: User): DriveGrant & { isNew: boolean } {
+    if (driveGrantId) {
+      const grant = this.googleDrive.peekGrant(driveGrantId, user.id);
+      if (!grant) throw new ApiException(422, BACKUP_MESSAGES.driveGrantExpired);
+      return { ...grant, isNew: true };
+    }
+    if (existing?.kind === 'googleDrive' && existing.googleAccount) return { ...accountOf(existing), isNew: false };
+    throw new ApiException(422, BACKUP_MESSAGES.driveConnectFirst);
+  }
+
+  /**
+   * Các cột của nơi lưu Drive sắp lưu: tài khoản, id thư mục, tên thư mục.
+   * Chỗ lưu là My Drive, hoặc thư mục chọn bằng Picker: mới chọn (hoặc đổi tài khoản) thì hỏi Drive xem cổng mở được không, lấy tên thật;
+   * giữ nguyên thì giữ tên cũ. Có tên thư mục mới thì tạo thư mục đó bên trong chỗ lưu rồi lưu vào đó.
+   * @param driveFolder    folderName: tên chỗ lưu giao diện gửi · driveFolderId: chỗ lưu · newDriveFolderName: tên thư mục mới (trống = không tạo)
+   * @param existing       nơi lưu đang sửa; null = thêm mới
+   * @param driveGrantId   lần kết nối vừa làm (nếu có)
+   * @param user           người đang lưu
+   * @returns              folder, googleAccount, googleRefreshToken, googleFolderId
+   * @throws               422 kết nối hết hạn, chưa có tài khoản, không mở được thư mục · 409 Drive không tạo được thư mục mới
+   */
+  private async driveFieldsFor(
+    driveFolder: { folderName: string; driveFolderId: string; newDriveFolderName?: string },
     existing: BackupTargetRow | null,
     driveGrantId: string | undefined,
     user: User,
-  ): Pick<BackupTargetRow, 'googleAccount' | 'googleRefreshToken' | 'googleFolderId'> | Pick<BackupTargetRow, 'googleFolderId'> {
-    if (fields.kind !== 'googleDrive') return { googleAccount: null, googleRefreshToken: null, googleFolderId: null };
-    if (driveGrantId) {
-      const grant = this.googleDrive.takeGrant(driveGrantId, user.id);
+  ): Promise<Pick<BackupTargetRow, 'folder' | 'googleAccount' | 'googleRefreshToken' | 'googleFolderId'>> {
+    const { folderName, driveFolderId, newDriveFolderName } = driveFolder;
+    const account = this.driveAccountFor(existing, driveGrantId, user);
+    const accountFields = { googleAccount: account.email, googleRefreshToken: account.encryptedRefreshToken };
+
+    // Chỗ lưu: cùng tài khoản, cùng thư mục thì không hỏi Drive; My Drive thì luôn mở được
+    let location: { id: string; name: string };
+    if (!account.isNew && existing?.googleFolderId === driveFolderId) location = { id: driveFolderId, name: existing.folder };
+    else if (driveFolderId === DRIVE_ROOT_FOLDER_ID) location = { id: driveFolderId, name: DRIVE_ROOT_FOLDER_NAME };
+    else location = { id: driveFolderId, name: await this.checkedDriveFolderName(account, driveFolderId, folderName) };
+    if (!newDriveFolderName) return { folder: location.name, googleFolderId: location.id, ...accountFields };
+
+    /* JUST FOR DEMO: START · tài khoản kết nối bằng bản giả dev-google-drive-connect: không gọi Google, thư mục mới là thư mục giả.
+       Bản thật: luôn có refresh token, tạo trên Drive */
+    if (!account.encryptedRefreshToken) return { folder: newDriveFolderName, googleFolderId: `demo-${randomUUID()}`, ...accountFields };
+    /* JUST FOR DEMO: END */
+
+    // Tạo thư mục mới bên trong chỗ lưu
+    const created = await this.googleDrive.createFolder(account, location.id, newDriveFolderName).catch((error: unknown) => {
+      throw new ApiException(409, error instanceof Error ? error.message : BACKUP_MESSAGES.driveFolderInvalid);
+    });
+    return { folder: created.name, googleFolderId: created.id, ...accountFields };
+  }
+
+  /**
+   * Hỏi Drive xem cổng mở được thư mục Admin vừa chọn không.
+   * @param account     tài khoản của nơi lưu
+   * @param folderId    id thư mục chọn bằng Picker
+   * @param folderName  tên giao diện gửi (chỉ dùng cho tài khoản kết nối bằng bản giả)
+   * @returns           tên thư mục trên Drive
+   * @throws            422 không mở được thư mục
+   */
+  private async checkedDriveFolderName(account: DriveGrant, folderId: string, folderName: string): Promise<string> {
+    /* JUST FOR DEMO: START · tài khoản kết nối bằng bản giả: không có quyền Google, lấy tên giao diện gửi. Bản thật: luôn có refresh token, hỏi Drive */
+    if (!account.encryptedRefreshToken) return folderName || folderId;
+    /* JUST FOR DEMO: END */
+
+    const driveName = await this.googleDrive.checkFolder(account, folderId).catch(() => null);
+    if (!driveName) throw new ApiException(422, BACKUP_MESSAGES.driveFolderInvalid);
+    return driveName;
+  }
+
+  /**
+   * Tài khoản Drive để mở Picker: lần kết nối vừa làm (không bỏ), hoặc tài khoản của nơi lưu Drive đang sửa.
+   * @param accountRef  driveGrantId hoặc targetId (đúng một, đã kiểm bằng schema)
+   * @param user        người đang làm (lần kết nối phải của người này)
+   * @returns           email và refresh token đã mã hóa
+   * @throws            422 kết nối hết hạn · 404 không có nơi lưu · 409 nơi lưu chưa kết nối Drive
+   */
+  private async driveAccountOf(accountRef: DrivePickerRequest, user: User): Promise<DriveGrant> {
+    if (accountRef.driveGrantId) {
+      const grant = this.googleDrive.peekGrant(accountRef.driveGrantId, user.id);
       if (!grant) throw new ApiException(422, BACKUP_MESSAGES.driveGrantExpired);
-      return { googleAccount: grant.email, googleRefreshToken: grant.encryptedRefreshToken, googleFolderId: null };
+      return grant;
     }
-    if (existing?.kind === 'googleDrive' && existing.googleAccount) {
-      return { googleFolderId: existing.folder === fields.folder ? existing.googleFolderId : null };
-    }
-    throw new ApiException(422, BACKUP_MESSAGES.driveConnectFirst);
+    const target = await this.prisma.backupTarget.findUnique({ where: { id: accountRef.targetId! } });
+    if (!target) throw new ApiException(404, BACKUP_MESSAGES.targetNotFound);
+    if (target.kind !== 'googleDrive' || !target.googleAccount) throw new ApiException(409, BACKUP_MESSAGES.driveNotConnected);
+    return accountOf(target);
+  }
+
+  /**
+   * Mở Google Picker chọn thư mục Drive cho nơi lưu.
+   * @param pickerRequest  tài khoản vừa kết nối (driveGrantId) hoặc nơi lưu Drive đang sửa (targetId)
+   * @param user           người đang chọn (lần kết nối phải của người này)
+   * @returns              'picker' kèm access token, API key, appId · tài khoản kết nối bằng bản giả: 'demo'
+   * @throws               422 kết nối hết hạn · 404 không có nơi lưu · 409 nơi lưu chưa kết nối Drive, Google từ chối cấp token · 503 chưa có API key
+   */
+  async drivePicker(pickerRequest: DrivePickerRequest, user: User): Promise<DrivePickerResponse> {
+    const account = await this.driveAccountOf(pickerRequest, user);
+
+    // Google từ chối cấp token (đã thu hồi quyền…) thì báo câu lỗi
+    const session = await this.googleDrive.pickerSession(account).catch((error: unknown) => {
+      throw new ApiException(409, error instanceof Error ? error.message : BACKUP_MESSAGES.driveNotConnected);
+    });
+    if (!session) throw new ApiException(503, BACKUP_MESSAGES.pickerUnavailable);
+    return session;
   }
 
   /**

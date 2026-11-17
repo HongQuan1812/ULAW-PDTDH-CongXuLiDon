@@ -42,7 +42,7 @@ describe('nơi lưu, tên tệp', () => {
     for (const folder of ['../etc', '/abs', 'a//b', 'có dấu']) {
       expect(BackupTargetInputSchema.safeParse({ ...target, folder }).success).toBe(false);
     }
-    expect(BackupTargetInputSchema.safeParse({ ...target, kind: 'googleDrive', folder: 'Sao lưu cổng' }).success).toBe(true);
+    expect(BackupTargetInputSchema.safeParse({ ...target, kind: 'googleDrive', folder: 'Sao lưu cổng', driveFolderId: '1AbC' }).success).toBe(true);
   });
 
   test('tên tệp theo lúc bắt đầu', () => {
