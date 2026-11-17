@@ -66,7 +66,7 @@ export async function seedProduction(
     emailSettings = 'created';
   }
 
-  // Sao lưu: chưa có nơi lưu lẫn lịch nào (lần đầu cài) thì tạo nơi lưu trên máy chủ và lịch 02:00 hằng ngày;
+  // Sao lưu: chưa có nơi lưu lẫn lịch nào (lần đầu cài) thì tạo nơi lưu trên máy chủ và lịch 02:00 hằng ngày (tắt sẵn, Admin tự bật);
   // đã có (có thể Admin đã sửa, đã tắt, đã bỏ bớt) thì giữ nguyên
   const [targetCount, scheduleCount] = await Promise.all([prisma.backupTarget.count(), prisma.backupSchedule.count()]);
   if (targetCount || scheduleCount) return { admin, emailSettings, backups: 'unchanged' };

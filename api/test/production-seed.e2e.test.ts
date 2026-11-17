@@ -83,7 +83,7 @@ describe('seedProduction', () => {
     }
   });
 
-  it('chưa có nơi lưu lẫn lịch sao lưu nào thì tạo nơi lưu trên máy chủ và lịch 02:00 hằng ngày; đã có thì giữ nguyên', async () => {
+  it('chưa có nơi lưu lẫn lịch sao lưu nào thì tạo nơi lưu trên máy chủ và lịch 02:00 hằng ngày (tắt sẵn); đã có thì giữ nguyên', async () => {
     const [targetsBefore, schedulesBefore] = await Promise.all([prisma.backupTarget.findMany(), prisma.backupSchedule.findMany()]);
     await prisma.backupSchedule.deleteMany();
     await prisma.backupTarget.deleteMany();
@@ -91,7 +91,7 @@ describe('seedProduction', () => {
       const report = await seedProduction(prisma, NEW_ADMIN_EMAIL);
 
       expect(report.backups).toBe('created');
-      expect(await prisma.backupSchedule.findMany()).toMatchObject([{ enabled: true, time: '02:00', targetIds: ['backup-target-server'] }]);
+      expect(await prisma.backupSchedule.findMany()).toMatchObject([{ enabled: false, time: '02:00', targetIds: ['backup-target-server'] }]);
       expect(await prisma.backupTarget.count({ where: { id: 'backup-target-server' } })).toBe(1);
       expect((await seedProduction(prisma, NEW_ADMIN_EMAIL)).backups).toBe('unchanged');
     } finally {

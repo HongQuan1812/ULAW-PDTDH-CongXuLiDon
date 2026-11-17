@@ -227,7 +227,7 @@ Mỗi loại đơn có hai nhóm mẫu, lưu ở máy chủ theo loại đơn, d
 - **Lịch định kì**: một danh sách lịch (thêm, sửa, bỏ). Mỗi lịch: bật / tắt, hằng ngày hoặc hằng tuần (thứ mấy), giờ chạy theo giờ Việt Nam,
   lưu vào một hoặc nhiều nơi (một tệp, chép vào từng nơi; nơi nào lỗi thì chỉ dòng đó lỗi). Nhiều lịch trúng cùng một phút thì chạy chung một lần,
   lưu vào mọi nơi của các lịch đó. "Lần tới" là lần sớm nhất trong các lịch đang bật. Backend kiểm mỗi 30 giây; tắt đúng phút chạy thì lần ấy bỏ qua; khởi động lại trong cùng phút không chạy trùng.
-  Bản thật mặc định (seed:production, chỉ thêm khi chưa có nơi lưu lẫn lịch nào): một nơi lưu "Trên máy chủ" (`hang-ngay`, giữ 14 bản), một lịch 02:00 hằng ngày.
+  Bản thật mặc định (seed:production, chỉ thêm khi chưa có nơi lưu lẫn lịch nào): một nơi lưu "Trên máy chủ" (`hang-ngay`, giữ 14 bản), một lịch 02:00 hằng ngày, **tắt sẵn** (Admin tự bật, không tự sao lưu khi chưa ai biết).
 - Giao diện: lịch sử bên trái; khung "Lịch và nơi lưu" bên phải (hẹp thì trượt ra từ bên phải) gồm hai mục thu gọn được kiểu VS Code, mỗi mục có nút + để thêm.
 - **Lịch sử**: mỗi lần sao lưu vào mỗi nơi một dòng: lúc bắt đầu, nơi lưu (tên chép lại lúc chạy), chạy tay (ai bấm) hay định kì, dung lượng,
   tình trạng (Đang chạy / Thành công / Lỗi kèm câu lỗi / Đã xóa vì quá số bản giữ). Bảng phân trang ở máy chủ (`GET /backups/runs`, 10 dòng mỗi trang),

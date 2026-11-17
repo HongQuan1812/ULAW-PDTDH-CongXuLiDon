@@ -7,7 +7,7 @@ export const BACKUP_TARGETS_SEED: readonly (BackupTargetInput & { id: string })[
   { id: 'backup-target-server', name: 'Trên máy chủ', kind: 'serverFolder', folder: 'hang-ngay', keepLatest: 14 },
 ];
 
-/** Lịch ban đầu: một lịch 02:00 hằng ngày, lưu vào thư mục trên máy chủ. */
+/** Lịch ban đầu: một lịch 02:00 hằng ngày, lưu vào thư mục trên máy chủ. Tắt sẵn: Admin tự bật khi muốn sao lưu định kì. */
 export const BACKUP_SCHEDULES_SEED: readonly BackupScheduleItem[] = [
-  { id: 'backup-schedule-daily', enabled: true, frequency: 'daily', weekday: 1, time: '02:00', targetIds: ['backup-target-server'] },
+  { id: 'backup-schedule-daily', enabled: false, frequency: 'daily', weekday: 1, time: '02:00', targetIds: ['backup-target-server'] },
 ];
