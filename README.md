@@ -34,6 +34,7 @@ pnpm dev:up
 | Chạy test | `pnpm dev:test` |
 | Xem log (mọi container; chỉ một cái thì thêm tên, vd `pnpm dev:logs api`) | `pnpm dev:logs` |
 | Tắt | `pnpm dev:down` |
+| Tắt và xóa luôn volume (database, tệp tải lên, bản sao lưu, thư viện đã cài của container); bật lại là như mới cài | `pnpm dev:wipe` |
 
 Các lệnh `pnpm dev:*`, `pnpm prod:*` ghi trong `package.json` ở thư mục gốc, là lệnh `docker compose` viết gọn. Thêm chữ phía sau thì nối vào cuối lệnh, vd `pnpm dev:up postgres` chỉ bật postgres.
 
@@ -77,8 +78,9 @@ Các lần sau:
 | Đổi chứng chỉ | `docker compose -f docker-compose.prod.yml --env-file .env.prod restart nginx` |
 | Xem log (mọi container; chỉ một cái thì thêm tên, vd `pnpm prod:logs api`) | `pnpm prod:logs` |
 | Tắt | `pnpm prod:down` |
+| Tắt và xóa luôn volume, như mới cài (chỉ để thử trên máy mình) | `pnpm prod:wipe` |
 
-Không dùng `down -v`: xóa luôn dữ liệu và tệp tải lên.
+Máy chủ thật không dùng `pnpm prod:wipe` (`down -v`): xóa luôn database, tệp tải lên, bản sao lưu trên máy chủ, không lấy lại được.
 
 ## Đăng nhập Google
 

@@ -12,7 +12,7 @@
 #     (mỗi lần bật / restart api tự chạy: migrate deploy → seed:production với FIRST_ADMIN_EMAIL → backend, không xóa gì)
 #   docker compose -f docker-compose.prod.yml --env-file .env.prod logs -f api                       # xem log backend
 #   docker compose -f docker-compose.prod.yml --env-file .env.prod down                              # dừng (dữ liệu vẫn còn)
-#   KHÔNG dùng "down -v": xóa luôn volume, mất hết dữ liệu và tệp tải lên
+#   KHÔNG dùng "down -v" (pnpm prod:wipe) trên máy chủ thật: xóa luôn volume, mất hết dữ liệu và tệp tải lên (chỉ để thử trên máy mình)
 
 # Tên đặt theo ulaw-cong-xu-li-don-<môi trường>-<phần>, để không lẫn với docker-compose.dev.yml và dự án khác
 name: ulaw-cong-xu-li-don-prod

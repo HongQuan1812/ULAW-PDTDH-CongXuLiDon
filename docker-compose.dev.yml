@@ -4,7 +4,7 @@
 #   Về dữ liệu mẫu:    ... restart api      (mỗi lần bật / restart api: migrate deploy → seed, xóa sạch dữ liệu cũ)
 #   Đổi .env.dev:      ... up -d api web
 #   Xem log:           ... logs -f api
-#   Dừng: ... down  ·  Xóa luôn dữ liệu, thư viện đã cài: ... down -v
+#   Dừng: ... down  ·  Xóa luôn dữ liệu, thư viện đã cài: ... down -v (pnpm dev:wipe)
 # Mã nguồn gắn từ máy vào container: sửa code thì backend, web tự chạy lại, không seed lại.
 # Hai lớp tài khoản: superuser chung của cả instance (POSTGRES_ADMIN_*), và user riêng của dự án (APP_DB_*)
 # chỉ làm chủ database của dự án, do docker/postgres/init/ tạo ở lần khởi động đầu tiên.
