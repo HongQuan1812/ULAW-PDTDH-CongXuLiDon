@@ -1,8 +1,10 @@
 # CI/CD: kiểm thử → build image đẩy lên GHCR → deploy lên máy đích.
 #   Pull Request vào main: chỉ chạy kiểm thử (máy của GitHub).
-#   Push / merge vào main:  kiểm thử → build → tự deploy lên dev-machine.
+#   Push / merge vào main:  kiểm thử → build → tự deploy lên một máy dev đang bật (runner nhãn dev-machine nào rảnh thì nhận).
 #   Actions → CI/CD → Run workflow (nhánh main), chọn máy: chỉ deploy image đã build của commit mới nhất trên main (không kiểm thử, build lại).
-# Mỗi máy đích cài một self-hosted runner gắn nhãn dev-machine hoặc prod-machine, và có một Environment cùng tên (biến DEPLOY_DIR): README, mục CI/CD.
+#     dev-machine = máy dev nào đang bật · dev-machine-1, dev-machine-2 = đúng máy đó · prod-machine = máy chủ trường
+# Mỗi máy dev cài một self-hosted runner gắn 2 nhãn: dev-machine (chung) và dev-machine-<số> (riêng); máy chủ: prod-machine.
+# DEPLOY_DIR đặt trong tệp .env ở thư mục cài runner của từng máy (GitHub chọn máy lúc chạy, nên mỗi máy tự giữ thư mục của mình): README, mục CI/CD.
 name: CI/CD
 
 on:
@@ -15,7 +17,7 @@ on:
       target:
         description: Deploy lên máy nào
         type: choice
-        options: [dev-machine, prod-machine]
+        options: [dev-machine, dev-machine-1, dev-machine-2, prod-machine]
         default: dev-machine
 
 # Mặc định chỉ được đọc mã nguồn; job nào cần thêm quyền thì tự khai báo
@@ -167,7 +169,7 @@ jobs:
           cache-to: type=gha,scope=web,mode=max
 
   # ==================== ③ Deploy trên máy đích (self-hosted runner) ====================
-  # Push vào main: sau khi build xong, lên dev-machine · Run workflow (chỉ từ main): lên máy đã chọn
+  # Push vào main: sau khi build xong, lên một máy dev đang bật · Run workflow (chỉ từ main): lên máy đã chọn
   deploy:
     name: Deploy lên ${{ inputs.target || 'dev-machine' }}
     needs: build
@@ -176,12 +178,12 @@ jobs:
         (github.event_name == 'push' && needs.build.result == 'success') ||
         github.event_name == 'workflow_dispatch'
       )
-    # Runner của máy đích: nhãn dev-machine hoặc prod-machine
+    # dev-machine: runner nào có nhãn chung này mà đang rảnh thì nhận · dev-machine-<số>, prod-machine: đúng máy đó
     runs-on: [self-hosted, "${{ inputs.target || 'dev-machine' }}"]
     timeout-minutes: 20
 
-    # Mỗi máy một Environment cùng tên, giữ DEPLOY_DIR của máy đó
-    # (muốn bấm duyệt tay trước khi deploy: Settings → Environments → <tên máy> → Required reviewers)
+    # Environment cùng tên lựa chọn, chỉ để bấm duyệt tay khi cần (Settings → Environments → <tên> → Required reviewers);
+    # DEPLOY_DIR không để ở đây mà trong .env của runner từng máy
     environment: ${{ inputs.target || 'dev-machine' }}
 
     # Mỗi máy mỗi lúc chỉ một lần deploy; lần sau chờ lần trước xong, không hủy giữa chừng
@@ -225,10 +227,10 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       # --- Deploy (commit chưa build được thì không có image, bước kéo image báo lỗi) ---
+      # DEPLOY_DIR: runner tự nạp từ tệp .env trong thư mục cài runner của máy này
       - name: Sao lưu (trang Sao lưu, "Trước cập nhật"), kéo image mới, bật lại
         shell: bash
         env:
-          DEPLOY_DIR: ${{ vars.DEPLOY_DIR }}
           API_IMAGE: ${{ steps.names.outputs.api }}
           WEB_IMAGE: ${{ steps.names.outputs.web }}
         run: bash docker/deploy.sh

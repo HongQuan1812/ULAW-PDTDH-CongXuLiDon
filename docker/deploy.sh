@@ -16,7 +16,7 @@ set -euo pipefail
 # Git Bash trên Windows: không tự đổi các chuỗi bắt đầu bằng / thành đường dẫn Windows
 export MSYS_NO_PATHCONV=1
 
-: "${DEPLOY_DIR:?Chưa đặt DEPLOY_DIR (GitHub: Settings → Environments → dev-machine hoặc prod-machine → Variables)}"
+: "${DEPLOY_DIR:?Chưa đặt DEPLOY_DIR (thêm dòng DEPLOY_DIR=<thư mục> vào tệp .env trong thư mục cài runner của máy này, rồi chạy lại runner)}"
 : "${API_IMAGE:?Thiếu API_IMAGE}"
 : "${WEB_IMAGE:?Thiếu WEB_IMAGE}"
 

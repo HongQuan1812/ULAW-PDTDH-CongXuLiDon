@@ -89,15 +89,24 @@ GitHub Actions, tệp `.github/workflows/deploy.yml`:
 | Khi | Job | Chạy ở |
 |---|---|---|
 | Pull Request vào `main` | ① Kiểm thử: typecheck, test `shared`, `web`, `api` (Postgres tạm) | máy của GitHub |
-| Push / merge vào `main` | ① Kiểm thử → ② Build image `api`, `nginx + web`, đẩy lên GHCR (tag theo commit) → ③ Deploy lên `dev-machine` | ①② máy của GitHub, ③ máy đích |
+| Push / merge vào `main` | ① Kiểm thử → ② Build image `api`, `nginx + web`, đẩy lên GHCR (tag theo commit) → ③ Deploy lên một máy dev đang bật | ①② máy của GitHub, ③ máy đích |
 | Actions → **CI/CD** → **Run workflow** (nhánh `main`), chọn máy | ③ Deploy image đã build của commit mới nhất trên `main` lên máy đã chọn (không kiểm thử, build lại) | máy đích |
 
-Hai máy đích, mỗi máy một runner gắn nhãn và một Environment cùng tên:
+Mỗi máy đích một runner. Máy dev gắn 2 nhãn: `dev-machine` (chung) và `dev-machine-<số>` (riêng).
 
-| Máy | Nhãn runner, Environment | Lên khi |
-|---|---|---|
-| máy cá nhân (chạy bản build thật, không phải `pnpm dev:up`) | `dev-machine` | tự động sau mỗi lần merge vào `main` |
-| máy chủ trường | `prod-machine` | bấm Run workflow, chọn `prod-machine` |
+| Máy | Nhãn runner |
+|---|---|
+| máy dev 1 (trên trường) | `dev-machine`, `dev-machine-1` |
+| máy dev 2 | `dev-machine`, `dev-machine-2` |
+| máy chủ trường | `prod-machine` |
+
+| Chọn ở Run workflow | Lên máy nào |
+|---|---|
+| `dev-machine` (cũng là mặc định khi push vào `main`) | một máy dev đang bật, rảnh; nhiều máy cùng bật thì GitHub tự chọn một; không máy nào bật thì chờ trong hàng đợi |
+| `dev-machine-1`, `dev-machine-2` | đúng máy đó |
+| `prod-machine` | máy chủ trường |
+
+Máy dev chạy bản build thật (`docker-compose.prod.yml`), không phải `pnpm dev:up`. Mỗi lần chỉ deploy lên một máy.
 
 Bước nào đỏ thì dừng, không deploy. Commit chưa build xong thì không có image, Run workflow báo lỗi ở bước kéo image. Deploy (`docker/deploy.sh`): sao lưu bằng chức năng Sao lưu của cổng (database + `uploads/` vào mọi nơi lưu kiểu "Thư mục trên máy chủ", giữ N bản, lịch sử ghi "Trước cập nhật"; chưa có nơi lưu nào kiểu này thì chỉ cảnh báo; lỗi thì dừng, không deploy) → kéo image mới → `up -d`, chờ api khỏe (api tự chạy `migrate deploy`).
 
@@ -107,10 +116,11 @@ Cài một lần trên máy đích:
 
 1. Máy đích có Docker, `.env.prod`, chứng chỉ, chạy được `pnpm prod:up` (mục trên). Windows thì cần thêm Git Bash (Git for Windows).
 2. GitHub → repo → **Settings → Actions → Runners → New self-hosted runner**, chọn hệ điều hành, chạy lần lượt các lệnh GitHub đưa (tải, `config`), rồi `run` (Windows: `run.cmd`).
-   Lúc `config` hỏi *additional labels* thì nhập tên máy: `dev-machine` hoặc `prod-machine` (đã cài rồi thì thêm nhãn ở trang runner trên GitHub).
+   Lúc `config` hỏi *additional labels* thì nhập nhãn theo bảng trên, cách nhau dấu phẩy, vd `dev-machine,dev-machine-2` (đã cài rồi thì thêm nhãn ở trang runner trên GitHub).
    Windows nên chạy `run.cmd` bằng tài khoản đang mở Docker Desktop, không cài thành service.
-3. **Settings → Environments → New environment**, tên trùng nhãn (`dev-machine` / `prod-machine`) → **Environment variables**: `DEPLOY_DIR` = thư mục chứa `.env.prod` trên máy đó (máy cá nhân: thư mục repo này).
-   Muốn bấm duyệt trước mỗi lần deploy (nên bật cho `prod-machine`): bật **Required reviewers**.
+3. Trong thư mục cài runner, tạo tệp `.env` có một dòng `DEPLOY_DIR=<thư mục chứa .env.prod trên máy đó>` (máy cá nhân: thư mục repo này), rồi chạy lại runner.
+   Để ở máy chứ không ở GitHub, vì khi chọn `dev-machine` GitHub mới quyết máy nào chạy, mỗi máy phải tự biết thư mục của mình.
+   Muốn bấm duyệt trước mỗi lần deploy (nên bật cho `prod-machine`): **Settings → Environments → prod-machine → Required reviewers**.
 4. Repo public: **Settings → Actions → General → Fork pull request workflows** chọn **Require approval for all external contributors**, để PR từ người lạ không chạy được trên máy đích.
 
 Image ở `ghcr.io/<chủ repo>/ulaw-cong-xu-li-don-api:<commit>`, `…-web:<commit>` (tab Packages), cùng tên với image build tại máy (`ulaw-cong-xu-li-don-api:prod`), chỉ khác chỗ lưu và tag. `pnpm prod:up` trên máy vẫn tự build như cũ, không cần GHCR.
