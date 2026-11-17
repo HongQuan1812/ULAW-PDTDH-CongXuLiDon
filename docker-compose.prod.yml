@@ -13,6 +13,9 @@
 #   docker compose -f docker-compose.prod.yml --env-file .env.prod logs -f api                       # xem log backend
 #   docker compose -f docker-compose.prod.yml --env-file .env.prod down                              # dừng (dữ liệu vẫn còn)
 #   KHÔNG dùng "down -v" (pnpm prod:wipe) trên máy chủ thật: xóa luôn volume, mất hết dữ liệu và tệp tải lên (chỉ để thử trên máy mình)
+#
+# Image: chạy tay thì build tại máy, tên ulaw-cong-xu-li-don-api:prod / -web:prod.
+# CI/CD (docker/deploy.sh) đặt API_IMAGE, WEB_IMAGE = image trên GHCR theo commit, kéo về rồi up --no-build.
 
 # Tên đặt theo ulaw-cong-xu-li-don-<môi trường>-<phần>, để không lẫn với docker-compose.dev.yml và dự án khác
 name: ulaw-cong-xu-li-don-prod

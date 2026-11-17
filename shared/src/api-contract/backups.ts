@@ -258,9 +258,9 @@ export const BackupRunSchema = z.object({
   startedAt: z.string(),
   /** null = đang chạy */
   finishedAt: z.string().nullable(),
-  /** manual = Admin bấm, scheduled = lịch định kì */
-  trigger: z.enum(['manual', 'scheduled']),
-  /** người bấm; null khi chạy theo lịch */
+  /** manual = Admin bấm, scheduled = lịch định kì, beforeUpdate = tự chạy trước khi cập nhật phiên bản mới (deploy, chỉ lưu vào thư mục máy chủ) */
+  trigger: z.enum(['manual', 'scheduled', 'beforeUpdate']),
+  /** người bấm; null khi chạy theo lịch, trước cập nhật */
   startedBy: StaffRefSchema.nullable(),
   /** nơi lưu lúc chạy: tên và kiểu chép lại (nơi lưu bị sửa, bỏ sau đó vẫn đọc được); 'download' = tải về máy */
   targetName: z.string(),
@@ -317,6 +317,7 @@ export function backupRunStatusView(run: Pick<BackupRun, 'status' | 'pruned'>): 
 const BACKUP_TRIGGER_LABEL = {
   manual: 'Bấm tay',
   scheduled: 'Định kì',
+  beforeUpdate: 'Trước cập nhật',
 } as const;
 
 /** Các cột của bảng lịch sử (tìm, lọc, sắp xếp). Tìm kiếm còn tìm được câu lỗi. */

@@ -1,0 +1,223 @@
+# CI/CD: kiểm thử → build image đẩy lên GHCR → deploy lên máy đích.
+#   Pull Request vào main: chỉ chạy kiểm thử (máy của GitHub).
+#   Push / merge vào main:  kiểm thử → build → tự deploy lên dev-machine.
+#   Actions → CI/CD → Run workflow (nhánh main), chọn máy: chỉ deploy image đã build của commit mới nhất trên main (không kiểm thử, build lại).
+# Mỗi máy đích cài một self-hosted runner gắn nhãn dev-machine hoặc prod-machine, và có một Environment cùng tên (biến DEPLOY_DIR): README, mục CI/CD.
+name: CI/CD
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      target:
+        description: Deploy lên máy nào
+        type: choice
+        options: [dev-machine, prod-machine]
+        default: dev-machine
+
+# Mặc định chỉ được đọc mã nguồn; job nào cần thêm quyền thì tự khai báo
+permissions:
+  contents: read
+
+env:
+  NODE_VERSION: 24.16.0
+  PNPM_VERSION: 12.18.0
+  # Tên image, cùng tên với image build tại máy (docker-compose.prod.yml): ghcr.io/<chủ repo>/ulaw-cong-xu-li-don-api:<commit>, …-web:<commit>
+  IMAGE_NAME: ulaw-cong-xu-li-don
+
+jobs:
+  # ==================== ① Kiểm thử trên máy sạch của GitHub ====================
+  test:
+    name: Kiểm thử
+    # Run workflow chỉ deploy bản đã build, không kiểm thử lại
+    if: github.event_name != 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    # Postgres tạm cho test api, mất đi khi job xong
+    services:
+      postgres:
+        image: postgres:18.6
+        env:
+          POSTGRES_USER: ci
+          POSTGRES_PASSWORD: ci
+          POSTGRES_DB: cong_xu_li_don
+          TZ: Asia/Ho_Chi_Minh
+          PGTZ: Asia/Ho_Chi_Minh
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U ci -d cong_xu_li_don"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+
+    # Giống container dev: giờ Việt Nam, bản giả của API (test/setup-env.ts), không có .env.dev
+    env:
+      TZ: Asia/Ho_Chi_Minh
+      APP_ENV: dev
+      DATABASE_URL: postgresql://ci:ci@localhost:5432/cong_xu_li_don?schema=public
+
+    steps:
+      # --- Chuẩn bị: mã nguồn, pnpm, Node, thư viện, pg_dump ---
+      - name: Lấy mã nguồn
+        uses: actions/checkout@v4
+
+      - name: Cài pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Cài Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: Cài thư viện
+        run: pnpm install --frozen-lockfile
+
+      # Test sao lưu cần pg_dump cùng bản với Postgres (18); máy của GitHub chỉ có bản cũ hơn
+      - name: Cài pg_dump 18
+        run: |
+          sudo apt-get install -y postgresql-common
+          sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
+          sudo apt-get install -y --no-install-recommends postgresql-client-18
+
+      # --- Kiểm tra kiểu ---
+      - name: Kiểm tra kiểu
+        run: |
+          pnpm --filter @ulaw/shared typecheck
+          pnpm --filter web typecheck
+          pnpm --filter api typecheck
+
+      # --- Test shared, web (không cần database) ---
+      - name: Test shared
+        run: pnpm --filter @ulaw/shared test
+
+      - name: Test web
+        run: pnpm --filter web test
+
+      # --- Test api (cần database đã tạo bảng, có dữ liệu mẫu) ---
+      - name: Tạo bảng, dữ liệu mẫu
+        run: |
+          pnpm --filter api exec prisma migrate deploy
+          pnpm --filter api exec prisma db seed
+
+      - name: Test api
+        run: pnpm --filter api test
+
+  # ==================== ② Build image, đẩy lên GHCR (chỉ khi push vào main) ====================
+  build:
+    name: Build image
+    needs: test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      # --- Chuẩn bị: mã nguồn, tên image, Docker, đăng nhập GHCR ---
+      - name: Lấy mã nguồn
+        uses: actions/checkout@v4
+
+      # Tên chủ repo trên GHCR phải viết thường
+      - name: Đặt tên image
+        id: names
+        run: |
+          prefix="ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/${IMAGE_NAME}"
+          echo "api=${prefix}-api:${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
+          echo "web=${prefix}-web:${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
+
+      - name: Cài Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Đăng nhập GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # --- Build, đẩy 2 image (cùng Dockerfile với pnpm prod:up; VITE_* bản thật đặt sẵn trong web/Dockerfile) ---
+      - name: Build, đẩy image api
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: api/Dockerfile
+          push: true
+          tags: ${{ steps.names.outputs.api }}
+          cache-from: type=gha,scope=api
+          cache-to: type=gha,scope=api,mode=max
+
+      - name: Build, đẩy image nginx + web
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: web/Dockerfile
+          push: true
+          tags: ${{ steps.names.outputs.web }}
+          cache-from: type=gha,scope=web
+          cache-to: type=gha,scope=web,mode=max
+
+  # ==================== ③ Deploy trên máy đích (self-hosted runner) ====================
+  # Push vào main: sau khi build xong, lên dev-machine · Run workflow (chỉ từ main): lên máy đã chọn
+  deploy:
+    name: Deploy lên ${{ inputs.target || 'dev-machine' }}
+    needs: build
+    if: >-
+      always() && github.ref == 'refs/heads/main' && (
+        (github.event_name == 'push' && needs.build.result == 'success') ||
+        github.event_name == 'workflow_dispatch'
+      )
+    # Runner của máy đích: nhãn dev-machine hoặc prod-machine
+    runs-on: [self-hosted, "${{ inputs.target || 'dev-machine' }}"]
+    timeout-minutes: 20
+
+    # Mỗi máy một Environment cùng tên, giữ DEPLOY_DIR của máy đó
+    # (muốn bấm duyệt tay trước khi deploy: Settings → Environments → <tên máy> → Required reviewers)
+    environment: ${{ inputs.target || 'dev-machine' }}
+
+    # Mỗi máy mỗi lúc chỉ một lần deploy; lần sau chờ lần trước xong, không hủy giữa chừng
+    concurrency:
+      group: deploy-${{ inputs.target || 'dev-machine' }}
+      cancel-in-progress: false
+
+    permissions:
+      contents: read
+      packages: read
+
+    steps:
+      # --- Chuẩn bị: mã nguồn (lấy docker-compose.prod.yml, deploy.sh), tên image, đăng nhập GHCR ---
+      - name: Lấy mã nguồn
+        uses: actions/checkout@v4
+
+      # Cùng tên với job build
+      - name: Đặt tên image
+        id: names
+        shell: bash
+        run: |
+          prefix="ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/${IMAGE_NAME}"
+          echo "api=${prefix}-api:${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
+          echo "web=${prefix}-web:${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
+
+      - name: Đăng nhập GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # --- Deploy (commit chưa build được thì không có image, bước kéo image báo lỗi) ---
+      - name: Sao lưu (trang Sao lưu, "Trước cập nhật"), kéo image mới, bật lại
+        shell: bash
+        env:
+          DEPLOY_DIR: ${{ vars.DEPLOY_DIR }}
+          API_IMAGE: ${{ steps.names.outputs.api }}
+          WEB_IMAGE: ${{ steps.names.outputs.web }}
+        run: bash docker/deploy.sh

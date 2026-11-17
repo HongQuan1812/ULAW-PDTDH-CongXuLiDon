@@ -231,8 +231,11 @@ Mỗi loại đơn có hai nhóm mẫu, lưu ở máy chủ theo loại đơn, d
   lưu vào một hoặc nhiều nơi (một tệp, chép vào từng nơi; nơi nào lỗi thì chỉ dòng đó lỗi). Nhiều lịch trúng cùng một phút thì chạy chung một lần,
   lưu vào mọi nơi của các lịch đó. "Lần tới" là lần sớm nhất trong các lịch đang bật. Backend kiểm mỗi 30 giây; tắt đúng phút chạy thì lần ấy bỏ qua; khởi động lại trong cùng phút không chạy trùng.
   Bản thật mặc định (seed:production, chỉ thêm khi chưa có nơi lưu lẫn lịch nào): một nơi lưu "Trên máy chủ" (`hang-ngay`, giữ 14 bản), một lịch 02:00 hằng ngày, **tắt sẵn** (Admin tự bật, không tự sao lưu khi chưa ai biết).
+- **Trước cập nhật**: mỗi lần đưa phiên bản mới lên (CI/CD, `docker/deploy.sh`), trước khi đổi bản cổng tự sao lưu một bản vào **mọi nơi lưu kiểu thư mục trên máy chủ**
+  (không lưu lên Drive), giữ N bản như thường. Đang có lần khác chạy thì chờ xong. Chưa có nơi lưu kiểu này thì bỏ qua (chỉ cảnh báo trong log deploy); sao lưu lỗi thì không cập nhật.
+  Chạy ngoài backend (lệnh `backup-before-update` trong container api), nên "mỗi lúc chỉ chạy một bản" kiểm cả lần đang chạy ghi trong database.
 - Giao diện: lịch sử bên trái; khung "Lịch và nơi lưu" bên phải (hẹp thì trượt ra từ bên phải) gồm hai mục thu gọn được kiểu VS Code, mỗi mục có nút + để thêm.
-- **Lịch sử**: mỗi lần sao lưu vào mỗi nơi một dòng: lúc bắt đầu, nơi lưu (tên chép lại lúc chạy), chạy tay (ai bấm) hay định kì, dung lượng,
+- **Lịch sử**: mỗi lần sao lưu vào mỗi nơi một dòng: lúc bắt đầu, nơi lưu (tên chép lại lúc chạy), cách chạy (Bấm tay · tên người bấm / Định kì / Trước cập nhật), dung lượng,
   tình trạng (Đang chạy / Thành công / Lỗi kèm câu lỗi / Đã xóa vì quá số bản giữ). Bảng phân trang ở máy chủ (`GET /backups/runs`, 10 dòng mỗi trang),
   tìm kiếm (cả câu lỗi), Sắp xếp, Lọc như các bảng khác; mặc định mới nhất trước.
   Backend tắt khi đang sao lưu thì lần đó ghi lỗi lúc bật lại.

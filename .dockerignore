@@ -12,5 +12,6 @@ docs
 api/uploads
 # thư mục sao lưu khi chạy dev trên máy (BACKUP_DIR=backups): không cho vào image
 api/backups
+.github
 api/src/generated
 docker/nginx/certs

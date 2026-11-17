@@ -82,6 +82,46 @@ Các lần sau:
 
 Máy chủ thật không dùng `pnpm prod:wipe` (`down -v`): xóa luôn database, tệp tải lên, bản sao lưu trên máy chủ, không lấy lại được.
 
+## CI/CD
+
+GitHub Actions, tệp `.github/workflows/deploy.yml`:
+
+| Khi | Job | Chạy ở |
+|---|---|---|
+| Pull Request vào `main` | ① Kiểm thử: typecheck, test `shared`, `web`, `api` (Postgres tạm) | máy của GitHub |
+| Push / merge vào `main` | ① Kiểm thử → ② Build image `api`, `nginx + web`, đẩy lên GHCR (tag theo commit) → ③ Deploy lên `dev-machine` | ①② máy của GitHub, ③ máy đích |
+| Actions → **CI/CD** → **Run workflow** (nhánh `main`), chọn máy | ③ Deploy image đã build của commit mới nhất trên `main` lên máy đã chọn (không kiểm thử, build lại) | máy đích |
+
+Hai máy đích, mỗi máy một runner gắn nhãn và một Environment cùng tên:
+
+| Máy | Nhãn runner, Environment | Lên khi |
+|---|---|---|
+| máy cá nhân (chạy bản build thật, không phải `pnpm dev:up`) | `dev-machine` | tự động sau mỗi lần merge vào `main` |
+| máy chủ trường | `prod-machine` | bấm Run workflow, chọn `prod-machine` |
+
+Bước nào đỏ thì dừng, không deploy. Commit chưa build xong thì không có image, Run workflow báo lỗi ở bước kéo image. Deploy (`docker/deploy.sh`): sao lưu bằng chức năng Sao lưu của cổng (database + `uploads/` vào mọi nơi lưu kiểu "Thư mục trên máy chủ", giữ N bản, lịch sử ghi "Trước cập nhật"; chưa có nơi lưu nào kiểu này thì chỉ cảnh báo; lỗi thì dừng, không deploy) → kéo image mới → `up -d`, chờ api khỏe (api tự chạy `migrate deploy`).
+
+Máy đích nằm trong LAN, GitHub không với tới được, nên deploy chạy bằng **self-hosted runner** cài trên máy đích: runner tự hỏi GitHub có việc không, không phải mở cổng nào.
+
+Cài một lần trên máy đích:
+
+1. Máy đích có Docker, `.env.prod`, chứng chỉ, chạy được `pnpm prod:up` (mục trên). Windows thì cần thêm Git Bash (Git for Windows).
+2. GitHub → repo → **Settings → Actions → Runners → New self-hosted runner**, chọn hệ điều hành, chạy lần lượt các lệnh GitHub đưa (tải, `config`), rồi `run` (Windows: `run.cmd`).
+   Lúc `config` hỏi *additional labels* thì nhập tên máy: `dev-machine` hoặc `prod-machine` (đã cài rồi thì thêm nhãn ở trang runner trên GitHub).
+   Windows nên chạy `run.cmd` bằng tài khoản đang mở Docker Desktop, không cài thành service.
+3. **Settings → Environments → New environment**, tên trùng nhãn (`dev-machine` / `prod-machine`) → **Environment variables**: `DEPLOY_DIR` = thư mục chứa `.env.prod` trên máy đó (máy cá nhân: thư mục repo này).
+   Muốn bấm duyệt trước mỗi lần deploy (nên bật cho `prod-machine`): bật **Required reviewers**.
+4. Repo public: **Settings → Actions → General → Fork pull request workflows** chọn **Require approval for all external contributors**, để PR từ người lạ không chạy được trên máy đích.
+
+Image ở `ghcr.io/<chủ repo>/ulaw-cong-xu-li-don-api:<commit>`, `…-web:<commit>` (tab Packages), cùng tên với image build tại máy (`ulaw-cong-xu-li-don-api:prod`), chỉ khác chỗ lưu và tag. `pnpm prod:up` trên máy vẫn tự build như cũ, không cần GHCR.
+
+Quay về bản trước (migration đã chạy không tự lùi): lấy commit cũ ở trang Actions hoặc Packages, rồi
+
+```bash
+API_IMAGE=ghcr.io/<chủ repo>/ulaw-cong-xu-li-don-api:<commit> WEB_IMAGE=ghcr.io/<chủ repo>/ulaw-cong-xu-li-don-web:<commit> \
+  docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --no-build
+```
+
 ## Đăng nhập Google
 
 1. Google Cloud Console → Credentials → OAuth client ID, loại **Web application**.
