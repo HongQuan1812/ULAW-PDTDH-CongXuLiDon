@@ -25,7 +25,7 @@ pnpm dev:up
 ```
 
 - Backend: http://localhost:3000/api/docs · giao diện: https://localhost:5173
-- Mỗi lần bật / restart `api`: tạo bảng, nạp dữ liệu mẫu (xóa dữ liệu cũ). Sửa code thì tự chạy lại, không seed lại.
+- Mỗi lần bật / restart `api`: tạo bảng, nạp dữ liệu mẫu (xóa sạch database, tệp tải lên `UPLOAD_DIR`, bản sao lưu `BACKUP_DIR`; bản trên Google Drive giữ nguyên). Sửa code thì tự chạy lại, không seed lại.
 
 | Việc | Lệnh |
 |---|---|
@@ -43,7 +43,7 @@ Cách 2, chạy thẳng trên máy (chỉ postgres trong container), backend và
 ```bash
 pnpm dev:up postgres
 pnpm --filter api exec prisma migrate dev                            # tạo bảng
-pnpm --filter api exec prisma db seed                                # dữ liệu mẫu (xóa dữ liệu cũ)
+pnpm --filter api exec prisma db seed                                # dữ liệu mẫu (xóa sạch database, `UPLOAD_DIR`, `BACKUP_DIR`)
 pnpm --filter api dev                                                # backend
 pnpm --filter web dev                                                # giao diện
 ```
