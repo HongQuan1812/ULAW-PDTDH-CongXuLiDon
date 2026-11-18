@@ -20,6 +20,7 @@ import {
 import { DEFAULT_BACKUP_DIR, DEFAULT_UPLOAD_DIR } from '../src/config/app-config';
 import { loadDevEnvFile } from '../src/config/env-file';
 import { PrismaClient, type Prisma } from '../src/generated/prisma/client';
+import { loadSeedExportTemplates } from './load-seed-export-templates';
 
 // Biến môi trường: .env.dev khi chạy trên máy, compose truyền vào khi chạy container
 loadDevEnvFile();
@@ -182,6 +183,15 @@ async function seedAll(prisma: PrismaClient): Promise<void> {
       uploadedAt: toDate(SEED_EXPORT_TEMPLATE.uploadedAt),
       uploadedById: SEED_EXPORT_TEMPLATE.uploadedById,
     },
+  });
+  // Mẫu theo mẫu Word của Phòng Đào tạo: mỗi loại đơn một mẫu (người tải lên, lúc tải lên như mẫu ở trên)
+  await prisma.exportTemplate.createMany({
+    data: loadSeedExportTemplates().map((template) => ({
+      ...template,
+      sizeBytes: template.content.byteLength,
+      uploadedAt: toDate(SEED_EXPORT_TEMPLATE.uploadedAt),
+      uploadedById: SEED_EXPORT_TEMPLATE.uploadedById,
+    })),
   });
   await prisma.emailSettings.create({
     data: {

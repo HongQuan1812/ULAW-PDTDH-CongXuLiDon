@@ -28,7 +28,7 @@ describe('seedProduction', () => {
 
     const report = await seedProduction(prisma, '  Admin.Dau.Tien@HCMULAW.edu.vn ');
 
-    expect(report).toEqual({ admin: 'created', emailSettings: 'unchanged', formTypes: [], backups: 'unchanged' });
+    expect(report).toEqual({ admin: 'created', emailSettings: 'unchanged', formTypes: [], exportTemplates: [], backups: 'unchanged' });
     const admin = await prisma.user.findUniqueOrThrow({ where: { email: NEW_ADMIN_EMAIL } });
     expect(admin).toMatchObject({ role: 'admin', name: '', completed: false });
     expect(admin.id).toMatch(/^tk-/);
@@ -42,7 +42,7 @@ describe('seedProduction', () => {
 
     const report = await seedProduction(prisma, NEW_ADMIN_EMAIL, 'Nguyễn Văn A');
 
-    expect(report).toEqual({ admin: 'unchanged', emailSettings: 'unchanged', formTypes: [], backups: 'unchanged' });
+    expect(report).toEqual({ admin: 'unchanged', emailSettings: 'unchanged', formTypes: [], exportTemplates: [], backups: 'unchanged' });
     expect(await prisma.user.count()).toBe(userCountBefore);
     expect(await prisma.user.findUniqueOrThrow({ where: { email: NEW_ADMIN_EMAIL } })).toEqual(before);
   });
@@ -109,6 +109,32 @@ describe('seedProduction', () => {
     });
     await expect(result).rejects.toBe(rollback);
     expect(await prisma.form.count({ where: { formTypeId: first!.id } })).toBeGreaterThan(0);
+  });
+
+  it('thêm mẫu xuất file đơn cho loại đơn chưa có mẫu đơn nào (người tải lên là Admin); đã có mẫu thì giữ nguyên', async () => {
+    const formTypeId = PRODUCTION_FORM_TYPES_SEED[0]!.id;
+    const rollback = new Error('rollback');
+
+    // Chạy trong một transaction rồi hủy, để mẫu của dữ liệu mẫu vẫn nguyên sau test
+    const result = prisma.$transaction(async (tx) => {
+      const txPrisma = tx as unknown as PrismaClient;
+      await tx.exportTemplate.deleteMany({ where: { formTypeId } });
+      const report = await seedProduction(txPrisma, NEW_ADMIN_EMAIL);
+
+      expect(report.exportTemplates).toEqual([formTypeId]);
+      const admin = await tx.user.findUniqueOrThrow({ where: { email: NEW_ADMIN_EMAIL } });
+      const created = await tx.exportTemplate.findUniqueOrThrow({ where: { id: `tpl-${formTypeId}` } });
+      expect(created).toMatchObject({ formTypeId, purpose: 'form', fileName: `mau-don-${formTypeId}.docx`, uploadedById: admin.id });
+      expect(created.sizeBytes).toBe(created.content.byteLength);
+      expect((await seedProduction(txPrisma, NEW_ADMIN_EMAIL)).exportTemplates).toEqual([]);
+
+      // Cán bộ đã thay bằng mẫu khác (xóa mẫu seed, tải mẫu riêng): giữ nguyên, không thêm lại
+      await tx.exportTemplate.update({ where: { id: `tpl-${formTypeId}` }, data: { id: 'tpl-can-bo-tai-len', name: 'Mẫu riêng' } });
+      expect((await seedProduction(txPrisma, NEW_ADMIN_EMAIL)).exportTemplates).toEqual([]);
+      throw rollback;
+    });
+    await expect(result).rejects.toBe(rollback);
+    expect(await prisma.exportTemplate.count({ where: { id: `tpl-${formTypeId}` } })).toBe(1);
   });
 
   it('chưa có nơi lưu lẫn lịch sao lưu nào thì tạo nơi lưu trên máy chủ và lịch 02:00 hằng ngày (tắt sẵn); đã có thì giữ nguyên', async () => {

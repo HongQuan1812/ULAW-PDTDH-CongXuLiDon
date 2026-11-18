@@ -1,8 +1,9 @@
-/* Dữ liệu ban đầu cho bản thật: Admin đầu tiên, dòng cấu hình email, loại đơn theo mẫu Word, nơi lưu và lịch sao lưu mặc định. Không xóa, không ghi đè dữ liệu nào đã có,
+/* Dữ liệu ban đầu cho bản thật: Admin đầu tiên, dòng cấu hình email, loại đơn theo mẫu Word, mẫu xuất file đơn, nơi lưu và lịch sao lưu mặc định. Không xóa, không ghi đè dữ liệu nào đã có,
    nên chạy lại nhiều lần vẫn an toàn. Chạy bằng prisma/seed-production.ts. */
 import { randomUUID } from 'node:crypto';
 import { BACKUP_SCHEDULES_SEED, BACKUP_TARGETS_SEED, EMAIL_SETTINGS_SEED, PRODUCTION_FORM_TYPES_SEED, isSchoolEmail } from '@ulaw/shared';
 import type { Prisma, PrismaClient } from '../src/generated/prisma/client';
+import { loadSeedExportTemplates } from './load-seed-export-templates';
 
 /** Dòng cấu hình email duy nhất (cùng id với SETTINGS_ROW_ID của api/src/email/email-settings.service.ts). */
 const EMAIL_SETTINGS_ROW_ID = 1;
@@ -15,12 +16,14 @@ export interface ProductionSeedReport {
   emailSettings: 'created' | 'unchanged';
   /** Mã các loại đơn vừa thêm (loại đơn đã có, hoặc mã đơn đã bị loại đơn khác dùng, thì bỏ qua) */
   formTypes: string[];
+  /** Mã các loại đơn vừa được thêm mẫu xuất file đơn (loại đơn không có, hoặc đã có mẫu đơn nào đó, thì bỏ qua) */
+  exportTemplates: string[];
   /** Sao lưu: vừa tạo nơi lưu và lịch mặc định, hay đã có lịch từ trước (giữ nguyên) */
   backups: 'created' | 'unchanged';
 }
 
 /**
- * Tạo Admin đầu tiên, cấu hình email, loại đơn theo mẫu Word, nơi lưu và lịch sao lưu mặc định nếu chưa có.
+ * Tạo Admin đầu tiên, cấu hình email, loại đơn theo mẫu Word, mẫu xuất file đơn, nơi lưu và lịch sao lưu mặc định nếu chưa có.
  * Có họ tên: Admin mới tạo đã hoàn tất hồ sơ, đăng nhập Google là vào thẳng.
  * Không có họ tên: giống tài khoản tạo ở trang Quản lí tài khoản, lần đầu đăng nhập Google thì tự nhập.
  * @param prisma      Prisma Client
@@ -96,11 +99,28 @@ export async function seedProduction(
     formTypes.push(formType.id);
   }
 
+  // Mẫu xuất file đơn: loại đơn có trong database mà chưa có mẫu đơn nào thì thêm mẫu theo mẫu Word (người tải lên là Admin);
+  // đã có mẫu (có thể cán bộ đã tải mẫu khác, đã sửa) thì giữ nguyên, không ghi đè
+  const formTypeIds = new Set((await prisma.formType.findMany({ select: { id: true } })).map((formType) => formType.id));
+  const hasFormTemplate = new Set(
+    (await prisma.exportTemplate.findMany({ where: { purpose: 'form' }, select: { formTypeId: true } })).map((template) => template.formTypeId),
+  );
+  const exportTemplates: string[] = [];
+  for (const template of loadSeedExportTemplates()) {
+    if (!formTypeIds.has(template.formTypeId) || hasFormTemplate.has(template.formTypeId)) continue;
+    await prisma.exportTemplate.upsert({
+      where: { id: template.id },
+      create: { ...template, sizeBytes: template.content.byteLength, uploadedAt: new Date(), uploadedById: adminId },
+      update: {},
+    });
+    exportTemplates.push(template.formTypeId);
+  }
+
   // Sao lưu: chưa có nơi lưu lẫn lịch nào (lần đầu cài) thì tạo nơi lưu trên máy chủ và lịch 02:00 hằng ngày (tắt sẵn, Admin tự bật);
   // đã có (có thể Admin đã sửa, đã tắt, đã bỏ bớt) thì giữ nguyên
   const [targetCount, scheduleCount] = await Promise.all([prisma.backupTarget.count(), prisma.backupSchedule.count()]);
-  if (targetCount || scheduleCount) return { admin, emailSettings, formTypes, backups: 'unchanged' };
+  if (targetCount || scheduleCount) return { admin, emailSettings, formTypes, exportTemplates, backups: 'unchanged' };
   await prisma.backupTarget.createMany({ data: [...BACKUP_TARGETS_SEED], skipDuplicates: true });
   await prisma.backupSchedule.createMany({ data: BACKUP_SCHEDULES_SEED.map((schedule) => ({ ...schedule })), skipDuplicates: true });
-  return { admin, emailSettings, formTypes, backups: 'created' };
+  return { admin, emailSettings, formTypes, exportTemplates, backups: 'created' };
 }
