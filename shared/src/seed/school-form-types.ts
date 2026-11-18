@@ -168,7 +168,7 @@ export const SCHOOL_FORM_TYPES_SEED: readonly FormType[] = [
             columns: [
               { label: 'Tên học phần', type: 'text', placeholder: 'VD: Luật Hình sự phần chung' },
               { label: 'Số tín chỉ', type: 'number', placeholder: 'TC', sum: true, sumLabel: 'tín chỉ' },
-              { label: 'Học phần đăng ký', type: 'select', placeholder: 'Học phần đăng ký học', options: ['Học lại', 'Học cải thiện'] },
+              { label: 'Học phần đăng ký', type: 'select', options: ['Học lại', 'Học cải thiện'] },
               { label: 'Lớp đăng ký', type: 'text', placeholder: 'Lớp học phần' },
               { label: 'Thời gian bắt đầu học', type: 'date' },
             ],

@@ -89,9 +89,12 @@ export function SimpleAnswer({
       // Ngày gõ dở cũng lưu lại, để khi kiểm tra báo "Ngày không hợp lệ."
       return <DateInput value={textValue} onValueChange={onAnswerChange} {...inputProps} />;
     case 'select':
+      // Ô chưa chọn ghi "— Chọn —"; dòng này ẩn khỏi danh sách sổ xuống, chỉ còn các lựa chọn (giống cột Chọn của bảng)
       return (
         <select value={textValue} onChange={(event) => onAnswerChange(event.target.value)} {...inputProps}>
-          <option value="">Chọn…</option>
+          <option value="" disabled hidden>
+            — Chọn —
+          </option>
           {question.options.map((option) => (
             <option key={option} value={option}>
               {option}

@@ -92,11 +92,11 @@ function ChoiceSettings({
  * Đổi kiểu một cột: giữ lại thuộc tính hợp với kiểu mới, bỏ thuộc tính của kiểu cũ.
  * @param column  cột đang soạn
  * @param type    kiểu mới
- * @returns       phần cần sửa của cột: chỉ cột Số có tính tổng; chỉ cột Chọn có lựa chọn (mới đổi sang thì có sẵn một lựa chọn)
+ * @returns       phần cần sửa của cột: chỉ cột Số có tính tổng; chỉ cột Chọn có lựa chọn (mới đổi sang thì có sẵn một lựa chọn), cột Chọn không có chữ mờ
  */
 function columnTypeChanges(column: TableColumn, type: TableColumnType): Partial<TableColumn> {
   if (type === 'number') return { type, options: undefined };
-  if (type === 'select') return { type, options: column.options ?? ['Lựa chọn 1'], sum: undefined, sumLabel: undefined };
+  if (type === 'select') return { type, options: column.options ?? ['Lựa chọn 1'], sum: undefined, sumLabel: undefined, placeholder: undefined };
   return { type, options: undefined, sum: undefined, sumLabel: undefined };
 }
 
