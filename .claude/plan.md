@@ -217,7 +217,7 @@ Quy ước dựng:
 | # | Mẫu | |
 |---|---|---|
 | 1 | Đơn đề nghị đăng ký học phần muộn (`DKHPM`) | ✓ |
-| 2 | Đơn đề nghị đăng ký học phần học lại, học cải thiện | |
+| 2 | Đơn đề nghị đăng ký học phần học lại, học cải thiện (`HLCT`) | ✓ |
 | 3 | Đơn đề nghị đăng ký học bổ sung học phần, tín chỉ | |
 | 4 | Đơn đề nghị rút bớt, hủy các học phần đã đăng ký | |
 | 5 | Đơn đăng ký dự thi kết thúc học phần | |
