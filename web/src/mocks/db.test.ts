@@ -496,6 +496,10 @@ describe('thống kê đơn (Quản lí đơn)', () => {
   });
 
   test('số theo loại đơn cộng lại bằng tổng, kể cả loại chưa có đơn (đếm 0) và ghi trạng thái loại đơn', () => {
+    // Thêm một loại đơn chưa có đơn nào
+    const { description, sections } = getFormType('xmm')!;
+    createFormType({ prefix: 'MOI', name: 'Loại đơn mới', description, status: 'draft', sections }, 'cb-1');
+
     const stats = getFormStats();
     expect(stats.byType.reduce((sum, type) => sum + type.count, 0)).toBe(stats.total);
     const xmm = stats.byType.find((type) => type.formTypeId === 'xmm');

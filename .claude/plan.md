@@ -194,3 +194,57 @@ Workflow đã đổi (commit `aa00be2`): push vào `main` thì máy dev nào đa
 - `api` và `postgres` bản thật không mở cổng ra ngoài, nginx gọi backend bằng tên service (`http://api:3000`), không dùng `127.0.0.1`.
 - Mật khẩu SMTP, `GOOGLE_CLIENT_SECRET`, mật khẩu Postgres bản thật chỉ nằm trong `.env.prod` trên máy chủ, không commit, không đóng gói vào image.
 - Không dùng `down -v` (`pnpm prod:wipe`) trên máy chủ thật: xóa luôn volume, mất dữ liệu và tệp tải lên (dev thì không sao, bật lại là seed lại).
+
+## Loại đơn theo mẫu Word (đang làm)
+
+Mẫu Word ở Google Drive, thư mục `CongXuLiDon/Mẫu Đơn` (32 mẫu). Làm lần lượt theo ngày sửa, cũ trước. **Xong đơn nào chốt đơn đó** rồi mới sang đơn sau.
+
+### Mỗi đơn
+
+1. Đọc mẫu Word trên Drive.
+2. Dựng loại đơn (tên, mã đơn 2–5 chữ in hoa không dấu, mô tả, các phần, câu hỏi), ghi thẳng vào database dev, để **Nháp**.
+3. Cậu xem, sửa trên trình soạn đến khi ưng. Trong lúc này **không restart api** (`pnpm dev:reset`, CI deploy): restart là seed lại, mất bản đang sửa.
+4. Cậu OK: lấy bản đó từ database dev, đưa vào seed dev (`shared/src/seed/form-types.ts`) và `api/prisma/seed-production.ts` (chỉ thêm khi chưa có, không ghi đè bản Admin đã sửa).
+5. Đánh ✓ bên dưới, sang đơn tiếp.
+
+Quy ước dựng:
+- Thông tin đã có ở hồ sơ (họ tên, MSSV, lớp, ngành, khóa, hình thức đào tạo, SĐT, email) không hỏi lại trong đơn.
+- Chỗ "Học kỳ … năm học …" thành câu hỏi riêng; bảng trong mẫu thành câu hỏi Bảng nhiều dòng; lí do thành Đoạn văn; lời cam kết thành câu Chọn nhiều một lựa chọn, bắt buộc; Ghi chú thành Khối thông báo.
+- Phần chữ kí, ý kiến của Phòng không đưa vào (cán bộ xử lí trên cổng).
+- Mẫu xuất Word của từng loại đơn: để sau.
+- Đã xóa 10 loại đơn mẫu thử (chỉ có câu "Lí do") khỏi seed dev. Xét miễn môn (`xmm`), Đơn thử nghiệm (`thu`) giữ đến khi xong 32 đơn, rồi làm một lần: thay `xmm` bằng đơn thật số 18 hoặc 19, chuyển lá đơn mẫu, mẫu Word mẫu, test sang loại đơn thật, bỏ `thu`.
+
+| # | Mẫu | |
+|---|---|---|
+| 1 | Đơn đề nghị đăng ký học phần muộn (`DKHPM`) | ✓ |
+| 2 | Đơn đề nghị đăng ký học phần học lại, học cải thiện | |
+| 3 | Đơn đề nghị đăng ký học bổ sung học phần, tín chỉ | |
+| 4 | Đơn đề nghị rút bớt, hủy các học phần đã đăng ký | |
+| 5 | Đơn đăng ký dự thi kết thúc học phần | |
+| 6 | Đơn đề nghị chuyển lịch thi kết thúc học phần | |
+| 7 | Đơn đề nghị hoãn thi kết thúc học phần | |
+| 8 | Đơn phản ánh về điểm đánh giá bộ phận | |
+| 9 | Đơn phản ánh về điểm thi kết thúc học phần (có dự thi không có điểm, vấn đáp, GDTC) | |
+| 10 | Đơn đề nghị tạm hoãn học học phần | |
+| 11 | Đơn đề nghị nghỉ học tạm thời và bảo lưu kết quả học tập | |
+| 12 | Đơn đề nghị tiếp tục học | |
+| 13 | Đơn đề nghị thôi học | |
+| 14 | Đơn đề nghị chuyển ngành | |
+| 15 | Đơn đề nghị chuyển chương trình đào tạo | |
+| 16 | Đơn đề nghị chuyển hình thức đào tạo | |
+| 17 | Đơn đề nghị chuyển trường | |
+| 18 | Đơn đề nghị xét miễn học học phần, công nhận kết quả đào tạo và chuyển đổi tín chỉ đã tích lũy | |
+| 19 | Đơn đề nghị xét miễn học học phần và chuyển đổi tín chỉ (đã học ở cơ sở đào tạo khác) | |
+| 20 | Đơn đề nghị xét chuyển điểm cho sinh viên chuyển trường | |
+| 21 | Đơn đề nghị xét miễn học học phần (nộp chứng chỉ tin học, GDQP-AN) | |
+| 22 | Đơn đề nghị không làm khóa luận tốt nghiệp | |
+| 23 | Đơn đề nghị cấp lần 1, đổi lại Giấy giới thiệu thực tập | |
+| 24 | Đơn đề nghị xét, công nhận tốt nghiệp và cấp bằng cử nhân | |
+| 25 | Đơn đề nghị hoãn xét, công nhận tốt nghiệp và cấp bằng cử nhân | |
+| 26 | Đơn đề nghị xét, công nhận tốt nghiệp và cấp bằng cử nhân theo chuẩn đại trà | |
+| 27 | Đơn đề nghị (các nội dung khác) | |
+| 28 | Đơn đề nghị, phản ánh | |
+| 29 | Đơn đăng ký dự thi kết thúc học phần do đóng học phí muộn | |
+| 30 | Đơn đề nghị chuyển lịch thi TOEIC | |
+| 31 | Đơn đề nghị hủy thi TOEIC | |
+| 32 | Đơn cấp lại thẻ sinh viên (VB2CQ, VLVH, TX) | |

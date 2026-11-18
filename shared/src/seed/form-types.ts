@@ -3,6 +3,7 @@ import type { FormType } from '../api-contract';
 import type { FormSection, FormTypeStatus } from '../aux-schema';
 import { FormTypeSchema } from '../api-contract';
 import { cloneSeedValue } from './clone';
+import { SCHOOL_FORM_TYPES_SEED } from './school-form-types';
 import { addHours } from './time';
 
 /* Các lựa chọn của cột "Cơ sở đào tạo" (Xét miễn môn); các môn mẫu SAMPLE_SUBJECTS chỉ dùng trường trong danh sách này. */
@@ -22,6 +23,7 @@ export const SAMPLE_SCHOOLS = [
 /* Loại đơn ban đầu.
    - Xét miễn môn: loại đơn đầu tiên, có bảng các môn xin miễn.
    - Đơn thử nghiệm: đủ 10 loại câu hỏi, để xem giao diện từng loại khi chưa có trình soạn loại đơn (bước 7).
+   - Loại đơn thật theo mẫu Word (SCHOOL_FORM_TYPES_SEED), cũng có trong seed bản thật.
    Cấu trúc khai báo dạng thô rồi cho qua FormTypeSchema, để điền sẵn giá trị mặc định (required, main…) như máy chủ. */
 export const FORM_TYPE_SEED: readonly FormType[] = [
   {
@@ -148,32 +150,7 @@ export const FORM_TYPE_SEED: readonly FormType[] = [
       },
     ],
   },
-  ...[
-    ['nhs', 'Xin nghỉ học tạm thời', 'closed'],
-    ['blk', 'Xin bảo lưu kết quả học tập', 'closed'],
-    ['pkd', 'Phúc khảo điểm thi', 'closed'],
-    ['cnh', 'Xin chuyển ngành', 'closed'],
-    ['cbd', 'Xin cấp bảng điểm', 'closed'],
-    ['xnsv', 'Xin giấy xác nhận sinh viên', 'closed'],
-    ['hth', 'Xin hoãn thi', 'draft'],
-    ['hv', 'Xin học vượt', 'draft'],
-    ['hl', 'Đăng ký học lại', 'draft'],
-    ['cltsv', 'Xin cấp lại thẻ sinh viên', 'draft'],
-  ].map(([id, name, status]) => ({
-    id,
-    name,
-    prefix: id!.toUpperCase(),
-    description: `${name} (loại đơn mẫu để thử giao diện)`,
-    status,
-    sections: [
-      {
-        id: 's-chung',
-        title: 'Thông tin đơn',
-        main: true,
-        questions: [{ id: 'li-do', type: 'para', label: 'Lí do', required: true }],
-      },
-    ],
-  })),
+  ...SCHOOL_FORM_TYPES_SEED,
 ].map((rawFormType) => FormTypeSchema.parse(rawFormType));
 
 /** Một phiên bản loại đơn trong API giả: nội dung, trạng thái, lần lưu gần nhất (id cán bộ). */

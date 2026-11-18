@@ -2,6 +2,7 @@
    Test tạo tài khoản thử rồi xóa, trả cb-2 và dòng cấu hình email về như seed. */
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { PrismaPg } from '@prisma/adapter-pg';
+import { SCHOOL_FORM_TYPES_SEED } from '@ulaw/shared';
 import { PrismaClient } from '../src/generated/prisma/client';
 import { seedProduction } from '../prisma/production-seed';
 
@@ -27,7 +28,7 @@ describe('seedProduction', () => {
 
     const report = await seedProduction(prisma, '  Admin.Dau.Tien@HCMULAW.edu.vn ');
 
-    expect(report).toEqual({ admin: 'created', emailSettings: 'unchanged', backups: 'unchanged' });
+    expect(report).toEqual({ admin: 'created', emailSettings: 'unchanged', formTypes: [], backups: 'unchanged' });
     const admin = await prisma.user.findUniqueOrThrow({ where: { email: NEW_ADMIN_EMAIL } });
     expect(admin).toMatchObject({ role: 'admin', name: '', completed: false });
     expect(admin.id).toMatch(/^tk-/);
@@ -41,7 +42,7 @@ describe('seedProduction', () => {
 
     const report = await seedProduction(prisma, NEW_ADMIN_EMAIL, 'Nguyễn Văn A');
 
-    expect(report).toEqual({ admin: 'unchanged', emailSettings: 'unchanged', backups: 'unchanged' });
+    expect(report).toEqual({ admin: 'unchanged', emailSettings: 'unchanged', formTypes: [], backups: 'unchanged' });
     expect(await prisma.user.count()).toBe(userCountBefore);
     expect(await prisma.user.findUniqueOrThrow({ where: { email: NEW_ADMIN_EMAIL } })).toEqual(before);
   });
@@ -80,6 +81,32 @@ describe('seedProduction', () => {
     } finally {
       // Trả về dòng của seed mẫu (người lưu cb-1), để afterAll xóa được Admin thử
       await prisma.emailSettings.upsert({ where: { id: 1 }, create: settingsBefore as never, update: settingsBefore as never });
+    }
+  });
+
+  it('thêm loại đơn theo mẫu Word còn thiếu (người lưu là Admin); đã có hoặc trùng mã đơn thì giữ nguyên', async () => {
+    const [first] = SCHOOL_FORM_TYPES_SEED;
+    const before = await prisma.formType.findUniqueOrThrow({ where: { id: first!.id }, include: { versions: true } });
+    await prisma.formType.delete({ where: { id: first!.id } });
+    try {
+      const report = await seedProduction(prisma, NEW_ADMIN_EMAIL);
+
+      expect(report.formTypes).toEqual([first!.id]);
+      const admin = await prisma.user.findUniqueOrThrow({ where: { email: NEW_ADMIN_EMAIL } });
+      const created = await prisma.formTypeVersion.findUniqueOrThrow({ where: { formTypeId_version: { formTypeId: first!.id, version: 1 } } });
+      expect(created).toMatchObject({ status: first!.status, name: first!.name, sections: first!.sections, updatedById: admin.id });
+      expect((await seedProduction(prisma, NEW_ADMIN_EMAIL)).formTypes).toEqual([]);
+
+      // Mã đơn đã bị loại đơn khác dùng: bỏ qua
+      await prisma.formType.delete({ where: { id: first!.id } });
+      await prisma.formType.update({ where: { id: 'thu' }, data: { prefix: first!.prefix } });
+      expect((await seedProduction(prisma, NEW_ADMIN_EMAIL)).formTypes).toEqual([]);
+    } finally {
+      // Trả về loại đơn của seed mẫu, để afterAll xóa được Admin thử
+      await prisma.formType.update({ where: { id: 'thu' }, data: { prefix: 'THU' } });
+      await prisma.formType.deleteMany({ where: { id: first!.id } });
+      const { versions, ...formType } = before;
+      await prisma.formType.create({ data: { ...formType, versions: { create: versions.map(({ formTypeId: _formTypeId, ...version }) => ({ ...version, sections: version.sections as never })) } } });
     }
   });
 

@@ -1,6 +1,7 @@
 export * from './accounts';
 export * from './students';
 export * from './form-types';
+export * from './school-form-types';
 export * from './forms';
 export * from './email-settings';
 export * from './backups';
