@@ -139,7 +139,7 @@
 /* bảng: tên gọi mỗi dòng, các cột */
 .tableSettings{display:grid;gap:8px;overflow-x:auto;min-width:0}
 .rowName{max-width:340px}
-.columnsHead,.column{display:grid;grid-template-columns:minmax(140px,1fr) minmax(140px,1fr) 90px 70px 34px;gap:8px;align-items:center;min-width:560px}
+.columnsHead,.column{display:grid;grid-template-columns:minmax(140px,1fr) minmax(120px,1fr) minmax(120px,1fr) 90px 70px 34px;gap:8px;align-items:center;min-width:690px}
 /* mỗi cột: hàng trên là các ô nhập (cao bằng nhau theo ô cao nhất), hàng dưới là mã của cột ngay dưới ô tên cột */
 .column{align-items:stretch;grid-template-rows:auto auto;row-gap:4px}
 .column>*{grid-row:1}
