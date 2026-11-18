@@ -197,7 +197,7 @@ Workflow đã đổi (commit `aa00be2`): push vào `main` thì máy dev nào đa
 
 ## Loại đơn theo mẫu Word ✓
 
-Mẫu Word ở Google Drive, thư mục `CongXuLiDon/Mẫu Đơn` (32 mẫu), đánh số theo ngày sửa, cũ trước. Đơn 1, 2 làm lần lượt; ngày 18/11/2026 đã soạn sẵn cả 30 đơn còn lại vào database dev ở dạng **Nháp**. Ngày 18/11/2026 cậu đã duyệt, sửa xong cả 32 đơn; đã đưa cả 32 vào seed. Seed dev có đủ 32; seed bản thật bỏ `CCT`, `CHT`, `CTR`, `XMT`, `XMR`, `CDCT`, `HXTN`, `KKL`, `DN`, `DNPA` (`PRODUCTION_EXCLUDED_FORM_TYPE_PREFIXES` trong `shared/src/seed/production-form-types.ts`).
+Mẫu Word ở Google Drive, thư mục `CongXuLiDon/Mẫu Đơn` (32 mẫu), đánh số theo ngày sửa, cũ trước. Đơn 1, 2 làm lần lượt; ngày 18/11/2026 đã soạn sẵn cả 30 đơn còn lại vào database dev ở dạng **Nháp**. Ngày 18/11/2026 cậu đã duyệt, sửa xong cả 32 đơn; đã đưa cả 32 vào seed. Seed dev và seed bản thật đều có đủ 32 (muốn chừa mã nào khỏi bản thật thì thêm vào `PRODUCTION_EXCLUDED_FORM_TYPE_PREFIXES` trong `shared/src/seed/production-form-types.ts`). Còn hỏi Phòng: giữ cả `DN` và `DNPA` hay bỏ một.
 
 ### Mỗi đơn
 

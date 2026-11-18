@@ -3,8 +3,8 @@
 import type { FormType } from '../api-contract';
 import { SCHOOL_FORM_TYPES_SEED } from './school-form-types';
 
-/** Mã đơn không đưa lên bản thật. */
-export const PRODUCTION_EXCLUDED_FORM_TYPE_PREFIXES: readonly string[] = ['CCT', 'CHT', 'CTR', 'XMT', 'XMR', 'CDCT', 'HXTN', 'KKL', 'DN', 'DNPA'];
+/** Mã đơn không đưa lên bản thật (hiện đưa lên đủ 32 loại đơn; thêm mã vào đây nếu cần chừa ra). */
+export const PRODUCTION_EXCLUDED_FORM_TYPE_PREFIXES: readonly string[] = [];
 
 /** Loại đơn seed bản thật thêm vào (api/prisma/production-seed.ts). */
 export const PRODUCTION_FORM_TYPES_SEED: readonly FormType[] = SCHOOL_FORM_TYPES_SEED.filter(

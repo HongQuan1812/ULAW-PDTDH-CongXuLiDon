@@ -115,7 +115,7 @@ Có lí do của Phòng Đào tạo thì hiện thêm dòng "Phòng Đào tạo:
 
 ## Loại đơn
 
-- Mỗi **loại đơn** là một form: các **phần**, trong phần là các **câu hỏi**. Loại đơn ban đầu là 32 mẫu đơn Word của Phòng Đào tạo Đại học (`shared/src/seed/school-form-types.ts`), sửa được như mọi loại khác; bản thật chưa đưa lên một số mã (`shared/src/seed/production-form-types.ts`).
+- Mỗi **loại đơn** là một form: các **phần**, trong phần là các **câu hỏi**. Loại đơn ban đầu là 32 mẫu đơn Word của Phòng Đào tạo Đại học (`shared/src/seed/school-form-types.ts`), sửa được như mọi loại khác; seed bản thật thêm cả 32 ở dạng Nháp, chừa mã nào thì khai ở `shared/src/seed/production-form-types.ts`.
 - **Mã đơn (tiền tố)**: 2–5 chữ in hoa, không trùng; khóa khi phiên bản đầu tiên được mở.
 - **Phiên bản** (`shared/src/api-contract/form-types.ts`): mỗi loại đơn có nhiều phiên bản; tên, mô tả, các phần, câu hỏi thuộc từng phiên bản.
   - **Nháp**: sửa được, xóa được. Nhiều nhất một phiên bản Nháp, luôn là phiên bản mới nhất. Người nộp đơn không thấy.
