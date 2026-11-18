@@ -21,7 +21,7 @@ import { ApiError, apiFetch, fetchFile, type DownloadedFile } from './client';
 /**
  * Khóa lưu tạm danh sách mẫu của một loại đơn.
  * @param formTypeId  mã loại đơn
- * @returns           vd ['exportTemplates', 'xmm']
+ * @returns           vd ['exportTemplates', 'xmr']
  */
 const exportTemplatesKey = (formTypeId: string) => ['exportTemplates', formTypeId] as const;
 

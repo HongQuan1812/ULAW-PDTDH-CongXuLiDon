@@ -187,6 +187,7 @@ export function TableAnswer({
                   return (
                     <td key={columnIndex}>
                       {column.type === 'select' ? (
+                        // Ô chưa chọn ghi "— Chọn —" (không lấy chữ mờ); dòng này ẩn khỏi danh sách sổ xuống, chỉ còn các lựa chọn
                         // Giá trị cũ không còn trong danh sách (người soạn đã sửa lựa chọn) vẫn hiện để người nộp thấy mà chọn lại
                         <select
                           className={`${styles.cellSelect} ${isEmptyCell(cell) ? styles.cellSelectEmpty : ''} ${cellInvalid ? styles.invalid : ''}`}
@@ -195,7 +196,9 @@ export function TableAnswer({
                           aria-label={cellProps['aria-label']}
                           aria-invalid={cellProps['aria-invalid']}
                         >
-                          <option value="">{column.placeholder || '— Chọn —'}</option>
+                          <option value="" disabled hidden>
+                            — Chọn —
+                          </option>
                           {typeof cell === 'string' && cell && !(column.options ?? []).includes(cell) && <option value={cell}>{cell}</option>}
                           {(column.options ?? []).map((option) => (
                             <option key={option} value={option}>

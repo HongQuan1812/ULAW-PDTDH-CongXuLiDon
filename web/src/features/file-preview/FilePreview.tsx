@@ -21,9 +21,9 @@ export interface PreviewFile extends FileRef {
   content?: Blob;
   /** Chữ trên nút tải về; mặc định "Tải về", vd "Tải file Word" */
   downloadLabel?: string;
-  /** Tiêu đề trên thanh xem; mặc định là tên tệp (tên tệp vẫn dùng khi tải về), vd "XMM-2026-001-00001 · Đơn gửi phòng Đào tạo" */
+  /** Tiêu đề trên thanh xem; mặc định là tên tệp (tên tệp vẫn dùng khi tải về), vd "XMR-2026-001-00001 · Đơn gửi phòng Đào tạo" */
   title?: string;
-  /** Ghi chú thêm sau dung lượng, vd "Xem trước gần đúng · dữ liệu đơn XMM-…" */
+  /** Ghi chú thêm sau dung lượng, vd "Xem trước gần đúng · dữ liệu đơn XMR-…" */
   note?: string;
 }
 

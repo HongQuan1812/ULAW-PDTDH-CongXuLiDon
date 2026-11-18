@@ -52,13 +52,13 @@ export function useOpenFormTypes(enabled: boolean) {
 /**
  * Khóa lưu tạm phiên bản đang mở của một loại đơn (trang nộp đơn).
  * @param formTypeId  mã loại đơn
- * @returns           vd ['formTypes', 'detail', 'xmm']
+ * @returns           vd ['formTypes', 'detail', 'xmr']
  */
 export const formTypeDetailKey = (formTypeId: string) => ['formTypes', 'detail', formTypeId] as const;
 
 /**
  * Phiên bản đang mở của một loại đơn, đủ cấu trúc các phần, câu hỏi (để vẽ trang nộp đơn).
- * @param formTypeId  mã loại đơn, vd 'xmm'
+ * @param formTypeId  mã loại đơn, vd 'xmr'
  * @returns           kết quả useQuery; data = loại đơn (FormType); không có phiên bản nào đang mở thì lỗi 404
  */
 export function useFormType(formTypeId: string) {
@@ -71,7 +71,7 @@ export function useFormType(formTypeId: string) {
 /**
  * Khóa lưu tạm loại đơn kèm mọi phiên bản (trình soạn).
  * @param formTypeId  mã loại đơn
- * @returns           vd ['formTypes', 'versions', 'xmm']
+ * @returns           vd ['formTypes', 'versions', 'xmr']
  */
 export const managedFormTypeKey = (formTypeId: string) => ['formTypes', 'versions', formTypeId] as const;
 

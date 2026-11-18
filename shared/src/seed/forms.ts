@@ -1,8 +1,9 @@
-/* Lá đơn mẫu (Xét miễn môn) và người tiếp nhận, xử lí. */
+/* Lá đơn mẫu (mọi loại đơn, nhiều nhất là loại đơn chính MAIN_SEED_FORM_TYPE_ID) và người tiếp nhận, xử lí. */
 import type { FormSummary, FormType } from '../api-contract';
-import type { FileRef, FormAnswers, FormStatus, TableCell } from '../aux-schema';
+import type { FormAnswers, FormStatus } from '../aux-schema';
 import { formatFormCode } from '../business-rules';
-import { FORM_TYPE_SEED } from './form-types';
+import { MAIN_SEED_FORM_TYPE_ID, seedFormTypes } from './form-types';
+import { SAMPLE_SUBJECTS, sampleAnswersFor } from './sample-answers';
 import { cloneSeedValue } from './clone';
 import { addHours, dateText, twoDigits } from './time';
 
@@ -30,49 +31,59 @@ export const SEED_STAFF_IDS = ['cb-1', 'cb-2', 'cb-3'] as const;
 /* 10 sinh viên khác có đơn mẫu (tài khoản sv-2 … sv-11). */
 const OTHER_STUDENT_IDS = Array.from({ length: 10 }, (_, i) => `sv-${i + 2}`);
 
-/* Các môn mẫu cho bảng "Các môn xin miễn": [môn của trường, số tín chỉ, môn tương đương, cơ sở đào tạo]. */
-const SAMPLE_SUBJECTS: TableCell[][] = [
-  ['Triết học Mác – Lênin', 3, 'Triết học Mác – Lênin', 'ĐH KHXH&NV – ĐHQG TP.HCM'],
-  ['Kinh tế chính trị Mác – Lênin', 2, 'Kinh tế chính trị Mác – Lênin', 'ĐH Kinh tế TP.HCM'],
-  ['Chủ nghĩa xã hội khoa học', 2, 'Chủ nghĩa xã hội khoa học', 'ĐH Sư phạm TP.HCM'],
-  ['Lịch sử Đảng Cộng sản Việt Nam', 2, 'Lịch sử Đảng Cộng sản Việt Nam', 'ĐH Công nghiệp TP.HCM'],
-  ['Tư tưởng Hồ Chí Minh', 2, 'Tư tưởng Hồ Chí Minh', 'ĐH Mở TP.HCM'],
-  ['Tiếng Anh pháp lý 1', 3, 'English for Specific Purposes 1', 'ĐH Sư phạm TP.HCM'],
-  ['Tin học đại cương', 2, 'Tin học căn bản', 'ĐH Bách khoa – ĐHQG TP.HCM'],
-  ['Logic học', 2, 'Logic học đại cương', 'ĐH KHXH&NV – ĐHQG TP.HCM'],
-  ['Xã hội học pháp luật', 2, 'Xã hội học đại cương', 'ĐH Mở TP.HCM'],
-  ['Kinh tế vi mô', 3, 'Microeconomics', 'ĐH Kinh tế – Luật'],
-  ['Giáo dục thể chất 1', 1, 'Giáo dục thể chất 1', 'ĐH Nông Lâm TP.HCM'],
-];
-
 /* Lí do mẫu Phòng Đào tạo ghi khi Yêu cầu bổ sung / Từ chối; trạng thái khác không có lí do. */
 /** Tiền tố id của tệp mẫu có sẵn trong đơn mẫu; sau tiền tố là mã đơn chứa tệp. */
 export const SEED_FILE_ID_PREFIX = 'seed-';
 
-const SUPPLEMENT_NOTE = 'Bảng điểm chưa có dấu xác nhận của cơ sở đào tạo. Vui lòng nộp lại bản có xác nhận.';
+const SUPPLEMENT_NOTE = 'Giấy tờ minh chứng chưa có dấu xác nhận. Vui lòng nộp lại bản có xác nhận.';
 const SAMPLE_NOTES: Partial<Record<FormStatus, string>> = {
   bs: SUPPLEMENT_NOTE,
   bsg: SUPPLEMENT_NOTE,
-  tc: 'Nội dung môn tương đương trùng dưới 70% đề cương môn của trường.',
+  tc: 'Hồ sơ không đủ điều kiện theo quy chế đào tạo.',
 };
 
+/** Học phần mẫu của một dòng bảng. */
+type SampleSubject = (typeof SAMPLE_SUBJECTS)[number];
+
 /**
- * Câu trả lời mẫu của một đơn Xét miễn môn: bảng môn và một tệp bảng điểm (tệp mẫu không có nội dung thật).
+ * Câu trả lời mẫu của một đơn thuộc loại đơn chính (XMR): bảng học phần, cơ sở đào tạo, một tệp bảng điểm (tệp mẫu không có nội dung thật).
  * @param code      mã đơn, để đặt id tệp
- * @param subjects  các dòng bảng môn
+ * @param subjects  các học phần xin miễn
  * @param fileName  tên tệp bảng điểm
- * @returns         câu trả lời theo id câu hỏi của loại đơn xmm
+ * @returns         câu trả lời theo id câu hỏi của loại đơn xmr
  */
-function sampleAnswers(code: string, subjects: TableCell[][], fileName: string): FormAnswers {
+function sampleAnswers(code: string, subjects: SampleSubject[], fileName: string): FormAnswers {
   const sizeBytes = 150_000 + (Number(code.slice(-5)) * 7_919) % 900_000;
-  return { mon: subjects.map((row) => [...row]), files: [{ id: `${SEED_FILE_ID_PREFIX}${code}`, name: fileName, sizeBytes }] };
+  return {
+    'hoc-phan': subjects.map(([name, credits, equivalent], row) => [name, credits, equivalent, `${credits} TC`, 7 + (row % 3) * 0.5]),
+    'co-so-dao-tao': subjects[0]![3],
+    'hinh-thuc-dao-tao': 'Chính quy',
+    'minh-chung': [{ id: `${SEED_FILE_ID_PREFIX}${code}`, name: fileName, sizeBytes }],
+  };
 }
 
-/** Bản chụp loại đơn Xét miễn môn cho đơn mẫu. */
-const xmmSnapshot = () => cloneSeedValue(FORM_TYPE_SEED.find((formType) => formType.id === 'xmm')!);
+/** Các loại đơn ở dev (phiên bản đang mở là bản mới nhất). */
+const SEED_FORM_TYPES = seedFormTypes();
+
 /**
- * Sinh 18 đơn Xét miễn môn mẫu cho sinh viên đăng nhập thử
- * (cùng trạng thái, mã đơn, ngày nộp, các môn, tệp, lí do), để bảng có nhiều trang, đủ các trạng thái.
+ * Bản chụp phiên bản mới nhất của một loại đơn mẫu, kèm số phiên bản (để ghi vào mã đơn).
+ * @param formTypeId  mã loại đơn
+ * @returns           bản chụp loại đơn, số phiên bản
+ */
+function latestSnapshot(formTypeId: string): { snapshot: FormType; version: number } {
+  const formType = SEED_FORM_TYPES.find((candidate) => candidate.id === formTypeId)!;
+  const latest = formType.versions.at(-1)!;
+  const { name, description, status, sections, version } = cloneSeedValue(latest);
+  return { snapshot: { id: formType.id, prefix: formType.prefix, name, description, version, status, sections }, version };
+}
+
+/** Bản chụp loại đơn chính cho đơn mẫu. */
+const mainSnapshot = () => latestSnapshot(MAIN_SEED_FORM_TYPE_ID).snapshot;
+const MAIN_PREFIX = SEED_FORM_TYPES.find((formType) => formType.id === MAIN_SEED_FORM_TYPE_ID)!.prefix;
+
+/**
+ * Sinh 18 đơn của loại đơn chính cho sinh viên đăng nhập thử
+ * (trạng thái, mã đơn, ngày nộp, học phần, tệp, lí do cố định), để bảng có nhiều trang, đủ các trạng thái.
  * @returns  các đơn của sv-1, đơn mới nộp đứng đầu
  */
 function seedStudentForms(): UnassignedForm[] {
@@ -85,11 +96,11 @@ function seedStudentForms(): UnassignedForm[] {
   return statuses.map((status, i) => {
     // Ngày nộp lùi dần, giờ nộp trong buổi sáng; cứ 4 đơn có 1 đơn sửa lại buổi chiều cùng ngày
     const date = dateText(day);
-    const code = formatFormCode('XMM', day.getFullYear(), 1, 1520 - i * 83);
+    const code = formatFormCode(MAIN_PREFIX, day.getFullYear(), 1, 1520 - i * 83);
     const submittedAt = `${date}T${twoDigits(7 + (i % 4))}:${twoDigits((i * 17) % 60)}`;
     const updatedAt = i % 4 === 1 ? `${date}T${twoDigits(13 + (i % 5))}:${twoDigits((i * 29) % 60)}` : submittedAt;
 
-    // 1–3 môn, một tệp bảng điểm
+    // 1–3 học phần, một tệp bảng điểm
     const subjects = Array.from({ length: 1 + ((i * 7) % 3) }, (_, k) => SAMPLE_SUBJECTS[(i * 3 + k * 5) % SAMPLE_SUBJECTS.length]!);
     const fileName = `Bang_diem_${i % 2 ? 'hoc_ky' : 'toan_khoa'}_${i + 1}.pdf`;
 
@@ -97,22 +108,22 @@ function seedStudentForms(): UnassignedForm[] {
     return {
       ownerId: 'sv-1',
       code,
-      formTypeId: 'xmm',
-      formTypeName: 'Xét miễn môn',
+      formTypeId: MAIN_SEED_FORM_TYPE_ID,
+      formTypeName: mainSnapshot().name,
       submittedAt,
       updatedAt,
       status,
       note: SAMPLE_NOTES[status] ?? '',
       receivedAt: status === 'nop' ? null : addHours(submittedAt, 3 + (i % 3) * 18),
       answers: sampleAnswers(code, subjects, fileName),
-      formTypeSnapshot: xmmSnapshot(),
+      formTypeSnapshot: mainSnapshot(),
     };
   });
 }
 
 /**
  * Sinh đơn của 10 sinh viên khác (sv-2 … sv-11):
- * sinh viên thứ i có 1 + i % 3 đơn, tổng 19 đơn, mỗi đơn một môn. Dùng cho mục "Đơn phụ trách" của cán bộ.
+ * sinh viên thứ i có 1 + i % 3 đơn, tổng 19 đơn, mỗi đơn một học phần. Dùng cho mục "Đơn phụ trách" của cán bộ.
  * @returns  các đơn
  */
 function seedOtherStudentForms(): UnassignedForm[] {
@@ -125,7 +136,7 @@ function seedOtherStudentForms(): UnassignedForm[] {
     for (let j = 0; j < 1 + (student % 3); j++, formIndex++) {
       // Ngày nộp rải trong khoảng 200 ngày; đơn Đã bổ sung sửa sau 30 giờ, vài đơn khác sửa sau 5 giờ
       const day = new Date(2026, 9, 31 - ((formIndex * 11) % 200));
-      const code = formatFormCode('XMM', day.getFullYear(), 1, 1500 - formIndex * 37);
+      const code = formatFormCode(MAIN_PREFIX, day.getFullYear(), 1, 1500 - formIndex * 37);
       const submittedAt = `${dateText(day)}T${twoDigits(8 + (formIndex % 9))}:${twoDigits((formIndex * 13) % 60)}`;
       const status = statuses[formIndex % statuses.length]!;
       const updatedAt = status === 'bsg' ? addHours(submittedAt, 30) : formIndex % 5 === 2 ? addHours(submittedAt, 5) : submittedAt;
@@ -133,129 +144,59 @@ function seedOtherStudentForms(): UnassignedForm[] {
       forms.push({
         ownerId: OTHER_STUDENT_IDS[student]!,
         code,
-        formTypeId: 'xmm',
-        formTypeName: 'Xét miễn môn',
+        formTypeId: MAIN_SEED_FORM_TYPE_ID,
+        formTypeName: mainSnapshot().name,
         submittedAt,
         updatedAt,
         status,
         note: SAMPLE_NOTES[status] ?? '',
         receivedAt: status === 'nop' ? null : addHours(submittedAt, 3 + (formIndex % 3) * 18),
         answers: sampleAnswers(code, [subjects[formIndex % subjects.length]!], `Bang_diem_${formIndex + 1}.pdf`),
-        formTypeSnapshot: xmmSnapshot(),
+        formTypeSnapshot: mainSnapshot(),
       });
     }
   }
   return forms;
 }
 
-/** Bản chụp phiên bản mới nhất (2) của đơn thử nghiệm cho đơn mẫu. */
-const TEST_FORM_VERSION = 2;
-const testSnapshot = () => cloneSeedValue(FORM_TYPE_SEED.find((formType) => formType.id === 'thu')!);
-
-/** Văn bản có định dạng gồm các đoạn, cho câu trả lời "đoạn văn". */
-const richText = (...paragraphs: string[]): FormAnswers[string] => ({
-  type: 'doc',
-  content: paragraphs.map((text) => ({ type: 'paragraph', content: [{ type: 'text', text }] })),
-});
-
-/* Câu trả lời mẫu của đơn thử nghiệm: đủ loại câu hỏi, số dòng bảng 0 – 4, số lựa chọn và số tệp khác nhau. */
-const TEST_FORM_SAMPLES: { status: FormStatus; answers: FormAnswers }[] = [
-  {
-    status: 'nop',
-    answers: {
-      'tieu-de': 'Xin nghỉ học kỳ 1 vì lí do sức khỏe',
-      'li-do': richText('Em bị tai nạn giao thông, cần điều trị dài ngày.', 'Em xin phép nghỉ từ đầu học kỳ.'),
-      'so-tin-chi': 62,
-      'ngay-nghi': '2026-09-05',
-      'hoc-ky': 'Học kỳ 1',
-      'giay-to': ['Bảng điểm', 'Giấy xác nhận sinh viên'],
-      'co-so': 'Cơ sở Nguyễn Tất Thành',
-      'mon-hoc': [['Luật Dân sự 1', 3, 'Lớp DS01'], ['Luật Hình sự 1', 3, 'Lớp HS02'], ['Tiếng Anh pháp lý 1', 2, 'Lớp TA03'], ['Logic học', 2, 'Học cùng khóa trên']],
-      'tep-dinh-kem': [{ id: '', name: 'Giay_ra_vien.pdf', sizeBytes: 412_880 }],
-    },
-  },
-  {
-    status: 'xet',
-    answers: {
-      'tieu-de': 'Đăng ký học vượt hai môn',
-      'li-do': richText('Em muốn rút ngắn thời gian học.'),
-      'so-tin-chi': 90,
-      'ngay-nghi': '',
-      'hoc-ky': 'Học kỳ hè',
-      'giay-to': ['Bảng điểm', 'Giấy xác nhận sinh viên', 'Đơn có chữ ký phụ huynh'],
-      'co-so': 'Cơ sở Bình Thạnh',
-      'mon-hoc': [['Luật Thương mại 1', 3, 'Lớp TM01'], ['Luật Lao động', 2, 'Lớp LD01']],
-      'tep-dinh-kem': [],
-    },
-  },
-  {
-    status: 'bs',
-    answers: {
-      'tieu-de': 'Xin hoãn thi cuối kỳ',
-      'li-do': richText('Em trùng lịch thi hai môn.'),
-      'so-tin-chi': 48,
-      'ngay-nghi': '2026-10-12',
-      'hoc-ky': 'Học kỳ 2',
-      'giay-to': ['Bảng điểm'],
-      'co-so': '',
-      'mon-hoc': [],
-      'tep-dinh-kem': [{ id: '', name: 'Lich_thi_trung.docx', sizeBytes: 98_304 }, { id: '', name: 'Don_xac_nhan.pdf', sizeBytes: 215_040 }],
-    },
-  },
-  {
-    status: 'duyet',
-    answers: {
-      'tieu-de': 'Đăng ký học lại ba môn',
-      'li-do': richText('Em chưa đạt ba môn ở học kỳ trước.', 'Em xin đăng ký học lại cùng khóa dưới.', 'Em xin cảm ơn Phòng Đào tạo.'),
-      'so-tin-chi': 75,
-      'ngay-nghi': '2026-08-20',
-      'hoc-ky': 'Học kỳ 1',
-      'giay-to': ['Bảng điểm', 'Đơn có chữ ký phụ huynh'],
-      'co-so': 'Cơ sở Thủ Đức',
-      'mon-hoc': [['Luật Hành chính', 3, 'Học lại'], ['Luật Hiến pháp', 3, 'Học lại'], ['Luật Đất đai', 2, 'Học lại'], ['Luật Tố tụng dân sự', 3, 'Lớp TT02'], ['Công pháp quốc tế', 3, 'Học cải thiện']],
-      'tep-dinh-kem': [{ id: '', name: 'Bang_diem_hoc_ky.pdf', sizeBytes: 530_112 }],
-    },
-  },
-  {
-    status: 'tc',
-    answers: {
-      'tieu-de': 'Xin bảo lưu kết quả',
-      'li-do': richText('Em xin bảo lưu để đi du học trao đổi.'),
-      'so-tin-chi': 30,
-      'ngay-nghi': '2026-11-01',
-      'hoc-ky': 'Học kỳ 2',
-      'giay-to': ['Giấy xác nhận sinh viên'],
-      'co-so': 'Cơ sở Nguyễn Tất Thành',
-      'mon-hoc': [['Triết học Mác – Lênin', 3, 'Học bù']],
-      'tep-dinh-kem': [],
-    },
-  },
-];
+/** Số đơn mẫu của mỗi loại đơn khác loại đơn chính. */
+const FORMS_PER_OTHER_TYPE = 3;
 
 /**
- * Sinh các đơn thử nghiệm mẫu (đủ 10 loại câu hỏi), của các sinh viên khác sv-1.
- * @returns  các đơn thử nghiệm đã điền, mã THU-<năm>-002-<STT>
+ * Sinh đơn mẫu cho mọi loại đơn khác loại đơn chính: mỗi loại FORMS_PER_OTHER_TYPE đơn của các sinh viên khác sv-1,
+ * đủ các trạng thái, câu trả lời dựng theo cấu trúc loại đơn (sampleAnswersFor).
+ * @returns  các đơn, mã <TIỀN TỐ>-2026-<phiên bản mới nhất>-<STT từ 1>
  */
-function seedTestForms(): UnassignedForm[] {
-  return TEST_FORM_SAMPLES.map(({ status, answers }, i) => {
-    const day = new Date(2026, 9, 28 - i * 6);
-    const code = formatFormCode('THU', day.getFullYear(), TEST_FORM_VERSION, i + 1);
-    const submittedAt = `${dateText(day)}T${twoDigits(9 + i)}:${twoDigits((i * 23) % 60)}`;
-    const files = (answers['tep-dinh-kem'] as FileRef[]).map((file, k) => ({ ...file, id: `${SEED_FILE_ID_PREFIX}${code}-${k + 1}` }));
-    return {
-      ownerId: OTHER_STUDENT_IDS[i]!,
-      code,
-      formTypeId: 'thu',
-      formTypeName: 'Đơn thử nghiệm (đủ loại câu hỏi)',
-      submittedAt,
-      updatedAt: submittedAt,
-      status,
-      note: SAMPLE_NOTES[status] ?? '',
-      receivedAt: status === 'nop' ? null : addHours(submittedAt, 4 + i),
-      answers: cloneSeedValue({ ...answers, 'tep-dinh-kem': files }),
-      formTypeSnapshot: testSnapshot(),
-    };
-  });
+function seedEveryTypeForms(): UnassignedForm[] {
+  const statuses: FormStatus[] = ['nop', 'xet', 'duyet', 'bs', 'tc', 'bsg'];
+  const forms: UnassignedForm[] = [];
+  let formIndex = 0;
+
+  for (const formType of SEED_FORM_TYPES.filter((candidate) => candidate.id !== MAIN_SEED_FORM_TYPE_ID)) {
+    const { snapshot, version } = latestSnapshot(formType.id);
+    for (let k = 0; k < FORMS_PER_OTHER_TYPE; k++, formIndex++) {
+      // Ngày nộp rải trong khoảng 150 ngày trước 31/10/2026, giờ nộp trong giờ hành chính
+      const day = new Date(2026, 9, 31 - ((formIndex * 7) % 150));
+      const code = formatFormCode(formType.prefix, day.getFullYear(), version, k + 1);
+      const submittedAt = `${dateText(day)}T${twoDigits(8 + (formIndex % 9))}:${twoDigits((formIndex * 19) % 60)}`;
+      const status = statuses[formIndex % statuses.length]!;
+
+      forms.push({
+        ownerId: OTHER_STUDENT_IDS[formIndex % OTHER_STUDENT_IDS.length]!,
+        code,
+        formTypeId: formType.id,
+        formTypeName: snapshot.name,
+        submittedAt,
+        updatedAt: status === 'bsg' ? addHours(submittedAt, 30) : submittedAt,
+        status,
+        note: SAMPLE_NOTES[status] ?? '',
+        receivedAt: status === 'nop' ? null : addHours(submittedAt, 4 + (formIndex % 5)),
+        answers: sampleAnswersFor(snapshot.sections, formIndex, code, dateText(day), SEED_FILE_ID_PREFIX),
+        formTypeSnapshot: cloneSeedValue(snapshot),
+      });
+    }
+  }
+  return forms;
 }
 
 /**
@@ -285,5 +226,5 @@ function assignStaff(forms: UnassignedForm[]): SeedForm[] {
  * @returns  đơn của sinh viên đăng nhập thử rồi đơn của sinh viên khác, đã gán cán bộ
  */
 export function seedForms(): SeedForm[] {
-  return assignStaff([...seedStudentForms(), ...seedOtherStudentForms(), ...seedTestForms()]);
+  return assignStaff([...seedStudentForms(), ...seedOtherStudentForms(), ...seedEveryTypeForms()]);
 }

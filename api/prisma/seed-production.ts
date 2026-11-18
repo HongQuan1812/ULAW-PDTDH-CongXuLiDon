@@ -1,4 +1,4 @@
-/* Seed bản thật: tạo Admin đầu tiên và cấu hình email mặc định. Không xóa dữ liệu nào, chạy lại vẫn an toàn.
+/* Seed bản thật: tạo Admin đầu tiên, cấu hình email mặc định, loại đơn theo mẫu Word. Không xóa dữ liệu nào, chạy lại vẫn an toàn.
    Container bản thật tự chạy mỗi lần bật / restart (api/Dockerfile), email lấy từ FIRST_ADMIN_EMAIL trong .env.prod,
    họ tên từ FIRST_ADMIN_NAME (có thì Admin đăng nhập là vào thẳng, trống thì lần đầu tự nhập).
    Chạy tay: pnpm --filter api seed:production [email trường của Admin], bỏ trống thì lấy FIRST_ADMIN_EMAIL */
@@ -30,6 +30,7 @@ try {
   const report = await seedProduction(prisma, adminEmail, process.env.FIRST_ADMIN_NAME ?? '');
   console.log(`Admin ${adminEmail}: ${ADMIN_MESSAGES[report.admin]}.`);
   console.log(`Cấu hình email: ${EMAIL_SETTINGS_MESSAGES[report.emailSettings]}.`);
+  console.log(`Loại đơn: ${report.formTypes.length ? `đã thêm ${report.formTypes.join(', ')}` : 'đã có đủ, giữ nguyên'}.`);
   console.log(`Sao lưu: ${BACKUP_MESSAGES[report.backups]}.`);
 } finally {
   await prisma.$disconnect();

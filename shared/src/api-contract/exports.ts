@@ -48,8 +48,8 @@ export const EXPORT_ENDPOINTS = {
 
 /**
  * Đường dẫn API các mẫu của một loại đơn.
- * @param formTypeId  mã loại đơn, vd 'xmm'
- * @returns           vd '/form-types/xmm/export-templates'
+ * @param formTypeId  mã loại đơn, vd 'xmr'
+ * @returns           vd '/form-types/xmr/export-templates'
  */
 export function exportTemplatesPath(formTypeId: string): string {
   return EXPORT_ENDPOINTS.templates.replace(':formTypeId', encodeURIComponent(formTypeId));
@@ -60,7 +60,7 @@ export function exportTemplatesPath(formTypeId: string): string {
  * @param formTypeId  mã loại đơn
  * @param templateId  id mẫu
  * @param action      'file': mẫu gốc · 'check': kiểm tra mã · 'export': xuất file thống kê
- * @returns           vd '/form-types/xmm/export-templates/tpl-1/check'
+ * @returns           vd '/form-types/xmr/export-templates/tpl-1/check'
  */
 export function exportTemplatePath(formTypeId: string, templateId: string, action: 'file' | 'check' | 'export'): string {
   return `${exportTemplatesPath(formTypeId)}/${encodeURIComponent(templateId)}/${action}`;
@@ -69,7 +69,7 @@ export function exportTemplatePath(formTypeId: string, templateId: string, actio
 /**
  * Đường dẫn API xuất file một lá đơn.
  * @param code  mã đơn
- * @returns     vd '/forms/XMM-2026-001-00001/export'
+ * @returns     vd '/forms/XMR-2026-001-00001/export'
  */
 export function formExportPath(code: string): string {
   return EXPORT_ENDPOINTS.formExport.replace(':code', encodeURIComponent(code));
@@ -78,7 +78,7 @@ export function formExportPath(code: string): string {
 /**
  * Đường dẫn API kiểm tra mã của mẫu theo một lá đơn.
  * @param code  mã đơn
- * @returns     vd '/forms/XMM-2026-001-00001/export-check'
+ * @returns     vd '/forms/XMR-2026-001-00001/export-check'
  */
 export function formExportCheckPath(code: string): string {
   return EXPORT_ENDPOINTS.formExportCheck.replace(':code', encodeURIComponent(code));

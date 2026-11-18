@@ -1,5 +1,5 @@
 /* Test nhóm API exports: mẫu xuất file (danh sách, lưu, mẫu gốc, kiểm tra mã), xuất file một lá đơn (Word) và xuất thống kê (Excel).
-   Cần database đã migrate và seed (mẫu tpl-demo của loại đơn xmm). Test thêm mẫu tên bắt đầu bằng TEST_NAME rồi xóa sạch khi xong. */
+   Cần database đã migrate và seed (mẫu tpl-demo của loại đơn xmr). Test thêm mẫu tên bắt đầu bằng TEST_NAME rồi xóa sạch khi xong. */
 import ExcelJS from 'exceljs';
 import PizZip from 'pizzip';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
@@ -28,8 +28,8 @@ import { PrismaService } from '../src/common/prisma.service';
 import { createTestApp } from './create-test-app';
 
 /** Đơn của sv-1 (người nộp đơn khi đăng nhập thử) và đơn của sinh viên khác (sv-2), trong dữ liệu mẫu. */
-const OWN_FORM_CODE = 'XMM-2026-001-01520';
-const OTHER_FORM_CODE = 'XMM-2026-001-01500';
+const OWN_FORM_CODE = 'XMR-2026-001-01520';
+const OTHER_FORM_CODE = 'XMR-2026-001-01500';
 
 /** Tên các mẫu test thêm, để dọn sau. */
 const TEST_NAME = 'Mẫu thử e2e';
@@ -66,7 +66,7 @@ describe('exports', () => {
   let app: INestApplication;
   let prisma: PrismaService;
   let sampleDocx: Buffer;
-  let xmmDraft: ExportDraftRequest;
+  let xmrDraft: ExportDraftRequest;
   const server = () => app.getHttpServer();
 
   /** Đăng nhập thử, trả cookie để gửi kèm các request sau. */
@@ -76,7 +76,7 @@ describe('exports', () => {
   }
 
   /** Gửi lưu các thay đổi về mẫu: phần chữ JSON và các file mới (id tạm → [tên file, nội dung]). */
-  function saveTemplates(cookie: string, changes: SaveExportTemplatesRequest, files: Record<string, [string, Buffer]> = {}, formTypeId = 'xmm') {
+  function saveTemplates(cookie: string, changes: SaveExportTemplatesRequest, files: Record<string, [string, Buffer]> = {}, formTypeId = 'xmr') {
     const call = request(server()).put(`/api${exportTemplatesPath(formTypeId)}`).set('Cookie', cookie).field(EXPORT_TEMPLATE_FIELDS.changes, JSON.stringify(changes));
     for (const [tempId, [fileName, content]] of Object.entries(files)) call.attach(tempId, content, fileName);
     return call;
@@ -90,11 +90,11 @@ describe('exports', () => {
     prisma = app.get(PrismaService);
     await cleanUp();
 
-    // Nội dung mẫu có sẵn và cấu trúc loại đơn xmm, dùng làm file tải lên và bản soạn
+    // Nội dung mẫu có sẵn và cấu trúc loại đơn xmr, dùng làm file tải lên và bản soạn
     sampleDocx = Buffer.from((await prisma.exportTemplate.findUniqueOrThrow({ where: { id: SEED_EXPORT_TEMPLATE.id } })).content);
     const studentCookie = await loginAs('nguoiNopDon');
-    const xmm = FormTypeSchema.parse((await request(server()).get('/api/form-types/xmm').set('Cookie', studentCookie).expect(200)).body);
-    xmmDraft = { name: xmm.name, prefix: 'XMM', sections: xmm.sections };
+    const xmr = FormTypeSchema.parse((await request(server()).get('/api/form-types/xmr').set('Cookie', studentCookie).expect(200)).body);
+    xmrDraft = { name: xmr.name, prefix: 'XMR', sections: xmr.sections };
   });
 
   afterAll(async () => {
@@ -103,14 +103,14 @@ describe('exports', () => {
   });
 
   it('chưa đăng nhập: 401', async () => {
-    const response = await request(server()).get(`/api${exportTemplatesPath('xmm')}`).expect(401);
+    const response = await request(server()).get(`/api${exportTemplatesPath('xmr')}`).expect(401);
     expect(messageOf(response)).toBe(EXPORT_MESSAGES[401]);
     await request(server()).post(`/api${formExportPath(OWN_FORM_CODE)}`).send({ templateId: SEED_EXPORT_TEMPLATE.id }).expect(401);
   });
 
   it('danh sách mẫu: ai đăng nhập cũng xem được', async () => {
     const cookie = await loginAs('nguoiNopDon');
-    const response = await request(server()).get(`/api${exportTemplatesPath('xmm')}`).set('Cookie', cookie).expect(200);
+    const response = await request(server()).get(`/api${exportTemplatesPath('xmr')}`).set('Cookie', cookie).expect(200);
     const { templates } = ExportTemplatesResponseSchema.parse(response.body);
     expect(templates.find((template) => template.id === SEED_EXPORT_TEMPLATE.id)).toMatchObject({
       name: SEED_EXPORT_TEMPLATE.name,
@@ -123,10 +123,10 @@ describe('exports', () => {
     const cookie = await loginAs('nguoiNopDon');
     const calls = [
       saveTemplates(cookie, { removed: [], renamed: [], added: [] }),
-      request(server()).get(`/api${exportTemplatePath('xmm', SEED_EXPORT_TEMPLATE.id, 'file')}`).set('Cookie', cookie),
-      request(server()).post(`/api${exportTemplatePath('xmm', SEED_EXPORT_TEMPLATE.id, 'check')}`).set('Cookie', cookie).send(xmmDraft),
+      request(server()).get(`/api${exportTemplatePath('xmr', SEED_EXPORT_TEMPLATE.id, 'file')}`).set('Cookie', cookie),
+      request(server()).post(`/api${exportTemplatePath('xmr', SEED_EXPORT_TEMPLATE.id, 'check')}`).set('Cookie', cookie).send(xmrDraft),
       request(server()).post('/api/export-templates/check').set('Cookie', cookie),
-      request(server()).post(`/api${exportTemplatePath('xmm', SEED_EXPORT_TEMPLATE.id, 'export')}`).set('Cookie', cookie),
+      request(server()).post(`/api${exportTemplatePath('xmr', SEED_EXPORT_TEMPLATE.id, 'export')}`).set('Cookie', cookie),
     ];
     for (const call of calls) expect(messageOf(await call.expect(403))).toBe(EXPORT_MESSAGES[403]);
   });
@@ -134,7 +134,7 @@ describe('exports', () => {
   it('mẫu gốc: trả file .docx còn nguyên, tên file lúc tải lên', async () => {
     const cookie = await loginAs('nguoiXuLiDon');
     const response = await request(server())
-      .get(`/api${exportTemplatePath('xmm', SEED_EXPORT_TEMPLATE.id, 'file')}`)
+      .get(`/api${exportTemplatePath('xmr', SEED_EXPORT_TEMPLATE.id, 'file')}`)
       .set('Cookie', cookie)
       .buffer(true)
       .parse(binaryParser)
@@ -146,14 +146,14 @@ describe('exports', () => {
     // Loại đơn, mẫu không có: 404
     const noFormType = await request(server()).get(`/api${exportTemplatePath('khong-co', SEED_EXPORT_TEMPLATE.id, 'file')}`).set('Cookie', cookie).expect(404);
     expect(messageOf(noFormType)).toBe(EXPORT_MESSAGES.formTypeNotFound);
-    const noTemplate = await request(server()).get(`/api${exportTemplatePath('xmm', 'khong-co', 'file')}`).set('Cookie', cookie).expect(404);
+    const noTemplate = await request(server()).get(`/api${exportTemplatePath('xmr', 'khong-co', 'file')}`).set('Cookie', cookie).expect(404);
     expect(messageOf(noTemplate)).toBe(EXPORT_MESSAGES.templateNotFound);
   });
 
   it('kiểm tra mã mẫu đã lưu: mọi mã đều có trong loại đơn; bản soạn sai dạng thì 422', async () => {
     const cookie = await loginAs('nguoiXuLiDon');
-    const path = `/api${exportTemplatePath('xmm', SEED_EXPORT_TEMPLATE.id, 'check')}`;
-    const check = ExportTemplateCheckSchema.parse((await request(server()).post(path).set('Cookie', cookie).send(xmmDraft).expect(200)).body);
+    const path = `/api${exportTemplatePath('xmr', SEED_EXPORT_TEMPLATE.id, 'check')}`;
+    const check = ExportTemplateCheckSchema.parse((await request(server()).post(path).set('Cookie', cookie).send(xmrDraft).expect(200)).body);
     expect(check).toMatchObject({ unknown: [], error: '' });
     expect(check.found).toContain('ho_ten');
 
@@ -167,7 +167,7 @@ describe('exports', () => {
       request(server())
         .post('/api/export-templates/check')
         .set('Cookie', cookie)
-        .field(EXPORT_TEMPLATE_FIELDS.draft, JSON.stringify(xmmDraft))
+        .field(EXPORT_TEMPLATE_FIELDS.draft, JSON.stringify(xmrDraft))
         .attach(EXPORT_TEMPLATE_FIELDS.file, content, fileName);
 
     const check = ExportTemplateCheckSchema.parse((await checkFile('mẫu mới.docx', sampleDocx).expect(200)).body);
@@ -310,13 +310,13 @@ describe('exports', () => {
 
     // Kiểm tra mã: mọi mã đều dùng được
     const check = ExportTemplateCheckSchema.parse(
-      (await request(server()).post(`/api${exportTemplatePath('xmm', statsTemplate.id, 'check')}`).set('Cookie', cookie).send(xmmDraft).expect(200)).body,
+      (await request(server()).post(`/api${exportTemplatePath('xmr', statsTemplate.id, 'check')}`).set('Cookie', cookie).send(xmrDraft).expect(200)).body,
     );
     expect(check).toMatchObject({ unknown: [], error: '' });
 
     // Xuất mọi phiên bản: mỗi phiên bản một sheet, mỗi đơn một hàng theo thứ tự nộp
     const exportStats = (body: unknown) =>
-      request(server()).post(`/api${exportTemplatePath('xmm', statsTemplate.id, 'export')}`).set('Cookie', cookie).send(body as object).buffer(true).parse(binaryParser);
+      request(server()).post(`/api${exportTemplatePath('xmr', statsTemplate.id, 'export')}`).set('Cookie', cookie).send(body as object).buffer(true).parse(binaryParser);
     const openWorkbook = async (response: Response) => {
       const opened = new ExcelJS.Workbook();
       await opened.xlsx.load(new Uint8Array(response.body as Buffer).buffer);
@@ -324,8 +324,8 @@ describe('exports', () => {
     };
     const everything = await exportStats({ version: 'all', submittedFrom: null, submittedTo: null }).expect(200);
     expect(everything.headers['content-type']).toContain(XLSX_CONTENT_TYPE);
-    const forms = await prisma.form.findMany({ where: { formTypeId: 'xmm' }, orderBy: [{ submittedAt: 'asc' }, { code: 'asc' }], select: { code: true, formTypeVersion: true, submittedAt: true } });
-    const versions = (await prisma.formTypeVersion.findMany({ where: { formTypeId: 'xmm', status: { not: 'draft' } }, orderBy: { version: 'asc' } })).map((version) => version.version);
+    const forms = await prisma.form.findMany({ where: { formTypeId: 'xmr' }, orderBy: [{ submittedAt: 'asc' }, { code: 'asc' }], select: { code: true, formTypeVersion: true, submittedAt: true } });
+    const versions = (await prisma.formTypeVersion.findMany({ where: { formTypeId: 'xmr', status: { not: 'draft' } }, orderBy: { version: 'asc' } })).map((version) => version.version);
     const everythingBook = await openWorkbook(everything);
     expect(everythingBook.worksheets.map((worksheet) => worksheet.name)).toEqual(versions.map((version) => `Phiên bản ${version}`));
     const firstVersionForms = forms.filter((form) => form.formTypeVersion === versions[0]);
@@ -342,13 +342,13 @@ describe('exports', () => {
     expect(String(ranged.worksheets[0]!.getCell('A1').value)).toContain('0 đơn');
 
     // Sai điều kiện: phiên bản không có 404; body thiếu hoặc sai 422
-    const exportStatsJson = (body: object) => request(server()).post(`/api${exportTemplatePath('xmm', statsTemplate.id, 'export')}`).set('Cookie', cookie).send(body);
+    const exportStatsJson = (body: object) => request(server()).post(`/api${exportTemplatePath('xmr', statsTemplate.id, 'export')}`).set('Cookie', cookie).send(body);
     expect(messageOf(await exportStatsJson({ version: 999, submittedFrom: null, submittedTo: null }).expect(404))).toBe(EXPORT_MESSAGES.versionNotFound);
     await exportStatsJson({}).expect(422);
     await exportStatsJson({ version: 'all', submittedFrom: '2026-03-01', submittedTo: '2026-02-01' }).expect(422);
 
     // Mẫu thống kê không dùng để xuất file một lá đơn, và ngược lại
     await request(server()).post(`/api${formExportPath(OTHER_FORM_CODE)}`).set('Cookie', cookie).send({ templateId: statsTemplate.id }).expect(404);
-    await request(server()).post(`/api${exportTemplatePath('xmm', SEED_EXPORT_TEMPLATE.id, 'export')}`).set('Cookie', cookie).send({ version: 'all', submittedFrom: null, submittedTo: null }).expect(404);
+    await request(server()).post(`/api${exportTemplatePath('xmr', SEED_EXPORT_TEMPLATE.id, 'export')}`).set('Cookie', cookie).send({ version: 'all', submittedFrom: null, submittedTo: null }).expect(404);
   });
 });

@@ -194,3 +194,59 @@ Workflow đã đổi (commit `aa00be2`): push vào `main` thì máy dev nào đa
 - `api` và `postgres` bản thật không mở cổng ra ngoài, nginx gọi backend bằng tên service (`http://api:3000`), không dùng `127.0.0.1`.
 - Mật khẩu SMTP, `GOOGLE_CLIENT_SECRET`, mật khẩu Postgres bản thật chỉ nằm trong `.env.prod` trên máy chủ, không commit, không đóng gói vào image.
 - Không dùng `down -v` (`pnpm prod:wipe`) trên máy chủ thật: xóa luôn volume, mất dữ liệu và tệp tải lên (dev thì không sao, bật lại là seed lại).
+
+## Loại đơn theo mẫu Word ✓
+
+Mẫu Word ở Google Drive, thư mục `CongXuLiDon/Mẫu Đơn` (32 mẫu), đánh số theo ngày sửa, cũ trước. Đơn 1, 2 làm lần lượt; ngày 18/11/2026 đã soạn sẵn cả 30 đơn còn lại vào database dev ở dạng **Nháp**. Ngày 18/11/2026 cậu đã duyệt, sửa xong cả 32 đơn; đã đưa cả 32 vào seed. Seed dev có đủ 32; seed bản thật bỏ `CCT`, `CHT`, `CTR`, `XMT`, `XMR`, `CDCT`, `HXTN`, `KKL`, `DN`, `DNPA` (`PRODUCTION_EXCLUDED_FORM_TYPE_PREFIXES` trong `shared/src/seed/production-form-types.ts`).
+
+### Mỗi đơn
+
+1. Đọc mẫu Word trên Drive.
+2. Dựng loại đơn (tên, mã đơn 2–5 chữ in hoa không dấu, mô tả, các phần, câu hỏi), ghi thẳng vào database dev, để **Nháp** (đã xong cho cả 32 đơn).
+3. Cậu xem, sửa trên trình soạn đến khi ưng. Trong lúc này **không restart api** (`pnpm dev:reset`, CI deploy): restart là seed lại, mất bản đang sửa.
+4. Cậu OK: lấy bản đó từ database dev, đưa vào `shared/src/seed/school-form-types.ts`: seed dev và seed bản thật (`api/prisma/production-seed.ts`, chỉ thêm khi chưa có, không ghi đè bản Admin đã sửa) cùng đọc tệp này.
+5. Đánh ✓ bên dưới, sang đơn tiếp.
+
+Quy ước dựng:
+- Thông tin đã có ở hồ sơ (họ tên, MSSV, lớp, ngành, khóa, hình thức đào tạo, SĐT, email) không hỏi lại trong đơn.
+- Chỗ "Học kỳ … năm học …" thành câu hỏi riêng (học kỳ chỉ có Học kỳ 1, Học kỳ 2, không có học kỳ hè); bảng trong mẫu thành câu hỏi Bảng nhiều dòng; lí do thành Đoạn văn; lời cam kết thành câu Chọn nhiều một lựa chọn, bắt buộc; Ghi chú thành Khối thông báo.
+- Phần chữ kí, ý kiến của Phòng không đưa vào (cán bộ xử lí trên cổng).
+- Mẫu xuất Word của từng loại đơn: để sau.
+- Đã xóa 10 loại đơn mẫu thử (chỉ có câu "Lí do") khỏi seed dev. Đã bỏ Xét miễn môn (`xmm`), Đơn thử nghiệm (`thu`): loại đơn chính của dữ liệu mẫu là `XMR` (đơn 19, có mẫu Word mẫu, nhiều đơn nhất), mỗi loại đơn khác có 3 đơn mẫu (câu trả lời dựng theo cấu trúc loại đơn, `shared/src/seed/sample-answers.ts`); dev mở sẵn mọi loại đơn.
+
+Cột cuối: **Nháp** = đã có trong database dev, chờ duyệt · **✓** = đã OK, đã vào seed.
+
+| # | Mẫu | |
+|---|---|---|
+| 1 | Đơn đề nghị đăng ký học phần muộn (`DKHPM`) | ✓ |
+| 2 | Đơn đề nghị đăng ký học phần học lại, học cải thiện (`HLCT`) | ✓ |
+| 3 | Đơn đề nghị đăng ký học bổ sung học phần, tín chỉ (`BSHP`) | ✓ |
+| 4 | Đơn đề nghị rút bớt, hủy các học phần đã đăng ký (`RBHP`) | ✓ |
+| 5 | Đơn đăng ký dự thi kết thúc học phần (`DKDT`) | ✓ |
+| 6 | Đơn đề nghị chuyển lịch thi kết thúc học phần (`CLT`) | ✓ |
+| 7 | Đơn đề nghị hoãn thi kết thúc học phần (`HTHP`) | ✓ |
+| 8 | Đơn phản ánh về điểm đánh giá bộ phận (`PADBP`) | ✓ |
+| 9 | Đơn phản ánh về điểm thi kết thúc học phần (có dự thi không có điểm, vấn đáp, GDTC) (`PADT`) | ✓ |
+| 10 | Đơn đề nghị tạm hoãn học học phần (`THHP`) | ✓ |
+| 11 | Đơn đề nghị nghỉ học tạm thời và bảo lưu kết quả học tập (`BLKQ`) | ✓ |
+| 12 | Đơn đề nghị tiếp tục học (`TTH`) | ✓ |
+| 13 | Đơn đề nghị thôi học (`TH`) | ✓ |
+| 14 | Đơn đề nghị chuyển ngành (`CN`) | ✓ |
+| 15 | Đơn đề nghị chuyển chương trình đào tạo (`CCT`) | ✓ |
+| 16 | Đơn đề nghị chuyển hình thức đào tạo (`CHT`) | ✓ |
+| 17 | Đơn đề nghị chuyển trường (`CTR`) | ✓ |
+| 18 | Đơn đề nghị xét miễn học học phần, công nhận kết quả đào tạo và chuyển đổi tín chỉ đã tích lũy (`XMT`) | ✓ |
+| 19 | Đơn đề nghị xét miễn học học phần và chuyển đổi tín chỉ (đã học ở cơ sở đào tạo khác) (`XMR`) | ✓ |
+| 20 | Đơn đề nghị xét chuyển điểm cho sinh viên chuyển trường (`CDCT`) | ✓ |
+| 21 | Đơn đề nghị xét miễn học học phần (nộp chứng chỉ tin học, GDQP-AN) (`XMCC`) | ✓ |
+| 22 | Đơn đề nghị không làm khóa luận tốt nghiệp (`KKL`) | ✓ |
+| 23 | Đơn đề nghị cấp lần 1, đổi lại Giấy giới thiệu thực tập (`GTTT`) | ✓ |
+| 24 | Đơn đề nghị xét, công nhận tốt nghiệp và cấp bằng cử nhân (`XTN`) | ✓ |
+| 25 | Đơn đề nghị hoãn xét, công nhận tốt nghiệp và cấp bằng cử nhân (`HXTN`) | ✓ |
+| 26 | Đơn đề nghị xét, công nhận tốt nghiệp và cấp bằng cử nhân theo chuẩn đại trà (`XTNC`) | ✓ |
+| 27 | Đơn đề nghị (các nội dung khác) (`DN`) | ✓ |
+| 28 | Đơn đề nghị, phản ánh (`DNPA`) | ✓ |
+| 29 | Đơn đăng ký dự thi kết thúc học phần do đóng học phí muộn (`DTM`) | ✓ |
+| 30 | Đơn đề nghị chuyển lịch thi TOEIC (`CLTT`) | ✓ |
+| 31 | Đơn đề nghị hủy thi TOEIC (`HTT`) | ✓ |
+| 32 | Đơn cấp lại thẻ sinh viên (VB2CQ, VLVH, TX) (`CLTSV`) | ✓ |

@@ -236,10 +236,10 @@ export class FormService {
    * Sinh mã đơn kế tiếp: số thứ tự lớn nhất đang có của cùng tiền tố và năm (mọi phiên bản), cộng 1.
    * Khóa theo tiền tố và năm trong suốt transaction, để hai đơn nộp cùng lúc không trùng mã.
    * @param transaction  transaction đang chạy
-   * @param prefix       tiền tố loại đơn, vd 'XMM'
+   * @param prefix       tiền tố loại đơn, vd 'XMR'
    * @param year         năm nộp
    * @param version      phiên bản loại đơn
-   * @returns            vd 'XMM-2026-001-00038'
+   * @returns            vd 'XMR-2026-001-00038'
    */
   private async nextFormCode(transaction: Prisma.TransactionClient, prefix: string, year: number, version: number): Promise<string> {
     await transaction.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`form-code:${prefix}-${year}`}))`;

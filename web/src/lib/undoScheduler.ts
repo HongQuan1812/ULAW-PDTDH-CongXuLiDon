@@ -8,7 +8,7 @@ export const UNDO_WINDOW_MS = 10_000;
 export interface UndoableTask {
   /** Việc nào cùng khóa thì chỉ chờ một cái một lúc (vd mã đơn). */
   key: string;
-  /** Mô tả ngắn cho người dùng, vd "Duyệt đơn XMM-…". */
+  /** Mô tả ngắn cho người dùng, vd "Duyệt đơn XMR-…". */
   message: string;
   /** Việc làm thật, chạy khi hết 10 giây mà chưa hoàn tác. */
   perform: () => void;

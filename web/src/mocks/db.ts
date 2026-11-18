@@ -522,7 +522,7 @@ export function getOpenFormTypes(): OpenFormType[] {
 
 /**
  * Phiên bản đang mở của một loại đơn, đủ cấu trúc các phần, câu hỏi (để nộp đơn).
- * @param formTypeId  mã loại đơn, vd 'xmm'
+ * @param formTypeId  mã loại đơn, vd 'xmr'
  * @returns           phiên bản đang mở; loại đơn không có, hoặc không có phiên bản nào đang mở, thì null
  */
 export function getFormType(formTypeId: string): FormType | null {
@@ -918,7 +918,7 @@ export function getFilesOfForm(formCode: string): FileRef[] {
 
 /**
  * Nội dung một tệp, nếu người hỏi được xem: là người nộp đơn chứa tệp, hoặc được xem mọi đơn.
- * Tệp mẫu có sẵn (id 'seed-<mã đơn>') không có nội dung thật nên trả một PDF mẫu ghi tên tệp.
+ * Tệp mẫu có sẵn (id 'seed-<mã đơn>' hoặc 'seed-<mã đơn>-<mã câu hỏi>') không có nội dung thật nên trả một PDF mẫu ghi tên tệp.
  * @param fileId  id tệp ở máy chủ
  * @param viewer  id và vai trò người đang đăng nhập
  * @returns       tệp; không có, hoặc không được xem, thì null
@@ -926,7 +926,7 @@ export function getFilesOfForm(formCode: string): FileRef[] {
 export function getFileContent(fileId: string, viewer: { id: string; role: RoleId }): File | null {
   const stored = FILES.get(fileId);
   const seedCode = fileId.startsWith(SEED_FILE_ID_PREFIX) ? fileId.slice(SEED_FILE_ID_PREFIX.length) : null;
-  const form = FORMS.find((candidate) => candidate.code === (stored?.formCode ?? seedCode));
+  const form = FORMS.find((candidate) => (stored ? candidate.code === stored.formCode : seedCode?.startsWith(candidate.code)));
   if (!form || (form.ownerId !== viewer.id && !can(viewer.role, 'viewAll'))) return null;
   if (stored) return stored.content;
 
@@ -960,7 +960,7 @@ interface MockExportTemplate {
 }
 
 /**
- * Mẫu ban đầu: loại đơn Xét miễn môn có sẵn một mẫu.
+ * Mẫu ban đầu: loại đơn chính của dữ liệu mẫu (SEED_EXPORT_TEMPLATE.formTypeId) có sẵn một mẫu.
  * @returns  mẫu theo mã loại đơn
  */
 function seedExportTemplates(): Map<string, MockExportTemplate[]> {

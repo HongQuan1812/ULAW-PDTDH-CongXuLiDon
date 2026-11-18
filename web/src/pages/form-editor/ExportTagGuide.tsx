@@ -279,21 +279,21 @@ const FORMAT_EXAMPLES = [
   { format: 'Chữ thường', lead: 'Họ và tên: ', tag: 'ho_ten', value: 'Nguyễn Văn A', className: '' },
   { format: 'In đậm', lead: 'MSSV: ', tag: 'mssv', value: '2253801010001', className: styles.demoBold },
   { format: 'In nghiêng', lead: 'Lớp: ', tag: 'lop', value: '47-LTM-A', className: styles.demoItalic },
-  { format: 'Cỡ chữ lớn', lead: '', tag: 'loai_don', value: 'Xét miễn môn', className: styles.demoLarge },
+  { format: 'Cỡ chữ lớn', lead: '', tag: 'loai_don', value: 'Thôi học', className: styles.demoLarge },
 ];
 
 /** Ví dụ của "Cách tạo một mẫu" ở mẫu Excel: tiêu đề, các cột và vài đơn minh họa (mã đơn nhảy cóc để thấy STT khác mã đơn). */
 const STATS_EXAMPLE = {
-  title: { template: 'Danh sách đơn {loai_don} · {so_don} đơn', filled: 'Danh sách đơn Xét miễn môn · 3 đơn' },
+  title: { template: 'Danh sách đơn {loai_don} · {so_don} đơn', filled: 'Danh sách đơn Thôi học · 3 đơn' },
   columns: [
     { header: 'STT', tag: FORM_NUMBER_TAG },
     { header: 'Mã đơn', tag: 'ma_don' },
     { header: 'Họ và tên', tag: 'ho_ten' },
   ],
   forms: [
-    ['1', 'XMM-2026-001-00007', 'Nguyễn Văn A'],
-    ['2', 'XMM-2026-001-00012', 'Trần Thị B'],
-    ['3', 'XMM-2026-001-00015', 'Lê Văn C'],
+    ['1', 'XMR-2026-001-00007', 'Nguyễn Văn A'],
+    ['2', 'XMR-2026-001-00012', 'Trần Thị B'],
+    ['3', 'XMR-2026-001-00015', 'Lê Văn C'],
   ],
 };
 

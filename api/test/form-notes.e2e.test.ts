@@ -22,9 +22,9 @@ import { PrismaService } from '../src/common/prisma.service';
 import { createTestApp } from './create-test-app';
 
 /** Hai lá đơn có trong dữ liệu mẫu, và một mã đơn không có. */
-const FORM_CODE = 'XMM-2026-001-01520';
-const OTHER_FORM_CODE = 'XMM-2026-001-01500';
-const MISSING_FORM_CODE = 'XMM-2026-001-99999';
+const FORM_CODE = 'XMR-2026-001-01520';
+const OTHER_FORM_CODE = 'XMR-2026-001-01500';
+const MISSING_FORM_CODE = 'XMR-2026-001-99999';
 
 /**
  * Câu báo lỗi trong body response, đúng dạng ApiErrorBody.

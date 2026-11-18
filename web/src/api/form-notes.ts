@@ -7,7 +7,7 @@ import { ALL_FORMS_KEY, HANDLED_FORMS_KEY } from './forms';
 /**
  * Khóa lưu tạm các ghi chú của một lá đơn.
  * @param code  mã đơn
- * @returns     vd ['formNotes', 'XMM-2026-001-00001']
+ * @returns     vd ['formNotes', 'XMR-2026-001-00001']
  */
 const formNotesKey = (code: string) => ['formNotes', code] as const;
 

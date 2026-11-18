@@ -14,32 +14,32 @@ function documentText(bytes: ArrayBuffer): string {
 
 beforeEach(() => resetMockDb());
 
-describe('mẫu xuất file Xét miễn môn có sẵn', () => {
-  const sampleBytes = () => findExportTemplate('xmm', 'tpl-demo')!.bytes;
-  const xmmSections = () => getFormType('xmm')!.sections;
+describe('mẫu xuất file có sẵn của loại đơn chính xmr', () => {
+  const sampleBytes = () => findExportTemplate('xmr', 'tpl-demo')!.bytes;
+  const xmrSections = () => getFormType('xmr')!.sections;
 
   test('đọc được, mọi mã đều có trong loại đơn', () => {
     expect(openDocx(sampleBytes())).not.toBeNull();
-    const check = checkDocxTemplate(sampleBytes(), xmmSections());
+    const check = checkDocxTemplate(sampleBytes(), xmrSections());
     expect(check.error).toBe('');
     expect(check.unknown).toEqual([]);
     expect(check.found).toContain('ho_ten');
   });
 
   test('đổi tên câu hỏi bảng thì báo mã không có trong loại đơn', () => {
-    const renamed: FormSection[] = xmmSections().map((section) => ({
+    const renamed: FormSection[] = xmrSections().map((section) => ({
       ...section,
-      questions: section.questions.map((question) => (question.type === 'table' ? { ...question, tag: 'mon_xin_mien' } : question)),
+      questions: section.questions.map((question) => (question.type === 'table' ? { ...question, tag: 'hoc_phan_xin_mien' } : question)),
     }));
     expect(checkDocxTemplate(sampleBytes(), renamed).unknown.length).toBeGreaterThan(0);
   });
 
   test('điền dữ liệu của một đơn: có họ tên, mã đơn, không còn mã trong ngoặc', () => {
-    const exportable = getExportSource('XMM-2026-001-01520')!;
+    const exportable = getExportSource('XMR-2026-001-01520')!;
     const filled = renderDocxTemplate(sampleBytes(), buildExportData(exportable.source, '2026-11-11'), exportable.source.sections);
     const text = documentText(filled);
     expect(text).toContain(exportable.source.applicant.name);
-    expect(text).toContain('XMM-2026-001-01520');
+    expect(text).toContain('XMR-2026-001-01520');
     expect(text).not.toMatch(/\{[#/]?[a-z_]+\}/);
   });
 
@@ -50,9 +50,9 @@ describe('mẫu xuất file Xét miễn môn có sẵn', () => {
 
 describe('getExportSource', () => {
   test('người nộp đơn và cán bộ xem mọi đơn thì lấy được; người khác thì không', () => {
-    const owner = getExportSource('XMM-2026-001-01520')!;
-    expect(owner.formTypeId).toBe('xmm');
-    expect(getExportSource('XMM-2026-001-01520', { id: 'cb-1', role: 'nguoiXuLiDon' })).not.toBeNull();
-    expect(getExportSource('XMM-2026-001-01520', { id: 'sv-999', role: 'nguoiNopDon' })).toBeNull();
+    const owner = getExportSource('XMR-2026-001-01520')!;
+    expect(owner.formTypeId).toBe('xmr');
+    expect(getExportSource('XMR-2026-001-01520', { id: 'cb-1', role: 'nguoiXuLiDon' })).not.toBeNull();
+    expect(getExportSource('XMR-2026-001-01520', { id: 'sv-999', role: 'nguoiNopDon' })).toBeNull();
   });
 });

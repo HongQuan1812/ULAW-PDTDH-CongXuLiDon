@@ -22,7 +22,7 @@ describe('splitEmailTemplate', () => {
 
 describe('fillEmailTemplate', () => {
   it('thay mọi mã, kể cả mã lặp lại; mã lạ giữ nguyên', () => {
-    expect(fillEmailTemplate('[{ma_don}] {ma_don} {la}\n{chu_ki}', values)).toBe('[XMM-2026-001-00001] XMM-2026-001-00001 {la}\nPhòng Đào tạo');
+    expect(fillEmailTemplate('[{ma_don}] {ma_don} {la}\n{chu_ki}', values)).toBe('[XMR-2026-001-00001] XMR-2026-001-00001 {la}\nPhòng Đào tạo');
   });
 });
 

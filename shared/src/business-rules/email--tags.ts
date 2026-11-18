@@ -25,12 +25,12 @@ export type EmailTagValues = Record<EmailTag, string>;
 /** Dữ liệu mẫu cho khung xem trước và thư gửi thử (không phải người thật). Chữ kí lấy theo cấu hình người gửi. */
 export const EMAIL_SAMPLE_VALUES: Omit<EmailTagValues, 'chu_ki'> = {
   ho_ten: 'Nguyễn Văn An',
-  ma_don: 'XMM-2026-001-00001',
-  loai_don: 'Xét miễn môn',
+  ma_don: 'XMR-2026-001-00001',
+  loai_don: 'Thôi học',
   ngay_nop: '30/10/2026',
   nguoi_xu_li: 'Phạm Thu Hà',
   ly_do: 'Thiếu bảng điểm bản chính, vui lòng tải lại tệp rõ hơn.',
-  link_don: 'https://dichvu.hcmulaw.edu.vn/#/don/XMM-2026-001-00001',
+  link_don: 'https://dichvu.hcmulaw.edu.vn/#/don/XMR-2026-001-00001',
 };
 
 /** Email người nộp đơn mẫu, hiện ở dòng "Tới" của khung xem trước. */
@@ -112,7 +112,7 @@ export interface FormEmailSource {
  * Đường dẫn tới trang chi tiết đơn trên cổng (giao diện dùng đường dẫn dạng #/don/<mã đơn>).
  * @param webBaseUrl  địa chỉ gốc của cổng, vd 'https://dichvu.hcmulaw.edu.vn'
  * @param code        mã đơn
- * @returns           vd 'https://dichvu.hcmulaw.edu.vn/#/don/XMM-2026-001-00001'
+ * @returns           vd 'https://dichvu.hcmulaw.edu.vn/#/don/XMR-2026-001-00001'
  */
 export function formLink(webBaseUrl: string, code: string): string {
   return `${webBaseUrl.replace(/\/+$/, '')}/#/don/${code}`;

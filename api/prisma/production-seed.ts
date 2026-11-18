@@ -1,7 +1,7 @@
-/* Dữ liệu ban đầu cho bản thật: Admin đầu tiên, dòng cấu hình email, nơi lưu và lịch sao lưu mặc định. Không xóa, không ghi đè dữ liệu nào đã có,
+/* Dữ liệu ban đầu cho bản thật: Admin đầu tiên, dòng cấu hình email, loại đơn theo mẫu Word, nơi lưu và lịch sao lưu mặc định. Không xóa, không ghi đè dữ liệu nào đã có,
    nên chạy lại nhiều lần vẫn an toàn. Chạy bằng prisma/seed-production.ts. */
 import { randomUUID } from 'node:crypto';
-import { BACKUP_SCHEDULES_SEED, BACKUP_TARGETS_SEED, EMAIL_SETTINGS_SEED, isSchoolEmail } from '@ulaw/shared';
+import { BACKUP_SCHEDULES_SEED, BACKUP_TARGETS_SEED, EMAIL_SETTINGS_SEED, PRODUCTION_FORM_TYPES_SEED, isSchoolEmail } from '@ulaw/shared';
 import type { Prisma, PrismaClient } from '../src/generated/prisma/client';
 
 /** Dòng cấu hình email duy nhất (cùng id với SETTINGS_ROW_ID của api/src/email/email-settings.service.ts). */
@@ -13,18 +13,20 @@ export interface ProductionSeedReport {
   admin: 'created' | 'promoted' | 'unchanged';
   /** Cấu hình email: vừa tạo, hay đã có từ trước (giữ nguyên) */
   emailSettings: 'created' | 'unchanged';
+  /** Mã các loại đơn vừa thêm (loại đơn đã có, hoặc mã đơn đã bị loại đơn khác dùng, thì bỏ qua) */
+  formTypes: string[];
   /** Sao lưu: vừa tạo nơi lưu và lịch mặc định, hay đã có lịch từ trước (giữ nguyên) */
   backups: 'created' | 'unchanged';
 }
 
 /**
- * Tạo Admin đầu tiên, cấu hình email, nơi lưu và lịch sao lưu mặc định nếu chưa có.
+ * Tạo Admin đầu tiên, cấu hình email, loại đơn theo mẫu Word, nơi lưu và lịch sao lưu mặc định nếu chưa có.
  * Có họ tên: Admin mới tạo đã hoàn tất hồ sơ, đăng nhập Google là vào thẳng.
  * Không có họ tên: giống tài khoản tạo ở trang Quản lí tài khoản, lần đầu đăng nhập Google thì tự nhập.
  * @param prisma      Prisma Client
  * @param adminEmail  email trường của Admin đầu tiên
  * @param adminName   họ tên của Admin đầu tiên (FIRST_ADMIN_NAME), bỏ trống thì để người đó tự nhập; chỉ dùng khi tạo mới
- * @returns           việc đã làm với tài khoản Admin, cấu hình email, sao lưu
+ * @returns           việc đã làm với tài khoản Admin, cấu hình email, loại đơn, sao lưu
  * @throws            lỗi nếu email không thuộc tên miền trường (người đó không đăng nhập Google được)
  */
 export async function seedProduction(
@@ -66,11 +68,39 @@ export async function seedProduction(
     emailSettings = 'created';
   }
 
+  // Loại đơn theo mẫu Word (trừ các mã chưa đưa lên bản thật): chỉ thêm loại đơn chưa có (người lưu là Admin);
+  // đã có (có thể Admin đã sửa, đã xóa phiên bản) thì giữ nguyên, mã đơn đã bị loại đơn khác dùng thì bỏ qua để không lỗi trùng mã
+  const existingFormTypes = await prisma.formType.findMany({ select: { id: true, prefix: true } });
+  const takenIds = new Set(existingFormTypes.map((formType) => formType.id));
+  const takenPrefixes = new Set(existingFormTypes.map((formType) => formType.prefix));
+  const formTypes: string[] = [];
+  for (const formType of PRODUCTION_FORM_TYPES_SEED) {
+    if (takenIds.has(formType.id) || takenPrefixes.has(formType.prefix)) continue;
+    await prisma.formType.create({
+      data: {
+        id: formType.id,
+        prefix: formType.prefix,
+        versions: {
+          create: {
+            version: 1,
+            status: formType.status,
+            name: formType.name,
+            description: formType.description,
+            sections: formType.sections as unknown as Prisma.InputJsonValue,
+            updatedAt: new Date(),
+            updatedById: adminId,
+          },
+        },
+      },
+    });
+    formTypes.push(formType.id);
+  }
+
   // Sao lưu: chưa có nơi lưu lẫn lịch nào (lần đầu cài) thì tạo nơi lưu trên máy chủ và lịch 02:00 hằng ngày (tắt sẵn, Admin tự bật);
   // đã có (có thể Admin đã sửa, đã tắt, đã bỏ bớt) thì giữ nguyên
   const [targetCount, scheduleCount] = await Promise.all([prisma.backupTarget.count(), prisma.backupSchedule.count()]);
-  if (targetCount || scheduleCount) return { admin, emailSettings, backups: 'unchanged' };
+  if (targetCount || scheduleCount) return { admin, emailSettings, formTypes, backups: 'unchanged' };
   await prisma.backupTarget.createMany({ data: [...BACKUP_TARGETS_SEED], skipDuplicates: true });
   await prisma.backupSchedule.createMany({ data: BACKUP_SCHEDULES_SEED.map((schedule) => ({ ...schedule })), skipDuplicates: true });
-  return { admin, emailSettings, backups: 'created' };
+  return { admin, emailSettings, formTypes, backups: 'created' };
 }

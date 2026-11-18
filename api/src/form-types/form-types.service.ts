@@ -191,7 +191,7 @@ export class FormTypesService {
 
   /**
    * Phiên bản đang mở của một loại đơn, đủ cấu trúc các phần, câu hỏi (để nộp đơn).
-   * @param formTypeId  mã loại đơn, vd 'xmm'
+   * @param formTypeId  mã loại đơn, vd 'xmr'
    * @returns           theo FormTypeSchema
    * @throws            404 không có loại đơn, hoặc không có phiên bản nào đang mở
    */

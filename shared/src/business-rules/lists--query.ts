@@ -60,7 +60,7 @@ export function selectOptions<Row>(field: TableField<Row>, rows: readonly Row[])
  * Lựa chọn lọc của các cột select không có lựa chọn cố định (vd Loại đơn, Người xử lí), lấy từ dữ liệu.
  * @param fields  các cột của bảng
  * @param rows    toàn bộ dữ liệu người xem được thấy (chưa tìm, lọc), để lựa chọn không đổi theo bộ lọc đang chọn
- * @returns       lựa chọn theo tên cột, vd { formType: [{ value: 'xmm', label: 'Xét miễn môn' }] }
+ * @returns       lựa chọn theo tên cột, vd { formType: [{ value: 'xmr', label: 'Thôi học' }] }
  */
 export function filterOptionsOf<Row>(fields: readonly TableField<Row>[], rows: readonly Row[]): Record<string, FieldOption[]> {
   return Object.fromEntries(
