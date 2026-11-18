@@ -62,7 +62,7 @@ export const SCHOOL_FORM_TYPES_SEED: readonly FormType[] = [
               ],
             },
           },
-          { id: 'hoc-ky', type: 'radio', label: 'Học kỳ', required: true, options: ['Học kỳ 1', 'Học kỳ 2', 'Học kỳ hè'] },
+          { id: 'hoc-ky', type: 'radio', label: 'Học kỳ', required: true, options: ['Học kỳ 1', 'Học kỳ 2'] },
           { id: 'nam-hoc', type: 'text', label: 'Năm học', required: true, help: 'VD: 2026 - 2027' },
           {
             id: 'hoc-phan',
@@ -156,7 +156,7 @@ export const SCHOOL_FORM_TYPES_SEED: readonly FormType[] = [
               ],
             },
           },
-          { id: 'hoc-ky', type: 'radio', label: 'Học kỳ', required: true, options: ['Học kỳ 1', 'Học kỳ 2', 'Học kỳ hè'] },
+          { id: 'hoc-ky', type: 'radio', label: 'Học kỳ', required: true, options: ['Học kỳ 1', 'Học kỳ 2'] },
           { id: 'nam-hoc', type: 'text', label: 'Năm học', required: true, help: 'VD: 2026 - 2027' },
           {
             id: 'hoc-phan',
