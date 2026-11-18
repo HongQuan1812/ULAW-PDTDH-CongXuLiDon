@@ -1,5 +1,7 @@
 /* Dữ liệu mẫu cho database: cùng nguồn với API giả (shared/src/seed), nên cùng id người dùng, cùng mã đơn.
-   Chạy: pnpm --filter api prisma db seed. Xóa sạch dữ liệu cũ rồi nạp lại, chỉ dùng khi phát triển. */
+   Chạy: pnpm --filter api prisma db seed. Xóa sạch dữ liệu cũ (database, tệp tải lên, bản sao lưu) rồi nạp lại, chỉ dùng khi phát triển. */
+import { readdir, rm } from 'node:fs/promises';
+import path from 'node:path';
 import { PrismaPg } from '@prisma/adapter-pg';
 import {
   BACKUP_SCHEDULES_SEED,
@@ -15,8 +17,10 @@ import {
   seedFormTypes,
   seedForms,
 } from '@ulaw/shared';
+import { DEFAULT_BACKUP_DIR, DEFAULT_UPLOAD_DIR } from '../src/config/app-config';
 import { loadDevEnvFile } from '../src/config/env-file';
 import { PrismaClient, type Prisma } from '../src/generated/prisma/client';
+import { loadSeedExportTemplates } from './load-seed-export-templates';
 
 // Biến môi trường: .env.dev khi chạy trên máy, compose truyền vào khi chạy container
 loadDevEnvFile();
@@ -58,6 +62,40 @@ async function clearAll(prisma: PrismaClient): Promise<void> {
     prisma.studentInfo.deleteMany(),
     prisma.user.deleteMany(),
   ]);
+}
+
+/**
+ * Xóa mọi thứ bên trong một thư mục, giữ lại chính thư mục đó (có thể là chỗ gắn volume). Thư mục chưa có thì bỏ qua.
+ * Không dọn thư mục đang chạy hoặc thư mục cha của nó, phòng đặt nhầm biến (vd UPLOAD_DIR=.).
+ * @param dir  đường dẫn thư mục, tương đối với thư mục chạy seed (api/) hoặc tuyệt đối
+ * @returns    số mục đã xóa
+ */
+async function emptyDir(dir: string): Promise<number> {
+  // Chặn đường dẫn nguy hiểm
+  const absoluteDir = path.resolve(dir);
+  const fromDirToCwd = path.relative(absoluteDir, process.cwd());
+  if (!fromDirToCwd.startsWith('..') && !path.isAbsolute(fromDirToCwd)) {
+    throw new Error(`Không dọn "${absoluteDir}": là thư mục đang chạy hoặc thư mục cha của nó.`);
+  }
+
+  // Xóa từng mục bên trong
+  const entries = await readdir(absoluteDir).catch((error: NodeJS.ErrnoException) => {
+    if (error.code === 'ENOENT') return [];
+    throw error;
+  });
+  await Promise.all(entries.map((entry) => rm(path.join(absoluteDir, entry), { recursive: true, force: true })));
+  return entries.length;
+}
+
+/**
+ * Dọn tệp tải lên (UPLOAD_DIR) và bản sao lưu trên máy chủ (BACKUP_DIR). Bản sao lưu trên Google Drive không đụng tới.
+ * @returns  số mục đã xóa ở mỗi thư mục
+ */
+async function clearStorage(): Promise<{ uploads: number; backups: number }> {
+  return {
+    uploads: await emptyDir(process.env.UPLOAD_DIR || DEFAULT_UPLOAD_DIR),
+    backups: await emptyDir(process.env.BACKUP_DIR || DEFAULT_BACKUP_DIR),
+  };
 }
 
 /**
@@ -146,6 +184,15 @@ async function seedAll(prisma: PrismaClient): Promise<void> {
       uploadedById: SEED_EXPORT_TEMPLATE.uploadedById,
     },
   });
+  // Mẫu theo mẫu Word của Phòng Đào tạo: mỗi loại đơn một mẫu (người tải lên, lúc tải lên như mẫu ở trên)
+  await prisma.exportTemplate.createMany({
+    data: loadSeedExportTemplates().map((template) => ({
+      ...template,
+      sizeBytes: template.content.byteLength,
+      uploadedAt: toDate(SEED_EXPORT_TEMPLATE.uploadedAt),
+      uploadedById: SEED_EXPORT_TEMPLATE.uploadedById,
+    })),
+  });
   await prisma.emailSettings.create({
     data: {
       id: 1,
@@ -165,8 +212,9 @@ try {
   // Dữ liệu mẫu phải thỏa mọi luật mới được nạp; kiểm tra trước khi xóa dữ liệu cũ để không mất dữ liệu vô ích
   assertSeedValid();
   await clearAll(prisma);
+  const cleared = await clearStorage();
   await seedAll(prisma);
-  console.log('Đã nạp dữ liệu mẫu.');
+  console.log(`Đã nạp dữ liệu mẫu (xóa ${cleared.uploads} mục tệp tải lên, ${cleared.backups} mục sao lưu).`);
 } finally {
   await prisma.$disconnect();
 }

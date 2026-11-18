@@ -15,6 +15,10 @@ function urlOrDefault(fallbackUrl: string) {
     .transform((configuredUrl) => configuredUrl || fallbackUrl);
 }
 
+/** Thư mục tệp tải lên, thư mục sao lưu khi không đặt biến (tương đối với thư mục chạy api); seed dev cũng dùng để dọn. */
+export const DEFAULT_UPLOAD_DIR = 'uploads';
+export const DEFAULT_BACKUP_DIR = 'backups';
+
 /** Các biến backend cần. */
 const AppEnvSchema = z.object({
   // Môi trường: dev (Swagger, WEB_BASE_URL_DEV, cookie không secure) · bỏ trống: bản thật
@@ -31,9 +35,9 @@ const AppEnvSchema = z.object({
   API_PORT: z.coerce.number().int().min(1).max(65535).default(3000),
   DATABASE_URL: z.string().startsWith('postgresql://'),
   // Thư mục lưu tệp tải lên trên ổ đĩa máy chủ (tương đối với thư mục chạy backend, hoặc đường dẫn tuyệt đối)
-  UPLOAD_DIR: z.string().min(1).default('uploads'),
+  UPLOAD_DIR: z.string().min(1).default(DEFAULT_UPLOAD_DIR),
   // Thư mục chứa các nơi lưu kiểu "Thư mục trên máy chủ" của trang Sao lưu (mỗi nơi lưu một thư mục con); như UPLOAD_DIR
-  BACKUP_DIR: z.string().min(1).default('backups'),
+  BACKUP_DIR: z.string().min(1).default(DEFAULT_BACKUP_DIR),
   // Máy chủ gửi thư (SMTP). Có điền: gửi thư thật (bản giả dev-email vẫn gửi, nhưng thư tự động về DEV_EMAIL_REDIRECT_TO)
   // · bỏ trống: không gửi (bản giả dev-email thì in ra console)
   SMTP_HOST: z.string().trim().default(''),

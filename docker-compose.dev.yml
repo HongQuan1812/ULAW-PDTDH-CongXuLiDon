@@ -1,7 +1,7 @@
 # Môi trường phát triển: postgres + api (pnpm dev) + web (Vite). Biến lấy từ .env.dev (chép từ .env.dev.example).
 #   Chạy cả ba:        docker compose -f docker-compose.dev.yml --env-file .env.dev up -d
 #   Chỉ postgres:      ... up -d postgres   (backend, web chạy thẳng trên máy)
-#   Về dữ liệu mẫu:    ... restart api      (mỗi lần bật / restart api: migrate deploy → seed, xóa sạch dữ liệu cũ)
+#   Về dữ liệu mẫu:    ... restart api      (mỗi lần bật / restart api: migrate deploy → seed, xóa sạch database, tệp tải lên, bản sao lưu trên máy chủ)
 #   Đổi .env.dev:      ... up -d api web
 #   Xem log:           ... logs -f api
 #   Dừng: ... down  ·  Xóa luôn dữ liệu, thư viện đã cài: ... down -v (pnpm dev:wipe)
