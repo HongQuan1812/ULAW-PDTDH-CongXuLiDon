@@ -13,7 +13,7 @@ import type { Prisma } from '../src/generated/prisma/client';
 import { createTestApp } from './create-test-app';
 
 /** Một lá đơn có trong dữ liệu mẫu. */
-const FORM_CODE = 'XMM-2026-001-01520';
+const FORM_CODE = 'XMR-2026-001-01520';
 
 /** Địa chỉ nhận thay khi dev, dùng trong test. */
 const REDIRECT_ADDRESS = 'hop.thu.dev@hcmulaw.edu.vn';
@@ -96,7 +96,7 @@ describe('thư tự động báo cho người nộp đơn', () => {
     config.devEmailRedirectTo = null;
     expect(await formEmail.sendStatusEmail(FORM_CODE, 'nop')).toBe(false);
     config.devEmailRedirectTo = REDIRECT_ADDRESS;
-    expect(await formEmail.sendStatusEmail('XMM-2026-001-99999', 'nop')).toBe(false);
+    expect(await formEmail.sendStatusEmail('XMR-2026-001-99999', 'nop')).toBe(false);
     expect(sentEmails).toHaveLength(0);
   });
 });

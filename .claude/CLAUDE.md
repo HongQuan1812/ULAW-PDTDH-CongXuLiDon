@@ -1,7 +1,7 @@
 # Cổng xử lí đơn — Phòng Đào tạo Đại học, Trường ĐH Luật TP.HCM (ULAW)
 
 Ứng dụng web để **sinh viên nộp đơn trực tuyến** và **Phòng Đào tạo Đại học tiếp nhận, xử lí, quản lí đơn**.
-Loại đơn đầu tiên là **Xét miễn môn**. Cán bộ tự tạo thêm loại đơn mới bằng trình soạn form kiểu Google Form.
+Loại đơn ban đầu là **32 mẫu đơn Word** của Phòng Đào tạo Đại học. Cán bộ sửa, tạo thêm loại đơn bằng trình soạn form kiểu Google Form.
 
 ## Kế hoạch
 
@@ -17,7 +17,7 @@ Chi tiết: `docs/business-rules.md`.
 - **Vòng đời đơn**: `nop` Đã nộp → (Tiếp nhận) → `xet` Đang xét → `duyet` Đã duyệt / `tc` Từ chối / `bs` Cần bổ sung
   → sinh viên sửa → `bsg` Đã bổ sung → tiếp nhận lại.
   Sửa được khi `nop|bs|bsg` · tiếp nhận được khi `nop|bsg` · chuyển giao được khi `xet|bs|bsg` · ra quyết định khi `xet`.
-- **Loại đơn**: gồm các phần → câu hỏi (text, số, bảng, tệp…). Mỗi loại đơn có nhiều phiên bản; mỗi phiên bản Nháp / Đang mở / Đã đóng. Mã đơn `<TIỀN TỐ>-<NĂM>-<PHIÊN BẢN>-<STT>`, vd `XMM-2026-001-00001`.
+- **Loại đơn**: gồm các phần → câu hỏi (text, số, bảng, tệp…). Mỗi loại đơn có nhiều phiên bản; mỗi phiên bản Nháp / Đang mở / Đã đóng. Mã đơn `<TIỀN TỐ>-<NĂM>-<PHIÊN BẢN>-<STT>`, vd `XMR-2026-001-00001`.
 - **Xuất file**: mẫu Word theo từng loại đơn, có mã thay thế `{...}`.
 
 ---

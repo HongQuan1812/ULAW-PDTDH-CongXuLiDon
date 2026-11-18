@@ -56,7 +56,7 @@ describe('form-types', () => {
   });
 
   it('chưa đăng nhập: 401', async () => {
-    for (const path of ['/api/form-types', '/api/form-types/open', '/api/form-types/xmm']) {
+    for (const path of ['/api/form-types', '/api/form-types/open', '/api/form-types/xmr']) {
       const response = await request(server()).get(path).expect(401);
       expect(ApiErrorBodySchema.parse(response.body).message).toBe(FORM_TYPE_MESSAGES[401]);
     }
@@ -65,20 +65,20 @@ describe('form-types', () => {
   it('người nộp đơn: xem được loại đơn đang mở, nhưng 403 ở các lệnh quản lí', async () => {
     const cookie = await loginAs('nguoiNopDon');
     const open = OpenFormTypesResponseSchema.parse((await request(server()).get('/api/form-types/open').set('Cookie', cookie).expect(200)).body);
-    expect(open.formTypes.map((formType) => formType.id)).toContain('xmm');
+    expect(open.formTypes.map((formType) => formType.id)).toContain('xmr');
 
-    const detail = FormTypeSchema.parse((await request(server()).get('/api/form-types/xmm').set('Cookie', cookie).expect(200)).body);
+    const detail = FormTypeSchema.parse((await request(server()).get('/api/form-types/xmr').set('Cookie', cookie).expect(200)).body);
     expect(detail.status).toBe('open');
     expect(detail.sections.length).toBeGreaterThan(0);
 
     for (const call of [
       request(server()).get('/api/form-types').set('Cookie', cookie),
-      request(server()).get('/api/form-types/xmm/versions').set('Cookie', cookie),
+      request(server()).get('/api/form-types/xmr/versions').set('Cookie', cookie),
       request(server()).post('/api/form-types').set('Cookie', cookie).send({}),
-      request(server()).post('/api/form-types/xmm/versions').set('Cookie', cookie).send({}),
-      request(server()).put('/api/form-types/xmm/versions/1').set('Cookie', cookie).send({}),
-      request(server()).delete('/api/form-types/xmm/versions/1').set('Cookie', cookie),
-      request(server()).put('/api/form-types/xmm/versions/1/status').set('Cookie', cookie).send({}),
+      request(server()).post('/api/form-types/xmr/versions').set('Cookie', cookie).send({}),
+      request(server()).put('/api/form-types/xmr/versions/1').set('Cookie', cookie).send({}),
+      request(server()).delete('/api/form-types/xmr/versions/1').set('Cookie', cookie),
+      request(server()).put('/api/form-types/xmr/versions/1/status').set('Cookie', cookie).send({}),
     ]) {
       const response = await call.expect(403);
       expect(ApiErrorBodySchema.parse(response.body).message).toBe(FORM_TYPE_MESSAGES[403]);
@@ -88,9 +88,9 @@ describe('form-types', () => {
   it('GET /form-types trả mỗi loại đơn một dòng, phiên bản cũ nằm trong olderVersions', async () => {
     const cookie = await loginAs('nguoiXuLiDon');
     const { formTypes } = FormTypesResponseSchema.parse((await request(server()).get('/api/form-types').set('Cookie', cookie).expect(200)).body);
-    const xmm = formTypes.find((formType) => formType.id === 'xmm')!;
-    expect(xmm.prefix).toBe('XMM');
-    expect(xmm.formCount).toBeGreaterThan(0);
+    const xmr = formTypes.find((formType) => formType.id === 'xmr')!;
+    expect(xmr.prefix).toBe('XMR');
+    expect(xmr.formCount).toBeGreaterThan(0);
     expect(formTypes.some((formType) => formType.olderVersions.length > 0)).toBe(true);
     expect(new Set(formTypes.map((formType) => formType.id)).size).toBe(formTypes.length);
   });
@@ -117,7 +117,7 @@ describe('form-types', () => {
     const blankTitle = draftOf('ZTT', { sections: [{ id: 's1', title: ' ', main: false, questions: [{ id: 'q1', type: 'text', label: 'Nội dung thử', required: false }] }] });
     expect((await post(blankTitle).expect(422)).body.message).toContain('Phần 1: nhập tiêu đề phần.');
     expect((await post(draftOf('abc')).expect(422)).body.message).toBe(FORM_TYPE_DRAFT_MESSAGES.prefixFormat);
-    expect((await post(draftOf('XMM')).expect(409)).body.message).toBe(FORM_TYPE_DRAFT_MESSAGES.prefixTaken('XMM'));
+    expect((await post(draftOf('XMR')).expect(409)).body.message).toBe(FORM_TYPE_DRAFT_MESSAGES.prefixTaken('XMR'));
   });
 
   it('vòng đời phiên bản: Nháp → mở → khóa → phiên bản mới → mở / đóng → xóa Nháp', async () => {

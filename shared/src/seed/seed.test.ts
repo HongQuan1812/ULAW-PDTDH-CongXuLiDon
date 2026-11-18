@@ -5,6 +5,23 @@ import { assertSeedValid, findSeedProblems } from './validate';
 import { seedFormTypes } from './form-types';
 import { seedForms } from './forms';
 import { STUDENT_DIRECTORY } from './students';
+import { SCHOOL_FORM_TYPES_SEED } from './school-form-types';
+import { PRODUCTION_EXCLUDED_FORM_TYPE_PREFIXES, PRODUCTION_FORM_TYPES_SEED } from './production-form-types';
+
+describe('loại đơn bản thật', () => {
+  test('bỏ đúng các mã đơn chưa đưa lên bản thật, mã nào cũng có trong loại đơn theo mẫu Word', () => {
+    // Arrange
+    const schoolPrefixes = SCHOOL_FORM_TYPES_SEED.map((formType) => formType.prefix);
+
+    // Act
+    const productionPrefixes = PRODUCTION_FORM_TYPES_SEED.map((formType) => formType.prefix);
+
+    // Assert
+    expect(PRODUCTION_EXCLUDED_FORM_TYPE_PREFIXES.filter((prefix) => !schoolPrefixes.includes(prefix))).toEqual([]);
+    expect(productionPrefixes.filter((prefix) => PRODUCTION_EXCLUDED_FORM_TYPE_PREFIXES.includes(prefix))).toEqual([]);
+    expect(productionPrefixes.length).toBe(schoolPrefixes.length - PRODUCTION_EXCLUDED_FORM_TYPE_PREFIXES.length);
+  });
+});
 
 describe('dữ liệu mẫu', () => {
   test('mọi đơn có người nộp và cán bộ nằm trong tài khoản mẫu', () => {
@@ -41,13 +58,20 @@ describe('dữ liệu mẫu', () => {
     expect(Object.keys(STUDENT_DIRECTORY).filter((id) => !(id in SEED_ACCOUNTS))).toEqual([]);
   });
 
-  test('đơn thử nghiệm mẫu có đủ loại câu trả lời, bảng đủ 0 – 4 dòng, id tệp không trùng', () => {
-    const testForms = seedForms().filter((form) => form.formTypeId === 'thu');
-    const tableSizes = testForms.map((form) => (form.answers['mon-hoc'] as unknown[]).length);
-    const fileIds = testForms.flatMap((form) => (form.answers['tep-dinh-kem'] as { id: string }[]).map((file) => file.id));
+  test('loại đơn nào cũng có ít nhất 3 đơn mẫu, id tệp mẫu không trùng', () => {
+    // Arrange
+    const forms = seedForms();
 
-    expect(testForms.length).toBeGreaterThanOrEqual(5);
-    expect(new Set(tableSizes)).toEqual(new Set([0, 1, 2, 4, 5]));
+    // Act
+    const formCountByType = new Map(seedFormTypes().map((formType) => [formType.id, forms.filter((form) => form.formTypeId === formType.id).length]));
+    const fileIds = forms.flatMap((form) =>
+      Object.values(form.answers).flatMap((answer) =>
+        Array.isArray(answer) ? (answer as unknown[]).flatMap((item) => (typeof item === 'object' && item !== null && 'sizeBytes' in item && 'id' in item ? [String(item.id)] : [])) : [],
+      ),
+    );
+
+    // Assert
+    expect([...formCountByType].filter(([, count]) => count < 3)).toEqual([]);
     expect(new Set(fileIds).size).toBe(fileIds.length);
   });
 

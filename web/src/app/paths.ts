@@ -21,8 +21,8 @@ export const NEW_FORM_ROUTE = '/nop-don/:formTypeId';
 
 /**
  * Đường dẫn trang nộp đơn mới của một loại đơn (mở sau khi chọn trong hộp "Chọn loại đơn").
- * @param formTypeId  mã loại đơn, vd 'xmm'
- * @returns           vd '/nop-don/xmm'
+ * @param formTypeId  mã loại đơn, vd 'xmr'
+ * @returns           vd '/nop-don/xmr'
  */
 export function newFormPath(formTypeId: string): string {
   return `/nop-don/${encodeURIComponent(formTypeId)}`;
@@ -30,8 +30,8 @@ export function newFormPath(formTypeId: string): string {
 
 /**
  * Đường dẫn trang chi tiết của một lá đơn.
- * @param code  mã đơn, vd 'XMM-2026-001-00001'
- * @returns     vd '/don/XMM-2026-001-00001'
+ * @param code  mã đơn, vd 'XMR-2026-001-00001'
+ * @returns     vd '/don/XMR-2026-001-00001'
  */
 export function formPath(code: string): string {
   return `/don/${encodeURIComponent(code)}`;
@@ -43,14 +43,14 @@ export const FORM_TYPE_EDITOR_ROUTE = '/soan-don/:formTypeId';
 /** Mã loại đơn trên đường dẫn khi tạo loại đơn mới: /soan-don/moi. */
 export const NEW_FORM_TYPE_ID = 'moi';
 
-/** Tên tham số trên đường dẫn trình soạn để mở đúng một phiên bản: /soan-don/xmm?phien-ban=2. */
+/** Tên tham số trên đường dẫn trình soạn để mở đúng một phiên bản: /soan-don/xmr?phien-ban=2. */
 export const FORM_TYPE_VERSION_PARAM = 'phien-ban';
 
 /**
  * Đường dẫn trình soạn của một loại đơn.
- * @param formTypeId  mã loại đơn, vd 'xmm'; tạo mới thì NEW_FORM_TYPE_ID
+ * @param formTypeId  mã loại đơn, vd 'xmr'; tạo mới thì NEW_FORM_TYPE_ID
  * @param version     phiên bản muốn mở; bỏ trống thì mở phiên bản mới nhất
- * @returns           vd '/soan-don/xmm', '/soan-don/xmm?phien-ban=2'
+ * @returns           vd '/soan-don/xmr', '/soan-don/xmr?phien-ban=2'
  */
 export function formTypeEditorPath(formTypeId: string, version?: number): string {
   const path = `/soan-don/${encodeURIComponent(formTypeId)}`;
@@ -75,8 +75,8 @@ export const NEW_FORM_FOR_APPLICANT_ROUTE = '/ho-so/:userId/nop-don/:formTypeId'
 /**
  * Đường dẫn trang nộp đơn mới thay cho một người nộp đơn.
  * @param userId      id người nộp đơn (đơn thuộc về người này)
- * @param formTypeId  mã loại đơn, vd 'xmm'
- * @returns           vd '/ho-so/sv-5/nop-don/xmm'
+ * @param formTypeId  mã loại đơn, vd 'xmr'
+ * @returns           vd '/ho-so/sv-5/nop-don/xmr'
  */
 export function newFormForApplicantPath(userId: string, formTypeId: string): string {
   return `${personProfilePath(userId)}${newFormPath(formTypeId)}`;

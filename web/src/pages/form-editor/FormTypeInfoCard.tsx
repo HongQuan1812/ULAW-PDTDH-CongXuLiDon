@@ -57,7 +57,7 @@ export function FormTypeInfoCard({ draft, prefixLocked, contentLocked, status, s
           hint={
             prefixLocked
               ? 'Loại đơn đã phát hành nên không đổi được mã đơn'
-              : '2–5 chữ in hoa, đứng đầu mã mỗi đơn (vd XMM-2026-001-00001, 001 là phiên bản)'
+              : '2–5 chữ in hoa, đứng đầu mã mỗi đơn (vd XMR-2026-001-00001, 001 là phiên bản)'
           }
         >
           <input

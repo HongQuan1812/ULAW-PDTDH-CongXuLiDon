@@ -6,152 +6,15 @@ import { cloneSeedValue } from './clone';
 import { SCHOOL_FORM_TYPES_SEED } from './school-form-types';
 import { addHours } from './time';
 
-/* Các lựa chọn của cột "Cơ sở đào tạo" (Xét miễn môn); các môn mẫu SAMPLE_SUBJECTS chỉ dùng trường trong danh sách này. */
-export const SAMPLE_SCHOOLS = [
-  'ĐH KHXH&NV – ĐHQG TP.HCM',
-  'ĐH Bách khoa – ĐHQG TP.HCM',
-  'ĐH Kinh tế – Luật',
-  'ĐH Kinh tế TP.HCM',
-  'ĐH Sư phạm TP.HCM',
-  'ĐH Công nghiệp TP.HCM',
-  'ĐH Mở TP.HCM',
-  'ĐH Nông Lâm TP.HCM',
-  'ĐH Tôn Đức Thắng',
-  'ĐH Ngân hàng TP.HCM',
-] as const;
+/* Loại đơn ban đầu: các loại đơn thật theo mẫu Word (SCHOOL_FORM_TYPES_SEED), seed bản thật cũng dùng (trừ vài mã, xem production-form-types.ts).
+   Ở dev mọi loại đơn đều Đang mở (bản thật để Nháp), để nộp thử được ngay. */
+export const FORM_TYPE_SEED: readonly FormType[] = SCHOOL_FORM_TYPES_SEED.map((formType) => FormTypeSchema.parse({ ...formType, status: 'open' }));
 
-/* Loại đơn ban đầu.
-   - Xét miễn môn: loại đơn đầu tiên, có bảng các môn xin miễn.
-   - Đơn thử nghiệm: đủ 10 loại câu hỏi, để xem giao diện từng loại khi chưa có trình soạn loại đơn (bước 7).
-   - Loại đơn thật theo mẫu Word (SCHOOL_FORM_TYPES_SEED), cũng có trong seed bản thật.
-   Cấu trúc khai báo dạng thô rồi cho qua FormTypeSchema, để điền sẵn giá trị mặc định (required, main…) như máy chủ. */
-export const FORM_TYPE_SEED: readonly FormType[] = [
-  {
-    id: 'xmm',
-    name: 'Xét miễn môn',
-    prefix: 'XMM',
-    description: 'Miễn môn đã học tương đương ở cơ sở đào tạo khác',
-    status: 'open',
-    sections: [
-      {
-        id: 's-mon',
-        title: 'Đăng ký miễn môn',
-        main: true,
-        hint: 'Mỗi dòng là một môn của trường bạn muốn xét miễn, kèm môn đã học tương đương ở cơ sở khác.',
-        questions: [
-          {
-            id: 'mon',
-            type: 'table',
-            label: 'Các môn xin miễn',
-            required: true,
-            rowName: 'môn',
-            columns: [
-              { label: 'Môn học của trường', sub: 'Môn muốn xét miễn', type: 'text', placeholder: 'VD: Luật Hiến pháp' },
-              { label: 'Số tín chỉ', type: 'number', placeholder: 'TC', sum: true, sumLabel: 'tín chỉ' },
-              { label: 'Môn học tương đương', sub: 'Môn dùng để xét miễn', type: 'text', placeholder: 'Tên môn đã học' },
-              // Cột Chọn: người nộp đơn chọn trường trong danh sách Phòng Đào tạo đặt sẵn
-              { label: 'Cơ sở đào tạo', sub: 'Nơi dạy môn tương đương', type: 'select', placeholder: 'Chọn trường / cơ sở', options: [...SAMPLE_SCHOOLS] },
-            ],
-          },
-        ],
-      },
-      {
-        id: 's-files',
-        title: 'Bảng điểm minh chứng',
-        hint: 'Tải lên bảng điểm có xác nhận của cơ sở đào tạo cũ.',
-        questions: [
-          {
-            id: 'files',
-            type: 'file',
-            label: 'Tệp bảng điểm',
-            required: true,
-            accept: ['pdf', 'jpg', 'png'],
-            maxMB: 10,
-          },
-        ],
-      },
-    ],
-  },
-  {
-    id: 'thu',
-    name: 'Đơn thử nghiệm (đủ loại câu hỏi)',
-    prefix: 'THU',
-    description: 'Có đủ 10 loại câu hỏi, để xem giao diện của từng loại',
-    status: 'open',
-    sections: [
-      {
-        id: 's-chu',
-        title: 'Chữ, số và ngày',
-        main: true,
-        hint: 'Câu có dấu * là bắt buộc. Bấm Gửi đơn khi còn trống để xem câu báo lỗi.',
-        questions: [
-          {
-            id: 'info-dau',
-            type: 'info',
-            content: {
-              type: 'doc',
-              content: [
-                { type: 'heading', attrs: { level: 3 }, content: [{ type: 'text', text: 'Lưu ý' }] },
-                { type: 'paragraph', content: [{ type: 'text', text: 'Đây là khối thông báo: không cần trả lời.' }] },
-                {
-                  type: 'bulletList',
-                  content: [
-                    { type: 'listItem', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Nội dung có thể ' }, { type: 'text', text: 'in đậm', marks: [{ type: 'bold' }] }, { type: 'text', text: ' hoặc gạch đầu dòng.' }] }] },
-                  ],
-                },
-              ],
-            },
-          },
-          { id: 'tieu-de', type: 'text', label: 'Tiêu đề đơn', required: true, help: 'Trả lời ngắn: không xuống dòng bằng Enter.' },
-          { id: 'li-do', type: 'para', label: 'Lí do', help: 'Đoạn văn, viết được nhiều dòng.' },
-          { id: 'so-tin-chi', type: 'number', label: 'Số tín chỉ đã tích lũy', required: true },
-          { id: 'ngay-nghi', type: 'date', label: 'Ngày bắt đầu nghỉ học' },
-        ],
-      },
-      {
-        id: 's-chon',
-        title: 'Lựa chọn',
-        questions: [
-          { id: 'hoc-ky', type: 'radio', label: 'Học kỳ đăng ký', required: true, options: ['Học kỳ 1', 'Học kỳ 2', 'Học kỳ hè'] },
-          {
-            id: 'giay-to',
-            type: 'check',
-            label: 'Giấy tờ đã có',
-            required: true,
-            help: 'Chọn một hoặc nhiều mục.',
-            options: ['Bảng điểm', 'Giấy xác nhận sinh viên', 'Đơn có chữ ký phụ huynh'],
-          },
-          {
-            id: 'co-so',
-            type: 'select',
-            label: 'Cơ sở học',
-            options: ['Cơ sở Nguyễn Tất Thành', 'Cơ sở Bình Thạnh', 'Cơ sở Thủ Đức'],
-          },
-        ],
-      },
-      {
-        id: 's-bang',
-        title: 'Bảng và tệp',
-        questions: [
-          {
-            id: 'mon-hoc',
-            type: 'table',
-            label: 'Các môn đã đăng ký',
-            help: 'Không bắt buộc: để trống bảng cũng được.',
-            rowName: 'môn',
-            columns: [
-              { label: 'Tên môn', type: 'text', placeholder: 'VD: Luật Dân sự' },
-              { label: 'Số tín chỉ', type: 'number', placeholder: 'TC', sum: true, sumLabel: 'tín chỉ' },
-              { label: 'Ghi chú', sub: 'Lớp, giảng viên…', type: 'text' },
-            ],
-          },
-          { id: 'tep-dinh-kem', type: 'file', label: 'Tệp đính kèm', accept: ['pdf', 'docx'], maxMB: 5 },
-        ],
-      },
-    ],
-  },
-  ...SCHOOL_FORM_TYPES_SEED,
-].map((rawFormType) => FormTypeSchema.parse(rawFormType));
+/** Loại đơn chính của dữ liệu mẫu: có nhiều đơn nhất (đủ trang, đủ trạng thái), có sẵn mẫu xuất Word. */
+export const MAIN_SEED_FORM_TYPE_ID = 'xmr';
+
+/** Loại đơn có thêm phiên bản 1 cũ (Đã đóng), để thấy cách hiện nhiều phiên bản; phiên bản đang mở là 2. */
+export const MULTI_VERSION_SEED_FORM_TYPE_ID = 'th';
 
 /** Một phiên bản loại đơn trong API giả: nội dung, trạng thái, lần lưu gần nhất (id cán bộ). */
 export interface SeedFormTypeVersion {
@@ -173,7 +36,7 @@ export interface SeedFormType {
 
 /**
  * Lần lưu gần nhất của loại đơn mẫu thứ i:
- * Xét miễn môn lưu ngày 01/09/2026; các loại khác lùi dần mỗi loại 6 ngày, giờ lưu trong giờ hành chính, lần lượt 3 cán bộ mẫu.
+ * loại đơn đầu tiên lưu ngày 01/09/2026; các loại khác lùi dần mỗi loại 6 ngày, giờ lưu trong giờ hành chính, lần lượt 3 cán bộ mẫu.
  * @param i  vị trí trong FORM_TYPE_SEED
  * @returns  lúc lưu, id cán bộ lưu
  */
@@ -187,14 +50,14 @@ function seedUpdate(i: number): { updatedAt: string; updatedById: string } {
 
 /**
  * Dựng các loại đơn ban đầu, mỗi loại một phiên bản (phiên bản 1) theo FORM_TYPE_SEED.
- * Riêng đơn thử nghiệm có thêm phiên bản 1 cũ (Đã đóng, chỉ có phần đầu), để thấy cách hiện nhiều phiên bản.
+ * Riêng MULTI_VERSION_SEED_FORM_TYPE_ID có thêm phiên bản 1 cũ (Đã đóng, chỉ có phần đầu), để thấy cách hiện nhiều phiên bản.
  * @returns  các loại đơn
  */
 export function seedFormTypes(): SeedFormType[] {
   return FORM_TYPE_SEED.map((formType, i) => {
     const { id, prefix, name, description, status, sections } = cloneSeedValue(formType);
     const latest: SeedFormTypeVersion = { version: 1, status, name, description, sections, ...seedUpdate(i) };
-    if (id !== 'thu') return { id, prefix, versions: [latest] };
+    if (id !== MULTI_VERSION_SEED_FORM_TYPE_ID) return { id, prefix, versions: [latest] };
     const firstVersion: SeedFormTypeVersion = {
       ...cloneSeedValue(latest),
       status: 'closed',

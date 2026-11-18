@@ -32,11 +32,16 @@ describe('workflow (tiếp nhận, quyết định, chuyển giao)', () => {
     return (response.headers['set-cookie'] as unknown as string[]).map((cookie) => cookie.split(';')[0]).join('; ');
   }
 
-  /** Người nộp đơn nộp một đơn xmm mới, trả mã đơn. */
+  /** Người nộp đơn nộp một đơn xmr mới, trả mã đơn. */
   async function submitNewForm(applicantCookie: string): Promise<string> {
     const body = {
-      formTypeId: 'xmm',
-      answers: { mon: [['Luật Hiến pháp', 3, 'Hiến pháp học', 'ĐH Kinh tế – Luật']], files: [{ id: 'local-1', name: 'a.pdf', sizeBytes: 1 }] },
+      formTypeId: 'xmr',
+      answers: {
+        'hoc-phan': [['Luật Hiến pháp', 3, 'Hiến pháp học', '3 TC', 8]],
+        'co-so-dao-tao': 'ĐH Kinh tế – Luật',
+        'hinh-thuc-dao-tao': 'Chính quy',
+        'minh-chung': [{ id: 'local-1', name: 'a.pdf', sizeBytes: 1 }],
+      },
       committed: true,
     };
     const response = await request(server())
@@ -88,10 +93,10 @@ describe('workflow (tiếp nhận, quyết định, chuyển giao)', () => {
 
   it('chưa đăng nhập: 401', async () => {
     for (const call of [
-      request(server()).post('/api/forms/XMM-2026-001-00001/receive'),
-      request(server()).post('/api/forms/XMM-2026-001-00001/decision'),
-      request(server()).get('/api/forms/XMM-2026-001-00001/transfer-targets'),
-      request(server()).post('/api/forms/XMM-2026-001-00001/transfer'),
+      request(server()).post('/api/forms/XMR-2026-001-00001/receive'),
+      request(server()).post('/api/forms/XMR-2026-001-00001/decision'),
+      request(server()).get('/api/forms/XMR-2026-001-00001/transfer-targets'),
+      request(server()).post('/api/forms/XMR-2026-001-00001/transfer'),
     ]) {
       expect(messageOf(await call.expect(401))).toBe(FORM_MESSAGES[401]);
     }

@@ -112,7 +112,7 @@ describe('forms (danh sách đơn)', () => {
     expect(stats.byType.reduce((sum, row) => sum + row.count, 0)).toBe(stats.total);
     const counts = stats.byType.map((row) => row.count);
     expect(counts).toEqual([...counts].sort((a, b) => b - a));
-    expect(stats.byType.find((row) => row.formTypeId === 'xmm')?.formTypeName).toBeTruthy();
+    expect(stats.byType.find((row) => row.formTypeId === 'xmr')?.formTypeName).toBeTruthy();
     expect(stats.byType.length).toBe(await prisma.formType.count());
   });
 

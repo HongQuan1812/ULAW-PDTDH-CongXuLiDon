@@ -30,7 +30,7 @@ const toDate = (vietnamTime: string): Date => new Date(`${vietnamTime}:00+07:00`
 
 /**
  * Tách số thứ tự, năm, phiên bản khỏi mã đơn để dựng bộ đếm.
- * @param formCode  mã đơn dạng '<TIỀN TỐ>-<NĂM>-<PHIÊN BẢN>-<STT>', vd 'XMM-2026-001-01520'
+ * @param formCode  mã đơn dạng '<TIỀN TỐ>-<NĂM>-<PHIÊN BẢN>-<STT>', vd 'XMR-2026-001-01520'
  * @returns         tiền tố, năm, phiên bản, số thứ tự
  */
 function parseFormCode(formCode: string): { prefix: string; year: number; version: number; sequence: number } {

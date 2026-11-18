@@ -24,7 +24,7 @@ export interface GoogleLoginState {
   state: string;
   /** mã PKCE: chỉ máy chủ này đổi được code lấy token */
   codeVerifier: string;
-  /** trang trong giao diện cần mở sau khi đăng nhập, vd '/don/XMM-2026-001-00001' */
+  /** trang trong giao diện cần mở sau khi đăng nhập, vd '/don/XMR-2026-001-00001' */
   returnPath: string;
 }
 

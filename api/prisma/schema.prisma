@@ -88,7 +88,7 @@ model StudentInfo {
 
 model FormType {
   id     String @id
-  // Tiền tố mã đơn, vd XMM
+  // Tiền tố mã đơn, vd XMR
   prefix String @unique
 
   versions        FormTypeVersion[]

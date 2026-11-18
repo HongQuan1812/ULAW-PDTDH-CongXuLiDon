@@ -81,7 +81,7 @@ function fileResponse(bytes: ArrayBuffer, fileName: string, contentType: string)
  * @param prefix        phần đầu, vd mã đơn, tiền tố mã đơn
  * @param templateName  tên mẫu
  * @param purpose       quyết định đuôi file
- * @returns             vd 'XMM-2026-001-00001_don-gui-phong-dao-tao.docx'
+ * @returns             vd 'XMR-2026-001-00001_don-gui-phong-dao-tao.docx'
  */
 function exportFileName(prefix: string, templateName: string, purpose: ExportTemplatePurpose): string {
   return `${prefix}_${textToTag(templateName).replace(/_/g, '-')}${EXPORT_TEMPLATE_FILE[purpose].extension}`;

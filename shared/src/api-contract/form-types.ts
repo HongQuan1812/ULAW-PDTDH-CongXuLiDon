@@ -41,8 +41,8 @@ export const FORM_TYPE_ENDPOINTS = {
 
 /**
  * Đường dẫn API của một loại đơn (phiên bản đang mở).
- * @param formTypeId  mã loại đơn, vd 'xmm'
- * @returns           vd '/form-types/xmm'
+ * @param formTypeId  mã loại đơn, vd 'xmr'
+ * @returns           vd '/form-types/xmr'
  */
 export function formTypeDetailPath(formTypeId: string): string {
   return FORM_TYPE_ENDPOINTS.detail.replace(':formTypeId', encodeURIComponent(formTypeId));
@@ -51,7 +51,7 @@ export function formTypeDetailPath(formTypeId: string): string {
 /**
  * Đường dẫn API các phiên bản của một loại đơn.
  * @param formTypeId  mã loại đơn
- * @returns           vd '/form-types/xmm/versions'
+ * @returns           vd '/form-types/xmr/versions'
  */
 export function formTypeVersionsPath(formTypeId: string): string {
   return FORM_TYPE_ENDPOINTS.versions.replace(':formTypeId', encodeURIComponent(formTypeId));
@@ -61,7 +61,7 @@ export function formTypeVersionsPath(formTypeId: string): string {
  * Đường dẫn API một phiên bản.
  * @param formTypeId  mã loại đơn
  * @param version     số phiên bản
- * @returns           vd '/form-types/xmm/versions/2'
+ * @returns           vd '/form-types/xmr/versions/2'
  */
 export function formTypeVersionPath(formTypeId: string, version: number): string {
   return `${formTypeVersionsPath(formTypeId)}/${version}`;
@@ -71,7 +71,7 @@ export function formTypeVersionPath(formTypeId: string, version: number): string
  * Đường dẫn API mở / đóng một phiên bản.
  * @param formTypeId  mã loại đơn
  * @param version     số phiên bản
- * @returns           vd '/form-types/xmm/versions/2/status'
+ * @returns           vd '/form-types/xmr/versions/2/status'
  */
 export function formTypeVersionStatusPath(formTypeId: string, version: number): string {
   return `${formTypeVersionPath(formTypeId, version)}/status`;
@@ -81,11 +81,11 @@ export function formTypeVersionStatusPath(formTypeId: string, version: number): 
 
 /** Một loại đơn đang nhận đơn (theo phiên bản đang mở): đủ để người nộp chọn, chưa có cấu trúc các phần, câu hỏi. */
 export const OpenFormTypeSchema = z.object({
-  /** Mã loại đơn, vd 'xmm' */
+  /** Mã loại đơn, vd 'xmr' */
   id: z.string(),
-  /** Tên loại đơn, vd 'Xét miễn môn' */
+  /** Tên loại đơn, vd 'Thôi học' */
   name: z.string(),
-  /** Tiền tố mã đơn, vd 'XMM' (mã đơn XMM-2026-001-00001) */
+  /** Tiền tố mã đơn, vd 'XMR' (mã đơn XMR-2026-001-00001) */
   prefix: z.string(),
   /** Mô tả ngắn; null = không có */
   description: z.string().nullable(),
@@ -205,7 +205,7 @@ export const FORM_TYPE_MESSAGES = {
   onlyDraftDeletable: 'Chỉ xóa được phiên bản nháp.',
   /** PUT trạng thái của phiên bản Nháp (409) */
   draftNotLocked: 'Phiên bản này còn là nháp. Chọn Đang mở rồi bấm Lưu để mở.',
-  /** Lưu xong, vd "Đã lưu phiên bản 2 của Xét miễn môn (Nháp)." */
+  /** Lưu xong, vd "Đã lưu phiên bản 2 của Thôi học (Nháp)." */
   saved: (name: string, version: number, statusLabel: string) => `Đã lưu phiên bản ${version} của ${name} (${statusLabel}).`,
   /** Mở xong; có phiên bản đang mở khác thì nhắc nó đã tự đóng */
   opened: (name: string, version: number, closedVersion: number | null) =>

@@ -93,7 +93,7 @@ nop Đã nộp ──Tiếp nhận──▶ xet Đang xét ──▶ duyet Đã 
   Hết 10 giây mới gửi, trạng thái đổi và thư tự động mới đi. Mỗi đơn chỉ chờ một thao tác một lúc. Việc chờ nằm ở trình duyệt (`web/src/lib/undoScheduler.ts`),
   máy chủ không đổi; đóng hẳn trang trong lúc chờ thì thao tác mất (trình duyệt hỏi lại trước khi đóng). Tiếp nhận, Chuyển giao, Nộp đơn, sửa đơn của người nộp không chờ.
 - Mọi bước chuyển trạng thái đi qua **một chỗ duy nhất** ở máy chủ (`forms/workflow.service.ts`).
-- **Mã đơn** `<TIỀN TỐ>-<NĂM>-<PHIÊN BẢN>-<STT>`, vd `XMM-2026-001-00001` (`shared/src/business-rules/forms--codes.ts`).
+- **Mã đơn** `<TIỀN TỐ>-<NĂM>-<PHIÊN BẢN>-<STT>`, vd `XMR-2026-001-00001` (`shared/src/business-rules/forms--codes.ts`).
   Số thứ tự tăng theo từng tiền tố và từng năm, đếm tiếp qua các phiên bản. Máy chủ sinh mã trong transaction.
 - **Nộp đơn gửi câu trả lời và mọi tệp trong một lần.** Máy chủ kiểm tra hết; sai một chỗ thì không lưu gì.
   Đơn lưu kèm **bản chụp cấu trúc loại đơn lúc nộp**, nên sửa loại đơn sau này không làm hỏng đơn cũ.
@@ -115,7 +115,7 @@ Có lí do của Phòng Đào tạo thì hiện thêm dòng "Phòng Đào tạo:
 
 ## Loại đơn
 
-- Mỗi **loại đơn** là một form: các **phần**, trong phần là các **câu hỏi**. "Xét miễn môn" là loại đơn đầu tiên, sửa được như mọi loại khác.
+- Mỗi **loại đơn** là một form: các **phần**, trong phần là các **câu hỏi**. Loại đơn ban đầu là 32 mẫu đơn Word của Phòng Đào tạo Đại học (`shared/src/seed/school-form-types.ts`), sửa được như mọi loại khác; bản thật chưa đưa lên một số mã (`shared/src/seed/production-form-types.ts`).
 - **Mã đơn (tiền tố)**: 2–5 chữ in hoa, không trùng; khóa khi phiên bản đầu tiên được mở.
 - **Phiên bản** (`shared/src/api-contract/form-types.ts`): mỗi loại đơn có nhiều phiên bản; tên, mô tả, các phần, câu hỏi thuộc từng phiên bản.
   - **Nháp**: sửa được, xóa được. Nhiều nhất một phiên bản Nháp, luôn là phiên bản mới nhất. Người nộp đơn không thấy.
@@ -126,7 +126,7 @@ Có lí do của Phòng Đào tạo thì hiện thêm dòng "Phòng Đào tạo:
 - **Các loại câu hỏi** (`shared/src/aux-schema/form-types--question-types.ts`): trả lời ngắn, đoạn văn, số, ngày, chọn một, chọn nhiều,
   danh sách thả xuống, tải tệp (đuôi tệp và dung lượng tối đa), bảng nhiều dòng (các cột kiểu chữ / số / ngày / chọn, cột số có thể tính tổng, cột ngày xuất file dạng dd/mm/yyyy), khối thông báo.
   Câu trả lời lưu theo **id câu hỏi**; kiểm tra câu trả lời ở `shared/src/validators/forms--answers.ts`.
-- Bảng môn của Xét miễn môn là một câu hỏi bảng nhiều dòng.
+- Bảng học phần trong các mẫu đơn là câu hỏi bảng nhiều dòng.
 - Nộp đơn: nút **+ Nộp đơn mới** luôn mở hộp chọn loại đơn (kể cả khi chỉ có một loại), liệt kê các loại đang mở.
   Quy trình xử lí dùng chung cho mọi loại đơn.
 

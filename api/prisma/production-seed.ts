@@ -1,7 +1,7 @@
 /* Dữ liệu ban đầu cho bản thật: Admin đầu tiên, dòng cấu hình email, loại đơn theo mẫu Word, nơi lưu và lịch sao lưu mặc định. Không xóa, không ghi đè dữ liệu nào đã có,
    nên chạy lại nhiều lần vẫn an toàn. Chạy bằng prisma/seed-production.ts. */
 import { randomUUID } from 'node:crypto';
-import { BACKUP_SCHEDULES_SEED, BACKUP_TARGETS_SEED, EMAIL_SETTINGS_SEED, SCHOOL_FORM_TYPES_SEED, isSchoolEmail } from '@ulaw/shared';
+import { BACKUP_SCHEDULES_SEED, BACKUP_TARGETS_SEED, EMAIL_SETTINGS_SEED, PRODUCTION_FORM_TYPES_SEED, isSchoolEmail } from '@ulaw/shared';
 import type { Prisma, PrismaClient } from '../src/generated/prisma/client';
 
 /** Dòng cấu hình email duy nhất (cùng id với SETTINGS_ROW_ID của api/src/email/email-settings.service.ts). */
@@ -68,13 +68,13 @@ export async function seedProduction(
     emailSettings = 'created';
   }
 
-  // Loại đơn theo mẫu Word: chỉ thêm loại đơn chưa có (người lưu là Admin); đã có (có thể Admin đã sửa, đã xóa phiên bản) thì giữ nguyên,
-  // mã đơn đã bị loại đơn khác dùng thì bỏ qua để không lỗi trùng mã
+  // Loại đơn theo mẫu Word (trừ các mã chưa đưa lên bản thật): chỉ thêm loại đơn chưa có (người lưu là Admin);
+  // đã có (có thể Admin đã sửa, đã xóa phiên bản) thì giữ nguyên, mã đơn đã bị loại đơn khác dùng thì bỏ qua để không lỗi trùng mã
   const existingFormTypes = await prisma.formType.findMany({ select: { id: true, prefix: true } });
   const takenIds = new Set(existingFormTypes.map((formType) => formType.id));
   const takenPrefixes = new Set(existingFormTypes.map((formType) => formType.prefix));
   const formTypes: string[] = [];
-  for (const formType of SCHOOL_FORM_TYPES_SEED) {
+  for (const formType of PRODUCTION_FORM_TYPES_SEED) {
     if (takenIds.has(formType.id) || takenPrefixes.has(formType.prefix)) continue;
     await prisma.formType.create({
       data: {

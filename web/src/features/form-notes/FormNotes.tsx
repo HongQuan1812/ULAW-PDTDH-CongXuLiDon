@@ -102,7 +102,7 @@ function usePanelResize() {
  * Chỗ nhớ các ghi chú đã xem trong trình duyệt: mỗi người, mỗi lá đơn một mục (cùng trình duyệt có thể đăng nhập nhiều người).
  * @param userId  id người đang đăng nhập
  * @param code    mã đơn
- * @returns       vd 'form-notes-seen:cb-1:XMM-2026-001-00001'
+ * @returns       vd 'form-notes-seen:cb-1:XMR-2026-001-00001'
  */
 const seenNotesStorageKey = (userId: string, code: string) => `form-notes-seen:${userId}:${code}`;
 

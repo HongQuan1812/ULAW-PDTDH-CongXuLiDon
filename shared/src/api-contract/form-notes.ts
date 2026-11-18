@@ -24,7 +24,7 @@ export const FORM_NOTE_ENDPOINTS = {
 /**
  * Đường dẫn API các ghi chú của một lá đơn.
  * @param code  mã đơn
- * @returns     vd '/forms/XMM-2026-001-00001/notes'
+ * @returns     vd '/forms/XMR-2026-001-00001/notes'
  */
 export function formNotesPath(code: string): string {
   return FORM_NOTE_ENDPOINTS.list.replace(':code', encodeURIComponent(code));
@@ -34,7 +34,7 @@ export function formNotesPath(code: string): string {
  * Đường dẫn API một ghi chú.
  * @param code    mã đơn
  * @param noteId  id ghi chú
- * @returns       vd '/forms/XMM-2026-001-00001/notes/note-1'
+ * @returns       vd '/forms/XMR-2026-001-00001/notes/note-1'
  */
 export function formNotePath(code: string, noteId: string): string {
   return `${formNotesPath(code)}/${encodeURIComponent(noteId)}`;
