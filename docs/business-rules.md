@@ -125,6 +125,7 @@ Có lí do của Phòng Đào tạo thì hiện thêm dòng "Phòng Đào tạo:
 - Mỗi phần có công tắc **Nội dung chính**: chỉ các phần này hiện ở xem nhanh (dòng xổ ra trong các bảng đơn).
 - **Các loại câu hỏi** (`shared/src/aux-schema/form-types--question-types.ts`): trả lời ngắn, đoạn văn, số, ngày, chọn một, chọn nhiều,
   danh sách thả xuống, tải tệp (đuôi tệp và dung lượng tối đa), bảng nhiều dòng (các cột kiểu chữ / số / ngày / chọn, cột số có thể tính tổng, cột ngày xuất file dạng dd/mm/yyyy), khối thông báo.
+  Câu trả lời ngắn, đoạn văn, số và cột chữ, cột số của bảng có **chữ gợi ý** (chữ mờ trong ô, vd "VD: 2026 - 2027"): ví dụ để ở đây, không để ở mô tả, nên đơn đã nộp không còn dòng ví dụ thừa.
   Câu trả lời lưu theo **id câu hỏi**; kiểm tra câu trả lời ở `shared/src/validators/forms--answers.ts`.
 - Bảng học phần trong các mẫu đơn là câu hỏi bảng nhiều dòng.
 - Nộp đơn: nút **+ Nộp đơn mới** luôn mở hộp chọn loại đơn (kể cả khi chỉ có một loại), liệt kê các loại đang mở.

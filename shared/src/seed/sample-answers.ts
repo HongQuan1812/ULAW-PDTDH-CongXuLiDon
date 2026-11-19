@@ -156,7 +156,7 @@ function sampleAnswer(question: Question, index: number, code: string, baseDate:
 
   switch (question.type) {
     case 'text':
-      return pick(TEXTS[question.id] ?? [question.help?.match(/VD:\s*([^.]+)/)?.[1] ?? 'Theo hồ sơ đính kèm'], index);
+      return pick(TEXTS[question.id] ?? [question.placeholder?.replace(/^VD:\s*/, '') ?? 'Theo hồ sơ đính kèm'], index);
     case 'para':
       return { type: 'doc', content: pick(PARAGRAPHS[question.id] ?? PARAGRAPHS['li-do']!, index).map((text) => ({ type: 'paragraph', content: [{ type: 'text', text }] })) };
     case 'number':

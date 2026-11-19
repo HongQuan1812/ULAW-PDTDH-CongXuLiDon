@@ -149,7 +149,7 @@ function TableSettings({ question, onChange }: { question: QuestionOf<'table'>; 
             onValueChange={(label) => changeColumn(i, { label })}
           />
           <code className={styles.columnCode} title="Mã của cột trong file Word">{`{${columnTag(question, column)}}`}</code>
-          <GrowingTextarea value={column.sub ?? ''} placeholder="Mô tả ngắn" aria-label={`Mô tả ngắn cột ${i + 1}`} onValueChange={(sub) => changeColumn(i, { sub })} />
+          <GrowingTextarea value={column.sub ?? ''} placeholder="Làm rõ nội dung cột" aria-label={`Mô tả ngắn cột ${i + 1}`} onValueChange={(sub) => changeColumn(i, { sub })} />
           {/* Chữ mờ trong ô của người nộp đơn; cột Ngày, cột Chọn không dùng (ô ngày có sẵn dd/mm/yyyy, ô chọn ghi "— Chọn —") */}
           <GrowingTextarea
             value={column.placeholder ?? ''}

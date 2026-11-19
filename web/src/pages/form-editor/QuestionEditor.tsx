@@ -102,14 +102,26 @@ export function QuestionEditor({ question, index, questionCount, autoFocus, onCh
           </div>
         </div>
 
-        {/* Mô tả ngắn cho người nộp đơn (khối thông báo không có, nội dung đã là phần thông báo) */}
+        {/* Mô tả ngắn dưới câu hỏi (khối thông báo không có, nội dung đã là phần thông báo) */}
         {question.type !== 'info' && (
-          <Field label="Mô tả ngắn, gợi ý cho người nộp đơn">
+          <Field label="Mô tả ngắn">
             <GrowingTextarea
               className={styles.growing}
               value={question.help ?? ''}
-              placeholder="VD: Ghi rõ học kỳ và năm học"
+              placeholder="Làm rõ nội dung câu hỏi"
               onValueChange={(help) => onChange({ ...question, help })}
+            />
+          </Field>
+        )}
+
+        {/* Chữ gợi ý (chữ mờ trong ô trả lời, mất khi người nộp đơn gõ): chỉ Trả lời ngắn, Đoạn văn, Số, giống cột bảng */}
+        {(question.type === 'text' || question.type === 'para' || question.type === 'number') && (
+          <Field label="Chữ gợi ý trong ô trả lời">
+            <GrowingTextarea
+              className={styles.growing}
+              value={question.placeholder ?? ''}
+              placeholder="VD: 2026 - 2027"
+              onValueChange={(placeholder) => onChange({ ...question, placeholder: placeholder || undefined })}
             />
           </Field>
         )}

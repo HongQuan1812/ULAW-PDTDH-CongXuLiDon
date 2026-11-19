@@ -1,5 +1,5 @@
 /* Bản đang soạn của một loại đơn và các phép sửa trên đó. Mọi hàm đều thuần: nhận bản cũ, trả bản mới, không sửa bản cũ. */
-import { EMPTY_RICH_TEXT_DOC, type FormSection, FormTypeStatus, FormTypeVersion, Question, QuestionType } from '@ulaw/shared';
+import { EMPTY_RICH_TEXT_DOC, PLACEHOLDER_QUESTION_TYPES, type FormSection, FormTypeStatus, FormTypeVersion, Question, QuestionType } from '@ulaw/shared';
 
 /** Phần thông tin chung và nội dung của loại đơn mà trình soạn sửa được. */
 export interface FormTypeDraft {
@@ -124,7 +124,9 @@ export function changeQuestionType(question: Question, type: QuestionType): Ques
   if (type === 'file') {
     return question.type === 'file' ? { ...question } : { ...base, required, type, accept: ['pdf', 'jpg', 'png'], maxMB: DEFAULT_MAX_MB };
   }
-  return { ...base, required, type };
+  // Trả lời ngắn, Đoạn văn, Số: giữ chữ gợi ý đang có; câu Ngày không có chữ gợi ý
+  const placeholder = 'placeholder' in question && (PLACEHOLDER_QUESTION_TYPES as readonly string[]).includes(type) ? question.placeholder : undefined;
+  return placeholder ? { ...base, required, type, placeholder } : { ...base, required, type };
 }
 
 /**

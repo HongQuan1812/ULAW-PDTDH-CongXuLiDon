@@ -69,10 +69,11 @@ export function FormTypeInfoCard({ draft, prefixLocked, contentLocked, status, s
           />
         </Field>
         <div className={styles.wide}>
-          <Field label="Mô tả ngắn" hint="Hiện khi người nộp đơn chọn loại đơn">
+          <Field label="Mô tả ngắn">
             <GrowingTextarea
               className={styles.growing}
               value={draft.description}
+              placeholder="Làm rõ nội dung loại đơn"
               disabled={contentLocked}
               onValueChange={(description) => onChange({ description })}
             />

@@ -51,7 +51,9 @@ export function SimpleAnswer({
   if (question.type === 'para') {
     const doc = paragraphDoc(answerValue);
     if (!readOnly) {
-      return <RichTextEditor value={doc} onChange={onAnswerChange} label={question.label || 'Câu trả lời'} invalid={invalid} />;
+      return (
+        <RichTextEditor value={doc} onChange={onAnswerChange} label={question.label || 'Câu trả lời'} placeholder={question.placeholder} invalid={invalid} />
+      );
     }
     return isRichTextEmpty(doc) ? (
       <p className={`${styles.readBox} ${styles.emptyValue}`}>—</p>
@@ -72,8 +74,9 @@ export function SimpleAnswer({
     );
   }
 
-  // Thuộc tính chung của các ô nhập
+  // Thuộc tính chung của các ô nhập; chữ gợi ý chỉ câu Trả lời ngắn, Số có (ô ngày, ô chọn bỏ qua)
   const inputProps = {
+    placeholder: 'placeholder' in question ? question.placeholder : undefined,
     'aria-labelledby': labelId,
     'aria-describedby': describedBy,
     'aria-invalid': invalid || undefined,

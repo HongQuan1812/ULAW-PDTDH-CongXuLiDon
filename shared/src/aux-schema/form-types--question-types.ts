@@ -42,8 +42,16 @@ const questionBase = {
 
 /* ---------- Từng loại câu hỏi ---------- */
 
-/** Trả lời ngắn, đoạn văn, số, ngày: chỉ có phần chung. */
-const SimpleQuestionSchema = z.object({ ...questionBase, type: z.enum(['text', 'para', 'number', 'date']) });
+/** Loại câu hỏi có chữ gợi ý trong ô (giống cột Chữ, cột Số của bảng). */
+export const PLACEHOLDER_QUESTION_TYPES = ['text', 'para', 'number'] as const;
+
+/** Trả lời ngắn, đoạn văn, số, ngày: phần chung, thêm chữ gợi ý trong ô (trừ câu Ngày, ô ngày đã ghi sẵn dd/mm/yyyy). */
+const SimpleQuestionSchema = z.object({
+  ...questionBase,
+  type: z.enum(['text', 'para', 'number', 'date']),
+  /** Chữ mờ gợi ý trong ô, vd "VD: 2026 - 2027"; chỉ câu Trả lời ngắn, Đoạn văn, Số */
+  placeholder: z.string().optional(),
+});
 
 /** Chọn một (radio), chọn nhiều (check), danh sách thả xuống (select). */
 const ChoiceQuestionSchema = z.object({
