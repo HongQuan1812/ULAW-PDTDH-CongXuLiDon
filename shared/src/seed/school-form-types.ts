@@ -75,7 +75,7 @@ export const SCHOOL_FORM_TYPES_SEED: readonly FormType[] = [
             type: 'table',
             label: 'Các học phần xin đăng ký muộn',
             required: true,
-            help: 'Ghi đầy đủ tên học phần, vd: Luật Hình sự phần chung.',
+            help: 'Ghi đầy đủ tên học phần.',
             columns: [
               { type: 'text', label: 'Tên học phần', placeholder: 'VD: Luật Hình sự phần chung' },
               { type: 'number', label: 'Số tín chỉ', sum: true, sumLabel: 'tín chỉ', placeholder: 'TC' },
@@ -170,7 +170,7 @@ export const SCHOOL_FORM_TYPES_SEED: readonly FormType[] = [
             type: 'table',
             label: 'Các học phần xin học lại, học cải thiện',
             required: true,
-            help: 'Ghi đầy đủ tên học phần, vd: Luật Hình sự phần chung.',
+            help: 'Ghi đầy đủ tên học phần.',
             columns: [
               { type: 'text', label: 'Tên học phần', placeholder: 'VD: Luật Hình sự phần chung' },
               { type: 'number', label: 'Số tín chỉ', sum: true, sumLabel: 'tín chỉ', placeholder: 'TC' },
@@ -273,7 +273,7 @@ export const SCHOOL_FORM_TYPES_SEED: readonly FormType[] = [
             type: 'table',
             label: 'Các học phần xin học bổ sung',
             required: true,
-            help: 'Ghi đầy đủ tên học phần, vd: Luật Hình sự phần chung.',
+            help: 'Ghi đầy đủ tên học phần.',
             columns: [
               { type: 'text', label: 'Tên học phần', placeholder: 'VD: Luật Hình sự phần chung' },
               { type: 'number', label: 'Số tín chỉ', sum: true, sumLabel: 'tín chỉ', placeholder: 'TC' },
@@ -362,7 +362,7 @@ export const SCHOOL_FORM_TYPES_SEED: readonly FormType[] = [
             type: 'table',
             label: 'Các học phần xin rút bớt, hủy',
             required: true,
-            help: 'Ghi đầy đủ tên học phần, vd: Luật Hình sự phần chung.',
+            help: 'Ghi đầy đủ tên học phần.',
             columns: [
               { type: 'text', label: 'Tên học phần', placeholder: 'VD: Luật Hình sự phần chung' },
               { type: 'number', label: 'Số tín chỉ', sum: true, sumLabel: 'tín chỉ', placeholder: 'TC' },
@@ -425,7 +425,7 @@ export const SCHOOL_FORM_TYPES_SEED: readonly FormType[] = [
             type: 'table',
             label: 'Các học phần đăng ký dự thi',
             required: true,
-            help: 'Ghi đầy đủ tên học phần, vd: Luật Hình sự phần chung.',
+            help: 'Ghi đầy đủ tên học phần.',
             columns: [
               { type: 'text', label: 'Tên học phần', placeholder: 'VD: Luật Hình sự phần chung' },
               { type: 'text', label: 'Đăng ký thi với lớp', placeholder: 'Lớp học phần' },
@@ -453,7 +453,7 @@ export const SCHOOL_FORM_TYPES_SEED: readonly FormType[] = [
             type: 'file',
             label: 'Giấy tờ minh chứng',
             required: true,
-            help: 'VD: kết quả giải quyết cho hoãn thi.',
+            help: 'Kết quả giải quyết cho hoãn thi.',
             maxMB: 5,
             accept: ['pdf', 'jpg', 'png'],
           },
@@ -502,7 +502,7 @@ export const SCHOOL_FORM_TYPES_SEED: readonly FormType[] = [
             type: 'table',
             label: 'Các học phần xin chuyển lịch thi',
             required: true,
-            help: 'Ghi đầy đủ tên học phần, vd: Luật Hình sự phần chung.',
+            help: 'Ghi đầy đủ tên học phần.',
             columns: [
               { type: 'text', label: 'Tên học phần', placeholder: 'VD: Luật Hình sự phần chung' },
               { type: 'text', label: 'Lớp dự thi cũ' },
@@ -597,7 +597,7 @@ export const SCHOOL_FORM_TYPES_SEED: readonly FormType[] = [
             type: 'table',
             label: 'Các học phần xin hoãn thi',
             required: true,
-            help: 'Ghi đầy đủ tên học phần, vd: Luật Hình sự phần chung.',
+            help: 'Ghi đầy đủ tên học phần.',
             columns: [
               { type: 'text', label: 'Tên học phần', placeholder: 'VD: Luật Hình sự phần chung' },
               { type: 'text', label: 'Lớp dự thi', placeholder: 'Lớp học phần' },
@@ -800,7 +800,7 @@ export const SCHOOL_FORM_TYPES_SEED: readonly FormType[] = [
             type: 'table',
             label: 'Các học phần xin tạm hoãn học',
             required: true,
-            help: 'Ghi đầy đủ tên học phần, vd: Luật Hình sự phần chung.',
+            help: 'Ghi đầy đủ tên học phần.',
             columns: [
               { type: 'text', label: 'Tên học phần', placeholder: 'VD: Luật Hình sự phần chung' },
               { type: 'number', label: 'Số tín chỉ', sum: true, sumLabel: 'tín chỉ', placeholder: 'TC' },
@@ -2367,7 +2367,7 @@ export const SCHOOL_FORM_TYPES_SEED: readonly FormType[] = [
             type: 'table',
             label: 'Các học phần đăng ký dự thi',
             required: true,
-            help: 'Ghi đầy đủ tên học phần, vd: Luật Hình sự phần chung.',
+            help: 'Ghi đầy đủ tên học phần.',
             columns: [
               { type: 'text', label: 'Tên học phần', placeholder: 'VD: Luật Hình sự phần chung' },
               { type: 'text', label: 'Đăng ký thi với lớp', placeholder: 'Lớp học phần' },
