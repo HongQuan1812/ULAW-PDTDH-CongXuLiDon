@@ -28,6 +28,8 @@
 
 /* chỉ xem: câu trả lời dạng chữ */
 .readValue{white-space:pre-wrap;overflow-wrap:anywhere}
+/* chỉ xem: khung quanh câu trả lời một giá trị, giống ô nhập (khóa) để dễ nhìn */
+.readBox{min-height:42px;padding:9px 14px;border:1px solid var(--line-2);border-radius:var(--r);background:var(--surface-2);line-height:1.45}
 /* câu Trả lời ngắn, Đoạn văn: ô tự cao lên theo chữ, không thanh cuộn, không kéo giãn bằng tay; Đoạn văn thấp nhất 4 dòng */
 .growing{display:block;min-height:42px;line-height:1.45;resize:none;overflow:hidden;overflow-wrap:anywhere}
 .emptyValue{color:var(--faint);font-size:13.5px}

@@ -53,13 +53,23 @@ export function SimpleAnswer({
     if (!readOnly) {
       return <RichTextEditor value={doc} onChange={onAnswerChange} label={question.label || 'Câu trả lời'} invalid={invalid} />;
     }
-    return isRichTextEmpty(doc) ? <p className={styles.emptyValue}>—</p> : <RichTextView value={doc} />;
+    return isRichTextEmpty(doc) ? (
+      <p className={`${styles.readBox} ${styles.emptyValue}`}>—</p>
+    ) : (
+      <div className={styles.readBox}>
+        <RichTextView value={doc} />
+      </div>
+    );
   }
 
-  // Chỉ xem
+  // Chỉ xem: câu trả lời nằm trong khung giống ô nhập
   if (readOnly) {
     const text = readOnlyText(question.type, answerValue);
-    return text === null ? <p className={styles.emptyValue}>—</p> : <p className={styles.readValue}>{text}</p>;
+    return text === null ? (
+      <p className={`${styles.readBox} ${styles.emptyValue}`}>—</p>
+    ) : (
+      <p className={`${styles.readBox} ${styles.readValue}`}>{text}</p>
+    );
   }
 
   // Thuộc tính chung của các ô nhập
