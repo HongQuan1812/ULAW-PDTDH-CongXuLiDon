@@ -13,6 +13,7 @@ import { AccountMenu } from './AccountMenu';
 import { DemoRoleSwitch } from '../features/auth/DemoRoleSwitch';
 import { useLogoutAction } from '../features/auth/useLogoutAction';
 import { SHOW_DEMO } from '../lib/env';
+import { useCloseOnEscape } from '../lib/useCloseOnEscape';
 import { Icon, PAGE_ICON } from './pageIcons';
 import { LOGIN_PATH, ONBOARDING_PATH, PAGE_LABEL, PAGE_PATH } from './paths';
 import styles from './AppLayout.module.css';
@@ -41,12 +42,8 @@ export function AppLayout() {
   useEffect(() => {
     if (!drawerOpen) return;
     navRef.current?.querySelector('a')?.focus();
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') closeDrawer();
-    };
-    document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
   }, [drawerOpen]);
+  useCloseOnEscape(drawerOpen, () => closeDrawer());
 
   // Đang kiểm tra phiên, hoặc lỗi khi gọi API
   if (session.isPending) return null;

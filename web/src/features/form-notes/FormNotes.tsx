@@ -13,6 +13,7 @@ import { RichTextView } from '../../components/rich-text/RichTextView';
 import { useToast } from '../../components/Toast';
 import { useAuth } from '../auth/useAuth';
 import { formatDateTime } from '../../lib/format';
+import { useCloseOnEscape } from '../../lib/useCloseOnEscape';
 import { useFloatingButtonBottom } from '../../lib/useFloatingButtonBottom';
 import { NoteIcon } from './NoteIcon';
 import styles from './FormNotes.module.css';
@@ -175,6 +176,9 @@ export function FormNotes({ code, initialOpen = false }: { code: string; initial
     buttonRef.current?.focus();
   };
 
+  // Bấm Esc ở đâu trên trang cũng đóng khung
+  useCloseOnEscape(open, closePanel);
+
   return (
     <>
       {open && (
@@ -182,7 +186,6 @@ export function FormNotes({ code, initialOpen = false }: { code: string; initial
           className={styles.panel}
           style={{ '--panel-width': `${size.width}px`, '--panel-height': `${size.height}px`, ...fabBottomStyle } as CSSProperties}
           aria-label="Ghi chú nội bộ"
-          onKeyDown={(event) => event.key === 'Escape' && closePanel()}
         >
           <span className={styles.resizeHandle} title="Kéo để đổi cỡ khung" aria-hidden="true" {...handleProps} />
           <header className={styles.panelHead}>

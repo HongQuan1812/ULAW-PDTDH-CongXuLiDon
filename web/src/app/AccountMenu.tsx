@@ -6,6 +6,7 @@ import type { SessionUser } from '@ulaw/shared';
 import { Avatar } from '../components/Avatar';
 import { DemoRoleSwitch } from '../features/auth/DemoRoleSwitch';
 import { SHOW_DEMO } from '../lib/env';
+import { useCloseOnEscape } from '../lib/useCloseOnEscape';
 import styles from './AccountMenu.module.css';
 
 /**
@@ -34,24 +35,21 @@ export function AccountMenu({
   const rootRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
 
-  // Đang mở: bấm ra ngoài thì đóng; bấm Esc thì đóng và trả con trỏ bàn phím về nút
+  // Đang mở: bấm ra ngoài thì đóng
   useEffect(() => {
     if (!open) return;
     const onPointerDown = (event: PointerEvent) => {
       if (!rootRef.current?.contains(event.target as Node)) setOpen(false);
     };
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key !== 'Escape') return;
-      setOpen(false);
-      buttonRef.current?.focus();
-    };
     document.addEventListener('pointerdown', onPointerDown);
-    document.addEventListener('keydown', onKey);
-    return () => {
-      document.removeEventListener('pointerdown', onPointerDown);
-      document.removeEventListener('keydown', onKey);
-    };
+    return () => document.removeEventListener('pointerdown', onPointerDown);
   }, [open, setOpen]);
+
+  // Bấm Esc thì đóng và trả con trỏ bàn phím về nút
+  useCloseOnEscape(open, () => {
+    setOpen(false);
+    buttonRef.current?.focus();
+  });
 
   return (
     <div ref={rootRef} className={styles.root}>

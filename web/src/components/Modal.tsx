@@ -1,6 +1,7 @@
 /* Hộp thoại giữa màn hình, có nền mờ phía sau. */
 import { useEffect, useId, useRef, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
+import { useCloseOnEscape } from '../lib/useCloseOnEscape';
 import styles from './Modal.module.css';
 
 /**
@@ -46,14 +47,7 @@ export function Modal({
   }, [open]);
 
   // Đang mở: bấm Esc thì đóng
-  useEffect(() => {
-    if (!open) return;
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onClose();
-    };
-    document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
-  }, [open, onClose]);
+  useCloseOnEscape(open, onClose);
 
   if (!open) return null;
 

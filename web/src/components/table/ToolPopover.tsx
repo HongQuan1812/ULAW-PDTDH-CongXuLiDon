@@ -1,6 +1,7 @@
 /* Nút công cụ của bảng (Sắp xếp, Lọc) kèm bảng nổi bên dưới.
    Bấm ra ngoài hoặc Esc thì đóng. */
 import { useEffect, useRef, type ReactNode } from 'react';
+import { useCloseOnEscape } from '../../lib/useCloseOnEscape';
 import styles from './table.module.css';
 
 interface ToolPopoverProps {
@@ -34,18 +35,13 @@ export function ToolPopover({ label, icon, count, open, onToggle, onClose, child
     const closeOnOutsidePress = (event: PointerEvent) => {
       if (!wrapRef.current?.contains(event.target as Node)) onClose();
     };
-    const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key !== 'Escape') return;
-      onClose();
-      buttonRef.current?.focus();
-    };
     document.addEventListener('pointerdown', closeOnOutsidePress);
-    document.addEventListener('keydown', closeOnEscape);
-    return () => {
-      document.removeEventListener('pointerdown', closeOnOutsidePress);
-      document.removeEventListener('keydown', closeOnEscape);
-    };
+    return () => document.removeEventListener('pointerdown', closeOnOutsidePress);
   }, [open, onClose]);
+  useCloseOnEscape(open, () => {
+    onClose();
+    buttonRef.current?.focus();
+  });
 
   return (
     <div className={styles.popWrap} ref={wrapRef}>

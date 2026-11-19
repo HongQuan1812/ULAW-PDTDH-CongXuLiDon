@@ -5,7 +5,7 @@
    Mã trong mỗi mẫu tự được kiểm tra (không cần bấm nút), theo bản soạn đang hiện
    (kể cả thay đổi chưa lưu, kể cả mẫu chưa lưu). Muốn xem mẫu điền dữ liệu thật: mẫu đơn thì Xuất file ở trang chi tiết
    một lá đơn; mẫu thống kê thì Xuất thống kê ở trang Quản lí đơn.
-   Mỗi lần mở khung, các mục thu gọn bên trong đều đóng. */
+   Mỗi lần mở khung, các mục thu gọn bên trong đều đóng. Bấm Esc thì đóng khung. */
 import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
 import {
   EXPORT_MESSAGES,
@@ -29,6 +29,7 @@ import { LoadError, loadErrorMessage } from '../../components/LoadError';
 import { RefreshButton } from '../../components/RefreshButton';
 import { useToast } from '../../components/Toast';
 import { FilePreview, type PreviewFile } from '../../features/file-preview/FilePreview';
+import { useCloseOnEscape } from '../../lib/useCloseOnEscape';
 import { checkFailureOf, checkResultOf, type TemplateResult } from '../../features/export/checkResult';
 import { EditorIconButton } from './EditorIconButton';
 import { ExportHowTo, ExportTagGuide } from './ExportTagGuide';
@@ -112,6 +113,9 @@ export function ExportTemplatesPanel({
 
   /** Nút ↻ cạnh chữ "Các mẫu": ngoài tải lại danh sách mẫu, còn kiểm tra lại mã mọi mẫu. */
   const refreshAll = () => setCheckRound((round) => round + 1);
+
+  // Bấm Esc thì đóng khung, như các hộp thoại khác; đang mở hộp thoại con (xem tệp…) thì Esc chỉ đóng hộp thoại đó
+  useCloseOnEscape(true, onClose);
 
   return (
     <section className={styles.popup} role="dialog" aria-labelledby={titleId}>

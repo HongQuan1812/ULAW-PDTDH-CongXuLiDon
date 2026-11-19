@@ -8,7 +8,8 @@ h1,h2,h3{text-wrap:balance;letter-spacing:-.02em;font-weight:600}
 button,input,select,textarea{font:inherit;color:inherit}
 a{color:var(--accent)}
 img{max-width:100%}
-:focus-visible{outline:2px solid var(--focus);outline-offset:2px;border-radius:6px}
+/* :where() để không đè hình dạng riêng của phần tử (nút tròn, ảnh đại diện…): chỉ phần tử chưa bo góc mới bo 6px */
+:where(:focus-visible){outline:2px solid var(--focus);outline-offset:2px;border-radius:6px}
 mark{background:var(--mark);color:inherit;border-radius:3px;padding:0 1px}
 code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.88em;background:var(--surface-2);border-radius:5px;padding:1px 6px}
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{transition:none!important;animation:none!important}}

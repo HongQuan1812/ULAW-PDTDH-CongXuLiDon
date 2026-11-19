@@ -7,6 +7,7 @@ import { createPortal } from 'react-dom';
 import { formatFileSize, previewKindOf, type FileRef } from '@ulaw/shared';
 import { useFileContent } from '../../api/files';
 import { LoadError } from '../../components/LoadError';
+import { useCloseOnEscape } from '../../lib/useCloseOnEscape';
 import { LOCAL_FILE_ID_PREFIX, readLocalFile } from '../form-renderer/localFiles';
 import { ExcelView } from './ExcelView';
 import { ImageView } from './ImageView';
@@ -66,16 +67,12 @@ function OpenFilePreview({ file, onClose }: { file: PreviewFile; onClose: () => 
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     closeButtonRef.current?.focus();
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onClose();
-    };
-    document.addEventListener('keydown', onKey);
     return () => {
-      document.removeEventListener('keydown', onKey);
       document.body.style.overflow = previousOverflow;
       previousFocus?.focus({ preventScroll: true });
     };
-  }, [onClose]);
+  }, []);
+  useCloseOnEscape(true, onClose);
 
   const kind = previewKindOf(file.name);
   const metaText = [formatFileSize(file.sizeBytes), file.note, extraMeta].filter(Boolean).join(' · ');

@@ -1,5 +1,6 @@
 /* Khung trượt từ phải ra. */
 import { useEffect, useId, useRef, type ReactNode } from 'react';
+import { useCloseOnEscape } from '../lib/useCloseOnEscape';
 import styles from './Sheet.module.css';
 
 /**
@@ -37,14 +38,7 @@ export function Sheet({
   }, [open]);
 
   // Đang mở: bấm Esc thì đóng
-  useEffect(() => {
-    if (!open) return;
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onClose();
-    };
-    document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
-  }, [open, onClose]);
+  useCloseOnEscape(open, onClose);
 
   return (
     <>
