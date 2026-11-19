@@ -23,12 +23,12 @@ import {
   fetchExportTemplateFile,
   useExportTemplates,
 } from '../../api/exports';
-import { Button } from '../../components/Button';
 import { FileDropZone } from '../../components/FileDropZone';
 import { LoadError, loadErrorMessage } from '../../components/LoadError';
 import { RefreshButton } from '../../components/RefreshButton';
 import { useToast } from '../../components/Toast';
 import { FilePreview, type PreviewFile } from '../../features/file-preview/FilePreview';
+import { saveToDevice } from '../../lib/saveToDevice';
 import { useCloseOnEscape } from '../../lib/useCloseOnEscape';
 import { checkFailureOf, checkResultOf, type TemplateResult } from '../../features/export/checkResult';
 import { EditorIconButton } from './EditorIconButton';
@@ -154,7 +154,7 @@ export function ExportTemplatesPanel({
 }
 
 /**
- * Mục "Các mẫu": Cách tạo một mẫu, khung chọn file, danh sách mẫu (đã lưu và chưa lưu), mỗi mẫu có Xem, Đổi tên, Xóa.
+ * Mục "Các mẫu": Cách tạo một mẫu, khung chọn file, danh sách mẫu (đã lưu và chưa lưu), mỗi mẫu có Xem, Tải về, Đổi tên, Xóa.
  * Thêm, đổi tên, xóa chỉ ghi nhận (lưu khi bấm Lưu của trình soạn); Xem chạy ngay, mẫu chưa lưu thì mở thẳng file trong trình duyệt.
  * Mã trong mỗi mẫu tự được kiểm tra khi mẫu vừa thêm / vừa mở khung, và mỗi khi câu hỏi đổi (sau lúc ngừng gõ);
  * hiện kết quả ngay dưới mẫu: đỏ khi có vấn đề, xanh khi mọi mã đều khớp với phiên bản đang xem.
@@ -252,34 +252,49 @@ function TemplateList({
   };
 
   /**
-   * Xem mẫu gốc (còn nguyên các mã), có nút "Tải mẫu gốc" trên thanh xem. Mẫu chưa lưu thì mở thẳng file trong trình duyệt.
-   * @param row  dòng mẫu
+   * Lấy file mẫu gốc (còn nguyên các mã) rồi làm một việc với nó. Mẫu chưa lưu thì dùng thẳng file trong trình duyệt;
+   * mẫu đã lưu thì tải từ máy chủ (khóa nút của dòng trong lúc tải, lỗi thì báo bằng toast).
+   * @param row      dòng mẫu
+   * @param useFile  việc làm với file: nhận tên file, nội dung
    */
-  const viewTemplate = async (row: TemplateRow) => {
-    const showFile = (fileName: string, content: Blob, note: string) =>
-      setPreviewedFile({
-        id: `template-${row.id}-${Date.now()}`,
-        name: fileName,
-        sizeBytes: content.size,
-        content,
-        title: row.name,
-        note,
-        downloadLabel: 'Tải mẫu gốc',
-      });
+  const withTemplateFile = async (row: TemplateRow, useFile: (fileName: string, content: Blob) => void) => {
     if (row.kind === 'staged') {
-      showFile(row.staged.file.name, row.staged.file, 'Mẫu gốc · chưa lưu');
+      useFile(row.staged.file.name, row.staged.file);
       return;
     }
     setBusyRowId(row.id);
     try {
       const templateFile = await fetchExportTemplateFile(formTypeId!, row.id);
-      showFile(row.template.fileName, templateFile.content, 'Mẫu gốc');
+      useFile(row.template.fileName, templateFile.content);
     } catch (error) {
       toast(error instanceof Error ? error.message : EXPORT_MESSAGES.templateNotFound, 'error');
     } finally {
       setBusyRowId(null);
     }
   };
+
+  /**
+   * Xem mẫu gốc, có nút "Tải mẫu gốc" trên thanh xem.
+   * @param row  dòng mẫu
+   */
+  const viewTemplate = (row: TemplateRow) =>
+    withTemplateFile(row, (fileName, content) =>
+      setPreviewedFile({
+        id: `template-${row.id}-${Date.now()}`,
+        name: fileName,
+        sizeBytes: content.size,
+        content,
+        title: row.name,
+        note: row.kind === 'staged' ? 'Mẫu gốc · chưa lưu' : 'Mẫu gốc',
+        downloadLabel: 'Tải mẫu gốc',
+      }),
+    );
+
+  /**
+   * Tải mẫu gốc về máy, không cần mở xem.
+   * @param row  dòng mẫu
+   */
+  const downloadTemplate = (row: TemplateRow) => withTemplateFile(row, (fileName, content) => saveToDevice(content, fileName));
 
   /**
    * Ghi nhận tên mới (đổi tên ngay tại dòng); tên trống hoặc không đổi thì thôi.
@@ -353,17 +368,14 @@ function TemplateList({
                     </button>
                   )}
                   <div className={styles.actions}>
-                    <Button className={styles.smallButton} disabled={busy} onClick={() => void viewTemplate(row)}>
-                      Xem
-                    </Button>
-                    <Button
-                      className={styles.smallButton}
+                    <EditorIconButton icon="view" label="Xem mẫu" disabled={busy} onClick={() => void viewTemplate(row)} />
+                    <EditorIconButton icon="download" label="Tải mẫu gốc về máy" disabled={busy} onClick={() => void downloadTemplate(row)} />
+                    <EditorIconButton
+                      icon="rename"
+                      label={`Đổi tên: ${purpose === 'form' ? 'tên này hiện khi chọn mẫu lúc Xuất file' : 'tên này cũng là phần sau của tên file xuất ra'}`}
                       disabled={busy || saving}
-                      title={purpose === 'form' ? 'Tên này hiện khi chọn mẫu lúc Xuất file' : 'Tên này cũng là phần sau của tên file xuất ra'}
                       onClick={() => setRenamingId(row.id)}
-                    >
-                      Đổi tên
-                    </Button>
+                    />
                     <EditorIconButton
                       icon="delete"
                       label={row.kind === 'staged' ? 'Gỡ mẫu chưa lưu' : 'Xóa mẫu'}
