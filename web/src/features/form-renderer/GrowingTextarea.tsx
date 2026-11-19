@@ -1,5 +1,5 @@
 /* Ô nhập chữ tự cao lên khi chữ dài phải xuống hàng, không bị che chữ (ô chữ trong bảng, câu Trả lời ngắn, Đoạn văn, ô chữ của trình soạn). */
-import { useLayoutEffect, useRef, type TextareaHTMLAttributes } from 'react';
+import { useLayoutEffect, useRef, type Ref, type TextareaHTMLAttributes } from 'react';
 
 /** Thuộc tính của ô: như <textarea>, nhưng giá trị là chữ và đổi giá trị nhận thẳng chữ mới. */
 type GrowingTextareaProps = Omit<TextareaHTMLAttributes<HTMLTextAreaElement>, 'value' | 'onChange' | 'rows'> & {
@@ -7,6 +7,8 @@ type GrowingTextareaProps = Omit<TextareaHTMLAttributes<HTMLTextAreaElement>, 'v
   onValueChange: (text: string) => void;
   /** true: cho Enter xuống dòng và giữ các dòng (vd câu Đoạn văn); mặc định một đoạn liền */
   multiline?: boolean;
+  /** ref tới thẻ <textarea> (vd để đưa con trỏ vào ô) */
+  ref?: Ref<HTMLTextAreaElement>;
 };
 
 /**
@@ -32,10 +34,21 @@ function fitHeight(textarea: HTMLTextAreaElement): void {
  * @param value          chữ đang nhập
  * @param onValueChange  nhận chữ mới mỗi khi người dùng gõ
  * @param multiline      true: cho Enter xuống dòng, giữ nguyên các dòng
+ * @param ref            ref tới thẻ <textarea>, dùng chung với ref đo chiều cao bên trong
  * @returns              thẻ <textarea>
  */
-export function GrowingTextarea({ value, onValueChange, multiline = false, onKeyDown, ...textareaProps }: GrowingTextareaProps) {
+export function GrowingTextarea({ value, onValueChange, multiline = false, onKeyDown, ref, ...textareaProps }: GrowingTextareaProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  /**
+   * Gắn thẻ <textarea> vào ref bên trong và ref bên ngoài (nếu có).
+   * @param textarea  thẻ vừa gắn, hoặc null khi gỡ
+   */
+  const attachTextarea = (textarea: HTMLTextAreaElement | null) => {
+    textareaRef.current = textarea;
+    if (typeof ref === 'function') ref(textarea);
+    else if (ref) ref.current = textarea;
+  };
 
   // Chỉnh chiều cao khi chữ đổi
   useLayoutEffect(() => {
@@ -58,7 +71,7 @@ export function GrowingTextarea({ value, onValueChange, multiline = false, onKey
 
   return (
     <textarea
-      ref={textareaRef}
+      ref={attachTextarea}
       rows={1}
       value={value}
       onKeyDown={(event) => {

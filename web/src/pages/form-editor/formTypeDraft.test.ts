@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { EMPTY_RICH_TEXT_DOC, QuestionSchema, type Question } from '@ulaw/shared';
-import { changeQuestionType, cleanPrefix, duplicateQuestion, moveItem, newFormTypeDraft, newQuestion } from './formTypeDraft';
+import { changeQuestionType, cleanPrefix, duplicateQuestion, moveItem, newFormTypeDraft, newQuestion, insertEmptyOption, pasteOptions } from './formTypeDraft';
 
 describe('bản soạn loại đơn', () => {
   it('loại đơn mới: Nháp, một phần, một câu hỏi trống', () => {
@@ -52,5 +52,19 @@ describe('bản soạn loại đơn', () => {
     expect(cleanPrefix('Xét miễn')).toBe('XETMI');
     expect(cleanPrefix('đơn')).toBe('DON');
     expect(cleanPrefix('abcdefg')).toBe('ABCDE');
+  });
+});
+
+describe('soạn lựa chọn bằng bàn phím', () => {
+  it('Enter ở cuối lựa chọn: thêm lựa chọn trống ngay dưới', () => {
+    expect(insertEmptyOption(['A', 'B'], 0)).toEqual(['A', '', 'B']);
+  });
+
+  it('dán nhiều dòng: mỗi dòng một lựa chọn, bỏ dòng trống, ghép chữ quanh con trỏ', () => {
+    expect(pasteOptions(['A', 'xy'], 1, 1, 1, 'B\n\n C \nD')).toEqual({ options: ['A', 'xB', 'C', 'Dy'], lastIndex: 3 });
+  });
+
+  it('dán một dòng: để ô tự dán như thường', () => {
+    expect(pasteOptions(['A'], 0, 0, 0, 'B')).toBeNull();
   });
 });

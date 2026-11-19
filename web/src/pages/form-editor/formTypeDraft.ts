@@ -177,6 +177,47 @@ export function removeAt<Item>(items: readonly Item[], index: number): Item[] {
 }
 
 /**
+ * Thêm một lựa chọn trống ngay dưới một lựa chọn (Enter ở cuối ô lựa chọn).
+ * @param options  các lựa chọn
+ * @param index    lựa chọn đang gõ
+ * @returns        các lựa chọn mới; lựa chọn trống nằm ở index + 1
+ */
+export function insertEmptyOption(options: readonly string[], index: number): string[] {
+  return [...options.slice(0, index + 1), '', ...options.slice(index + 1)];
+}
+
+/**
+ * Dán chữ nhiều dòng vào ô lựa chọn: mỗi dòng (bỏ dòng trống) thành một lựa chọn, chèn tại con trỏ.
+ * Chữ trước con trỏ ghép với dòng đầu, chữ sau con trỏ ghép với dòng cuối.
+ * @param options        các lựa chọn
+ * @param index          lựa chọn đang gõ
+ * @param selectionStart đầu vùng chọn
+ * @param selectionEnd   cuối vùng chọn
+ * @param pastedText     chữ dán vào
+ * @returns              các lựa chọn mới và vị trí lựa chọn cuối vừa dán; chữ dán chỉ một dòng thì null (để ô tự dán như thường)
+ */
+export function pasteOptions(
+  options: readonly string[],
+  index: number,
+  selectionStart: number,
+  selectionEnd: number,
+  pastedText: string,
+): { options: string[]; lastIndex: number } | null {
+  const lines = pastedText
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+  if (lines.length < 2) return null;
+
+  // Ghép chữ trước con trỏ vào dòng đầu, chữ sau con trỏ vào dòng cuối
+  const option = options[index] ?? '';
+  const pasted = [...lines];
+  pasted[0] = option.slice(0, selectionStart) + pasted[0];
+  pasted[pasted.length - 1] = pasted[pasted.length - 1] + option.slice(selectionEnd);
+  return { options: [...options.slice(0, index), ...pasted, ...options.slice(index + 1)], lastIndex: index + pasted.length - 1 };
+}
+
+/**
  * Mã đơn người soạn gõ: bỏ dấu, chỉ giữ chữ in hoa A–Z, tối đa 5 chữ.
  * @param typed  chữ vừa gõ
  * @returns      mã đơn đã làm sạch, vd 'bl1' → 'BL', 'đơn' → 'DON'
