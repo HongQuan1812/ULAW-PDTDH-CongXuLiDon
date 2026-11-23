@@ -102,6 +102,7 @@ nop Đã nộp ──Tiếp nhận──▶ xet Đang xét ──▶ duyet Đã 
 
 Giống nhau với mọi người xem. Khai báo ở `STATUS_NOTICE` trong `web/src/pages/form/FormDetailPage.tsx`.
 Có lí do của Phòng Đào tạo thì hiện thêm dòng "Phòng Đào tạo: <lí do>".
+Cần bổ sung / Đã duyệt / Từ chối thì câu thông báo ghi kèm lúc ra quyết định (`decidedAt`, lưu mỗi lần ra quyết định, kể cả Yêu cầu bổ sung).
 
 ### Ghi chú nội bộ
 

@@ -694,6 +694,7 @@ function toDetail(form: MockForm): FormDetail {
     receivedAt: form.receivedAt,
     handler: staffOf(form.handlerId),
     handlerSince: form.handlerSince,
+    decidedAt: form.decidedAt,
     sections: structuredClone(form.formTypeSnapshot.sections),
     answers: structuredClone(form.answers),
   };
@@ -735,6 +736,7 @@ export function addForm(ownerId: string, formType: FormType, answers: FormAnswer
     receivedAt: null,
     handlerId: null,
     handlerSince: null,
+    decidedAt: null,
     answers: keptAnswers,
     formTypeSnapshot: structuredClone(formType),
   });
@@ -850,8 +852,7 @@ export function receiveForm(code: string, staffId: string): FormDetail | null {
 export function decideForm(code: string, decision: FormDecision, note: string): FormDetail | null {
   const form = FORMS.find((candidate) => candidate.code === code);
   if (!form) return null;
-  Object.assign(form, { status: decision, note: decision === 'duyet' ? '' : note });
-  if (decision !== 'bs') form.decidedAt = vietnamNow();
+  Object.assign(form, { status: decision, note: decision === 'duyet' ? '' : note, decidedAt: vietnamNow() });
   return toDetail(form);
 }
 

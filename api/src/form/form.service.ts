@@ -89,6 +89,7 @@ export class FormService {
       receivedAt: form.receivedAt ? toVietnamTime(form.receivedAt) : null,
       handler: toStaff(form.handler),
       handlerSince: form.handlerSince ? toVietnamTime(form.handlerSince) : null,
+      decidedAt: form.decidedAt ? toVietnamTime(form.decidedAt) : null,
       sections: snapshot.sections,
       answers: form.answers as unknown as FormAnswers,
     };

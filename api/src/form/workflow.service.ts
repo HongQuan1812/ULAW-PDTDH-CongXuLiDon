@@ -85,7 +85,7 @@ export class WorkflowService {
     // Chỉ ghi khi đơn vẫn Đang xét và vẫn do người này phụ trách (bị chuyển giao giữa chừng thì không ghi đè)
     const { count } = await this.prisma.form.updateMany({
       where: { code, status: { in: STATUSES_WHERE(isDecidable) }, handlerId: form.handlerId },
-      data: { status: decision, note: decision === 'duyet' ? '' : note, ...(decision === 'bs' ? {} : { decidedAt: new Date() }) },
+      data: { status: decision, note: decision === 'duyet' ? '' : note, decidedAt: new Date() },
     });
     if (count === 0) throw new ApiException(409, FORM_MESSAGES.notDecidable);
 

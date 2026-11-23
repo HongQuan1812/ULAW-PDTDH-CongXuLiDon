@@ -138,7 +138,7 @@ async function seedAll(prisma: PrismaClient): Promise<void> {
       status: form.status,
       submittedAt: toDate(form.submittedAt),
       updatedAt: toDate(form.updatedAt),
-      decidedAt: form.status === 'duyet' || form.status === 'tc' ? toDate(form.decidedAt ?? form.updatedAt) : null,
+      decidedAt: form.decidedAt ? toDate(form.decidedAt) : null,
       note: form.note,
       receiverId: form.receiverId,
       receivedAt: form.receivedAt ? toDate(form.receivedAt) : null,

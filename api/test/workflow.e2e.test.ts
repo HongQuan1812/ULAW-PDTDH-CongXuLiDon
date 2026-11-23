@@ -148,10 +148,10 @@ describe('workflow (tiếp nhận, quyết định, chuyển giao)', () => {
     await post(staff, `${code}/receive`).expect(200);
     expect(messageOf(await post(staff, `${code}/decision`, { decision: 'xoa' }).expect(422))).toBe(FORM_MESSAGES.invalidBody);
 
-    // Yêu cầu bổ sung: lưu lí do (bỏ khoảng trắng đầu cuối), không đổi người xử lí
+    // Yêu cầu bổ sung: lưu lí do (bỏ khoảng trắng đầu cuối), lúc quyết định, không đổi người xử lí
     const supplement = FormDetailSchema.parse((await post(staff, `${code}/decision`, { decision: 'bs', note: '  Thiếu bảng điểm  ' }).expect(200)).body);
     expect(supplement).toMatchObject({ status: 'bs', note: 'Thiếu bảng điểm', handler: { id: 'cb-1' } });
-    expect((await prisma.form.findUniqueOrThrow({ where: { code } })).decidedAt).toBeNull();
+    expect(supplement.decidedAt).not.toBeNull();
 
     // Người nộp sửa → Đã bổ sung → tiếp nhận lại xóa lí do cũ
     const body = { answers: supplement.answers, committed: true };
@@ -164,7 +164,7 @@ describe('workflow (tiếp nhận, quyết định, chuyển giao)', () => {
     // Duyệt: lưu lúc quyết định, xóa lí do
     const approved = FormDetailSchema.parse((await post(staff, `${code}/decision`, { decision: 'duyet', note: 'bỏ qua' }).expect(200)).body);
     expect(approved).toMatchObject({ status: 'duyet', note: '' });
-    expect((await prisma.form.findUniqueOrThrow({ where: { code } })).decidedAt).not.toBeNull();
+    expect(approved.decidedAt).not.toBeNull();
     expect(messageOf(await post(staff, `${code}/decision`, { decision: 'tc', note: '' }).expect(409))).toBe(FORM_MESSAGES.notDecidable);
   });
 
