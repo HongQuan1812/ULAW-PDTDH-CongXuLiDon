@@ -10,8 +10,8 @@ import { addHours, dateText, twoDigits } from './time';
 /** Lá đơn trong API giả: dòng tóm tắt, kèm id người nộp, cán bộ, các mốc thời gian, nội dung và bản chụp loại đơn lúc nộp. */
 export interface SeedForm extends FormSummary {
   ownerId: string;
-  /** Lúc Duyệt / Từ chối gần nhất (mã {ngay_xu_li} khi xuất file); đơn mẫu không có thì lấy lần lưu gần nhất */
-  decidedAt?: string | null;
+  /** Lúc ra quyết định gần nhất (Yêu cầu bổ sung / Duyệt / Từ chối; mã {ngay_xu_li} khi xuất file); null = chưa ra quyết định */
+  decidedAt: string | null;
   updatedAt: string;
   note: string;
   receiverId: string | null;
@@ -23,7 +23,7 @@ export interface SeedForm extends FormSummary {
 }
 
 /** Lá đơn mẫu chưa gán cán bộ. */
-type UnassignedForm = Omit<SeedForm, 'receiverId' | 'handlerId' | 'handlerSince'>;
+type UnassignedForm = Omit<SeedForm, 'receiverId' | 'handlerId' | 'handlerSince' | 'decidedAt'>;
 
 /* 3 cán bộ tiếp nhận / xử lí các đơn mẫu. */
 export const SEED_STAFF_IDS = ['cb-1', 'cb-2', 'cb-3'] as const;
@@ -203,19 +203,27 @@ function seedEveryTypeForms(): UnassignedForm[] {
  * Gán người tiếp nhận, người xử lí cho các đơn:
  * đơn Đã nộp chưa ai tiếp nhận; đơn khác do lần lượt 3 cán bộ tiếp nhận,
  * cứ 5 đơn có 1 đơn đã chuyển giao cho người kế tiếp (26 giờ sau khi tiếp nhận).
+ * Đơn Cần bổ sung / Đã duyệt / Từ chối có lúc ra quyết định: 20 giờ sau khi người xử lí nhận đơn.
  * @param forms  các đơn chưa gán
- * @returns      các đơn đã gán cán bộ
+ * @returns      các đơn đã gán cán bộ, kèm lúc ra quyết định
  */
 function assignStaff(forms: UnassignedForm[]): SeedForm[] {
   return forms.map((form, i) => {
-    if (!form.receivedAt) return { ...form, receiverId: null, handlerId: null, handlerSince: null };
+    if (!form.receivedAt) return { ...form, receiverId: null, handlerId: null, handlerSince: null, decidedAt: null };
+
+    // Người tiếp nhận, người xử lí
     const receiverId = SEED_STAFF_IDS[i % SEED_STAFF_IDS.length]!;
     const transferred = i % 5 === 2;
+    const handlerSince = transferred ? addHours(form.receivedAt, 26) : form.receivedAt;
+
+    // Lúc ra quyết định
+    const decided = form.status === 'bs' || form.status === 'duyet' || form.status === 'tc';
     return {
       ...form,
       receiverId,
       handlerId: transferred ? SEED_STAFF_IDS[(i + 1) % SEED_STAFF_IDS.length]! : receiverId,
-      handlerSince: transferred ? addHours(form.receivedAt, 26) : form.receivedAt,
+      handlerSince,
+      decidedAt: decided ? addHours(handlerSince, 20) : null,
     };
   });
 }

@@ -129,6 +129,8 @@ export const FormDetailSchema = FormSummarySchema.extend({
   /** Cán bộ đang xử lí và phụ trách từ lúc nào (đổi khi chuyển giao); null = chưa tiếp nhận */
   handler: StaffRefSchema.nullable(),
   handlerSince: z.string().nullable(),
+  /** Lúc ra quyết định gần nhất (Yêu cầu bổ sung / Duyệt / Từ chối), giờ Việt Nam 'YYYY-MM-DDTHH:mm'; null = chưa ra quyết định */
+  decidedAt: z.string().nullable(),
   /** Các phần, câu hỏi của loại đơn LÚC NỘP (bản chụp), để sửa loại đơn sau này không làm hỏng đơn cũ */
   sections: z.array(FormSectionSchema),
   /** Câu trả lời theo id câu hỏi */

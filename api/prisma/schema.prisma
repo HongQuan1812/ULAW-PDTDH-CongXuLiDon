@@ -123,7 +123,7 @@ model Form {
   status           FormStatus
   submittedAt      DateTime   @db.Timestamptz(3)
   updatedAt        DateTime   @db.Timestamptz(3)
-  // Lúc Duyệt / Từ chối gần nhất
+  // Lúc ra quyết định gần nhất (Yêu cầu bổ sung / Duyệt / Từ chối)
   decidedAt        DateTime?  @db.Timestamptz(3)
   // Lí do khi Yêu cầu bổ sung / Từ chối
   note             String     @default("")

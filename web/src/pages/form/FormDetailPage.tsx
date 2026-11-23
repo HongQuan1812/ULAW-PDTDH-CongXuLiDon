@@ -7,7 +7,7 @@
    Loại đơn có mẫu xuất file thì có nút "Xuất file" ở đầu trang (điền đơn vào mẫu Word, xem trước rồi tải về).
    Cán bộ có quyền internalNotes thấy nút tròn Ghi chú nội bộ ở góc phải dưới (người nộp đơn không thấy).
    Lịch sử: thêm ở phần sau của bước 5. */
-import { useState, type FormEvent } from 'react';
+import { useState, type FormEvent, type ReactNode } from 'react';
 import { Link, useLocation, useParams } from 'react-router';
 import { FORM_MESSAGES, can, canDecideOn, canEditForm, canReceiveForm, canTransferForm, type FormDetail, type FormStatus } from '@ulaw/shared';
 import { useFormDetail, useReceiveForm } from '../../api/form';
@@ -44,17 +44,47 @@ const RECEIVE_FAILED_TEXT = 'Chưa tiếp nhận được đơn. Kiểm tra kế
 
 /* Câu thông báo theo trạng thái.
    Giống nhau với mọi vai trò, không đổi theo người xem. */
-const STATUS_NOTICE: Record<FormStatus, (form: FormDetail) => string> = {
+const STATUS_NOTICE: Record<FormStatus, (form: FormDetail) => ReactNode> = {
   nop: () =>
     'Đơn đã được gửi, đang chờ phòng Đào tạo tiếp nhận. Người nộp đơn được quyền chỉnh sửa đến khi đơn được tiếp nhận.',
   xet: () => 'Phòng Đào tạo đang xét đơn.',
-  bs: () => 'Phòng Đào tạo yêu cầu bổ sung hồ sơ. Sau khi người nộp đơn sửa và lưu, đơn chuyển sang “Đã bổ sung”.',
-  bsg: (form) =>
-    `Người nộp đơn đã bổ sung lúc ${formatDateTime(form.updatedAt)}, đang chờ phòng Đào tạo tiếp nhận lại. ` +
-    'Người nộp đơn được quyền chỉnh sửa đến khi đơn được tiếp nhận.',
-  duyet: () => 'Đơn đã được duyệt.',
-  tc: () => 'Đơn đã bị từ chối.',
+  bs: (form) => (
+    <>
+      Phòng Đào tạo yêu cầu bổ sung hồ sơ<AtTime time={form.decidedAt} />. Sau khi người nộp đơn sửa và lưu, đơn chuyển sang “Đã bổ sung”.
+    </>
+  ),
+  bsg: (form) => (
+    <>
+      Người nộp đơn đã bổ sung<AtTime time={form.updatedAt} />, đang chờ phòng Đào tạo tiếp nhận lại. Người nộp đơn được quyền chỉnh sửa
+      đến khi đơn được tiếp nhận.
+    </>
+  ),
+  duyet: (form) => (
+    <>
+      Đơn đã được duyệt<AtTime time={form.decidedAt} />.
+    </>
+  ),
+  tc: (form) => (
+    <>
+      Đơn đã bị từ chối<AtTime time={form.decidedAt} />.
+    </>
+  ),
 };
+
+/**
+ * Đoạn " lúc <giờ, ngày>" trong câu thông báo, giờ ngày tô đậm.
+ * @param time  thời điểm, giờ Việt Nam 'YYYY-MM-DDTHH:mm'; null = không có
+ * @returns     vd " lúc **14:05 23/11/2026**"; không có thời điểm thì không vẽ gì
+ */
+function AtTime({ time }: { time: string | null }) {
+  if (!time) return null;
+  return (
+    <>
+      {' lúc '}
+      <b>{formatDateTime(time)}</b>
+    </>
+  );
+}
 
 /**
  * Tải lá đơn theo mã trên đường dẫn rồi vẽ trang chi tiết.
