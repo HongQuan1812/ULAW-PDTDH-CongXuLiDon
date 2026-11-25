@@ -3,7 +3,7 @@ import { FormTypeSchema } from '../api-contract';
 import { SEED_ACCOUNTS } from './accounts';
 import { assertSeedValid, findSeedProblems } from './validate';
 import { seedFormTypes } from './form-types';
-import { seedForms } from './forms';
+import { seedForms, type SeedFormEvent } from './forms';
 import { STUDENT_DIRECTORY } from './students';
 import { SCHOOL_FORM_TYPES_SEED } from './school-form-types';
 import { PRODUCTION_EXCLUDED_FORM_TYPE_PREFIXES, PRODUCTION_FORM_TYPES_SEED } from './production-form-types';
@@ -36,6 +36,9 @@ describe('dữ liệu mẫu', () => {
     expect(unknownUserIds).toEqual([]);
   });
 
+  /** Dòng lịch sử cuối cùng thỏa điều kiện (lib ES2022 của shared chưa có Array.findLast). */
+  const lastEvent = (history: SeedFormEvent[], matches: (event: SeedFormEvent) => boolean) => [...history].reverse().find(matches);
+
   test('lịch sử khớp với đơn: bắt đầu bằng Nộp đơn, theo thứ tự thời gian, khớp các mốc và trạng thái hiện tại', () => {
     for (const form of seedForms()) {
       const { history } = form;
@@ -46,10 +49,10 @@ describe('dữ liệu mẫu', () => {
       expect(times).toEqual([...times].sort());
       expect(history.at(-1)!.status).toBe(form.status);
       expect(actorIds.filter((id) => !(id in SEED_ACCOUNTS))).toEqual([]);
-      if (form.receivedAt) expect(history.findLast((event) => event.action === 'receive')!.at).toBe(form.receivedAt);
-      if (form.decidedAt) expect(history.findLast((event) => ['requestSupplement', 'approve', 'reject'].includes(event.action))!.at).toBe(form.decidedAt);
-      if (form.handlerId !== form.receiverId) expect(history.findLast((event) => event.action === 'transfer')).toMatchObject({ action: 'transfer', toStaffId: form.handlerId, at: form.handlerSince });
-      expect(history.findLast((event) => event.actorId === form.ownerId)!.at).toBe(form.updatedAt);
+      if (form.receivedAt) expect(lastEvent(history, (event) => event.action === 'receive')!.at).toBe(form.receivedAt);
+      if (form.decidedAt) expect(lastEvent(history, (event) => ['requestSupplement', 'approve', 'reject'].includes(event.action))!.at).toBe(form.decidedAt);
+      if (form.handlerId !== form.receiverId) expect(lastEvent(history, (event) => event.action === 'transfer')).toMatchObject({ action: 'transfer', toStaffId: form.handlerId, at: form.handlerSince });
+      expect(lastEvent(history, (event) => event.actorId === form.ownerId)!.at).toBe(form.updatedAt);
     }
   });
 
