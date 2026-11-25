@@ -1,6 +1,7 @@
 /* Ô trả lời một giá trị: trả lời ngắn, đoạn văn (soạn như Notion), số, ngày, danh sách thả xuống. */
 import { isRichTextEmpty, plainTextToRichText, type RichTextDoc } from '@ulaw/shared';
 import { DateInput } from '../../components/DateInput';
+import { SelectPlaceholder } from '../../components/SelectPlaceholder';
 import { RichTextEditor } from '../../components/rich-text/RichTextEditor';
 import { RichTextView } from '../../components/rich-text/RichTextView';
 import { formatDate } from '../../lib/format';
@@ -102,12 +103,9 @@ export function SimpleAnswer({
       // Ngày gõ dở cũng lưu lại, để khi kiểm tra báo "Ngày không hợp lệ."
       return <DateInput value={textValue} onValueChange={onAnswerChange} {...inputProps} />;
     case 'select':
-      // Ô chưa chọn ghi "— Chọn —"; dòng này ẩn khỏi danh sách sổ xuống, chỉ còn các lựa chọn (giống cột Chọn của bảng)
       return (
         <select value={textValue} onChange={(event) => onAnswerChange(event.target.value)} {...inputProps}>
-          <option value="" disabled hidden>
-            — Chọn —
-          </option>
+          <SelectPlaceholder />
           {question.options.map((option) => (
             <option key={option} value={option}>
               {option}
