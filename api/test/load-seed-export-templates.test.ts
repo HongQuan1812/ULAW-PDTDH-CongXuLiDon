@@ -1,4 +1,4 @@
-/* Test mẫu xuất file đơn theo mẫu Word (shared/src/seed/export-templates): đủ mỗi loại đơn một mẫu, mã {...} khớp câu hỏi của loại đơn.
+/* Test mẫu xuất đơn theo mẫu Word (shared/src/seed/export-templates): đủ mỗi loại đơn một mẫu, mã {...} khớp câu hỏi của loại đơn.
    Không cần database. */
 import { describe, expect, it } from 'vitest';
 import { checkDocxTemplate, PRODUCTION_FORM_TYPES_SEED, seedFormTypes } from '@ulaw/shared';

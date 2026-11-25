@@ -1,4 +1,4 @@
-/* Seed bản thật: tạo Admin đầu tiên, cấu hình email mặc định, loại đơn theo mẫu Word, mẫu xuất file đơn. Không xóa dữ liệu nào, chạy lại vẫn an toàn.
+/* Seed bản thật: tạo Admin đầu tiên, cấu hình email mặc định, loại đơn theo mẫu Word, mẫu xuất đơn. Không xóa dữ liệu nào, chạy lại vẫn an toàn.
    Container bản thật tự chạy mỗi lần bật / restart (api/Dockerfile), email lấy từ FIRST_ADMIN_EMAIL trong .env.prod,
    họ tên từ FIRST_ADMIN_NAME (có thì Admin đăng nhập là vào thẳng, trống thì lần đầu tự nhập).
    Chạy tay: pnpm --filter api seed:production [email trường của Admin], bỏ trống thì lấy FIRST_ADMIN_EMAIL */
@@ -31,7 +31,7 @@ try {
   console.log(`Admin ${adminEmail}: ${ADMIN_MESSAGES[report.admin]}.`);
   console.log(`Cấu hình email: ${EMAIL_SETTINGS_MESSAGES[report.emailSettings]}.`);
   console.log(`Loại đơn: ${report.formTypes.length ? `đã thêm ${report.formTypes.join(', ')}` : 'đã có đủ, giữ nguyên'}.`);
-  console.log(`Mẫu xuất file đơn: ${report.exportTemplates.length ? `đã thêm cho ${report.exportTemplates.join(', ')}` : 'loại đơn nào cũng đã có mẫu, giữ nguyên'}.`);
+  console.log(`Mẫu xuất đơn: ${report.exportTemplates.length ? `đã thêm cho ${report.exportTemplates.join(', ')}` : 'loại đơn nào cũng đã có mẫu, giữ nguyên'}.`);
   console.log(`Sao lưu: ${BACKUP_MESSAGES[report.backups]}.`);
 } finally {
   await prisma.$disconnect();

@@ -5,7 +5,7 @@
 .errorCard{display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);padding:28px}
 
 /* đầu trang: tiêu đề bên trái, nút "Thông tin đơn" bên phải */
-/* Dính ngay dưới thanh menu khi cuộn, để nút Tiếp nhận · Xuất file luôn bấm được (giống đầu trang soạn loại đơn) */
+/* Dính ngay dưới thanh menu khi cuộn, để nút Tiếp nhận · Xuất đơn luôn bấm được (giống đầu trang soạn loại đơn) */
 .head{composes:stickyHead from '../../styles/stickyHead.module.css';
   display:flex;align-items:center;justify-content:space-between;gap:16px 24px;flex-wrap:wrap;margin-top:-10px;margin-bottom:6px}
 .headText{display:grid;gap:6px;min-width:0;max-width:68ch}

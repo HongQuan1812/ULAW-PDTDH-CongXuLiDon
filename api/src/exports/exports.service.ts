@@ -1,4 +1,4 @@
-/* Mẫu xuất file của loại đơn (danh sách, lưu các thay đổi, mẫu gốc, kiểm tra mã), xuất file một lá đơn (mẫu Word)
+/* Mẫu xuất file của loại đơn (danh sách, lưu các thay đổi, mẫu gốc, kiểm tra mã), xuất một lá đơn (mẫu Word)
    và xuất danh sách mọi lá đơn của loại đơn (mẫu Excel).
    Đọc, kiểm tra, điền mẫu bằng các hàm của shared/ (exports--docx.ts, exports--xlsx.ts), giống hệt API giả. */
 import { randomUUID } from 'node:crypto';
@@ -264,7 +264,7 @@ export class ExportsService {
   }
 
   /**
-   * Điền dữ liệu của một lá đơn vào một mẫu xuất file đơn của loại đơn đó.
+   * Điền dữ liệu của một lá đơn vào một mẫu xuất đơn của loại đơn đó.
    * @param code        mã đơn
    * @param templateId  id mẫu
    * @param viewer      người đang đăng nhập
@@ -275,7 +275,7 @@ export class ExportsService {
     // Xem được đơn thì xuất được; không thì 404 (FORM_MESSAGES.notFound, cùng câu với EXPORT_MESSAGES.formNotFound)
     const form = await this.formService.loadViewable(code, viewer);
 
-    // Mẫu phải là mẫu xuất file đơn của loại đơn này
+    // Mẫu phải là mẫu xuất đơn của loại đơn này
     const template = await this.loadTemplate(form.formTypeId, templateId, 'form');
 
     // Điền mẫu; mẫu sai cú pháp thì báo lí do
@@ -290,7 +290,7 @@ export class ExportsService {
   }
 
   /**
-   * So mã trong một mẫu xuất file đơn với các câu hỏi của lá đơn (bản chụp lúc nộp).
+   * So mã trong một mẫu xuất đơn với các câu hỏi của lá đơn (bản chụp lúc nộp).
    * @param code        mã đơn
    * @param templateId  id mẫu
    * @param viewer      người đang đăng nhập

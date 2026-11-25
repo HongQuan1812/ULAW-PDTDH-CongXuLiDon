@@ -649,7 +649,7 @@ function FormTypeEditor({ managed, requestedVersion }: FormTypeEditorProps) {
               </div>
             </fieldset>
 
-            {/* Mẫu xuất file đơn (Word) và danh sách đơn (Excel): hai nút tròn nổi ở cạnh phải, mỗi nút mở một khung nổi
+            {/* Mẫu xuất đơn (Word) và danh sách đơn (Excel): hai nút tròn nổi ở cạnh phải, mỗi nút mở một khung nổi
                 (nằm trong phần Soạn nên tab Xem trước thì ẩn). Thuộc loại đơn (mọi phiên bản) nên không bị khóa theo phiên bản;
                 hai khung dùng chung một bộ thay đổi, chờ bấm Lưu */}
             <ExportTemplatesDock

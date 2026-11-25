@@ -1,4 +1,4 @@
-/* Hộp "Chọn mẫu xuất file": mỗi mẫu một dòng kèm kết quả đối chiếu mã. */
+/* Hộp "Chọn mẫu xuất đơn": mỗi mẫu một dòng kèm kết quả đối chiếu mã. */
 .dialog{width:min(560px,calc(100vw - 32px))}
 .dialogHint{color:var(--muted);font-size:14px;margin-bottom:12px}
 .templateList{list-style:none;margin:0;padding:0;display:grid;gap:10px}

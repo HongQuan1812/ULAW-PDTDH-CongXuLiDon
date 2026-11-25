@@ -1,5 +1,5 @@
 /* Hook gọi API xuất file theo mẫu: mẫu của loại đơn (danh sách, lưu các thay đổi, xem mẫu gốc,
-   kiểm tra mã kể cả với file chưa lưu), xuất file một lá đơn (Word) và xuất danh sách đơn (Excel). */
+   kiểm tra mã kể cả với file chưa lưu), xuất một lá đơn (Word) và xuất danh sách đơn (Excel). */
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   EXPORT_MESSAGES,
@@ -96,7 +96,7 @@ export function checkExportTemplate(formTypeId: string, templateId: string, draf
 }
 
 /**
- * So mã trong một mẫu xuất file đơn với các câu hỏi của lá đơn (bản chụp lúc nộp).
+ * So mã trong một mẫu xuất đơn với các câu hỏi của lá đơn (bản chụp lúc nộp).
  * @param code     mã đơn
  * @param request  mẫu cần kiểm tra
  * @returns        kết quả kiểm tra
@@ -106,7 +106,7 @@ export function checkFormExport(code: string, request: ExportFormRequest): Promi
 }
 
 /**
- * Xuất file một lá đơn theo một mẫu.
+ * Xuất một lá đơn theo một mẫu.
  * @param code     mã đơn
  * @param request  mẫu dùng để điền
  * @returns        file Word đã điền; lỗi thì ném ApiError (câu báo theo EXPORT_MESSAGES)

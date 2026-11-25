@@ -1,4 +1,4 @@
-/* Hai mục hướng dẫn trong khung "Mẫu xuất file đơn" / "Mẫu xuất danh sách đơn":
+/* Hai mục hướng dẫn trong khung "Mẫu xuất đơn" / "Mẫu xuất danh sách đơn":
    - "Cách tạo một mẫu" (ExportHowTo, ngay trên khung chọn file, thu gọn được): 3 bước và ví dụ trước / sau;
    - "Bảng mã" (ExportTagGuide, dưới danh sách mẫu): mã câu trả lời của từng câu hỏi và mã chung, mỗi mã một dòng (Gõ vào file Word / Excel · Sẽ được điền bằng).
    Bấm vào mã để sao chép.
@@ -266,7 +266,7 @@ function QuestionTagRows({ question }: { question: QuestionExportTag }) {
 }
 
 interface ExportTagGuideProps {
-  /** Hướng dẫn cho mẫu xuất file đơn (Word) hay danh sách đơn (Excel) */
+  /** Hướng dẫn cho mẫu xuất đơn (Word) hay danh sách đơn (Excel) */
   purpose: ExportTemplatePurpose;
   /** Mã của các câu hỏi đang soạn */
   questionTags: QuestionExportTag[];
@@ -429,7 +429,7 @@ function FormListHowTo({ sections, formTypeName, version }: { sections: readonly
           <span>Kéo thả file vào mục trên rồi bấm Lưu. Mã gõ sai sẽ có cảnh báo ngay dưới mẫu.</span>
         </li>
         <li>
-          <b>Xuất file</b>
+          <b>Xuất danh sách đơn</b>
           <span>Bấm “Xuất danh sách đơn” ở đầu trang để nhận file Excel có mọi đơn của loại đơn này.</span>
         </li>
       </ol>
@@ -469,8 +469,8 @@ function FormHowTo({ sections, formTypeName, version }: { sections: readonly For
           <span>Kéo thả file vào mục trên rồi bấm Lưu. Mã gõ sai sẽ có cảnh báo ngay dưới mẫu.</span>
         </li>
         <li>
-          <b>Xuất file</b>
-          <span>Ở chi tiết đơn, bấm “Xuất file” để nhận file Word đã điền sẵn.</span>
+          <b>Xuất đơn</b>
+          <span>Ở chi tiết đơn, bấm “Xuất đơn” để nhận file Word đã điền sẵn.</span>
         </li>
       </ol>
       {/* Ví dụ: mỗi kiểu định dạng của mã một cặp "trong file mẫu → trong file xuất ra", tên định dạng ghi nhỏ phía trên */}
@@ -526,7 +526,7 @@ function TagGroup({ title, purpose, children }: { title: string; purpose: Export
 
 /**
  * Mục "Cách tạo một mẫu" (thu gọn được, mặc định đóng); đặt ngay trên khung chọn file.
- * @param purpose       mẫu xuất file đơn hay danh sách đơn
+ * @param purpose       mẫu xuất đơn hay danh sách đơn
  * @param sections      các phần của loại đơn đang soạn (mẫu Excel dựng file mẫu có sẵn)
  * @param formTypeName  tên loại đơn đang soạn (tên file mẫu có sẵn)
  * @returns             mục thu gọn

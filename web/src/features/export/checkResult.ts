@@ -1,5 +1,5 @@
 /* Câu kết quả "Kiểm tra mã" của một mẫu xuất file: dùng ở khung Mẫu xuất file (trình soạn loại đơn, so với câu hỏi của loại đơn)
-   và hộp "Chọn mẫu" của nút Xuất file (chi tiết đơn, so với câu hỏi của lá đơn). */
+   và hộp "Chọn mẫu" của nút Xuất đơn (chi tiết đơn, so với câu hỏi của lá đơn). */
 import { EXPORT_MESSAGES, type ExportTemplateCheck } from '@ulaw/shared';
 
 /** Kết quả kiểm tra mã một mẫu. */

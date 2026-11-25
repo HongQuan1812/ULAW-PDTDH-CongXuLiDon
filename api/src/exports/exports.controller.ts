@@ -1,5 +1,5 @@
-/* Nhóm API exports: mẫu xuất file của loại đơn, xuất file một lá đơn (Word) và xuất danh sách đơn (Excel).
-   Xem danh sách mẫu, xuất file một lá đơn chỉ cần đăng nhập; mọi lệnh quản lí mẫu và xuất danh sách đơn cần quyền manageFormTypes.
+/* Nhóm API exports: mẫu xuất file của loại đơn, xuất một lá đơn (Word) và xuất danh sách đơn (Excel).
+   Xem danh sách mẫu, xuất một lá đơn chỉ cần đăng nhập; mọi lệnh quản lí mẫu và xuất danh sách đơn cần quyền manageFormTypes.
    Các lệnh trả file (mẫu gốc, xuất file) trả nội dung .docx / .xlsx, tên file trong Content-Disposition. */
 import { Body, Controller, Get, HttpCode, Param, Post, Put, Req, Res, StreamableFile, UploadedFiles, UseInterceptors } from '@nestjs/common';
 import { AnyFilesInterceptor } from '@nestjs/platform-express';
@@ -104,7 +104,7 @@ export class ExportsController {
   /** @param exportsService  đọc, lưu, kiểm tra, điền mẫu */
   constructor(private readonly exportsService: ExportsService) {}
 
-  /** @returns  các mẫu của loại đơn (nút Xuất file ở trang chi tiết đơn, các khung mẫu xuất file) */
+  /** @returns  các mẫu của loại đơn (nút Xuất đơn ở trang chi tiết đơn, các khung mẫu xuất file) */
   @Get(EXPORT_ENDPOINTS.templates)
   @RequireLogin()
   @ApiOkResponse({ schema: openApiSchemaOf(ExportTemplatesResponseSchema) })
@@ -186,7 +186,7 @@ export class ExportsController {
   }
 
   /**
-   * Điền dữ liệu của lá đơn vào một mẫu xuất file đơn của loại đơn đó (nút Xuất file).
+   * Điền dữ liệu của lá đơn vào một mẫu xuất đơn của loại đơn đó (nút Xuất đơn).
    * @returns  nội dung file .docx đã điền
    * @throws   404 không có đơn / không được xem, không có mẫu · 422 body sai dạng, mẫu sai cú pháp
    */
@@ -205,7 +205,7 @@ export class ExportsController {
   }
 
   /**
-   * So mã trong một mẫu xuất file đơn với các câu hỏi của lá đơn này (hiện trong hộp "Chọn mẫu" của nút Xuất file).
+   * So mã trong một mẫu xuất đơn với các câu hỏi của lá đơn này (hiện trong hộp "Chọn mẫu" của nút Xuất đơn).
    * @returns  kết quả kiểm tra
    * @throws   404 không có đơn / không được xem, không có mẫu · 422 body sai dạng
    */

@@ -1,4 +1,4 @@
-/* Hai nút tròn nổi ở cạnh phải màn hình của trình soạn loại đơn: "Mẫu xuất file đơn" (Word) và "Mẫu xuất danh sách đơn" (Excel).
+/* Hai nút tròn nổi ở cạnh phải màn hình của trình soạn loại đơn: "Mẫu xuất đơn" (Word) và "Mẫu xuất danh sách đơn" (Excel).
    Bấm một nút thì mở khung nổi của mẫu đó (ExportTemplatesPanel), bấm lại hoặc bấm nút đóng thì đóng; mỗi lúc chỉ mở một khung.
    Số ở góc nút là số mẫu đang có (kể cả mẫu chưa lưu); có thay đổi chưa lưu thì số đổi màu cam. */
 import { useRef, useState, type CSSProperties } from 'react';

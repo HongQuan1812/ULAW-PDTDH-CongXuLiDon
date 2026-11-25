@@ -1,4 +1,4 @@
-/* Dữ liệu ban đầu cho bản thật: Admin đầu tiên, dòng cấu hình email, loại đơn theo mẫu Word, mẫu xuất file đơn, nơi lưu và lịch sao lưu mặc định. Không xóa, không ghi đè dữ liệu nào đã có,
+/* Dữ liệu ban đầu cho bản thật: Admin đầu tiên, dòng cấu hình email, loại đơn theo mẫu Word, mẫu xuất đơn, nơi lưu và lịch sao lưu mặc định. Không xóa, không ghi đè dữ liệu nào đã có,
    nên chạy lại nhiều lần vẫn an toàn. Chạy bằng prisma/seed-production.ts. */
 import { randomUUID } from 'node:crypto';
 import { BACKUP_SCHEDULES_SEED, BACKUP_TARGETS_SEED, EMAIL_SETTINGS_SEED, PRODUCTION_FORM_TYPES_SEED, isSchoolEmail } from '@ulaw/shared';
@@ -16,14 +16,14 @@ export interface ProductionSeedReport {
   emailSettings: 'created' | 'unchanged';
   /** Mã các loại đơn vừa thêm (loại đơn đã có, hoặc mã đơn đã bị loại đơn khác dùng, thì bỏ qua) */
   formTypes: string[];
-  /** Mã các loại đơn vừa được thêm mẫu xuất file đơn (loại đơn không có, hoặc đã có mẫu đơn nào đó, thì bỏ qua) */
+  /** Mã các loại đơn vừa được thêm mẫu xuất đơn (loại đơn không có, hoặc đã có mẫu đơn nào đó, thì bỏ qua) */
   exportTemplates: string[];
   /** Sao lưu: vừa tạo nơi lưu và lịch mặc định, hay đã có lịch từ trước (giữ nguyên) */
   backups: 'created' | 'unchanged';
 }
 
 /**
- * Tạo Admin đầu tiên, cấu hình email, loại đơn theo mẫu Word, mẫu xuất file đơn, nơi lưu và lịch sao lưu mặc định nếu chưa có.
+ * Tạo Admin đầu tiên, cấu hình email, loại đơn theo mẫu Word, mẫu xuất đơn, nơi lưu và lịch sao lưu mặc định nếu chưa có.
  * Có họ tên: Admin mới tạo đã hoàn tất hồ sơ, đăng nhập Google là vào thẳng.
  * Không có họ tên: giống tài khoản tạo ở trang Quản lí tài khoản, lần đầu đăng nhập Google thì tự nhập.
  * @param prisma      Prisma Client
@@ -99,7 +99,7 @@ export async function seedProduction(
     formTypes.push(formType.id);
   }
 
-  // Mẫu xuất file đơn: loại đơn có trong database mà chưa có mẫu đơn nào thì thêm mẫu theo mẫu Word (người tải lên là Admin);
+  // Mẫu xuất đơn: loại đơn có trong database mà chưa có mẫu đơn nào thì thêm mẫu theo mẫu Word (người tải lên là Admin);
   // đã có mẫu (có thể cán bộ đã tải mẫu khác, đã sửa) thì giữ nguyên, không ghi đè
   const formTypeIds = new Set((await prisma.formType.findMany({ select: { id: true } })).map((formType) => formType.id));
   const hasFormTemplate = new Set(

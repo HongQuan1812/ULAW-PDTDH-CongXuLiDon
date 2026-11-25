@@ -1,4 +1,4 @@
-/* Test nhóm API exports: mẫu xuất file (danh sách, lưu, mẫu gốc, kiểm tra mã), xuất file một lá đơn (Word) và xuất danh sách đơn (Excel).
+/* Test nhóm API exports: mẫu xuất file (danh sách, lưu, mẫu gốc, kiểm tra mã), xuất một lá đơn (Word) và xuất danh sách đơn (Excel).
    Cần database đã migrate và seed (mẫu tpl-demo của loại đơn xmr). Test thêm mẫu tên bắt đầu bằng TEST_NAME rồi xóa sạch khi xong. */
 import ExcelJS from 'exceljs';
 import PizZip from 'pizzip';
@@ -229,7 +229,7 @@ describe('exports', () => {
     expect(await countTestTemplates()).toBe(before);
   });
 
-  it('xuất file đơn của mình: điền họ tên, mã đơn, không còn mã trong ngoặc', async () => {
+  it('xuất đơn của mình: điền họ tên, mã đơn, không còn mã trong ngoặc', async () => {
     const cookie = await loginAs('nguoiNopDon');
     const response = await request(server())
       .post(`/api${formExportPath(OWN_FORM_CODE)}`)
@@ -248,7 +248,7 @@ describe('exports', () => {
     expect(text).not.toMatch(/\{[#/]?[a-z_]+\}/);
   });
 
-  it('xuất file: đơn người khác 404 với người nộp đơn, cán bộ xem mọi đơn thì xuất được', async () => {
+  it('xuất đơn: đơn người khác 404 với người nộp đơn, cán bộ xem mọi đơn thì xuất được', async () => {
     const exportOther = (cookie: string, templateId: string = SEED_EXPORT_TEMPLATE.id) =>
       request(server()).post(`/api${formExportPath(OTHER_FORM_CODE)}`).set('Cookie', cookie).send({ templateId });
 
@@ -347,7 +347,7 @@ describe('exports', () => {
     await exportFormListJson({}).expect(422);
     await exportFormListJson({ version: 'all', submittedFrom: '2026-03-01', submittedTo: '2026-02-01' }).expect(422);
 
-    // Mẫu danh sách đơn không dùng để xuất file một lá đơn, và ngược lại
+    // Mẫu danh sách đơn không dùng để xuất một lá đơn, và ngược lại
     await request(server()).post(`/api${formExportPath(OTHER_FORM_CODE)}`).set('Cookie', cookie).send({ templateId: formListTemplate.id }).expect(404);
     await request(server()).post(`/api${exportTemplatePath('xmr', SEED_EXPORT_TEMPLATE.id, 'export')}`).set('Cookie', cookie).send({ version: 'all', submittedFrom: null, submittedTo: null }).expect(404);
   });

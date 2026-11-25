@@ -1,5 +1,5 @@
 /* API giả: mẫu xuất file của loại đơn (danh sách, lưu các thay đổi, xem mẫu gốc, kiểm tra mã
-   kể cả với file chưa lưu), xuất file một lá đơn (Word, docxtemplater) và xuất danh sách đơn (Excel, ExcelJS) như máy chủ thật. */
+   kể cả với file chưa lưu), xuất một lá đơn (Word, docxtemplater) và xuất danh sách đơn (Excel, ExcelJS) như máy chủ thật. */
 import { delay, http, HttpResponse } from 'msw';
 import {
   DOCX_CONTENT_TYPE,
@@ -152,7 +152,7 @@ async function readDraftFile(
 }
 
 export const exportHandlers = [
-  // Các mẫu của loại đơn: ai đăng nhập cũng xem được (nút Xuất file ở trang chi tiết đơn)
+  // Các mẫu của loại đơn: ai đăng nhập cũng xem được (nút Xuất đơn ở trang chi tiết đơn)
   http.get(api(ENDPOINTS.exports.templates), async ({ params }) => {
     await delay(MOCK_DELAY_MS);
     if (!(await readSession())) return apiError(401, EXPORT_MESSAGES[401]);
@@ -229,7 +229,7 @@ export const exportHandlers = [
     return HttpResponse.json<ExportTemplateCheck>(await checkTemplate(upload.bytes, upload.purpose, upload.draft.sections));
   }),
 
-  // Xuất file một lá đơn: xem được đơn thì xuất được
+  // Xuất một lá đơn: xem được đơn thì xuất được
   http.post(api(ENDPOINTS.exports.formExport), async ({ params, request }) => {
     await delay(MOCK_DELAY_MS);
     const session = await readSession();
@@ -242,7 +242,7 @@ export const exportHandlers = [
     const exportable = getExportSource(code, { id: session.user.id, role: session.role });
     if (!exportable) return apiError(404, EXPORT_MESSAGES.formNotFound);
 
-    // Mẫu phải là mẫu xuất file đơn của loại đơn này
+    // Mẫu phải là mẫu xuất đơn của loại đơn này
     const stored = findExportTemplate(exportable.formTypeId, body.templateId);
     if (!stored || stored.template.purpose !== 'form') return apiError(404, EXPORT_MESSAGES.templateNotFound);
 
@@ -268,7 +268,7 @@ export const exportHandlers = [
     return HttpResponse.json<ExportTemplateCheck>(await checkTemplate(stored.bytes, 'form', exportable.source.sections));
   }),
 
-  // Xuất file danh sách đơn: các lá đơn của loại đơn (cũ trước) theo phiên bản và ngày nộp; mỗi phiên bản một sheet, mỗi đơn một hàng
+  // Xuất danh sách đơn: các lá đơn của loại đơn (cũ trước) theo phiên bản và ngày nộp; mỗi phiên bản một sheet, mỗi đơn một hàng
   http.post(api(ENDPOINTS.exports.formListExport), async ({ params, request }) => {
     await delay(MOCK_DELAY_MS);
     const formTypeId = String(params.formTypeId);

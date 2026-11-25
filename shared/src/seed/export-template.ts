@@ -1,5 +1,5 @@
 /* JUST FOR DEMO: START · mẫu xuất file có sẵn cho loại đơn Xét miễn học phần, chuyển đổi tín chỉ (XMR),
-   để thử nút "Xuất file" ngay. Bản thật: mẫu do cán bộ tải lên ở trình soạn loại đơn, lưu ở máy chủ. */
+   để thử nút "Xuất đơn" ngay. Bản thật: mẫu do cán bộ tải lên ở trình soạn loại đơn, lưu ở máy chủ. */
 
 /** Nội dung file mau-don-xet-mien-hoc-phan.docx, mã hóa base64. */
 export const SAMPLE_EXPORT_TEMPLATE_BASE64 =
