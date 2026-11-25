@@ -111,7 +111,7 @@ export const formHandlers = [
     if (fileError) return apiError(422, fileError);
 
     // Đúng hết: lưu đơn và tệp cùng lúc
-    return HttpResponse.json<FormSummary>(addForm(ownerId, formType, answers, filesByTempId), { status: 201 });
+    return HttpResponse.json<FormSummary>(addForm(session.user.id, ownerId, formType, answers, filesByTempId), { status: 201 });
   }),
 
   // Một lá đơn đủ nội dung. Đăng ký SAU các handler của forms.ts (/forms/mine, /forms/handled, /forms/cccds) để các đường dẫn đó không bị hiểu là mã đơn
@@ -154,7 +154,7 @@ export const formHandlers = [
     if (fileError) return apiError(422, fileError);
 
     // Đúng hết: lưu nội dung và tệp mới cùng lúc
-    return HttpResponse.json<FormDetail>(updateForm(code, answers, multipart.filesByTempId)!);
+    return HttpResponse.json<FormDetail>(updateForm(session.user.id, code, answers, multipart.filesByTempId)!);
   }),
 
   // Tiếp nhận đơn: Đã nộp / Đã bổ sung → Đang xét, người bấm thành người tiếp nhận và người xử lí
@@ -192,7 +192,7 @@ export const formHandlers = [
     if (!canDecideOn({ email: session.user.email, role: session.role }, form)) return apiError(403, FORM_MESSAGES.decideForbidden);
 
     const { decision, note } = decideRequest.data;
-    return HttpResponse.json<FormDetail>(decideForm(code, decision, note)!);
+    return HttpResponse.json<FormDetail>(decideForm(code, decision, note, session.user.id)!);
   }),
 
   // Cán bộ có thể nhận đơn khi Chuyển giao (trừ người đang xử lí)
@@ -230,6 +230,6 @@ export const formHandlers = [
     const { toStaffId } = transferRequest.data;
     if (!getTransferTargets(code)!.some((staff) => staff.id === toStaffId)) return apiError(422, FORM_MESSAGES.invalidTransferTarget);
 
-    return HttpResponse.json<FormDetail>(transferForm(code, toStaffId)!);
+    return HttpResponse.json<FormDetail>(transferForm(code, toStaffId, session.user.id)!);
   }),
 ];

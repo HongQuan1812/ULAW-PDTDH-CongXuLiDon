@@ -1,11 +1,22 @@
 /* Lá đơn mẫu (mọi loại đơn, nhiều nhất là loại đơn chính MAIN_SEED_FORM_TYPE_ID) và người tiếp nhận, xử lí. */
-import type { FormSummary, FormType } from '../api-contract';
-import type { FormAnswers, FormStatus } from '../aux-schema';
+import { DECISION_EVENT_ACTION, type FormDecision, type FormSummary, type FormType } from '../api-contract';
+import type { FormAnswers, FormEventAction, FormStatus } from '../aux-schema';
 import { formatFormCode } from '../business-rules';
 import { MAIN_SEED_FORM_TYPE_ID, seedFormTypes } from './form-types';
 import { SAMPLE_SUBJECTS, sampleAnswersFor } from './sample-answers';
 import { cloneSeedValue } from './clone';
 import { addHours, dateText, twoDigits } from './time';
+
+/** Một dòng lịch sử của đơn mẫu: như FormEvent nhưng người làm, cán bộ nhận chỉ là id. */
+export interface SeedFormEvent {
+  action: FormEventAction;
+  at: string;
+  actorId: string;
+  status: FormStatus;
+  note: string;
+  /** Cán bộ nhận đơn khi Chuyển giao; việc khác thì null */
+  toStaffId: string | null;
+}
 
 /** Lá đơn trong API giả: dòng tóm tắt, kèm id người nộp, cán bộ, các mốc thời gian, nội dung và bản chụp loại đơn lúc nộp. */
 export interface SeedForm extends FormSummary {
@@ -20,10 +31,12 @@ export interface SeedForm extends FormSummary {
   handlerSince: string | null;
   answers: FormAnswers;
   formTypeSnapshot: FormType;
+  /** Lịch sử, cũ nhất trước */
+  history: SeedFormEvent[];
 }
 
-/** Lá đơn mẫu chưa gán cán bộ. */
-type UnassignedForm = Omit<SeedForm, 'receiverId' | 'handlerId' | 'handlerSince' | 'decidedAt'>;
+/** Lá đơn mẫu chưa gán cán bộ, chưa có lịch sử. */
+type UnassignedForm = Omit<SeedForm, 'receiverId' | 'handlerId' | 'handlerSince' | 'decidedAt' | 'history'>;
 
 /* 3 cán bộ tiếp nhận / xử lí các đơn mẫu. */
 export const SEED_STAFF_IDS = ['cb-1', 'cb-2', 'cb-3'] as const;
@@ -200,34 +213,47 @@ function seedEveryTypeForms(): UnassignedForm[] {
 }
 
 /**
- * Gán người tiếp nhận, người xử lí cho các đơn:
- * đơn Đã nộp chưa ai tiếp nhận; đơn khác do lần lượt 3 cán bộ tiếp nhận,
+ * Gán người tiếp nhận, người xử lí cho các đơn và dựng lịch sử khớp với các mốc thời gian:
+ * đơn Đã nộp chưa ai tiếp nhận; đơn khác do lần lượt 3 cán bộ tiếp nhận (sau lần sửa đơn, nếu có),
  * cứ 5 đơn có 1 đơn đã chuyển giao cho người kế tiếp (26 giờ sau khi tiếp nhận).
  * Đơn Cần bổ sung / Đã duyệt / Từ chối có lúc ra quyết định: 20 giờ sau khi người xử lí nhận đơn.
+ * Đơn Đã bổ sung: yêu cầu bổ sung 20 giờ sau khi người xử lí nhận đơn, sinh viên bổ sung 10 giờ sau đó.
  * @param forms  các đơn chưa gán
- * @returns      các đơn đã gán cán bộ, kèm lúc ra quyết định
+ * @returns      các đơn đã gán cán bộ, kèm lúc ra quyết định và lịch sử
  */
 function assignStaff(forms: UnassignedForm[]): SeedForm[] {
   return forms.map((form, i) => {
-    if (!form.receivedAt) return { ...form, receiverId: null, handlerId: null, handlerSince: null, decidedAt: null };
+    // Nộp, sửa đơn (đơn Đã bổ sung thì lần lưu gần nhất là lần bổ sung, dựng ở dưới)
+    const history: SeedFormEvent[] = [{ action: 'submit', at: form.submittedAt, actorId: form.ownerId, status: 'nop', note: '', toStaffId: null }];
+    const edited = form.status !== 'bsg' && form.updatedAt !== form.submittedAt;
+    if (edited) history.push({ action: 'edit', at: form.updatedAt, actorId: form.ownerId, status: 'nop', note: '', toStaffId: null });
+    if (!form.receivedAt) return { ...form, receiverId: null, handlerId: null, handlerSince: null, decidedAt: null, history };
 
-    // Người tiếp nhận, người xử lí
+    // Tiếp nhận sau lần sửa đơn; người tiếp nhận, người xử lí
+    const receivedAt = edited && form.updatedAt >= form.receivedAt ? addHours(form.updatedAt, 2) : form.receivedAt;
     const receiverId = SEED_STAFF_IDS[i % SEED_STAFF_IDS.length]!;
     const transferred = i % 5 === 2;
-    const handlerSince = transferred ? addHours(form.receivedAt, 26) : form.receivedAt;
+    const handlerId = transferred ? SEED_STAFF_IDS[(i + 1) % SEED_STAFF_IDS.length]! : receiverId;
+    const handlerSince = transferred ? addHours(receivedAt, 26) : receivedAt;
+    history.push({ action: 'receive', at: receivedAt, actorId: receiverId, status: 'xet', note: '', toStaffId: null });
+    if (transferred) history.push({ action: 'transfer', at: handlerSince, actorId: receiverId, status: 'xet', note: '', toStaffId: handlerId });
 
-    // Lúc ra quyết định
-    const decided = form.status === 'bs' || form.status === 'duyet' || form.status === 'tc';
-    return {
-      ...form,
-      receiverId,
-      handlerId: transferred ? SEED_STAFF_IDS[(i + 1) % SEED_STAFF_IDS.length]! : receiverId,
-      handlerSince,
-      decidedAt: decided ? addHours(handlerSince, 20) : null,
-    };
+    // Ra quyết định; đơn Đã bổ sung: yêu cầu bổ sung rồi sinh viên bổ sung
+    const decidedAt = form.status === 'xet' ? null : addHours(handlerSince, 20);
+    let updatedAt = form.updatedAt;
+    if (form.status === 'bsg') {
+      updatedAt = addHours(decidedAt!, 10);
+      history.push(
+        { action: 'requestSupplement', at: decidedAt!, actorId: handlerId, status: 'bs', note: SUPPLEMENT_NOTE, toStaffId: null },
+        { action: 'supplement', at: updatedAt, actorId: form.ownerId, status: 'bsg', note: '', toStaffId: null },
+      );
+    } else if (decidedAt) {
+      const action = DECISION_EVENT_ACTION[form.status as FormDecision];
+      history.push({ action, at: decidedAt, actorId: handlerId, status: form.status, note: form.note, toStaffId: null });
+    }
+    return { ...form, updatedAt, receivedAt, receiverId, handlerId, handlerSince, decidedAt, history };
   });
 }
-
 
 /**
  * Dựng toàn bộ đơn mẫu.

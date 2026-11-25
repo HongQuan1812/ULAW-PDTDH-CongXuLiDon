@@ -6,6 +6,7 @@ import {
   FORM_MESSAGES,
   can,
   canEditForm,
+  editEventAction,
   formatFormCode,
   isEditable,
   validateAnswers,
@@ -13,6 +14,7 @@ import {
   type FileRef,
   type FormAnswers,
   type FormDetail,
+  type FormEvent,
   type FormSection,
   type FormSummary,
   type FormType,
@@ -26,7 +28,7 @@ import { toVietnamTime } from '../common/vietnam-time';
 import { FormEmailService } from '../email/form-email.service';
 import { FileStorageService } from '../files/file-storage.service';
 import { FormTypesService } from '../form-types/form-types.service';
-import type { Prisma, Form, User } from '../generated/prisma/client';
+import type { Prisma, Form, FormEvent as FormEventRow, User } from '../generated/prisma/client';
 import { fileRefsIn, mergeAnswers } from './form-answers';
 
 /** Một tệp nhận được trong body multipart. */
@@ -36,9 +38,17 @@ export interface UploadedPart {
   content: Buffer;
 }
 
-/** Đơn kèm người nộp và hai cán bộ liên quan, đủ để dựng FormDetail. */
-type FormWithPeople = Form & { owner: User; receiver: User | null; handler: User | null };
-const WITH_PEOPLE = { owner: true, receiver: true, handler: true } as const;
+/** Một dòng lịch sử kèm người làm và cán bộ nhận (chuyển giao). */
+type FormEventWithPeople = FormEventRow & { actor: User; toStaff: User | null };
+
+/** Đơn kèm người nộp, hai cán bộ liên quan và lịch sử, đủ để dựng FormDetail. */
+type FormWithPeople = Form & { owner: User; receiver: User | null; handler: User | null; events: FormEventWithPeople[] };
+const WITH_PEOPLE = {
+  owner: true,
+  receiver: true,
+  handler: true,
+  events: { include: { actor: true, toStaff: true }, orderBy: [{ at: 'asc' }, { id: 'asc' }] },
+} as const satisfies Prisma.FormInclude;
 
 /** Kết quả ghi các tệp mới lên ổ đĩa. */
 interface StoredUploads {
@@ -92,6 +102,14 @@ export class FormService {
       decidedAt: form.decidedAt ? toVietnamTime(form.decidedAt) : null,
       sections: snapshot.sections,
       answers: form.answers as unknown as FormAnswers,
+      history: form.events.map((event): FormEvent => ({
+        action: event.action,
+        at: toVietnamTime(event.at),
+        actor: { id: event.actor.id, name: event.actor.name, email: event.actor.email },
+        status: event.status,
+        note: event.note,
+        toStaff: toStaff(event.toStaff),
+      })),
     };
   }
 
@@ -177,7 +195,7 @@ export class FormService {
   }
 
   /**
-   * Nộp đơn mới: kiểm tra hết, rồi sinh mã đơn, lưu đơn, bản chụp cấu trúc loại đơn và tệp trong một transaction.
+   * Nộp đơn mới: kiểm tra hết, rồi sinh mã đơn, lưu đơn, bản chụp cấu trúc loại đơn, tệp và dòng lịch sử trong một transaction.
    * Sai một chỗ thì không lưu gì (kể cả tệp trên ổ đĩa). Lưu xong thì gửi thư báo đã nhận đơn (không chờ).
    * @param submitter  người đang đăng nhập (cần quyền submit; nộp thay cần submitForApplicant)
    * @param readSubmission  đọc phần chữ và tệp của body (gọi sau khi kiểm tra quyền)
@@ -219,6 +237,7 @@ export class FormService {
             answers: mergeAnswers(formType.sections, request.answers, {}, refs) as unknown as Prisma.InputJsonValue,
             formTypeSnapshot: formType as unknown as Prisma.InputJsonValue,
             files: { create: rows.map((row) => ({ ...row, uploadedAt: submittedAt })) },
+            events: { create: { action: 'submit', status: 'nop', actorId: submitter.id, at: submittedAt } },
           },
         });
         return { code, formTypeId: form.formTypeId, formTypeName: formType.name, submittedAt: toVietnamTime(submittedAt), status: form.status };
@@ -255,7 +274,7 @@ export class FormService {
   }
 
   /**
-   * Sửa nội dung đơn: kiểm tra hết, rồi lưu câu trả lời và tệp mới trong một transaction; tệp bị gỡ xóa hẳn sau khi đơn lưu xong.
+   * Sửa nội dung đơn: kiểm tra hết, rồi lưu câu trả lời, tệp mới và dòng lịch sử trong một transaction; tệp bị gỡ xóa hẳn sau khi đơn lưu xong.
    * Đơn Cần bổ sung sau khi lưu chuyển sang Đã bổ sung.
    * @param editor   người đang đăng nhập
    * @param code     mã đơn
@@ -297,6 +316,7 @@ export class FormService {
             status: nextStatus,
             updatedAt,
             files: { create: rows.map((row) => ({ ...row, uploadedAt: updatedAt })) },
+            events: { create: { action: editEventAction(form.status), status: nextStatus, actorId: editor.id, at: updatedAt } },
           },
         });
       });

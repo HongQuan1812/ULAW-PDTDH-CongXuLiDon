@@ -1,8 +1,10 @@
 /* Chuyển trạng thái đơn: tiếp nhận, ra quyết định (bổ sung / duyệt / từ chối), chuyển giao.
    Mọi bước đổi trạng thái đi qua đây. Kiểm tra quyền rồi ghi bằng câu lệnh có điều kiện trạng thái,
-   nên hai cán bộ bấm cùng lúc thì chỉ một người thành công, người kia nhận 409. */
+   nên hai cán bộ bấm cùng lúc thì chỉ một người thành công, người kia nhận 409.
+   Mỗi bước ghi thêm một dòng lịch sử (FormEvent) trong cùng transaction. */
 import { Injectable } from '@nestjs/common';
 import {
+  DECISION_EVENT_ACTION,
   FORM_MESSAGES,
   ROLE_IDS,
   can,
@@ -55,11 +57,15 @@ export class WorkflowService {
 
     // Chỉ ghi khi đơn vẫn đang chờ tiếp nhận (người khác có thể vừa tiếp nhận)
     const receivedAt = new Date();
-    const { count } = await this.prisma.form.updateMany({
-      where: { code, status: { in: STATUSES_WHERE(isReceivable) } },
-      data: { status: 'xet', note: '', receiverId: actor.id, receivedAt, handlerId: actor.id, handlerSince: receivedAt },
+    const saved = await this.prisma.$transaction(async (transaction) => {
+      const { count } = await transaction.form.updateMany({
+        where: { code, status: { in: STATUSES_WHERE(isReceivable) } },
+        data: { status: 'xet', note: '', receiverId: actor.id, receivedAt, handlerId: actor.id, handlerSince: receivedAt },
+      });
+      if (count > 0) await transaction.formEvent.create({ data: { formCode: code, action: 'receive', status: 'xet', actorId: actor.id, at: receivedAt } });
+      return count > 0;
     });
-    if (count === 0) throw new ApiException(409, FORM_MESSAGES.notReceivable);
+    if (!saved) throw new ApiException(409, FORM_MESSAGES.notReceivable);
     return this.formService.findDetail(code, actor);
   }
 
@@ -83,11 +89,21 @@ export class WorkflowService {
     }
 
     // Chỉ ghi khi đơn vẫn Đang xét và vẫn do người này phụ trách (bị chuyển giao giữa chừng thì không ghi đè)
-    const { count } = await this.prisma.form.updateMany({
-      where: { code, status: { in: STATUSES_WHERE(isDecidable) }, handlerId: form.handlerId },
-      data: { status: decision, note: decision === 'duyet' ? '' : note, decidedAt: new Date() },
+    const decidedAt = new Date();
+    const savedNote = decision === 'duyet' ? '' : note;
+    const saved = await this.prisma.$transaction(async (transaction) => {
+      const { count } = await transaction.form.updateMany({
+        where: { code, status: { in: STATUSES_WHERE(isDecidable) }, handlerId: form.handlerId },
+        data: { status: decision, note: savedNote, decidedAt },
+      });
+      if (count > 0) {
+        await transaction.formEvent.create({
+          data: { formCode: code, action: DECISION_EVENT_ACTION[decision], status: decision, actorId: actor.id, note: savedNote, at: decidedAt },
+        });
+      }
+      return count > 0;
     });
-    if (count === 0) throw new ApiException(409, FORM_MESSAGES.notDecidable);
+    if (!saved) throw new ApiException(409, FORM_MESSAGES.notDecidable);
 
     // Đã lưu: báo cho người nộp đơn
     this.formEmail.notifyStatusChange(code, decision);
@@ -125,11 +141,20 @@ export class WorkflowService {
     if (!targets.some((staff) => staff.id === toStaffId)) throw new ApiException(422, FORM_MESSAGES.invalidTransferTarget);
 
     // Chỉ ghi khi đơn vẫn chuyển giao được
-    const { count } = await this.prisma.form.updateMany({
-      where: { code, status: { in: STATUSES_WHERE(isTransferable) } },
-      data: { handlerId: toStaffId, handlerSince: new Date() },
+    const handlerSince = new Date();
+    const saved = await this.prisma.$transaction(async (transaction) => {
+      const { count } = await transaction.form.updateMany({
+        where: { code, status: { in: STATUSES_WHERE(isTransferable) } },
+        data: { handlerId: toStaffId, handlerSince },
+      });
+      if (count > 0) {
+        // Trạng thái đọc lại trong transaction (cán bộ khác có thể vừa ra quyết định)
+        const { status } = await transaction.form.findUniqueOrThrow({ where: { code }, select: { status: true } });
+        await transaction.formEvent.create({ data: { formCode: code, action: 'transfer', status, actorId: actor.id, toStaffId, at: handlerSince } });
+      }
+      return count > 0;
     });
-    if (count === 0) throw new ApiException(409, FORM_MESSAGES.notTransferable);
+    if (!saved) throw new ApiException(409, FORM_MESSAGES.notTransferable);
     return this.formService.findDetail(code, actor);
   }
 

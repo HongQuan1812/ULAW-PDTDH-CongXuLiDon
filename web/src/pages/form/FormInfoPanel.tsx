@@ -232,6 +232,7 @@ export const INFO_SECTION_STORAGE_KEY = {
   applicant: 'formInfoPanel.applicant.collapsed',
   receiver: 'formInfoPanel.receiver.collapsed',
   handler: 'formInfoPanel.handler.collapsed',
+  history: 'formInfoPanel.history.collapsed',
 } as const;
 
 /** Các dòng [nhãn, giá trị] của một mục thông tin. */
