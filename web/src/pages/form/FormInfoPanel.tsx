@@ -182,6 +182,10 @@ interface PanelSectionProps {
   storageKey: string;
   /** true: lề nội dung hẹp hơn, cho danh sách có viền từng mục (vd lịch, nơi lưu) */
   tightBody?: boolean;
+  /** true: mục không co, không cuộn riêng, luôn hiện đủ dòng (vd Người nộp đơn); khung không đủ cao thì các mục khác co lại */
+  fixed?: boolean;
+  /** true: co hết phần khung thiếu nhưng không thấp hơn hàng tiêu đề (vd Lịch sử, mục cuộn duy nhất khi các mục khác không co) */
+  keepMinHeight?: boolean;
   children: ReactNode;
 }
 
@@ -191,7 +195,7 @@ interface PanelSectionProps {
  * @param props  xem PanelSectionProps
  * @returns      khối mục: hàng tiêu đề, nội dung (ẩn khi thu gọn)
  */
-export function PanelSection({ title, count, action, add, storageKey, tightBody = false, children }: PanelSectionProps) {
+export function PanelSection({ title, count, action, add, storageKey, tightBody = false, fixed = false, keepMinHeight = false, children }: PanelSectionProps) {
   const bodyId = useId();
   const [collapsed, setCollapsed] = useState(() => readCollapsed(storageKey));
 
@@ -202,7 +206,10 @@ export function PanelSection({ title, count, action, add, storageKey, tightBody 
   };
 
   return (
-    <section className={styles.panelSection} data-collapsed={collapsed}>
+    <section
+      className={`${styles.panelSection} ${fixed ? styles.panelSectionFixed : ''} ${keepMinHeight ? styles.panelSectionMinHeight : ''}`}
+      data-collapsed={collapsed}
+    >
       <div className={styles.panelSectionHead}>
         <button type="button" className={styles.panelSectionToggle} aria-expanded={!collapsed} aria-controls={bodyId} onClick={toggle}>
           <svg className={styles.chevron} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -279,7 +286,7 @@ export function FormInfoSummary({ rows }: { rows: InfoRows }) {
  */
 export function FormInfoSection({ title, action, storageKey, rows }: { title: string; action?: ReactNode; storageKey: string; rows: InfoRows }) {
   return (
-    <PanelSection title={title} action={action} storageKey={storageKey}>
+    <PanelSection title={title} action={action} storageKey={storageKey} fixed>
       <InfoRowList rows={rows} />
     </PanelSection>
   );

@@ -21,7 +21,7 @@ function eventTitle(event: FormEvent): string {
  */
 export function FormHistory({ history }: { history: readonly FormEvent[] }) {
   return (
-    <PanelSection title="Lịch sử" count={history.length} storageKey={INFO_SECTION_STORAGE_KEY.history}>
+    <PanelSection title="Lịch sử" count={history.length} storageKey={INFO_SECTION_STORAGE_KEY.history} keepMinHeight>
       <ol className={styles.timeline}>
         {history.map((event, i) => {
           // Sửa đơn, chuyển giao không đổi trạng thái: chấm xám
