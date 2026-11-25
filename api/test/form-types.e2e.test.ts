@@ -6,6 +6,8 @@ import {
   ApiErrorBodySchema,
   FORM_TYPE_DRAFT_MESSAGES,
   FORM_TYPE_MESSAGES,
+  FORM_STATUSES,
+  FormTypeAnswerStatsSchema,
   FormTypeSchema,
   FormTypesResponseSchema,
   ManagedFormTypeSchema,
@@ -79,6 +81,7 @@ describe('form-types', () => {
       request(server()).put('/api/form-types/xmr/versions/1').set('Cookie', cookie).send({}),
       request(server()).delete('/api/form-types/xmr/versions/1').set('Cookie', cookie),
       request(server()).put('/api/form-types/xmr/versions/1/status').set('Cookie', cookie).send({}),
+      request(server()).get('/api/form-types/xmr/stats').set('Cookie', cookie),
     ]) {
       const response = await call.expect(403);
       expect(ApiErrorBodySchema.parse(response.body).message).toBe(FORM_TYPE_MESSAGES[403]);
@@ -168,5 +171,29 @@ describe('form-types', () => {
     await call('post', `/${id}/versions`).send(draftOf('ZTT')).expect(201);
     const afterDelete = ManagedFormTypeSchema.parse((await call('delete', `/${id}/versions/3`).expect(200)).body);
     expect(afterDelete.versions.map((version) => version.version)).toEqual([2, 1]);
+  });
+
+  it('thống kê câu trả lời: đếm đúng số đơn theo điều kiện, 422 khi tham số sai, 404 khi không có', async () => {
+    const cookie = await loginAs('nguoiXuLiDon');
+    const getStats = (query: string) => request(server()).get(`/api/form-types/xmr/stats${query}`).set('Cookie', cookie);
+
+    // Mọi đơn: tổng bằng số đơn XMR trong database, số theo trạng thái cộng lại bằng tổng
+    const all = FormTypeAnswerStatsSchema.parse((await getStats('').expect(200)).body);
+    expect(all.total).toBe(await prisma.form.count({ where: { formTypeId: 'xmr' } }));
+    expect(FORM_STATUSES.reduce((sum, status) => sum + all.byStatus[status], 0)).toBe(all.total);
+    expect(all.sections.length).toBeGreaterThan(0);
+    for (const question of all.sections.flatMap((section) => section.questions)) expect(question.answered).toBeLessThanOrEqual(question.formCount);
+
+    // Lọc trạng thái: tổng bằng số đơn trạng thái đó, nút trạng thái vẫn đếm mọi trạng thái
+    const approved = FormTypeAnswerStatsSchema.parse((await getStats('?statuses=duyet').expect(200)).body);
+    expect(approved.total).toBe(await prisma.form.count({ where: { formTypeId: 'xmr', status: 'duyet' } }));
+    expect(approved.byStatus).toEqual(all.byStatus);
+
+    // Sai dạng: 422 · phiên bản, loại đơn không có: 404
+    for (const badQuery of ['?version=abc', '?statuses=khong-co', '?submittedFrom=2026-12-01&submittedTo=2026-11-01', '?statuses=nop&statuses=xet']) {
+      expect((await getStats(badQuery).expect(422)).body.message).toBe(FORM_TYPE_MESSAGES.invalidStatsQuery);
+    }
+    expect((await getStats('?version=999').expect(404)).body.message).toBe(FORM_TYPE_MESSAGES.versionNotFound);
+    await request(server()).get('/api/form-types/khong-co/stats').set('Cookie', cookie).expect(404);
   });
 });

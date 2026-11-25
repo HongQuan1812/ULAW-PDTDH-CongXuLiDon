@@ -8,8 +8,10 @@
      (mỗi lúc chỉ một phiên bản nhận đơn). Phiên bản đã khóa chỉ đổi qua lại Đang mở / Đã đóng.
    - Muốn sửa nội dung đã khóa thì tạo phiên bản mới. Mã đơn khóa từ khi phiên bản đầu tiên được mở. */
 import { z } from 'zod';
+import { QUESTION_TYPES, TABLE_COLUMN_TYPES, type QuestionType } from '../aux-schema/form-types--question-types';
 import { FormSectionSchema } from '../aux-schema/form-types--sections';
 import { FORM_TYPE_STATUSES } from '../aux-schema/form-types--statuses';
+import { FORM_STATUSES, type FormStatus } from '../aux-schema/forms--statuses';
 import { StaffRefSchema } from './form';
 
 /* ---------- Đường dẫn (phần sau /api) ---------- */
@@ -37,7 +39,19 @@ export const FORM_TYPE_ENDPOINTS = {
   /** PUT: mở / đóng phiên bản đã khóa, body SetFormTypeVersionStatusRequest → ManagedFormType; phiên bản Nháp thì 409.
       Cần quyền manageFormTypes */
   versionStatus: '/form-types/:formTypeId/versions/:version/status',
+  /** GET ?<điều kiện thống kê> → FormTypeAnswerStats: thống kê câu trả lời các đơn của loại đơn (thẻ Thống kê ở trình soạn),
+      tham số theo formTypeStatsQueryParams; tham số sai thì 422; phiên bản không có thì 404. Cần quyền manageFormTypes */
+  stats: '/form-types/:formTypeId/stats',
 } as const;
+
+/**
+ * Đường dẫn API thống kê câu trả lời của một loại đơn.
+ * @param formTypeId  mã loại đơn
+ * @returns           vd '/form-types/xmr/stats'
+ */
+export function formTypeStatsPath(formTypeId: string): string {
+  return FORM_TYPE_ENDPOINTS.stats.replace(':formTypeId', encodeURIComponent(formTypeId));
+}
 
 /**
  * Đường dẫn API của một loại đơn (phiên bản đang mở).
@@ -178,6 +192,194 @@ export type SaveFormTypeVersionRequest = z.infer<typeof SaveFormTypeVersionReque
 export const SetFormTypeVersionStatusRequestSchema = z.object({ status: z.enum(LOCKED_VERSION_STATUSES) });
 export type SetFormTypeVersionStatusRequest = z.infer<typeof SetFormTypeVersionStatusRequestSchema>;
 
+/* ---------- Thống kê câu trả lời (thẻ Thống kê) ----------
+   GET /form-types/:formTypeId/stats?version=2&submittedFrom=2026-09-01&submittedTo=2026-11-30&statuses=nop,xet
+   - version: số phiên bản hoặc 'all' (mặc định) · submittedFrom, submittedTo: khoảng ngày nộp, tính cả hai đầu
+   - statuses: các trạng thái cách nhau bởi dấu phẩy; bỏ trống = mọi trạng thái
+   Điều kiện chỉ quyết định đơn nào được đếm; cách chia nhóm biểu đồ theo luật ở business-rules/form-types--answer-stats.ts. */
+
+/** Ngày dạng 'YYYY-MM-DD'. */
+const StatsDaySchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Ngày phải có dạng YYYY-MM-DD.');
+
+/** Điều kiện thống kê: đơn nào được đếm. */
+export const FormTypeStatsQuerySchema = z
+  .object({
+    /** Số phiên bản, hoặc 'all' = mọi phiên bản */
+    version: z.union([z.number().int().positive(), z.literal('all')]),
+    /** Từ ngày nộp (tính cả ngày này); null = không giới hạn */
+    submittedFrom: StatsDaySchema.nullable(),
+    /** Đến ngày nộp (tính cả ngày này); null = không giới hạn */
+    submittedTo: StatsDaySchema.nullable(),
+    /** Các trạng thái được đếm; [] = mọi trạng thái */
+    statuses: z.array(z.enum(FORM_STATUSES)),
+  })
+  .refine((query) => !query.submittedFrom || !query.submittedTo || query.submittedFrom <= query.submittedTo, {
+    message: 'Ngày bắt đầu phải trước hoặc bằng ngày kết thúc.',
+    path: ['submittedTo'],
+  });
+export type FormTypeStatsQuery = z.infer<typeof FormTypeStatsQuerySchema>;
+
+/** Điều kiện mặc định: mọi phiên bản, mọi ngày, mọi trạng thái. */
+export const DEFAULT_FORM_TYPE_STATS_QUERY: FormTypeStatsQuery = { version: 'all', submittedFrom: null, submittedTo: null, statuses: [] };
+
+/**
+ * Ghi điều kiện thống kê thành tham số trên đường dẫn (trình duyệt gọi); bỏ tham số trống cho gọn.
+ * @param query  điều kiện thống kê
+ * @returns      tham số, vd { version: '2', statuses: 'nop,xet' }
+ */
+export function formTypeStatsQueryParams(query: FormTypeStatsQuery): Record<string, string> {
+  const params: Record<string, string> = { version: String(query.version) };
+  if (query.submittedFrom) params.submittedFrom = query.submittedFrom;
+  if (query.submittedTo) params.submittedTo = query.submittedTo;
+  if (query.statuses.length) params.statuses = query.statuses.join(',');
+  return params;
+}
+
+/**
+ * Đọc điều kiện thống kê từ tham số trên đường dẫn (máy chủ, API giả gọi).
+ * @param params  tham số đọc từ đường dẫn
+ * @returns       điều kiện thống kê; sai dạng thì null (422)
+ */
+export function parseFormTypeStatsQueryParams(params: Record<string, string | undefined>): FormTypeStatsQuery | null {
+  // Tham số lặp lại (vd ?statuses=nop&statuses=xet) thì máy chủ đọc ra mảng: coi là sai dạng
+  const paramNames = ['version', 'submittedFrom', 'submittedTo', 'statuses'] as const;
+  if (paramNames.some((name) => params[name] !== undefined && typeof params[name] !== 'string')) return null;
+
+  const versionText = params.version || 'all';
+  const parsed = FormTypeStatsQuerySchema.safeParse({
+    version: versionText === 'all' ? 'all' : Number(versionText),
+    submittedFrom: params.submittedFrom || null,
+    submittedTo: params.submittedTo || null,
+    statuses: params.statuses ? params.statuses.split(',') : [],
+  });
+  return parsed.success ? parsed.data : null;
+}
+
+/** Số câu Trả lời ngắn (cột Chữ) nhiều nhất trả về; còn lại chỉ đếm vào distinctCount. */
+export const ANSWER_STATS_TEXT_LIMIT = 50;
+/** Số câu Đoạn văn mới nhất trả về. */
+export const ANSWER_STATS_PARAGRAPH_LIMIT = 20;
+
+/** Một nhóm có tên và số đếm: một lựa chọn, một cột biểu đồ, một đuôi tệp. */
+export const CountedLabelSchema = z.object({ label: z.string(), count: z.number().int().nonnegative() });
+export type CountedLabel = z.infer<typeof CountedLabelSchema>;
+
+/** Câu Chọn một, Chọn nhiều, Danh sách thả xuống, cột Chọn: số lần mỗi lựa chọn được chọn.
+    Lựa chọn của câu hỏi theo thứ tự soạn (kể cả lựa chọn chưa ai chọn), rồi các giá trị khác (vd lựa chọn của phiên bản cũ), nhiều trước. */
+const OptionStatsSchema = z.object({ kind: z.literal('options'), options: z.array(CountedLabelSchema) });
+
+/** Câu Số, cột Số: nhỏ nhất, trung bình, lớn nhất (null khi chưa ai trả lời) và các cột biểu đồ. */
+const NumberStatsSchema = z.object({
+  kind: z.literal('number'),
+  min: z.number().nullable(),
+  average: z.number().nullable(),
+  max: z.number().nullable(),
+  bins: z.array(CountedLabelSchema),
+});
+
+/** Câu Ngày, cột Ngày: ngày sớm nhất, muộn nhất ('YYYY-MM-DD', null khi chưa ai trả lời) và các cột biểu đồ. */
+const DateStatsSchema = z.object({
+  kind: z.literal('date'),
+  earliest: StatsDaySchema.nullable(),
+  latest: StatsDaySchema.nullable(),
+  bins: z.array(CountedLabelSchema),
+});
+
+/** Câu Trả lời ngắn, cột Chữ: câu trả lời gộp câu trùng, nhiều trước, tối đa ANSWER_STATS_TEXT_LIMIT câu. */
+const TextStatsSchema = z.object({
+  kind: z.literal('text'),
+  /** Số câu trả lời khác nhau (kể cả những câu không trả về) */
+  distinctCount: z.number().int().nonnegative(),
+  answers: z.array(z.object({ text: z.string(), count: z.number().int().positive() })),
+});
+
+/** Câu Đoạn văn: các câu trả lời mới nhất, tối đa ANSWER_STATS_PARAGRAPH_LIMIT câu. */
+const ParagraphStatsSchema = z.object({
+  kind: z.literal('para'),
+  answers: z.array(
+    z.object({
+      formCode: z.string(),
+      /** Lúc nộp, giờ Việt Nam 'YYYY-MM-DDTHH:mm' */
+      submittedAt: z.string(),
+      /** Câu trả lời dạng chữ thường */
+      text: z.string(),
+    }),
+  ),
+});
+
+/** Câu Tải tệp: tổng số tệp và số tệp theo đuôi (in hoa, vd 'PDF'), nhiều trước. */
+const FileStatsSchema = z.object({
+  kind: z.literal('file'),
+  fileCount: z.number().int().nonnegative(),
+  byExtension: z.array(CountedLabelSchema),
+});
+
+/** Thống kê một cột của bảng nhiều dòng, theo kiểu cột. */
+const ColumnAnswerStatsSchema = z.discriminatedUnion('kind', [OptionStatsSchema, NumberStatsSchema, DateStatsSchema, TextStatsSchema]);
+
+/** Một cột của bảng nhiều dòng; cột cùng tên ở các phiên bản gộp làm một. */
+const TableColumnStatsSchema = z.object({
+  label: z.string(),
+  type: z.enum(TABLE_COLUMN_TYPES),
+  /** Số dòng có điền ô này */
+  answered: z.number().int().nonnegative(),
+  stats: ColumnAnswerStatsSchema,
+});
+export type TableColumnStats = z.infer<typeof TableColumnStatsSchema>;
+
+/** Câu Bảng nhiều dòng: tổng số dòng và thống kê từng cột. */
+const TableStatsSchema = z.object({
+  kind: z.literal('table'),
+  rowCount: z.number().int().nonnegative(),
+  columns: z.array(TableColumnStatsSchema),
+});
+
+/** Thống kê theo loại câu hỏi. */
+export const AnswerStatsSchema = z.discriminatedUnion('kind', [
+  OptionStatsSchema,
+  NumberStatsSchema,
+  DateStatsSchema,
+  TextStatsSchema,
+  ParagraphStatsSchema,
+  FileStatsSchema,
+  TableStatsSchema,
+]);
+export type AnswerStats = z.infer<typeof AnswerStatsSchema>;
+/** Thống kê theo kiểu, vd AnswerStatsOf<'number'> có min, max, bins. */
+export type AnswerStatsOf<Kind extends AnswerStats['kind']> = AnswerStats & { kind: Kind };
+
+/** Loại câu hỏi có thống kê (mọi loại trừ khối thông báo). */
+const STATS_QUESTION_TYPES = QUESTION_TYPES.filter((type): type is Exclude<QuestionType, 'info'> => type !== 'info');
+
+/** Thống kê một câu hỏi. */
+export const QuestionStatsSchema = z.object({
+  id: z.string(),
+  label: z.string(),
+  type: z.enum(STATS_QUESTION_TYPES as [Exclude<QuestionType, 'info'>, ...Exclude<QuestionType, 'info'>[]]),
+  required: z.boolean(),
+  /** Số đơn có trả lời câu này */
+  answered: z.number().int().nonnegative(),
+  /** Số đơn được đếm có câu này (đơn của phiên bản không có câu này thì không tính) */
+  formCount: z.number().int().nonnegative(),
+  /** Các phiên bản có câu này, khi không phải mọi phiên bản đang thống kê đều có; null = mọi phiên bản đều có */
+  onlyInVersions: z.array(z.number().int().positive()).nullable(),
+  stats: AnswerStatsSchema,
+});
+export type QuestionStats = z.infer<typeof QuestionStatsSchema>;
+
+/** Trả về từ GET /form-types/:formTypeId/stats. */
+export const FormTypeAnswerStatsSchema = z.object({
+  /** Số đơn được thống kê (theo mọi điều kiện) */
+  total: z.number().int().nonnegative(),
+  /** Số đơn theo trạng thái, theo phiên bản và ngày nộp nhưng chưa lọc trạng thái (số trên các nút trạng thái) */
+  byStatus: z.object(
+    Object.fromEntries(FORM_STATUSES.map((status) => [status, z.number().int().min(0)])) as Record<FormStatus, z.ZodNumber>,
+  ),
+  /** Các phần theo thứ tự soạn của phiên bản mới nhất (phần, câu chỉ có ở phiên bản cũ chen vào đúng chỗ); bỏ khối thông báo, phần không có câu hỏi */
+  sections: z.array(z.object({ id: z.string(), title: z.string(), questions: z.array(QuestionStatsSchema) })),
+});
+export type FormTypeAnswerStats = z.infer<typeof FormTypeAnswerStatsSchema>;
+
 /* ---------- Câu thông báo ---------- */
 
 export const FORM_TYPE_MESSAGES = {
@@ -216,6 +418,8 @@ export const FORM_TYPE_MESSAGES = {
   draftDeleted: (version: number) => `Đã xóa phiên bản nháp ${version}.`,
   /** Xóa phiên bản duy nhất (xóa luôn loại đơn) xong */
   deleted: (name: string) => `Đã xóa loại đơn ${name}.`,
+  /** GET /form-types/:formTypeId/stats với tham số sai (422) */
+  invalidStatsQuery: 'Điều kiện thống kê không hợp lệ.',
   /** Bấm Bỏ thay đổi */
   discarded: 'Đã bỏ các thay đổi chưa lưu.',
 } as const;

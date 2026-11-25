@@ -1,13 +1,18 @@
 /* Hook gọi API loại đơn: danh sách, loại đơn đang mở, phiên bản đang mở (để nộp đơn);
-   các phiên bản (trình soạn): xem, tạo loại đơn, thêm phiên bản, lưu phiên bản Nháp, mở / đóng, xóa phiên bản Nháp. */
-import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
+   các phiên bản (trình soạn): xem, tạo loại đơn, thêm phiên bản, lưu phiên bản Nháp, mở / đóng, xóa phiên bản Nháp;
+   thống kê câu trả lời (thẻ Thống kê). */
+import { keepPreviousData, useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
 import {
   ENDPOINTS,
   formTypeDetailPath,
+  formTypeStatsPath,
+  formTypeStatsQueryParams,
   formTypeVersionPath,
   formTypeVersionStatusPath,
   formTypeVersionsPath,
   type FormType,
+  type FormTypeAnswerStats,
+  type FormTypeStatsQuery,
   type FormTypesResponse,
   type ManagedFormType,
   type OpenFormTypesResponse,
@@ -101,6 +106,7 @@ function afterFormTypeChange(queryClient: QueryClient, formTypeId: string, formT
   void queryClient.invalidateQueries({ queryKey: OPEN_FORM_TYPES_KEY });
   void queryClient.invalidateQueries({ queryKey: formTypeDetailKey(formTypeId) });
   void queryClient.invalidateQueries({ queryKey: FORM_STATS_KEY });
+  void queryClient.invalidateQueries({ queryKey: formTypeAnswerStatsKey(formTypeId) });
 }
 
 /** Lưu bản soạn: tạo loại đơn mới, thêm phiên bản mới, hoặc lưu đè phiên bản Nháp. */
@@ -151,5 +157,31 @@ export function useDeleteFormTypeVersion(formTypeId: string) {
     mutationFn: async (version: number) =>
       (await apiFetch<ManagedFormType | undefined>(formTypeVersionPath(formTypeId, version), { method: 'DELETE' })) ?? null,
     onSuccess: (formType) => afterFormTypeChange(queryClient, formTypeId, formType),
+  });
+}
+
+/**
+ * Khóa lưu tạm thống kê câu trả lời của một loại đơn; thêm điều kiện thì ra khóa của đúng một lần thống kê.
+ * @param formTypeId  mã loại đơn
+ * @param query       điều kiện thống kê; bỏ trống = mọi lần thống kê của loại đơn (để tải lại)
+ * @returns           vd ['formTypes', 'answerStats', 'xmr', { version: 'all', … }]
+ */
+export const formTypeAnswerStatsKey = (formTypeId: string, query?: FormTypeStatsQuery) =>
+  query ? (['formTypes', 'answerStats', formTypeId, query] as const) : (['formTypes', 'answerStats', formTypeId] as const);
+
+/**
+ * Thống kê câu trả lời các đơn của một loại đơn (thẻ Thống kê ở trình soạn). Cần quyền manageFormTypes.
+ * Đổi điều kiện thì giữ số liệu cũ trên màn hình tới khi có số liệu mới.
+ * @param formTypeId  mã loại đơn
+ * @param query       điều kiện: phiên bản, khoảng ngày nộp, trạng thái
+ * @param enabled     true thì tải (vd loại đơn chưa phát hành phiên bản nào thì không tải)
+ * @returns           kết quả useQuery; data = thống kê (FormTypeAnswerStats)
+ */
+export function useFormTypeAnswerStats(formTypeId: string, query: FormTypeStatsQuery, enabled = true) {
+  return useQuery({
+    queryKey: formTypeAnswerStatsKey(formTypeId, query),
+    queryFn: () => apiFetch<FormTypeAnswerStats>(`${formTypeStatsPath(formTypeId)}?${new URLSearchParams(formTypeStatsQueryParams(query))}`),
+    placeholderData: keepPreviousData,
+    enabled,
   });
 }

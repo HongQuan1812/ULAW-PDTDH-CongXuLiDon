@@ -1,13 +1,17 @@
 /* Quản lí loại đơn: danh sách, loại đơn đang mở, phiên bản (xem, tạo loại đơn, thêm phiên bản, lưu Nháp,
-   mở / đóng, xóa Nháp). Chỉ làm việc với database, việc kiểm tra quyền nằm ở controller. */
+   mở / đóng, xóa Nháp), thống kê câu trả lời (thẻ Thống kê). Chỉ làm việc với database, việc kiểm tra quyền nằm ở controller. */
 import { Injectable } from '@nestjs/common';
 import {
   FORM_TYPE_DRAFT_MESSAGES,
   FORM_TYPE_MESSAGES,
+  computeFormTypeAnswerStats,
   issueMessages,
   validateFormTypeDraft,
+  type FormAnswers,
   type FormSection,
   type FormType,
+  type FormTypeAnswerStats,
+  type FormTypeStatsQuery,
   type FormTypeStatus,
   type FormTypeSummary,
   type FormTypeVersion,
@@ -370,5 +374,40 @@ export class FormTypesService {
       return false;
     });
     return deletedWholeFormType ? null : this.findManaged(formTypeId);
+  }
+
+  /**
+   * Thống kê câu trả lời các đơn của một loại đơn (thẻ Thống kê ở trình soạn). Luật đếm, chia nhóm ở computeFormTypeAnswerStats.
+   * @param formTypeId  mã loại đơn
+   * @param query       điều kiện: phiên bản, khoảng ngày nộp, trạng thái
+   * @returns           số đơn, số đơn theo trạng thái, thống kê từng câu hỏi
+   * @throws            404 không có loại đơn, hoặc phiên bản chọn không có (bản nháp không tính)
+   */
+  async findAnswerStats(formTypeId: string, query: FormTypeStatsQuery): Promise<FormTypeAnswerStats> {
+    // Loại đơn và các phiên bản đã từng mở (bản nháp chưa có đơn nào)
+    const formType = await this.prisma.formType.findUnique({
+      where: { id: formTypeId },
+      select: { versions: { where: { status: { not: 'draft' } }, select: { version: true, sections: true } } },
+    });
+    if (!formType) throw new ApiException(404, FORM_TYPE_MESSAGES.notFound);
+
+    // Mọi lá đơn của loại đơn: chỉ đọc phần cần để thống kê
+    const forms = await this.prisma.form.findMany({
+      where: { formTypeId },
+      select: { code: true, formTypeVersion: true, status: true, submittedAt: true, answers: true },
+    });
+    const stats = computeFormTypeAnswerStats(
+      formType.versions.map(({ version, sections }) => ({ version, sections: sections as unknown as FormSection[] })),
+      forms.map((form) => ({
+        code: form.code,
+        version: form.formTypeVersion,
+        status: form.status,
+        submittedAt: toVietnamTime(form.submittedAt),
+        answers: form.answers as unknown as FormAnswers,
+      })),
+      query,
+    );
+    if (!stats) throw new ApiException(404, FORM_TYPE_MESSAGES.versionNotFound);
+    return stats;
   }
 }
