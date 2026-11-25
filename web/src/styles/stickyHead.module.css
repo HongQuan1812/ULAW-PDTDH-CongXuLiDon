@@ -1,0 +1,12 @@
+/* Đầu trang dính ngay dưới thanh menu khi cuộn (trang đơn, trình soạn loại đơn), để các nút ở đầu trang luôn bấm được.
+   Nền mờ như thanh menu, tràn ra hết lề trang (margin âm bằng padding 16px của trang) để chữ cuộn qua không lộ ở hai bên.
+   Dùng: .head{composes:stickyHead from '../../styles/stickyHead.module.css'; …} */
+.stickyHead{position:sticky;top:var(--nav-h);z-index:20;margin-left:-16px;margin-right:-16px;padding:10px 16px;
+  background:color-mix(in srgb,var(--bg) 90%,transparent);backdrop-filter:saturate(1.4) blur(10px)}
+/* menu trượt: thanh trên cùng thấp hơn thanh menu ngang (58px, xem AppLayout.module.css) */
+:global([data-menu="drawer"]) .stickyHead{top:58px}
+/* đã cuộn qua đầu trang: hiện đường kẻ dưới để tách khỏi nội dung (trình duyệt chưa hỗ trợ thì không có đường kẻ) */
+@supports (animation-timeline:scroll()){
+  .stickyHead{animation:headStuck linear both;animation-timeline:scroll(root);animation-range:0 48px}
+}
+@keyframes headStuck{to{box-shadow:0 1px 0 var(--line)}}

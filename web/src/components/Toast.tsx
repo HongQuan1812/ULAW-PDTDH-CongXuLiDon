@@ -4,6 +4,7 @@
    Rê chuột vào (hoặc đưa con trỏ bàn phím vào nút ×) thì giữ thông báo; rời ra thì đếm lại từ đầu. Nút × góc phải trên để tắt ngay.
    Lỗi của từng ô nhập / câu hỏi hiện ngay dưới ô đó; toast chỉ báo chung. */
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
+import { CloseIcon } from './CloseIcon';
 import styles from './Toast.module.css';
 
 /** Kiểu thông báo: 'success' thành công · 'error' lỗi · 'info' thông tin. */
@@ -80,9 +81,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
           <ToneIcon tone={shown.tone} />
           <span className={styles.message}>{shown.message}</span>
           <button type="button" className={styles.close} aria-label="Tắt thông báo" title="Tắt" onClick={dismissToast}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden="true">
-              <path d="M6 6l12 12M18 6 6 18" />
-            </svg>
+            <CloseIcon size={14} strokeWidth={2.4} />
           </button>
         </div>
       )}

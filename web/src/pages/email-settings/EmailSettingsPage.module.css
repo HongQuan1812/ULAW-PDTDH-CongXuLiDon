@@ -54,12 +54,6 @@
 .captionRow{display:flex;align-items:center;justify-content:space-between;gap:8px 16px;flex-wrap:wrap}
 .sendToggle{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
 .sendNote{font-size:12.5px;color:var(--muted)}
-.switch{display:inline-flex;align-items:center;gap:10px;font-size:13.5px;font-weight:500;cursor:pointer}
-.switch input[type=checkbox]{appearance:none;width:36px;height:21px;margin:0;border-radius:11px;background:var(--line-2);position:relative;cursor:pointer;transition:background .15s;flex:none}
-.switch input[type=checkbox]::after{content:"";position:absolute;top:2.5px;left:2.5px;width:16px;height:16px;border-radius:50%;background:var(--surface);box-shadow:0 1px 2px rgba(0,0,0,.2);transition:transform .15s}
-.switch input[type=checkbox]:checked{background:var(--accent)}
-.switch input[type=checkbox]:checked::after{transform:translateX(15px)}
-.switch input[type=checkbox]:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
 .fields{display:flex;flex-direction:column;gap:14px}
 .fields textarea[aria-invalid="true"]{border-color:var(--danger);box-shadow:0 0 0 4px color-mix(in srgb,var(--danger) 12%,transparent)}
 /* ô Nội dung thư (trình soạn có định dạng): cao bằng cỡ một bức thư ngắn */

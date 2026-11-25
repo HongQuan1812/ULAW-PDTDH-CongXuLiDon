@@ -15,6 +15,7 @@ import {
 import { useSaveBackupSchedule } from '../../api/backups';
 import { Button } from '../../components/Button';
 import { Modal } from '../../components/Modal';
+import { Switch } from '../../components/Switch';
 import { useToast } from '../../components/Toast';
 import { errorText, isTargetUsable } from './BackupTargetsCard';
 import { PanelSection } from './PanelSection';
@@ -144,10 +145,12 @@ function ScheduleForm({ overview, schedule, onClose }: { overview: BackupsRespon
     <div className={styles.dialogBody}>
       <div className={styles.dialogHeadRow}>
         <p className={styles.dialogText}>Máy chủ tự sao lưu theo lịch, giờ Việt Nam. Máy chủ tắt đúng lúc đó thì lần ấy bị bỏ qua.</p>
-        <label className={styles.switch}>
-          <input type="checkbox" checked={draft.enabled} onChange={(event) => change({ enabled: event.target.checked })} />
-          {draft.enabled ? 'Đang bật' : 'Đang tắt'}
-        </label>
+        <Switch
+          className={styles.scheduleSwitch}
+          checked={draft.enabled}
+          onChange={(isEnabled) => change({ enabled: isEnabled })}
+          label={draft.enabled ? 'Đang bật' : 'Đang tắt'}
+        />
       </div>
 
       <fieldset className={styles.plain} disabled={!draft.enabled}>

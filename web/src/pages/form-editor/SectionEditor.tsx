@@ -3,6 +3,7 @@
 import { FORM_TYPE_ISSUE_TARGET, type FormSection, type Question } from '@ulaw/shared';
 import { Button } from '../../components/Button';
 import { Field } from '../../components/Field';
+import { Switch } from '../../components/Switch';
 import { GrowingTextarea } from '../../features/form-renderer/GrowingTextarea';
 import { useDraftIssues } from './draftIssues';
 import { EditorIconButton } from './EditorIconButton';
@@ -69,10 +70,11 @@ export function SectionEditor({ section, index, sectionCount, focusQuestionId, a
         </div>
       </div>
 
-      <label className={styles.switch}>
-        <input type="checkbox" checked={section.main} onChange={(event) => onChange({ ...section, main: event.target.checked })} />
-        <span>Nội dung chính — hiện trong xem nhanh (›) ở các bảng đơn</span>
-      </label>
+      <Switch
+        checked={section.main}
+        onChange={(isMain) => onChange({ ...section, main: isMain })}
+        label="Nội dung chính — hiện trong xem nhanh (›) ở các bảng đơn"
+      />
 
       <div className={styles.grid2}>
         <Field label="Tiêu đề phần" required>

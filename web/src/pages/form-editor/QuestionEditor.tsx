@@ -17,6 +17,7 @@ import {
 } from '@ulaw/shared';
 import { Field } from '../../components/Field';
 import { RichTextEditor } from '../../components/rich-text/RichTextEditor';
+import { Switch } from '../../components/Switch';
 import { GrowingTextarea } from '../../features/form-renderer/GrowingTextarea';
 import { useDraftIssues } from './draftIssues';
 import { EditorIconButton } from './EditorIconButton';
@@ -130,10 +131,12 @@ export function QuestionEditor({ question, index, questionCount, autoFocus, onCh
 
         {!isInfo && (
           <div className={styles.questionFoot}>
-            <label className={styles.switch}>
-              <input type="checkbox" checked={required} onChange={(event) => onChange({ ...question, required: event.target.checked })} />
-              <span>Bắt buộc trả lời</span>
-            </label>
+            <Switch
+              className={styles.footSwitch}
+              checked={required}
+              onChange={(isRequired) => onChange({ ...question, required: isRequired })}
+              label="Bắt buộc trả lời"
+            />
             <TagField question={question} onChange={onChange} />
           </div>
         )}

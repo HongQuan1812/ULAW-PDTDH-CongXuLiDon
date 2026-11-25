@@ -4,18 +4,9 @@
 .errorCard{display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);padding:28px}
 
 /* đầu trang: tiêu đề bên trái; nhãn "Chưa lưu" bên phải.
-   Dính ngay dưới thanh menu khi cuộn, để soạn câu hỏi ở dưới vẫn bấm được Soạn / Xem trước;
-   nền mờ như thanh menu, tràn ra hết lề trang (margin âm bằng padding) để chữ cuộn qua không lộ ở hai bên */
-.head{display:flex;align-items:center;justify-content:space-between;gap:16px 24px;flex-wrap:wrap;
-  position:sticky;top:var(--nav-h);z-index:20;margin:-10px -16px;padding:10px 16px;
-  background:color-mix(in srgb,var(--bg) 90%,transparent);backdrop-filter:saturate(1.4) blur(10px)}
-/* menu trượt: thanh trên cùng thấp hơn thanh menu ngang (58px, xem AppLayout.module.css) */
-:global([data-menu="drawer"]) .head{top:58px}
-/* đã cuộn qua đầu trang: hiện đường kẻ dưới để tách khỏi nội dung (trình duyệt chưa hỗ trợ thì không có đường kẻ) */
-@supports (animation-timeline:scroll()){
-  .head{animation:headStuck linear both;animation-timeline:scroll(root);animation-range:0 48px}
-}
-@keyframes headStuck{to{box-shadow:0 1px 0 var(--line)}}
+   Dính ngay dưới thanh menu khi cuộn (stickyHead), để soạn câu hỏi ở dưới vẫn bấm được Soạn / Xem trước */
+.head{composes:stickyHead from '../../styles/stickyHead.module.css';
+  display:flex;align-items:center;justify-content:space-between;gap:16px 24px;flex-wrap:wrap;margin-top:-10px;margin-bottom:-10px}
 .title{font-size:clamp(24px,2.6vw,30px);line-height:1.2;font-weight:600;letter-spacing:-.03em;min-width:0}
 .headActions{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
 .dirty{font-size:12.5px;font-weight:500;color:var(--s-bs-fg);background:var(--s-bs-bg);padding:3px 11px;border-radius:999px}
@@ -60,14 +51,6 @@
 .linkButton{border:0;background:none;color:var(--accent);font-weight:500;font-size:13px;cursor:pointer;padding:4px 2px;justify-self:start}
 .linkButton:hover{text-decoration:underline;text-underline-offset:3px}
 
-/* công tắc bật / tắt */
-.switch{display:inline-flex;align-items:center;gap:10px;font-size:13.5px;cursor:pointer;justify-self:start}
-.switch input[type=checkbox]{appearance:none;width:36px;height:21px;margin:0;border-radius:11px;background:var(--line-2);position:relative;cursor:pointer;transition:background .15s;flex:none}
-.switch input[type=checkbox]::after{content:"";position:absolute;top:2.5px;left:2.5px;width:16px;height:16px;border-radius:50%;background:var(--surface);box-shadow:0 1px 2px rgba(0,0,0,.2);transition:transform .15s}
-.switch input[type=checkbox]:checked{background:var(--accent)}
-.switch input[type=checkbox]:checked::after{transform:translateX(15px)}
-.switch input[type=checkbox]:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
-
 /* chọn trạng thái: các nút tròn dài, chọn một */
 .segment{border:0;padding:0;margin:0;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .segment legend{font-weight:500;font-size:13.5px;margin-bottom:10px;padding:0}
@@ -105,7 +88,7 @@
 .growing{display:block;min-height:42px;line-height:1.45;resize:none;overflow:hidden;overflow-wrap:anywhere}
 .questionLabel{font-weight:500}
 .questionFoot{display:flex;align-items:flex-start;justify-content:space-between;gap:12px 24px;flex-wrap:wrap;padding-top:14px;border-top:1px solid var(--line)}
-.questionFoot>.switch{margin-top:4px}
+.footSwitch{margin-top:4px}
 /* ô "Mã dùng trong file Word" */
 .tagField{display:grid;gap:4px;flex:0 1 520px;min-width:0}
 .tagRow{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:13px;font-weight:500;color:var(--muted)}

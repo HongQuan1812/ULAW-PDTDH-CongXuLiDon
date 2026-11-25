@@ -10,7 +10,7 @@
 import { useState, type FormEvent, type ReactNode } from 'react';
 import { Link, useLocation, useParams } from 'react-router';
 import { FORM_MESSAGES, can, canDecideOn, canEditForm, canReceiveForm, canTransferForm, type FormDetail, type FormStatus } from '@ulaw/shared';
-import { useFormDetail, useReceiveForm } from '../../api/form';
+import { useFormDetail } from '../../api/form';
 import { PAGE_PATH, personProfilePath, readOpenNotes, type ReturnState } from '../../app/paths';
 import { Button } from '../../components/Button';
 import { LoadError, loadErrorMessage } from '../../components/LoadError';
@@ -24,6 +24,7 @@ import { FormSections } from '../../features/form-renderer/FormSections';
 import { answersChanged } from '../../features/form-renderer/formAnswers';
 import { useFormAnswers } from '../../features/form-renderer/useFormAnswers';
 import { useSaveFormChanges } from '../../features/form-renderer/useSaveFormChanges';
+import { ReceiveFormButton } from '../../features/receive/ReceiveFormButton';
 import { EMPTY_TEXT, formatDateTime } from '../../lib/format';
 import { DecideBar } from './DecideBar';
 import { FormInfoPanel, FormInfoPanelToggle, FormInfoSection, useFormInfoPanel } from './FormInfoPanel';
@@ -38,9 +39,6 @@ const LOAD_FAILED_TEXT = 'Không tải được đơn.';
 
 /** Câu báo khi lưu thay đổi lỗi mà không có câu báo nào (vd mất mạng). */
 const SAVE_FAILED_TEXT = 'Chưa lưu được thay đổi. Kiểm tra kết nối mạng rồi bấm Lưu thay đổi lại.';
-
-/** Câu báo khi tiếp nhận lỗi mà không có câu báo nào (vd mất mạng). */
-const RECEIVE_FAILED_TEXT = 'Chưa tiếp nhận được đơn. Kiểm tra kết nối mạng rồi bấm Tiếp nhận lại.';
 
 /* Câu thông báo theo trạng thái.
    Giống nhau với mọi vai trò, không đổi theo người xem. */
@@ -136,7 +134,7 @@ function FormDetailView({ form }: { form: FormDetail }) {
         <div className={styles.headActions}>
           <FormInfoPanelToggle panel={infoPanel} />
           <ExportButton form={form} />
-          {canReceiveForm(role, form.status) && <ReceiveButton form={form} />}
+          {canReceiveForm(role, form.status) && <ReceiveFormButton code={form.code} className={styles.headButton} />}
         </div>
       </div>
 
@@ -258,31 +256,6 @@ function FormEditor({ form, onReset }: { form: FormDetail; onReset: () => void }
         </SubmitBar>
       )}
     </form>
-  );
-}
-
-/**
- * Nút "Tiếp nhận" ở đầu trang. Bấm thì đơn chuyển sang Đang xét,
- * mình thành người tiếp nhận và người xử lí; trang vẽ lại theo lá đơn mới, toast ghi giờ tiếp nhận.
- * @param form  lá đơn đang chờ tiếp nhận
- * @returns     nút bấm; đang gửi thì khóa nút
- */
-function ReceiveButton({ form }: { form: FormDetail }) {
-  const toast = useToast();
-  const receive = useReceiveForm(form.code);
-
-  /** Bấm Tiếp nhận: gửi lên máy chủ, xong thì báo giờ tiếp nhận; lỗi thì báo câu máy chủ gửi. */
-  const receiveForm = () =>
-    receive.mutate(undefined, {
-      onSuccess: (receivedForm) =>
-        toast(FORM_MESSAGES.received(receivedForm.code, formatDateTime(receivedForm.receivedAt ?? receivedForm.updatedAt)), 'success'),
-      onError: (error) => toast(error.message || RECEIVE_FAILED_TEXT, 'error'),
-    });
-
-  return (
-    <Button variant="primary" className={styles.headButton} onClick={receiveForm} disabled={receive.isPending}>
-      {receive.isPending ? 'Đang tiếp nhận…' : 'Tiếp nhận'}
-    </Button>
   );
 }
 

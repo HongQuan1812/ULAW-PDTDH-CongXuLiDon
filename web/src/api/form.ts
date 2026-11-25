@@ -39,21 +39,22 @@ export function useFormDetail(code: string) {
 }
 
 /**
- * Tiếp nhận một lá đơn (cán bộ). Thành công thì trang chi tiết dùng ngay lá đơn máy chủ trả về, các bảng đơn tải lại.
- * Đơn không còn chờ tiếp nhận (vd cán bộ khác vừa tiếp nhận) hoặc không còn thì tải lại đơn để trang hiện đúng trạng thái.
- * @param code  mã đơn
- * @returns     kết quả useMutation; gọi mutate(). data = lá đơn sau khi tiếp nhận
+ * Một thao tác xử lí đơn của cán bộ (tiếp nhận, ra quyết định, chuyển giao); mọi thao tác cùng cách cập nhật giao diện:
+ * thành công thì trang chi tiết dùng ngay lá đơn máy chủ trả về, các bảng đơn và thống kê tải lại;
+ * đơn không còn làm được thao tác này (409, vd cán bộ khác vừa xử lí) hoặc không còn (404) thì tải lại đơn để trang hiện đúng trạng thái.
+ * @param code         mã đơn
+ * @param callFormApi  gọi API của thao tác, trả lá đơn sau khi làm
+ * @returns            kết quả useMutation; data = lá đơn sau khi làm
  */
-export function useReceiveForm(code: string) {
+function useFormAction<Request = void>(code: string, callFormApi: (request: Request) => Promise<FormDetail>) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: () => apiFetch<FormDetail>(formReceivePath(code), { method: 'POST' }),
-    onSuccess: (receivedForm) => {
-      queryClient.setQueryData(formDetailKey(code), receivedForm);
-      void queryClient.invalidateQueries({ queryKey: MY_FORMS_KEY });
-      void queryClient.invalidateQueries({ queryKey: HANDLED_FORMS_KEY });
-      void queryClient.invalidateQueries({ queryKey: ALL_FORMS_KEY });
-      void queryClient.invalidateQueries({ queryKey: FORM_STATS_KEY });
+    mutationFn: callFormApi,
+    onSuccess: (changedForm) => {
+      queryClient.setQueryData(formDetailKey(code), changedForm);
+      for (const listKey of [MY_FORMS_KEY, HANDLED_FORMS_KEY, ALL_FORMS_KEY, FORM_STATS_KEY]) {
+        void queryClient.invalidateQueries({ queryKey: listKey });
+      }
     },
     onError: (error) => {
       if (error instanceof ApiError && (error.status === 409 || error.status === 404)) {
@@ -64,29 +65,23 @@ export function useReceiveForm(code: string) {
 }
 
 /**
- * Ra quyết định về một đơn Đang xét (cán bộ): Yêu cầu bổ sung, Duyệt hoặc Từ chối. Thành công thì trang chi tiết dùng ngay lá đơn
- * máy chủ trả về, các bảng đơn tải lại. Đơn không còn Đang xét (vd cán bộ khác vừa xử lí) hoặc không còn thì tải lại đơn để trang hiện đúng trạng thái.
+ * Tiếp nhận một lá đơn (cán bộ); đơn không còn chờ tiếp nhận thì tải lại đơn (xem useFormAction).
+ * @param code  mã đơn
+ * @returns     kết quả useMutation; gọi mutate(). data = lá đơn sau khi tiếp nhận
+ */
+export function useReceiveForm(code: string) {
+  return useFormAction(code, () => apiFetch<FormDetail>(formReceivePath(code), { method: 'POST' }));
+}
+
+/**
+ * Ra quyết định về một đơn Đang xét (cán bộ): Yêu cầu bổ sung, Duyệt hoặc Từ chối; đơn không còn Đang xét thì tải lại đơn (xem useFormAction).
  * @param code  mã đơn
  * @returns     kết quả useMutation; gọi mutate({ decision, note }). data = lá đơn sau khi ra quyết định
  */
 export function useDecideForm(code: string) {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (decideRequest: DecideFormRequest) =>
-      apiFetch<FormDetail>(formDecisionPath(code), { method: 'POST', body: JSON.stringify(decideRequest) }),
-    onSuccess: (decidedForm) => {
-      queryClient.setQueryData(formDetailKey(code), decidedForm);
-      void queryClient.invalidateQueries({ queryKey: MY_FORMS_KEY });
-      void queryClient.invalidateQueries({ queryKey: HANDLED_FORMS_KEY });
-      void queryClient.invalidateQueries({ queryKey: ALL_FORMS_KEY });
-      void queryClient.invalidateQueries({ queryKey: FORM_STATS_KEY });
-    },
-    onError: (error) => {
-      if (error instanceof ApiError && (error.status === 409 || error.status === 404)) {
-        void queryClient.invalidateQueries({ queryKey: formDetailKey(code) });
-      }
-    },
-  });
+  return useFormAction(code, (decideRequest: DecideFormRequest) =>
+    apiFetch<FormDetail>(formDecisionPath(code), { method: 'POST', body: JSON.stringify(decideRequest) }),
+  );
 }
 
 /**
@@ -106,29 +101,14 @@ export function useTransferTargets(code: string, enabled: boolean) {
 }
 
 /**
- * Chuyển giao một lá đơn cho cán bộ khác. Thành công thì trang chi tiết dùng ngay lá đơn máy chủ trả về, các bảng đơn tải lại.
- * Đơn không còn chuyển giao được (vd đã có kết quả) hoặc không còn thì tải lại đơn để trang hiện đúng trạng thái.
+ * Chuyển giao một lá đơn cho cán bộ khác; đơn không còn chuyển giao được (vd đã có kết quả) thì tải lại đơn (xem useFormAction).
  * @param code  mã đơn
  * @returns     kết quả useMutation; gọi mutate({ toStaffId }). data = lá đơn sau khi chuyển giao
  */
 export function useTransferForm(code: string) {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (transferRequest: TransferFormRequest) =>
-      apiFetch<FormDetail>(formTransferPath(code), { method: 'POST', body: JSON.stringify(transferRequest) }),
-    onSuccess: (transferredForm) => {
-      queryClient.setQueryData(formDetailKey(code), transferredForm);
-      void queryClient.invalidateQueries({ queryKey: MY_FORMS_KEY });
-      void queryClient.invalidateQueries({ queryKey: HANDLED_FORMS_KEY });
-      void queryClient.invalidateQueries({ queryKey: ALL_FORMS_KEY });
-      void queryClient.invalidateQueries({ queryKey: FORM_STATS_KEY });
-    },
-    onError: (error) => {
-      if (error instanceof ApiError && (error.status === 409 || error.status === 404)) {
-        void queryClient.invalidateQueries({ queryKey: formDetailKey(code) });
-      }
-    },
-  });
+  return useFormAction(code, (transferRequest: TransferFormRequest) =>
+    apiFetch<FormDetail>(formTransferPath(code), { method: 'POST', body: JSON.stringify(transferRequest) }),
+  );
 }
 
 /**

@@ -3,7 +3,7 @@
    tìm kiếm / Sắp xếp / Lọc / phân trang dùng chung với các bảng khác, mặc định xếp theo họ tên A → Z.
    Bấm một dòng: mở trang thông tin của tài khoản đó (dòng của mình → Thông tin cá nhân). Nút Sửa cuối dòng, nút "+ Tạo tài khoản" ở đầu thẻ,
    nút Hiện CCCD trên thanh công cụ (sau nút Lọc). */
-import { useEffect, useMemo, useState, type KeyboardEvent } from 'react';
+import { useMemo, useState, type KeyboardEvent } from 'react';
 import { useNavigate } from 'react-router';
 import { ACCOUNT_LIST_FIELDS, ROLES, type Account, type RoleId } from '@ulaw/shared';
 import { ACCOUNTS_SOURCE, useAccountCccds } from '../../api/accounts';
@@ -11,13 +11,12 @@ import { PAGE_LABEL, PAGE_PATH, personProfilePath, type ReturnState } from '../.
 import { Button } from '../../components/Button';
 import { LoadError } from '../../components/LoadError';
 import { RefreshButton } from '../../components/RefreshButton';
-import { useToast } from '../../components/Toast';
 import { HeaderCell } from '../../components/table/HeaderCell';
 import { Highlight } from '../../components/table/Highlight';
 import { Pager } from '../../components/table/Pager';
 import { TableToolbar } from '../../components/table/TableToolbar';
 import { displayText, type TableField } from '../../components/table/tableTools';
-import { CccdToggleButton } from '../../components/table/CccdToggleButton';
+import { useCccdToggle } from '../../components/table/CccdToggleButton';
 import { useServerTable } from '../../components/table/useServerTable';
 import { AccountDialog } from '../../features/accounts/AccountDialog';
 import { useAuth } from '../../features/auth/useAuth';
@@ -35,9 +34,6 @@ const TABLE_ID = 'accounts.all';
 /** Số cột của bảng: các cột dữ liệu (ACCOUNT_LIST_FIELDS) và cột nút Sửa. */
 const COLUMN_COUNT = ACCOUNT_LIST_FIELDS.length + 1;
 
-/** Câu báo khi không tải được số CCCD mà máy chủ không gửi kèm câu báo lỗi (vd mất mạng). */
-const CCCD_FAILED_TEXT = 'Chưa tải được số CCCD. Kiểm tra kết nối mạng rồi bấm Hiện CCCD lại.';
-
 /**
  * Trang Quản lí tài khoản.
  * @returns  thẻ bảng tài khoản: tiêu đề, nút ↻ và "+ Tạo tài khoản" ở đầu thẻ; thanh công cụ (có Hiện CCCD); hộp tạo / sửa tài khoản
@@ -45,31 +41,23 @@ const CCCD_FAILED_TEXT = 'Chưa tải được số CCCD. Kiểm tra kết nối
 export function AccountsPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const toast = useToast();
   const accountsTable = useServerTable({ tableId: TABLE_ID, source: ACCOUNTS_SOURCE, pageSize: PAGE_SIZE });
   const { searchText: query, sorting, filterRules, hasCriteria, isPageLoading, errorMessage } = accountsTable;
   // Hộp tạo / sửa: null = đóng; account null = tạo mới
   const [dialog, setDialog] = useState<{ account: Account | null } | null>(null);
 
   // Hiện CCCD: chỉ tải CCCD của các tài khoản đang có trên trang bảng
-  const [showCccd, setShowCccd] = useState(false);
   const pageAccounts = accountsTable.rows;
-  const cccdsQuery = useAccountCccds(showCccd, pageAccounts.map((account) => account.id));
+  const { revealedCccds: revealed, toggleButton: cccdToggleButton } = useCccdToggle(
+    useAccountCccds,
+    pageAccounts.map((account) => account.id),
+  );
 
   // Đang hiện CCCD thì thay số che bằng số đầy đủ (tài khoản chưa có CCCD giữ nguyên null)
-  const revealed = showCccd && cccdsQuery.data ? cccdsQuery.data : null;
   const pageRows = useMemo(() => {
     if (!revealed) return pageAccounts;
     return pageAccounts.map((account) => ({ ...account, maskedCccd: revealed[account.id] ?? account.maskedCccd }));
   }, [pageAccounts, revealed]);
-
-  // Tải CCCD lỗi thì báo và tự ẩn lại (bấm Hiện CCCD để thử lần nữa)
-  const cccdsError = cccdsQuery.isError ? cccdsQuery.error : null;
-  useEffect(() => {
-    if (!cccdsError) return;
-    toast(cccdsError.message || CCCD_FAILED_TEXT, 'error');
-    setShowCccd(false);
-  }, [cccdsError, toast]);
 
   // Bấm dòng (hoặc Enter trên dòng đang chọn): mở trang thông tin của tài khoản; dòng của mình → Thông tin cá nhân.
   // Trang mở ra có nút "‹ Quay lại Quản lí tài khoản"
@@ -120,13 +108,7 @@ export function AccountsPage() {
           filterRules={filterRules}
           onFilterRulesChange={accountsTable.setFilterRules}
           defaultFilterKey="role"
-          extraButtons={
-            <CccdToggleButton
-              shown={showCccd}
-              loading={showCccd && cccdsQuery.isFetching}
-              onToggle={() => setShowCccd((isShown) => !isShown)}
-            />
-          }
+          extraButtons={cccdToggleButton}
         />
 
         {/* Đang chờ trang mới: trang cũ mờ đi, không bấm được, có vạch tải ở mép trên bảng */}

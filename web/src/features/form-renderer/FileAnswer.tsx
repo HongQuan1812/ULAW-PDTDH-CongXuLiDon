@@ -5,6 +5,7 @@ import { FileDropZone } from '../../components/FileDropZone';
 import { FilePreview } from '../file-preview/FilePreview';
 import type { AnswerProps } from './answerProps';
 import { keepLocalFile } from './localFiles';
+import { CloseIcon } from '../../components/CloseIcon';
 import styles from './FormRenderer.module.css';
 
 /** Kiểu tệp (MIME) theo đuôi tệp, để hộp chọn tệp của máy lọc đúng loại. */
@@ -123,9 +124,7 @@ export function FileAnswer({
                   title="Gỡ tệp"
                   onClick={() => removeFile(file.id)}
                 >
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
-                    <path d="M6 6l12 12M18 6 6 18" />
-                  </svg>
+                  <CloseIcon size={18} strokeWidth={1.8} />
                 </button>
               )}
             </li>
