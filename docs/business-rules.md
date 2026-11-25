@@ -189,7 +189,7 @@ Mỗi loại đơn có hai nhóm mẫu, lưu ở máy chủ theo loại đơn, d
 
 ## Thống kê ở trang Quản lí đơn
 
-- Theo trạng thái (số đơn và % của từng trạng thái) và theo loại đơn (biểu đồ cột). Máy chủ đếm.
+- Theo trạng thái (số đơn và % của từng trạng thái) và theo loại đơn (vành khuyên: 5 loại nhiều đơn nhất mỗi loại một màu, còn lại gộp "Khác" màu xám, bấm để xem; lát từ 10% ghi phần trăm trên hình, số đơn và phần trăm đủ ở chú thích). Máy chủ đếm.
 - Đếm trên **tất cả** đơn, không đổi theo ô tìm kiếm / bộ lọc. Bấm một mục để lọc bảng theo mục đó; bấm lại để bỏ lọc.
 
 ## Cấu hình email

@@ -17,6 +17,7 @@ import {
 import { useSendTestEmail } from '../../api/email';
 import { Button } from '../../components/Button';
 import { Field } from '../../components/Field';
+import { Switch } from '../../components/Switch';
 import { useToast } from '../../components/Toast';
 import { useAuth } from '../../features/auth/useAuth';
 import { EmailComposer } from './EmailComposer';
@@ -84,10 +85,7 @@ export function EmailEventEditor({ event, eventIndex, sender, senderAddress, fie
           <p className={styles.caption}>Soạn thư</p>
           <div className={styles.sendToggle}>
             <span className={styles.sendNote}>{event.enabled ? 'Gửi tới email người nộp đơn' : 'Đang tắt, không gửi email'}</span>
-            <label className={styles.switch}>
-              <span>Gửi email</span>
-              <input type="checkbox" checked={event.enabled} onChange={(changeEvent) => onChange({ enabled: changeEvent.target.checked })} />
-            </label>
+            <Switch checked={event.enabled} onChange={(isEnabled) => onChange({ enabled: isEnabled })} label="Gửi email" labelBefore />
           </div>
         </div>
 

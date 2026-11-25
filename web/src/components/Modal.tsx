@@ -2,6 +2,7 @@
 import { useEffect, useId, useRef, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { useCloseOnEscape } from '../lib/useCloseOnEscape';
+import { CloseIcon } from './CloseIcon';
 import styles from './Modal.module.css';
 
 /**
@@ -71,9 +72,7 @@ export function Modal({
           <div className={styles.head}>
             <h2 id={titleId}>{title}</h2>
             <button type="button" className={styles.closeButton} aria-label="Đóng" onClick={onClose}>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
-                <path d="M6 6l12 12M18 6 6 18" />
-              </svg>
+              <CloseIcon />
             </button>
           </div>
         ) : (

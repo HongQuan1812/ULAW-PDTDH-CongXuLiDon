@@ -9,6 +9,7 @@ import {
   type TableField,
 } from './tableTools';
 import { DateInput } from '../DateInput';
+import { SelectPlaceholder } from '../SelectPlaceholder';
 import { isIsoDate } from '../../lib/format';
 import styles from './table.module.css';
 
@@ -127,7 +128,7 @@ function FilterValueInputs<Row>({
   if (field.type === 'select') {
     return (
       <select aria-label="Giá trị" value={rule.value} onChange={(event) => onChange({ value: event.target.value })}>
-        <option value="">Chọn…</option>
+        <SelectPlaceholder />
         {(field.options ?? filterOptions[field.key] ?? []).map((option) => (
           <option key={option.value} value={option.value}>
             {option.label}

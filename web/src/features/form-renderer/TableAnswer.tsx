@@ -3,6 +3,7 @@ import { useEffect, useRef, type CSSProperties } from 'react';
 import { isEmptyCell, isValidTableCell, type TableCell, type TableColumn } from '@ulaw/shared';
 import { Button } from '../../components/Button';
 import { DateInput } from '../../components/DateInput';
+import { SelectPlaceholder } from '../../components/SelectPlaceholder';
 import { formatDate } from '../../lib/format';
 import type { AnswerProps } from './answerProps';
 import { emptyTableRow, tableTotalText } from './formAnswers';
@@ -187,7 +188,7 @@ export function TableAnswer({
                   return (
                     <td key={columnIndex}>
                       {column.type === 'select' ? (
-                        // Ô chưa chọn ghi "— Chọn —" (không lấy chữ mờ); dòng này ẩn khỏi danh sách sổ xuống, chỉ còn các lựa chọn
+                        // Ô chưa chọn ghi "— Chọn —" (không lấy chữ mờ của cột)
                         // Giá trị cũ không còn trong danh sách (người soạn đã sửa lựa chọn) vẫn hiện để người nộp thấy mà chọn lại
                         <select
                           className={`${styles.cellSelect} ${isEmptyCell(cell) ? styles.cellSelectEmpty : ''} ${cellInvalid ? styles.invalid : ''}`}
@@ -196,9 +197,7 @@ export function TableAnswer({
                           aria-label={cellProps['aria-label']}
                           aria-invalid={cellProps['aria-invalid']}
                         >
-                          <option value="" disabled hidden>
-                            — Chọn —
-                          </option>
+                          <SelectPlaceholder />
                           {typeof cell === 'string' && cell && !(column.options ?? []).includes(cell) && <option value={cell}>{cell}</option>}
                           {(column.options ?? []).map((option) => (
                             <option key={option} value={option}>

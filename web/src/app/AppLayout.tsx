@@ -7,6 +7,7 @@ import { Navigate, NavLink, Outlet, useLocation } from 'react-router';
 import { PAGES, SETTINGS_PAGES, canSeePage, type Page } from '@ulaw/shared';
 import { useSession } from '../api/auth';
 import { Avatar } from '../components/Avatar';
+import { CloseIcon } from '../components/CloseIcon';
 import { LoadError } from '../components/LoadError';
 import { RefreshButton } from '../components/RefreshButton';
 import { AccountMenu } from './AccountMenu';
@@ -253,13 +254,6 @@ function MenuIcon() {
   );
 }
 
-function CloseIcon() {
-  return (
-    <Icon strokeWidth={2}>
-      <path d="M6 6l12 12M18 6 6 18" />
-    </Icon>
-  );
-}
 
 function LogoutIcon() {
   return (

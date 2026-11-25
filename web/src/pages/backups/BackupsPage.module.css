@@ -99,8 +99,8 @@
 .fieldHint{font-size:12.5px;font-weight:400;color:var(--muted)}
 .fieldError{font-size:12.5px;font-weight:400;color:var(--s-tc-fg)}
 .fieldRow{display:flex;gap:12px;flex-wrap:wrap}
-.switch{display:inline-flex;align-items:center;gap:8px;flex-shrink:0;white-space:nowrap;font-size:13.5px;font-weight:500;cursor:pointer}
-.switch input{width:18px;height:18px;accent-color:var(--accent)}
+/* nút gạt bật / tắt lịch: không co, không xuống dòng cạnh câu mô tả */
+.scheduleSwitch{flex-shrink:0;white-space:nowrap}
 .dialogHeadRow{display:flex;align-items:center;justify-content:space-between;gap:12px}
 .plain{border:0;margin:0;padding:0;min-width:0;display:grid;gap:16px}
 .plain:disabled{opacity:.55}

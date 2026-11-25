@@ -92,8 +92,8 @@ Cổng xử lí đơn/
 │       │                         #   settings (Cấu hình: thẻ dẫn tới email-settings · data-sources · backups)
 │       ├── features/             # logic dùng lại giữa các trang:
 │       │                         #   auth (useAuth, useCan) · form-renderer
-│       │                         #   file-preview · export · transfer
-│       ├── components/           # UI chung: DataTable, Sort/FilterPopover, Modal, Toast, StatusPill, Avatar…
+│       │                         #   file-preview · export · transfer · receive (nút Tiếp nhận)
+│       ├── components/           # UI chung: DataTable, Sort/FilterPopover, Modal, Toast, StatusPill, Avatar, Switch, CloseIcon, SelectPlaceholder…
 │       ├── api/                  # client gọi API, các hook TanStack Query
 │       ├── mocks/                # MSW: browser.ts · db.ts (dữ liệu giả trong bộ nhớ) · handlers/ (auth, forms, form-types, users, files…)
 │       ├── lib/                  # định dạng ngày giờ, SĐT, che CCCD…

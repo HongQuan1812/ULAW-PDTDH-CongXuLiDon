@@ -14,6 +14,7 @@ import { ImageView } from './ImageView';
 import { PdfView } from './PdfView';
 import { PreviewMessage } from './PreviewMessage';
 import { WordView } from './WordView';
+import { CloseIcon } from '../../components/CloseIcon';
 import styles from './FilePreview.module.css';
 
 /** Tệp cần xem: FileRef của câu trả lời, có thể kèm nội dung sẵn và tên nút tải. */
@@ -109,9 +110,7 @@ function OpenFilePreview({ file, onClose }: { file: PreviewFile; onClose: () => 
           </a>
         )}
         <button ref={closeButtonRef} type="button" className={styles.close} aria-label="Đóng" title="Đóng (Esc)" onClick={onClose}>
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
-            <path d="M6 6l12 12M18 6 6 18" />
-          </svg>
+          <CloseIcon strokeWidth={1.8} />
         </button>
       </div>
       <div className={styles.body}>{renderBody()}</div>
