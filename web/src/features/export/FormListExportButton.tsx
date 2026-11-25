@@ -1,13 +1,13 @@
-/* Nút "Xuất thống kê" ở đầu trình soạn loại đơn. Bấm nút thì mở hộp "Xuất thống kê" để chọn điều kiện:
+/* Nút "Xuất danh sách đơn" ở đầu trình soạn loại đơn. Bấm nút thì mở hộp "Xuất danh sách đơn" để chọn điều kiện:
    - Phiên bản: một phiên bản (mặc định là phiên bản đang xem) hoặc Tất cả (mỗi phiên bản một sheet, đều là bản sao cấu trúc của mẫu)
    - Ngày nộp: từ ngày nào đến ngày nào (bỏ trống = không giới hạn)
-   Dưới đó là các mẫu thống kê ĐÃ LƯU, mỗi mẫu một dòng tự so mã trong mẫu với câu hỏi của phiên bản được chọn (đỏ khi có mã không khớp,
+   Dưới đó là các mẫu danh sách đơn ĐÃ LƯU, mỗi mẫu một dòng tự so mã trong mẫu với câu hỏi của phiên bản được chọn (đỏ khi có mã không khớp,
    xanh khi khớp hết), rồi bấm "Xuất" ở mẫu muốn dùng. Mã nào phiên bản đó không có thì ô để trống.
    File Excel nhận về mở trong trình xem, có nút "Tải file Excel" trên thanh xem. */
 import { useState } from 'react';
 import { useQueries } from '@tanstack/react-query';
 import type { ExportTemplate, FormTypeVersion } from '@ulaw/shared';
-import { checkExportTemplate, exportStats, useExportTemplates } from '../../api/exports';
+import { checkExportTemplate, exportFormList, useExportTemplates } from '../../api/exports';
 import { Button } from '../../components/Button';
 import { DateInput } from '../../components/DateInput';
 import { Modal } from '../../components/Modal';
@@ -34,7 +34,7 @@ function dayOf(typedDay: string): string | null | undefined {
 }
 
 /**
- * Nút Xuất thống kê của một loại đơn.
+ * Nút Xuất danh sách đơn của một loại đơn.
  * @param formTypeId     mã loại đơn (đã lưu)
  * @param prefix         tiền tố mã đơn (để gửi kèm lúc kiểm tra mã)
  * @param versions       các phiên bản đã lưu của loại đơn
@@ -42,7 +42,7 @@ function dayOf(typedDay: string): string | null | undefined {
  * @param className      lớp CSS thêm cho nút
  * @returns              nút, hộp chọn điều kiện và mẫu, trình xem file đã điền
  */
-export function StatsExportButton({
+export function FormListExportButton({
   formTypeId,
   prefix,
   versions,
@@ -57,7 +57,7 @@ export function StatsExportButton({
 }) {
   const toast = useToast();
   const templatesQuery = useExportTemplates(formTypeId);
-  const templates = (templatesQuery.data ?? []).filter((template) => template.purpose === 'stats');
+  const templates = (templatesQuery.data ?? []).filter((template) => template.purpose === 'list');
 
   // Bản nháp chưa có đơn nào nên không xuất được; các phiên bản còn lại, cũ trước
   const exportableVersions = versions.filter((version) => version.status !== 'draft').sort((first, second) => first.version - second.version);
@@ -85,7 +85,7 @@ export function StatsExportButton({
   const checkPairs = templates.flatMap((template) => chosenVersions.map((version) => ({ template, version })));
   const checks = useQueries({
     queries: checkPairs.map(({ template, version }) => ({
-      queryKey: ['export-check-stats', formTypeId, template.id, template.uploadedAt, version.version, version.updatedAt],
+      queryKey: ['export-check-form-list', formTypeId, template.id, template.uploadedAt, version.version, version.updatedAt],
       queryFn: async (): Promise<TemplateResult> => {
         try {
           const check = await checkExportTemplate(formTypeId, template.id, { name: version.name, prefix, sections: version.sections });
@@ -106,25 +106,25 @@ export function StatsExportButton({
   };
 
   /**
-   * Xuất theo một mẫu thống kê: xong thì đóng hộp, mở trình xem file Excel đã điền; lỗi thì báo câu máy chủ gửi.
+   * Xuất theo một mẫu danh sách đơn: xong thì đóng hộp, mở trình xem file Excel đã điền; lỗi thì báo câu máy chủ gửi.
    * @param template  mẫu đã chọn
    */
   const exportWith = async (template: ExportTemplate) => {
     if (submittedFrom === undefined || submittedTo === undefined) return;
     setExportingId(template.id);
     try {
-      const exported = await exportStats(formTypeId, template.id, {
+      const exported = await exportFormList(formTypeId, template.id, {
         version: versionChoice === ALL_VERSIONS ? ALL_VERSIONS : Number(versionChoice),
         submittedFrom,
         submittedTo,
       });
       setDialogOpen(false);
       setExportedFile({
-        id: `export-stats-${formTypeId}-${template.id}-${Date.now()}`,
+        id: `export-form-list-${formTypeId}-${template.id}-${Date.now()}`,
         name: exported.fileName,
         sizeBytes: exported.content.size,
         content: exported.content,
-        title: `Thống kê · ${template.name}`,
+        title: `Danh sách đơn · ${template.name}`,
         note: XLSX_PREVIEW_NOTE,
         downloadLabel: 'Tải file Excel',
       });
@@ -144,8 +144,8 @@ export function StatsExportButton({
         disabled={cannotOpen}
         title={
           cannotOpen
-            ? 'Chưa có mẫu thống kê. Bấm nút tròn “Mẫu xuất file thống kê” ở cạnh phải, thêm file Excel rồi bấm Lưu.'
-            : 'Chọn phiên bản, ngày nộp và mẫu để xem, tải file Excel thống kê'
+            ? 'Chưa có mẫu danh sách đơn. Bấm nút tròn “Mẫu xuất danh sách đơn” ở cạnh phải, thêm file Excel rồi bấm Lưu.'
+            : 'Chọn phiên bản, ngày nộp và mẫu để xem, tải file Excel danh sách đơn'
         }
         onClick={openDialog}
       >
@@ -154,10 +154,10 @@ export function StatsExportButton({
           <rect x="3" y="3" width="18" height="18" rx="2" />
           <path d="M3 9h18M3 15h18M9 3v18" />
         </svg>
-        Xuất thống kê
+        Xuất danh sách đơn
       </Button>
 
-      <Modal open={dialogOpen} onClose={() => setDialogOpen(false)} title="Xuất thống kê" showCloseButton className={styles.dialog}>
+      <Modal open={dialogOpen} onClose={() => setDialogOpen(false)} title="Xuất danh sách đơn" showCloseButton className={styles.dialog}>
         <div className={styles.filters}>
           <label className={styles.filterField}>
             <span>Phiên bản</span>

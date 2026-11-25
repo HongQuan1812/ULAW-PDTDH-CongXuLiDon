@@ -1076,11 +1076,11 @@ export function getExportSource(code: string, viewer?: { id: string; role: RoleI
 }
 
 /**
- * Thông tin điền mẫu thống kê của một loại đơn: mọi lá đơn (cũ trước, kèm phiên bản lúc nộp), các phiên bản đã từng mở, tiền tố mã đơn.
+ * Thông tin điền mẫu xuất danh sách đơn của một loại đơn: mọi lá đơn (cũ trước, kèm phiên bản lúc nộp), các phiên bản đã từng mở, tiền tố mã đơn.
  * @param formTypeId  mã loại đơn (đã biết là có)
  * @returns           forms: thông tin từng đơn + phiên bản · versions: số và tên các phiên bản không phải bản nháp, cũ trước · prefix: tiền tố mã đơn
  */
-export function getStatsExportSources(formTypeId: string): {
+export function getFormListExportSources(formTypeId: string): {
   forms: Array<{ source: ExportSource; version: number }>;
   versions: Array<{ version: number; name: string }>;
   prefix: string;

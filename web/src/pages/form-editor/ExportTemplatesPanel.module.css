@@ -9,9 +9,9 @@
 .fab:hover{background:var(--accent-ink);transform:translateY(-1px)}
 .fab:focus-visible{outline:3px solid color-mix(in srgb,var(--focus) 40%,transparent);outline-offset:3px}
 .fabOpen{background:var(--accent-ink)}
-/* nút mẫu thống kê (Excel) màu xanh lá */
-.fabStats{background:var(--ok)}
-.fabStats:hover,.fabStats.fabOpen{background:color-mix(in srgb,var(--ok) 80%,#000)}
+/* nút mẫu danh sách đơn (Excel) màu xanh lá */
+.fabFormList{background:var(--ok)}
+.fabFormList:hover,.fabFormList.fabOpen{background:color-mix(in srgb,var(--ok) 80%,#000)}
 /* số mẫu ở góc nút; có thay đổi chưa lưu thì màu cam như nhãn "Chưa lưu" */
 .fabBadge{position:absolute;top:-2px;right:-2px;min-width:20px;height:20px;padding:0 6px;border-radius:999px;background:var(--surface);color:var(--accent-ink);
   border:1px solid var(--line);font-size:11.5px;font-weight:700;line-height:18px;text-align:center}

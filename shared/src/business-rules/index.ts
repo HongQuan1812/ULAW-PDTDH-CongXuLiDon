@@ -3,7 +3,7 @@ export * from './accounts--permissions';
 export * from './backups--schedule';
 export * from './email--tags';
 export * from './exports--docx';
-export * from './exports--stats';
+export * from './exports--form-list';
 export * from './exports--tags';
 export * from './exports--xlsx';
 export * from './form-types--stats';

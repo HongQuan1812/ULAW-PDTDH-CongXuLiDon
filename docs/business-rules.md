@@ -142,7 +142,7 @@ Cần bổ sung / Đã duyệt / Từ chối thì câu thông báo ghi kèm lúc
 
 Mỗi loại đơn có hai nhóm mẫu, lưu ở máy chủ theo loại đơn, dùng chung mọi phiên bản, cùng một bộ mã trường:
 - **Mẫu xuất file đơn** (Word `.docx`): điền dữ liệu của một lá đơn.
-- **Mẫu xuất file thống kê** (Excel `.xlsx`): điền các lá đơn của loại đơn theo phiên bản và ngày nộp, mỗi đơn một hàng.
+- **Mẫu xuất danh sách đơn** (Excel `.xlsx`): điền các lá đơn của loại đơn theo phiên bản và ngày nộp, mỗi đơn một hàng.
 
 ### Mẫu xuất file đơn (Word)
 
@@ -161,11 +161,11 @@ Mỗi loại đơn có hai nhóm mẫu, lưu ở máy chủ theo loại đơn, d
     Thêm `{so_<mã bảng>}` (số dòng) và `{tong_<mã cột>}` (tổng cột), đặt ở đâu cũng được. Mẫu còn `{#…}` `{/…}` thì Kiểm tra mẫu báo lỗi, bảo xóa đi.
 - **Kiểm tra** mẫu báo mã không có trong loại đơn và lỗi ngoặc. **Xuất thử** điền bằng một đơn của loại đơn, chưa có đơn thì bằng dữ liệu giả.
 
-### Mẫu xuất file thống kê (Excel)
+### Mẫu xuất danh sách đơn (Excel)
 
-- Cán bộ soạn mẫu bằng Excel, dùng cùng các mã như mẫu Word, rồi tải file `.xlsx` lên ở khung "Mẫu xuất file thống kê" của trình soạn loại đơn.
-  **Xuất thống kê** ở đầu trình soạn mở hộp "Xuất thống kê" (máy chủ dùng ExcelJS, `shared/src/business-rules/exports--xlsx.ts`). Cần quyền `manageFormTypes`.
-- Hộp có hai điều kiện, rồi danh sách mẫu thống kê đã lưu:
+- Cán bộ soạn mẫu bằng Excel, dùng cùng các mã như mẫu Word, rồi tải file `.xlsx` lên ở khung "Mẫu xuất danh sách đơn" của trình soạn loại đơn.
+  **Xuất danh sách đơn** ở đầu trình soạn mở hộp "Xuất danh sách đơn" (máy chủ dùng ExcelJS, `shared/src/business-rules/exports--xlsx.ts`). Cần quyền `manageFormTypes`.
+- Hộp có hai điều kiện, rồi các mẫu danh sách đơn đã lưu:
   - **Phiên bản**: một phiên bản (mặc định là phiên bản đang xem ở trình soạn) hoặc **Tất cả**. Bản nháp chưa có đơn nên không có trong danh sách.
   - **Ngày nộp**: từ ngày nào đến ngày nào, tính cả hai đầu, theo giờ Việt Nam; bỏ trống = không giới hạn.
   Mỗi mẫu tự **đối chiếu mã với câu hỏi của phiên bản được chọn** (chọn Tất cả thì báo theo từng phiên bản): mã nào phiên bản đó không có thì báo đỏ "sẽ để trống", khớp hết thì báo xanh. Bấm **Xuất** ở mẫu muốn dùng để mở trình xem file Excel đã điền, rồi **Tải file Excel**.

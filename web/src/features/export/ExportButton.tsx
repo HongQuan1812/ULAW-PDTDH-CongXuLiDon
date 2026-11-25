@@ -1,5 +1,5 @@
 /* Nút "Xuất file" ở trang chi tiết đơn:
-   hiện khi loại đơn có mẫu xuất file đơn (Word; mẫu thống kê không dùng ở đây). Bấm nút thì mở hộp "Chọn mẫu xuất file":
+   hiện khi loại đơn có mẫu xuất file đơn (Word; mẫu danh sách đơn không dùng ở đây). Bấm nút thì mở hộp "Chọn mẫu xuất file":
    mỗi mẫu một dòng, tự so mã trong mẫu với các câu hỏi của lá đơn này (bản chụp lúc nộp), mã nào đơn không có thì báo đỏ như khi kiểm tra
    ở trình soạn loại đơn; người dùng thấy hệ thống đang đối chiếu mã giữa đơn và mẫu rồi bấm "Xuất" ở mẫu muốn dùng.
    Máy chủ điền dữ liệu của đơn vào mẫu; file Word nhận về mở trong trình xem, có nút "Tải file Word" trên thanh xem. */

@@ -1,4 +1,4 @@
-/* Test nhóm API exports: mẫu xuất file (danh sách, lưu, mẫu gốc, kiểm tra mã), xuất file một lá đơn (Word) và xuất thống kê (Excel).
+/* Test nhóm API exports: mẫu xuất file (danh sách, lưu, mẫu gốc, kiểm tra mã), xuất file một lá đơn (Word) và xuất danh sách đơn (Excel).
    Cần database đã migrate và seed (mẫu tpl-demo của loại đơn xmr). Test thêm mẫu tên bắt đầu bằng TEST_NAME rồi xóa sạch khi xong. */
 import ExcelJS from 'exceljs';
 import PizZip from 'pizzip';
@@ -287,42 +287,42 @@ describe('exports', () => {
     await request(server()).post(`/api${formExportCheckPath(OWN_FORM_CODE)}`).send({ templateId: SEED_EXPORT_TEMPLATE.id }).expect(401);
   });
 
-  it('mẫu thống kê: lưu file .xlsx, kiểm tra mã, xuất mọi đơn của loại đơn mỗi đơn một hàng', async () => {
+  it('mẫu danh sách đơn: lưu file .xlsx, kiểm tra mã, xuất mọi đơn của loại đơn mỗi đơn một hàng', async () => {
     const cookie = await loginAs('nguoiXuLiDon');
 
     // Mẫu: hàng 1 tiêu đề (mã chung), hàng 2 hàng mẫu của đơn
     const workbook = new ExcelJS.Workbook();
-    const sheet = workbook.addWorksheet('Thống kê');
+    const sheet = workbook.addWorksheet('Danh sách đơn');
     sheet.addRow(['{loai_don}: {so_don} đơn']);
     sheet.addRow(['{stt}', '{ma_don}', '{ho_ten}', '{trang_thai}']);
     const sampleXlsx = Buffer.from(await workbook.xlsx.writeBuffer());
 
-    // Mẫu thống kê phải là .xlsx
-    const wrongType = await saveTemplates(cookie, { removed: [], renamed: [], added: [{ tempId: 'local-1', name: `${TEST_NAME} sai`, purpose: 'stats' }] }, { 'local-1': ['sai.docx', sampleDocx] }).expect(422);
+    // Mẫu danh sách đơn phải là .xlsx
+    const wrongType = await saveTemplates(cookie, { removed: [], renamed: [], added: [{ tempId: 'local-1', name: `${TEST_NAME} sai`, purpose: 'list' }] }, { 'local-1': ['sai.docx', sampleDocx] }).expect(422);
     expect(messageOf(wrongType)).toBe(EXPORT_MESSAGES.notXlsx);
 
-    // Lưu mẫu thống kê
+    // Lưu mẫu danh sách đơn
     const saved = ExportTemplatesResponseSchema.parse(
-      (await saveTemplates(cookie, { removed: [], renamed: [], added: [{ tempId: 'local-1', name: `${TEST_NAME} thống kê`, purpose: 'stats' }] }, { 'local-1': ['thong-ke.xlsx', sampleXlsx] }).expect(200)).body,
+      (await saveTemplates(cookie, { removed: [], renamed: [], added: [{ tempId: 'local-1', name: `${TEST_NAME} danh sách đơn`, purpose: 'list' }] }, { 'local-1': ['danh-sach-don.xlsx', sampleXlsx] }).expect(200)).body,
     ).templates;
-    const statsTemplate = saved.find((template) => template.name === `${TEST_NAME} thống kê`)!;
-    expect(statsTemplate.purpose).toBe('stats');
+    const formListTemplate = saved.find((template) => template.name === `${TEST_NAME} danh sách đơn`)!;
+    expect(formListTemplate.purpose).toBe('list');
 
     // Kiểm tra mã: mọi mã đều dùng được
     const check = ExportTemplateCheckSchema.parse(
-      (await request(server()).post(`/api${exportTemplatePath('xmr', statsTemplate.id, 'check')}`).set('Cookie', cookie).send(xmrDraft).expect(200)).body,
+      (await request(server()).post(`/api${exportTemplatePath('xmr', formListTemplate.id, 'check')}`).set('Cookie', cookie).send(xmrDraft).expect(200)).body,
     );
     expect(check).toMatchObject({ unknown: [], error: '' });
 
     // Xuất mọi phiên bản: mỗi phiên bản một sheet, mỗi đơn một hàng theo thứ tự nộp
-    const exportStats = (body: unknown) =>
-      request(server()).post(`/api${exportTemplatePath('xmr', statsTemplate.id, 'export')}`).set('Cookie', cookie).send(body as object).buffer(true).parse(binaryParser);
+    const exportFormList = (body: unknown) =>
+      request(server()).post(`/api${exportTemplatePath('xmr', formListTemplate.id, 'export')}`).set('Cookie', cookie).send(body as object).buffer(true).parse(binaryParser);
     const openWorkbook = async (response: Response) => {
       const opened = new ExcelJS.Workbook();
       await opened.xlsx.load(new Uint8Array(response.body as Buffer).buffer);
       return opened;
     };
-    const everything = await exportStats({ version: 'all', submittedFrom: null, submittedTo: null }).expect(200);
+    const everything = await exportFormList({ version: 'all', submittedFrom: null, submittedTo: null }).expect(200);
     expect(everything.headers['content-type']).toContain(XLSX_CONTENT_TYPE);
     const forms = await prisma.form.findMany({ where: { formTypeId: 'xmr' }, orderBy: [{ submittedAt: 'asc' }, { code: 'asc' }], select: { code: true, formTypeVersion: true, submittedAt: true } });
     const versions = (await prisma.formTypeVersion.findMany({ where: { formTypeId: 'xmr', status: { not: 'draft' } }, orderBy: { version: 'asc' } })).map((version) => version.version);
@@ -336,19 +336,19 @@ describe('exports', () => {
     expect(firstSheet.getCell(`B${firstVersionForms.length + 1}`).value).toBe(firstVersionForms.at(-1)!.code);
 
     // Chọn một phiên bản: một sheet; lọc theo ngày nộp
-    const single = await openWorkbook(await exportStats({ version: versions[0], submittedFrom: null, submittedTo: null }).expect(200));
+    const single = await openWorkbook(await exportFormList({ version: versions[0], submittedFrom: null, submittedTo: null }).expect(200));
     expect(single.worksheets.map((worksheet) => worksheet.name)).toEqual([`Phiên bản ${versions[0]}`]);
-    const ranged = await openWorkbook(await exportStats({ version: 'all', submittedFrom: '2999-01-01', submittedTo: null }).expect(200));
+    const ranged = await openWorkbook(await exportFormList({ version: 'all', submittedFrom: '2999-01-01', submittedTo: null }).expect(200));
     expect(String(ranged.worksheets[0]!.getCell('A1').value)).toContain('0 đơn');
 
     // Sai điều kiện: phiên bản không có 404; body thiếu hoặc sai 422
-    const exportStatsJson = (body: object) => request(server()).post(`/api${exportTemplatePath('xmr', statsTemplate.id, 'export')}`).set('Cookie', cookie).send(body);
-    expect(messageOf(await exportStatsJson({ version: 999, submittedFrom: null, submittedTo: null }).expect(404))).toBe(EXPORT_MESSAGES.versionNotFound);
-    await exportStatsJson({}).expect(422);
-    await exportStatsJson({ version: 'all', submittedFrom: '2026-03-01', submittedTo: '2026-02-01' }).expect(422);
+    const exportFormListJson = (body: object) => request(server()).post(`/api${exportTemplatePath('xmr', formListTemplate.id, 'export')}`).set('Cookie', cookie).send(body);
+    expect(messageOf(await exportFormListJson({ version: 999, submittedFrom: null, submittedTo: null }).expect(404))).toBe(EXPORT_MESSAGES.versionNotFound);
+    await exportFormListJson({}).expect(422);
+    await exportFormListJson({ version: 'all', submittedFrom: '2026-03-01', submittedTo: '2026-02-01' }).expect(422);
 
-    // Mẫu thống kê không dùng để xuất file một lá đơn, và ngược lại
-    await request(server()).post(`/api${formExportPath(OTHER_FORM_CODE)}`).set('Cookie', cookie).send({ templateId: statsTemplate.id }).expect(404);
+    // Mẫu danh sách đơn không dùng để xuất file một lá đơn, và ngược lại
+    await request(server()).post(`/api${formExportPath(OTHER_FORM_CODE)}`).set('Cookie', cookie).send({ templateId: formListTemplate.id }).expect(404);
     await request(server()).post(`/api${exportTemplatePath('xmr', SEED_EXPORT_TEMPLATE.id, 'export')}`).set('Cookie', cookie).send({ version: 'all', submittedFrom: null, submittedTo: null }).expect(404);
   });
 });

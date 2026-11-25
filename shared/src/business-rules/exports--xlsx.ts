@@ -1,8 +1,8 @@
-/* Đọc, kiểm tra, điền mẫu xuất file thống kê Excel (.xlsx) bằng ExcelJS.
+/* Đọc, kiểm tra, điền mẫu xuất danh sách đơn Excel (.xlsx) bằng ExcelJS.
    Cùng bộ mã với mẫu Word (exports--tags.ts), nhưng một file chứa nhiều lá đơn:
    - Hàng có mã của đơn (vd {ma_don}, {ho_ten}) là hàng mẫu: khi xuất, hàng đó nhân lên, mỗi lá đơn một hàng,
      giữ định dạng của hàng mẫu; {stt} là số thứ tự của đơn trong file.
-   - Hàng chỉ có mã chung của file (STATS_SUMMARY_TAGS: {so_don}, {loai_don}, {ngay_xuat}) chỉ điền một lần, vd tiêu đề, dòng tổng.
+   - Hàng chỉ có mã chung của file (FORM_LIST_SUMMARY_TAGS: {so_don}, {loai_don}, {ngay_xuat}) chỉ điền một lần, vd tiêu đề, dòng tổng.
    - Câu hỏi dạng bảng có hai cách đặt: cả bảng vào một ô ({<bảng>}, mỗi dòng của bảng một dòng trong ô),
      hoặc mỗi cột một ô ({<cột>}): đơn có n dòng thì chiếm n hàng, ô cột của bảng điền từng dòng,
      các ô còn lại của đơn gộp dọc n hàng. {<bảng>_stt} là số thứ tự dòng của bảng. {so_<bảng>}, {tong_<cột>} điền như mẫu Word.
@@ -11,7 +11,7 @@ import type { Cell, Row, Workbook, Worksheet } from 'exceljs';
 import { EXPORT_MESSAGES, type ExportTemplateCheck, type ExportTemplatePurpose } from '../api-contract/exports';
 import type { FormSection } from '../aux-schema/form-types--sections';
 import { openDocx } from './exports--docx';
-import { FORM_COUNT_TAG, FORM_NUMBER_TAG, STATS_SUMMARY_TAGS, knownExportTags, questionExportTags, rowNumberTag, type ExportData } from './exports--tags';
+import { FORM_COUNT_TAG, FORM_NUMBER_TAG, FORM_LIST_SUMMARY_TAGS, knownExportTags, questionExportTags, rowNumberTag, type ExportData } from './exports--tags';
 
 /** Nội dung file: ArrayBuffer (trình duyệt) hoặc Buffer / Uint8Array (Node). */
 export type XlsxBytes = ArrayBuffer | Uint8Array;
@@ -26,7 +26,7 @@ const TAG_IN_TEXT = /\{\s*([^{}]*?)\s*\}/g;
 const WHOLE_CELL_TAG = /^\s*\{\s*([^{}]*?)\s*\}\s*$/;
 
 /** Mã chung của file: hàng chỉ có các mã này không nhân lên theo đơn. */
-const SUMMARY_TAG_SET: ReadonlySet<string> = new Set(STATS_SUMMARY_TAGS.map(({ tag }) => tag));
+const SUMMARY_TAG_SET: ReadonlySet<string> = new Set(FORM_LIST_SUMMARY_TAGS.map(({ tag }) => tag));
 
 /**
  * Tải ExcelJS (lần đầu mới tải). Node trả module CommonJS trong `default`, trình duyệt (Vite) trả thẳng.
@@ -63,7 +63,7 @@ export async function isReadableXlsx(bytes: XlsxBytes): Promise<boolean> {
 }
 
 /**
- * File mẫu có đọc được theo mục đích không: mẫu đơn là .docx, mẫu thống kê là .xlsx.
+ * File mẫu có đọc được theo mục đích không: mẫu đơn là .docx, mẫu danh sách đơn là .xlsx.
  * @param bytes    nội dung file
  * @param purpose  mục đích của mẫu
  * @returns        true nếu đọc được
@@ -359,7 +359,7 @@ function cloneSheet(source: Worksheet, target: Worksheet): void {
 }
 
 /**
- * Điền mẫu thống kê cho nhiều phiên bản: mỗi phiên bản một bản sao y hệt cấu trúc của mẫu, chỉ điền đơn của phiên bản đó.
+ * Điền mẫu danh sách đơn cho nhiều phiên bản: mỗi phiên bản một bản sao y hệt cấu trúc của mẫu, chỉ điền đơn của phiên bản đó.
  * Mẫu có nhiều sheet thì mỗi sheet được sao chép cho từng phiên bản.
  * @param bytes   nội dung file mẫu
  * @param groups  các phiên bản theo thứ tự sheet (không có đơn nào vẫn có sheet)
@@ -395,11 +395,11 @@ export async function renderXlsxByVersion(bytes: XlsxBytes, groups: readonly Ver
 }
 
 /**
- * Mọi mã dùng được trong mẫu thống kê: như mẫu Word (có mã cột và {<bảng>_stt} của bảng), thêm {stt} (thứ tự đơn) và {so_don}.
+ * Mọi mã dùng được trong mẫu danh sách đơn: như mẫu Word (có mã cột và {<bảng>_stt} của bảng), thêm {stt} (thứ tự đơn) và {so_don}.
  * @param sections  các phần của loại đơn
  * @returns         các mã
  */
-export function knownStatsTags(sections: readonly FormSection[]): Set<string> {
+export function knownFormListTags(sections: readonly FormSection[]): Set<string> {
   const known = knownExportTags(sections);
   known.add(FORM_NUMBER_TAG);
   known.add(FORM_COUNT_TAG);
@@ -407,14 +407,14 @@ export function knownStatsTags(sections: readonly FormSection[]): Set<string> {
 }
 
 /** Một cột của file mẫu dựng sẵn: chữ ở đầu cột, mã ở hàng mẫu, và (nếu là cột của câu hỏi dạng bảng) tên câu hỏi đó. */
-export interface StatsStarterColumn {
+export interface FormListStarterColumn {
   header: string;
   tag: string;
   tableLabel?: string;
 }
 
 /** Các cột chung đứng đầu file mẫu dựng sẵn; sau đó là từng câu hỏi của loại đơn. */
-export const STATS_STARTER_COMMON_COLUMNS: readonly StatsStarterColumn[] = [
+export const FORM_LIST_STARTER_COMMON_COLUMNS: readonly FormListStarterColumn[] = [
   { header: 'STT', tag: FORM_NUMBER_TAG },
   { header: 'Mã đơn', tag: 'ma_don' },
   { header: 'Họ và tên', tag: 'ho_ten' },
@@ -430,8 +430,8 @@ export const STATS_STARTER_COMMON_COLUMNS: readonly StatsStarterColumn[] = [
  * @param sections  các phần của loại đơn
  * @returns         các cột theo thứ tự
  */
-export function statsStarterColumns(sections: readonly FormSection[]): StatsStarterColumn[] {
-  const questionColumns = questionExportTags(sections).flatMap((question): StatsStarterColumn[] => {
+export function formListStarterColumns(sections: readonly FormSection[]): FormListStarterColumn[] {
+  const questionColumns = questionExportTags(sections).flatMap((question): FormListStarterColumn[] => {
     if (!question.columns) return [{ header: question.label, tag: question.tag }];
     const tableColumns = [
       { header: 'STT', tag: rowNumberTag(question.tag), tableLabel: question.label },
@@ -440,7 +440,7 @@ export function statsStarterColumns(sections: readonly FormSection[]): StatsStar
     const sumColumns = question.columns.filter((column) => column.sum).map((column) => ({ header: `Tổng ${column.label.toLowerCase()}`, tag: `tong_${column.tag}` }));
     return [...tableColumns, ...sumColumns];
   });
-  return [...STATS_STARTER_COMMON_COLUMNS, ...questionColumns];
+  return [...FORM_LIST_STARTER_COMMON_COLUMNS, ...questionColumns];
 }
 
 /** Hàng đầu cột (tầng trên), hàng tên cột của bảng (tầng dưới) và hàng mẫu của file mẫu dựng sẵn. */
@@ -449,18 +449,18 @@ const STARTER_HEADER_BOTTOM_ROW = 5;
 const STARTER_TEMPLATE_ROW = 6;
 
 /**
- * Dựng sẵn một file mẫu thống kê để người soạn tải về rồi sửa:
+ * Dựng sẵn một file mẫu danh sách đơn để người soạn tải về rồi sửa:
  * hàng 1–2 tiêu đề (mã của cả file, điền một lần); hàng 4–5 đầu cột hai tầng:
  * cột thường gộp dọc hai hàng, câu hỏi dạng bảng gộp ngang trên các cột của nó, tên cột ở tầng dưới;
  * hàng 6 hàng mẫu (mã của đơn, nhân lên mỗi đơn một hàng, đơn có bảng n dòng thì n hàng).
  * @param sections  các phần của loại đơn
  * @returns         nội dung file .xlsx
  */
-export async function createStatsStarterXlsx(sections: readonly FormSection[]): Promise<ArrayBuffer> {
+export async function createFormListStarterXlsx(sections: readonly FormSection[]): Promise<ArrayBuffer> {
   const ExcelJS = await loadExcelJs();
   const workbook = new ExcelJS.Workbook();
-  const sheet = workbook.addWorksheet('Thống kê', { views: [{ state: 'frozen', ySplit: STARTER_HEADER_BOTTOM_ROW }] });
-  const columns = statsStarterColumns(sections);
+  const sheet = workbook.addWorksheet('Danh sách đơn', { views: [{ state: 'frozen', ySplit: STARTER_HEADER_BOTTOM_ROW }] });
+  const columns = formListStarterColumns(sections);
   const border = { style: 'thin', color: { argb: 'FFBFBFBF' } } as const;
   const cellBorder = { top: border, left: border, bottom: border, right: border };
   const headerStyle = {
@@ -510,7 +510,7 @@ export async function createStatsStarterXlsx(sections: readonly FormSection[]): 
 }
 
 /**
- * Kiểm tra mẫu thống kê theo các câu hỏi của loại đơn: mã không dùng được, ô thiếu dấu ngoặc.
+ * Kiểm tra mẫu danh sách đơn theo các câu hỏi của loại đơn: mã không dùng được, ô thiếu dấu ngoặc.
  * @param bytes     nội dung file mẫu
  * @param sections  các phần của loại đơn (bản soạn hiện tại)
  * @returns         kết quả kiểm tra; không đọc được file thì báo ở error
@@ -518,7 +518,7 @@ export async function createStatsStarterXlsx(sections: readonly FormSection[]): 
 export async function checkXlsxTemplate(bytes: XlsxBytes, sections: readonly FormSection[]): Promise<ExportTemplateCheck> {
   const workbook = await openWorkbook(bytes);
   if (!workbook) return { found: [], unknown: [], error: EXPORT_MESSAGES.unreadableXlsx };
-  const known = knownStatsTags(sections);
+  const known = knownFormListTags(sections);
   const [found, unknown] = [new Set<string>(), new Set<string>()];
   const braceErrors: string[] = [];
 

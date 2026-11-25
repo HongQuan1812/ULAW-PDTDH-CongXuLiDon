@@ -1,4 +1,4 @@
-/* Hai nút tròn nổi ở cạnh phải màn hình của trình soạn loại đơn: "Mẫu xuất file đơn" (Word) và "Mẫu xuất file thống kê" (Excel).
+/* Hai nút tròn nổi ở cạnh phải màn hình của trình soạn loại đơn: "Mẫu xuất file đơn" (Word) và "Mẫu xuất danh sách đơn" (Excel).
    Bấm một nút thì mở khung nổi của mẫu đó (ExportTemplatesPanel), bấm lại hoặc bấm nút đóng thì đóng; mỗi lúc chỉ mở một khung.
    Số ở góc nút là số mẫu đang có (kể cả mẫu chưa lưu); có thay đổi chưa lưu thì số đổi màu cam. */
 import { useRef, useState, type CSSProperties } from 'react';
@@ -13,10 +13,10 @@ import styles from './ExportTemplatesPanel.module.css';
 const DOCK_BOTTOM = { wide: 16, narrow: 16 };
 
 /** Thứ tự các nút, trên xuống dưới. */
-const PURPOSES: readonly ExportTemplatePurpose[] = ['form', 'stats'];
+const PURPOSES: readonly ExportTemplatePurpose[] = ['form', 'list'];
 
 /**
- * Biểu tượng của nút theo mục đích: tờ giấy có chữ (mẫu đơn), bảng tính (mẫu thống kê).
+ * Biểu tượng của nút theo mục đích: tờ giấy có chữ (mẫu đơn), bảng tính (mẫu danh sách đơn).
  * @param purpose  mục đích của mẫu
  * @returns        hình SVG
  */
@@ -80,7 +80,7 @@ export function ExportTemplatesDock(props: Omit<ExportTemplatesPanelProps, 'purp
             <button
               key={purpose}
               type="button"
-              className={`${styles.fab} ${purpose === 'stats' ? styles.fabStats : ''} ${isOpen ? styles.fabOpen : ''}`}
+              className={`${styles.fab} ${purpose === 'list' ? styles.fabFormList : ''} ${isOpen ? styles.fabOpen : ''}`}
               aria-expanded={isOpen}
               aria-label={`${isOpen ? 'Đóng' : 'Mở'} ${title}${count ? `, ${count} mẫu` : ''}${unsaved ? ', có thay đổi chưa lưu' : ''}`}
               title={unsaved ? `${title} · có thay đổi chưa lưu` : title}
