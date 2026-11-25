@@ -67,7 +67,8 @@
 .numberBody{display:grid;grid-template-columns:380px minmax(0,560px);gap:18px 28px;align-items:end}
 .numberTiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
 .dateTiles{grid-template-columns:repeat(2,minmax(0,1fr))}
-.numberTile{background:var(--surface-2);border-radius:var(--r);padding:10px 14px;display:grid;gap:2px}
+/* mỗi ô chiếm 2 dòng của lưới cha (subgrid): tiêu đề cùng một dòng, số cùng một dòng; tiêu đề ô nào xuống dòng thì cả hàng theo, số vẫn thẳng hàng */
+.numberTile{background:var(--surface-2);border-radius:var(--r);padding:10px 14px;display:grid;grid-row:span 2;grid-template-rows:subgrid;row-gap:2px;align-content:start;min-width:0}
 .numberTile span{font-size:12px;color:var(--muted)}
 .numberTile b{font-size:20px;font-weight:600;font-variant-numeric:tabular-nums;line-height:1.25;white-space:nowrap}
 .dateTiles b{font-size:17px}
@@ -103,18 +104,16 @@
 .column h4{margin:0;font-size:13.5px;font-weight:600;display:flex;gap:8px;align-items:baseline;flex-wrap:wrap;justify-content:space-between}
 /* trong khối cột bảng: ô số ở trên, biểu đồ ở dưới */
 .column .numberBody{grid-template-columns:minmax(0,1fr)}
-.column .numberTiles{max-width:none}
 .column .bars{max-width:none}
 
 /* tệp */
-.fileBody{display:flex;flex-wrap:wrap;gap:8px}
-.fileBody .numberTile{min-width:150px}
+/* câu Tải tệp: ô như câu Số (3 cột, rộng 380px như cột ô số; thẻ hẹp thì trải hết bề ngang) */
+.fileBody{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;max-width:380px}
 
 /* thẻ hẹp (màn hình nhỏ, hoặc đang mở khung Phiên bản): ô số ở trên, biểu đồ ở dưới */
-@container answer-stats (max-width:980px){.numberBody{grid-template-columns:minmax(0,1fr)}.numberTiles{max-width:380px}}
+@container answer-stats (max-width:980px){.numberBody{grid-template-columns:minmax(0,1fr)}.fileBody{max-width:none}}
 @media (max-width:560px){
   .barRow{grid-template-columns:minmax(0,1fr) auto 3.2em}
   .barRow .barTrack{grid-column:1/-1;grid-row:2}
-  .numberTiles{grid-template-columns:repeat(3,minmax(0,1fr))}
 }
 @media (prefers-reduced-motion:reduce){.barTrack span,.histogramColumn span{transition:none}}
