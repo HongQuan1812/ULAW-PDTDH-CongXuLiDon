@@ -1,7 +1,7 @@
 /* Hai khung thống kê đầu trang Quản lí đơn:
-   "Theo trạng thái" (tổng, thanh tỉ lệ nhiều màu, 6 ô) và "Theo loại đơn" (biểu đồ cột 0–100%).
+   "Theo trạng thái" (tổng, thanh tỉ lệ nhiều màu, 6 ô) và "Theo loại đơn" (vành khuyên, FormTypeDonut).
    Số liệu đếm trên TẤT CẢ đơn, không đổi theo ô tìm kiếm / bộ lọc của bảng.
-   Bấm một ô trạng thái hoặc một cột loại đơn thì lọc bảng bên dưới; bấm lại để bỏ lọc. */
+   Bấm một ô trạng thái hoặc một loại đơn thì lọc bảng bên dưới; bấm lại để bỏ lọc. */
 import {
   FORM_STATUSES,
   FORM_STATUS_LABEL,
@@ -12,9 +12,7 @@ import { LoadError, loadErrorMessage } from '../../components/LoadError';
 import { RefreshButton } from '../../components/RefreshButton';
 import type { UseQueryResult } from '@tanstack/react-query';
 import styles from './FormStatsPanel.module.css';
-
-/** Các vạch trên trục tung của biểu đồ (% trên tổng số đơn). */
-const CHART_TICKS = [0, 25, 50, 75, 100];
+import { FormTypeDonut } from './FormTypeDonut';
 
 interface FormStatsPanelProps {
   /** Kết quả useFormStats() */
@@ -25,7 +23,7 @@ interface FormStatsPanelProps {
   activeFormTypeId: string | null;
   /** Bấm ô trạng thái */
   onToggleStatus: (status: FormStatus) => void;
-  /** Bấm cột loại đơn */
+  /** Bấm một loại đơn (lát hoặc dòng chú thích) */
   onToggleFormType: (formTypeId: string) => void;
 }
 
@@ -76,7 +74,7 @@ export function FormStatsPanel({ statsQuery, activeStatus, activeFormTypeId, onT
         </div>
         {/* Lỗi tải: câu báo đỏ như khung Theo trạng thái; đang tải: khung trống */}
         {errorMessage ? <LoadError message={errorMessage} /> : null}
-        {stats ? <TypeChart stats={stats} activeFormTypeId={activeFormTypeId} onToggleFormType={onToggleFormType} /> : null}
+        {stats ? <FormTypeDonut stats={stats} activeFormTypeId={activeFormTypeId} onToggleFormType={onToggleFormType} /> : null}
         {!stats && !errorMessage ? <div className={styles.placeholder} aria-busy="true" /> : null}
       </section>
     </div>
@@ -128,60 +126,5 @@ function StatusPart({ stats, activeStatus, onToggleStatus }: Pick<FormStatsPanel
         })}
       </div>
     </>
-  );
-}
-
-/**
- * Biểu đồ cột: trục x là loại đơn (nhãn nghiêng), trục y là % trên tổng số đơn; mỗi cột là nút bấm để lọc bảng.
- * @returns  biểu đồ, cuộn ngang khi nhiều loại đơn
- */
-function TypeChart({ stats, activeFormTypeId, onToggleFormType }: Pick<FormStatsPanelProps, 'activeFormTypeId' | 'onToggleFormType'> & { stats: FormStats }) {
-  return (
-    <div className={styles.chart} role="group" aria-label="Biểu đồ số đơn theo loại đơn">
-      <div className={styles.yAxis} aria-hidden="true">
-        {CHART_TICKS.map((tick) => (
-          <span key={tick} style={{ bottom: `${tick}%` }}>
-            {tick}%
-          </span>
-        ))}
-      </div>
-      <div className={styles.scroll}>
-        <div className={styles.inner} style={{ ['--cols' as string]: stats.byType.length }}>
-          <div className={styles.plot}>
-            {CHART_TICKS.map((tick) => (
-              <i key={tick} className={styles.gridLine} style={{ bottom: `${tick}%` }} />
-            ))}
-            {stats.byType.map((type) => {
-              const percent = percentOf(type.count, stats.total);
-              const isOn = activeFormTypeId === type.formTypeId;
-                            return (
-                <button
-                  key={type.formTypeId}
-                  type="button"
-                  className={`${styles.column} ${isOn ? styles.on : ''} ${type.formTypeStatus === 'open' ? '' : styles.off}`}
-                  aria-pressed={isOn}
-                  aria-label={`${type.formTypeName}: ${type.count} đơn, ${percent}%. Bấm để lọc bảng`}
-                  title={`${type.formTypeName}: ${type.count} đơn (${percent}%) — bấm để lọc bảng`}
-                  onClick={() => onToggleFormType(type.formTypeId)}
-                >
-                  <span className={styles.bar} style={{ height: `${stats.total ? (type.count * 100) / stats.total : 0}%` }}>
-                    <b>
-                      {percent}%<small>{type.count} đơn</small>
-                    </b>
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-          <div className={styles.xAxis} aria-hidden="true">
-            {stats.byType.map((type) => (
-              <span key={type.formTypeId}>
-                <em title={type.formTypeName}>{type.formTypeName}</em>
-              </span>
-            ))}
-          </div>
-        </div>
-      </div>
-    </div>
   );
 }
