@@ -1,5 +1,5 @@
 /* API giả: mẫu xuất file của loại đơn (danh sách, lưu các thay đổi, xem mẫu gốc, kiểm tra mã
-   kể cả với file chưa lưu), xuất file một lá đơn (Word, docxtemplater) và xuất file thống kê (Excel, ExcelJS) như máy chủ thật. */
+   kể cả với file chưa lưu), xuất một lá đơn (Word, docxtemplater) và xuất danh sách đơn (Excel, ExcelJS) như máy chủ thật. */
 import { delay, http, HttpResponse } from 'msw';
 import {
   DOCX_CONTENT_TYPE,
@@ -21,9 +21,9 @@ import {
   isReadableTemplateFile,
   renderDocxTemplate,
   renderXlsxByVersion,
-  selectStatsForms,
-  statsSheetName,
-  ExportStatsRequestSchema,
+  selectFormsForList,
+  formListSheetName,
+  ExportFormListRequestSchema,
   templatePurposeOfFile,
   textToTag,
   type ExportDraftRequest,
@@ -40,7 +40,7 @@ import {
   formTypeExists,
   getExportSource,
   getExportTemplates,
-  getStatsExportSources,
+  getFormListExportSources,
   readSession,
   renameExportTemplate,
   vietnamToday,
@@ -88,7 +88,7 @@ function exportFileName(prefix: string, templateName: string, purpose: ExportTem
 }
 
 /**
- * Kiểm tra mã một mẫu theo mục đích: mẫu đơn theo docxtemplater, mẫu thống kê theo ExcelJS.
+ * Kiểm tra mã một mẫu theo mục đích: mẫu đơn theo docxtemplater, mẫu danh sách đơn theo ExcelJS.
  * @param bytes     nội dung file mẫu
  * @param purpose   mục đích của mẫu
  * @param sections  các phần của bản soạn
@@ -152,7 +152,7 @@ async function readDraftFile(
 }
 
 export const exportHandlers = [
-  // Các mẫu của loại đơn: ai đăng nhập cũng xem được (nút Xuất file ở trang chi tiết đơn)
+  // Các mẫu của loại đơn: ai đăng nhập cũng xem được (nút Xuất đơn ở trang chi tiết đơn)
   http.get(api(ENDPOINTS.exports.templates), async ({ params }) => {
     await delay(MOCK_DELAY_MS);
     if (!(await readSession())) return apiError(401, EXPORT_MESSAGES[401]);
@@ -178,7 +178,7 @@ export const exportHandlers = [
       return apiError(404, EXPORT_MESSAGES.templateNotFound);
     }
 
-    // Mỗi mẫu mới phải có file đúng loại (.docx cho mẫu đơn, .xlsx cho mẫu thống kê) và đọc được
+    // Mỗi mẫu mới phải có file đúng loại (.docx cho mẫu đơn, .xlsx cho mẫu danh sách đơn) và đọc được
     const uploads: { purpose: ExportTemplatePurpose; name: string; fileName: string; bytes: ArrayBuffer }[] = [];
     for (const added of changes.added) {
       const file = formData.get(added.tempId);
@@ -229,7 +229,7 @@ export const exportHandlers = [
     return HttpResponse.json<ExportTemplateCheck>(await checkTemplate(upload.bytes, upload.purpose, upload.draft.sections));
   }),
 
-  // Xuất file một lá đơn: xem được đơn thì xuất được
+  // Xuất một lá đơn: xem được đơn thì xuất được
   http.post(api(ENDPOINTS.exports.formExport), async ({ params, request }) => {
     await delay(MOCK_DELAY_MS);
     const session = await readSession();
@@ -242,7 +242,7 @@ export const exportHandlers = [
     const exportable = getExportSource(code, { id: session.user.id, role: session.role });
     if (!exportable) return apiError(404, EXPORT_MESSAGES.formNotFound);
 
-    // Mẫu phải là mẫu xuất file đơn của loại đơn này
+    // Mẫu phải là mẫu xuất đơn của loại đơn này
     const stored = findExportTemplate(exportable.formTypeId, body.templateId);
     if (!stored || stored.template.purpose !== 'form') return apiError(404, EXPORT_MESSAGES.templateNotFound);
 
@@ -268,32 +268,32 @@ export const exportHandlers = [
     return HttpResponse.json<ExportTemplateCheck>(await checkTemplate(stored.bytes, 'form', exportable.source.sections));
   }),
 
-  // Xuất file thống kê: các lá đơn của loại đơn (cũ trước) theo phiên bản và ngày nộp; mỗi phiên bản một sheet, mỗi đơn một hàng
-  http.post(api(ENDPOINTS.exports.statsExport), async ({ params, request }) => {
+  // Xuất danh sách đơn: các lá đơn của loại đơn (cũ trước) theo phiên bản và ngày nộp; mỗi phiên bản một sheet, mỗi đơn một hàng
+  http.post(api(ENDPOINTS.exports.formListExport), async ({ params, request }) => {
     await delay(MOCK_DELAY_MS);
     const formTypeId = String(params.formTypeId);
     const { session, errorResponse } = await templateManager(formTypeId);
     if (!session) return errorResponse;
 
-    // Mẫu phải là mẫu thống kê của loại đơn này; điều kiện chọn đơn phải đúng dạng
+    // Mẫu phải là mẫu danh sách đơn của loại đơn này; điều kiện chọn đơn phải đúng dạng
     const stored = findExportTemplate(formTypeId, String(params.templateId));
-    if (!stored || stored.template.purpose !== 'stats') return apiError(404, EXPORT_MESSAGES.templateNotFound);
-    const parsedFilter = ExportStatsRequestSchema.safeParse(await request.json().catch(() => null));
+    if (!stored || stored.template.purpose !== 'list') return apiError(404, EXPORT_MESSAGES.templateNotFound);
+    const parsedFilter = ExportFormListRequestSchema.safeParse(await request.json().catch(() => null));
     if (!parsedFilter.success) return apiError(422, EXPORT_MESSAGES.invalidRequest);
     const filter = parsedFilter.data;
 
     // Phiên bản chọn phải có
-    const { forms, versions, prefix } = getStatsExportSources(formTypeId);
+    const { forms, versions, prefix } = getFormListExportSources(formTypeId);
     const chosenVersions = filter.version === 'all' ? versions : versions.filter(({ version }) => version === filter.version);
     if (!chosenVersions.length) return apiError(404, EXPORT_MESSAGES.versionNotFound);
 
     // Mỗi phiên bản một nhóm: dữ liệu từng đơn và mã chung (tên loại đơn là tên của phiên bản đó)
     const exportedOn = vietnamToday();
-    const selectedForms = selectStatsForms(forms.map((form) => ({ ...form, submittedAt: form.source.submittedAt })), filter);
+    const selectedForms = selectFormsForList(forms.map((form) => ({ ...form, submittedAt: form.source.submittedAt })), filter);
     const groups = chosenVersions.map(({ version, name }) => {
       const versionForms = selectedForms.filter((selected) => selected.version === version);
       return {
-        sheetName: statsSheetName(version),
+        sheetName: formListSheetName(version),
         formsData: versionForms.map(({ source }) => buildExportData(source, exportedOn)),
         summaryData: { [FORM_COUNT_TAG]: versionForms.length, loai_don: name, ngay_xuat: exportedOn.split('-').reverse().join('/') },
       };
@@ -301,7 +301,7 @@ export const exportHandlers = [
 
     try {
       const filled = await renderXlsxByVersion(stored.bytes, groups);
-      return fileResponse(filled, exportFileName(prefix, stored.template.name, 'stats'), EXPORT_TEMPLATE_FILE.stats.contentType);
+      return fileResponse(filled, exportFileName(prefix, stored.template.name, 'list'), EXPORT_TEMPLATE_FILE.list.contentType);
     } catch (xlsxError) {
       return apiError(422, EXPORT_MESSAGES.renderFailed(xlsxError instanceof Error ? xlsxError.message : String(xlsxError)));
     }

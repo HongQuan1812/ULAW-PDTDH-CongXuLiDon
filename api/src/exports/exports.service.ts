@@ -1,5 +1,5 @@
-/* Mẫu xuất file của loại đơn (danh sách, lưu các thay đổi, mẫu gốc, kiểm tra mã), xuất file một lá đơn (mẫu Word)
-   và xuất file thống kê mọi lá đơn của loại đơn (mẫu Excel).
+/* Mẫu xuất file của loại đơn (danh sách, lưu các thay đổi, mẫu gốc, kiểm tra mã), xuất một lá đơn (mẫu Word)
+   và xuất danh sách mọi lá đơn của loại đơn (mẫu Excel).
    Đọc, kiểm tra, điền mẫu bằng các hàm của shared/ (exports--docx.ts, exports--xlsx.ts), giống hệt API giả. */
 import { randomUUID } from 'node:crypto';
 import { Injectable } from '@nestjs/common';
@@ -17,12 +17,12 @@ import {
   isReadableTemplateFile,
   renderDocxTemplate,
   renderXlsxByVersion,
-  selectStatsForms,
-  statsSheetName,
+  selectFormsForList,
+  formListSheetName,
   templatePurposeOfFile,
   textToTag,
   type ExportSource,
-  type ExportStatsRequest,
+  type ExportFormListRequest,
   type ExportTemplate,
   type ExportTemplateCheck,
   type ExportTemplatePurpose,
@@ -105,7 +105,7 @@ export class ExportsService {
   ) {}
 
   /**
-   * Các mẫu của loại đơn (cả mẫu đơn và mẫu thống kê), theo thứ tự tải lên.
+   * Các mẫu của loại đơn (cả mẫu đơn và mẫu danh sách đơn), theo thứ tự tải lên.
    * @param formTypeId  mã loại đơn
    * @returns           theo ExportTemplatesResponseSchema; loại đơn không có thì danh sách rỗng
    */
@@ -149,7 +149,7 @@ export class ExportsService {
     const touchedIds = [...changes.removed, ...changes.renamed.map((rename) => rename.templateId)];
     if (touchedIds.some((templateId) => !savedIds.has(templateId))) throw new ApiException(404, EXPORT_MESSAGES.templateNotFound);
 
-    // Mỗi mẫu mới phải có file đúng loại (.docx cho mẫu đơn, .xlsx cho mẫu thống kê) và đọc được
+    // Mỗi mẫu mới phải có file đúng loại (.docx cho mẫu đơn, .xlsx cho mẫu danh sách đơn) và đọc được
     const newTemplates: { name: string; purpose: ExportTemplatePurpose; upload: UploadedTemplateFile }[] = [];
     for (const added of changes.added) {
       const upload = uploads.get(added.tempId);
@@ -225,7 +225,7 @@ export class ExportsService {
   }
 
   /**
-   * Kiểm tra mã trong một file mẫu chưa lưu (không lưu lại): .docx như mẫu đơn, .xlsx như mẫu thống kê.
+   * Kiểm tra mã trong một file mẫu chưa lưu (không lưu lại): .docx như mẫu đơn, .xlsx như mẫu danh sách đơn.
    * @param upload    file gửi kèm
    * @param sections  các phần của bản soạn
    * @returns         kết quả kiểm tra
@@ -264,7 +264,7 @@ export class ExportsService {
   }
 
   /**
-   * Điền dữ liệu của một lá đơn vào một mẫu xuất file đơn của loại đơn đó.
+   * Điền dữ liệu của một lá đơn vào một mẫu xuất đơn của loại đơn đó.
    * @param code        mã đơn
    * @param templateId  id mẫu
    * @param viewer      người đang đăng nhập
@@ -275,7 +275,7 @@ export class ExportsService {
     // Xem được đơn thì xuất được; không thì 404 (FORM_MESSAGES.notFound, cùng câu với EXPORT_MESSAGES.formNotFound)
     const form = await this.formService.loadViewable(code, viewer);
 
-    // Mẫu phải là mẫu xuất file đơn của loại đơn này
+    // Mẫu phải là mẫu xuất đơn của loại đơn này
     const template = await this.loadTemplate(form.formTypeId, templateId, 'form');
 
     // Điền mẫu; mẫu sai cú pháp thì báo lí do
@@ -290,7 +290,7 @@ export class ExportsService {
   }
 
   /**
-   * So mã trong một mẫu xuất file đơn với các câu hỏi của lá đơn (bản chụp lúc nộp).
+   * So mã trong một mẫu xuất đơn với các câu hỏi của lá đơn (bản chụp lúc nộp).
    * @param code        mã đơn
    * @param templateId  id mẫu
    * @param viewer      người đang đăng nhập
@@ -304,15 +304,15 @@ export class ExportsService {
   }
 
   /**
-   * Điền các lá đơn của loại đơn vào một mẫu xuất file thống kê: mỗi phiên bản một sheet (bản sao cấu trúc của mẫu).
+   * Điền các lá đơn của loại đơn vào một mẫu xuất danh sách đơn: mỗi phiên bản một sheet (bản sao cấu trúc của mẫu).
    * @param formTypeId  mã loại đơn (đã biết là có)
    * @param templateId  id mẫu
    * @param filter      phiên bản (số hoặc 'all') và khoảng ngày nộp
    * @returns           file Excel đã điền
-   * @throws            404 mẫu không phải mẫu thống kê của loại đơn này, phiên bản không có · 422 không đọc được mẫu
+   * @throws            404 mẫu không phải mẫu danh sách đơn của loại đơn này, phiên bản không có · 422 không đọc được mẫu
    */
-  async exportStats(formTypeId: string, templateId: string, filter: ExportStatsRequest): Promise<DownloadFile> {
-    const template = await this.loadTemplate(formTypeId, templateId, 'stats');
+  async exportFormList(formTypeId: string, templateId: string, filter: ExportFormListRequest): Promise<DownloadFile> {
+    const template = await this.loadTemplate(formTypeId, templateId, 'list');
 
     // Các phiên bản đã từng mở (bản nháp chưa có đơn nào); chọn một phiên bản thì phải có
     const versions = await this.prisma.formTypeVersion.findMany({
@@ -325,7 +325,7 @@ export class ExportsService {
 
     // Đơn của loại đơn, cũ trước, lọc theo điều kiện; tiền tố mã đơn để đặt tên file
     const allForms = await this.prisma.form.findMany({ where: { formTypeId }, include: WITH_PEOPLE, orderBy: [{ submittedAt: 'asc' }, { code: 'asc' }] });
-    const selectedForms = selectStatsForms(
+    const selectedForms = selectFormsForList(
       allForms.map((form) => ({ form, version: form.formTypeVersion, submittedAt: toVietnamTime(form.submittedAt) })),
       filter,
     );
@@ -339,15 +339,15 @@ export class ExportsService {
       const formsData = [];
       for (const { form } of versionForms) formsData.push(buildExportData(await this.exportSourceOf(form), exportedOn));
       const summaryData = { [FORM_COUNT_TAG]: versionForms.length, loai_don: name, ngay_xuat: exportedOn.split('-').reverse().join('/') };
-      groups.push({ sheetName: statsSheetName(version), formsData, summaryData });
+      groups.push({ sheetName: formListSheetName(version), formsData, summaryData });
     }
 
     // Điền mẫu; không đọc được thì báo lí do
     try {
       const filled = await renderXlsxByVersion(template.content, groups);
       return {
-        fileName: exportFileName(formType?.prefix ?? formTypeId, template.name, 'stats'),
-        contentType: EXPORT_TEMPLATE_FILE.stats.contentType,
+        fileName: exportFileName(formType?.prefix ?? formTypeId, template.name, 'list'),
+        contentType: EXPORT_TEMPLATE_FILE.list.contentType,
         content: Buffer.from(filled),
       };
     } catch (xlsxError) {

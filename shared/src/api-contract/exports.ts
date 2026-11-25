@@ -3,8 +3,8 @@
 
    Mỗi loại đơn có hai nhóm mẫu, lưu ở máy chủ theo loại đơn (dùng chung mọi phiên bản), cùng một bộ mã trường trong
    ngoặc nhọn (xem business-rules/exports--tags.ts):
-   - Mẫu xuất file đơn (purpose 'form'): file Word .docx, điền dữ liệu của MỘT lá đơn (nút Xuất file ở chi tiết đơn).
-   - Mẫu xuất file thống kê (purpose 'stats'): file Excel .xlsx, điền MỌI lá đơn của loại đơn, mỗi đơn một hàng
+   - Mẫu xuất đơn (purpose 'form'): file Word .docx, điền dữ liệu của MỘT lá đơn (nút Xuất đơn ở chi tiết đơn).
+   - Mẫu xuất danh sách đơn (purpose 'list'): file Excel .xlsx, điền MỌI lá đơn của loại đơn, mỗi đơn một hàng
      (xem business-rules/exports--xlsx.ts).
    Cán bộ quản lí mẫu ở trình soạn loại đơn:
    thêm, đổi tên, xóa mẫu chỉ ghi nhận trong trình duyệt; bấm Lưu thì gửi mọi thay đổi cùng các file mới trong MỘT lần
@@ -18,7 +18,7 @@ import type { FormSection } from '../aux-schema/form-types--sections';
 /* ---------- Đường dẫn (phần sau /api) ---------- */
 
 export const EXPORT_ENDPOINTS = {
-  /** GET → ExportTemplatesResponse: các mẫu của loại đơn (nút Xuất file ở trang chi tiết đơn, khung Mẫu xuất file). Cần đăng nhập.
+  /** GET → ExportTemplatesResponse: các mẫu của loại đơn (nút Xuất đơn ở trang chi tiết đơn, khung Mẫu xuất file). Cần đăng nhập.
       PUT (multipart/form-data: trường EXPORT_TEMPLATE_FIELDS.changes là SaveExportTemplatesRequest dạng chuỗi JSON,
       mỗi file mới một trường tên bằng id tạm) → ExportTemplatesResponse: lưu các thay đổi (xóa, đổi tên, thêm) trong một lần;
       sai một chỗ (mẫu không còn, file không đúng loại của mẫu hoặc không đọc được, thiếu file) thì không lưu gì.
@@ -31,19 +31,19 @@ export const EXPORT_ENDPOINTS = {
   templateCheck: '/form-types/:formTypeId/export-templates/:templateId/check',
   /** POST (multipart/form-data: file ở trường EXPORT_TEMPLATE_FIELDS.file, ExportDraftRequest dạng chuỗi JSON ở trường
       EXPORT_TEMPLATE_FIELDS.draft) → ExportTemplateCheck: như templateCheck nhưng với file mẫu chưa lưu (gửi kèm, không lưu lại);
-      file .docx kiểm tra như mẫu đơn, .xlsx như mẫu thống kê. Cần quyền manageFormTypes */
+      file .docx kiểm tra như mẫu đơn, .xlsx như mẫu danh sách đơn. Cần quyền manageFormTypes */
   fileCheck: '/export-templates/check',
-  /** POST ExportFormRequest → file .docx: điền dữ liệu của lá đơn vào một mẫu xuất file đơn của loại đơn đó (nút Xuất file).
+  /** POST ExportFormRequest → file .docx: điền dữ liệu của lá đơn vào một mẫu xuất đơn của loại đơn đó (nút Xuất đơn).
       Xem được đơn thì xuất được (người nộp đơn, hoặc cán bộ có quyền viewAll); không có đơn / không được xem thì 404 */
   formExport: '/forms/:code/export',
-  /** POST ExportFormRequest → ExportTemplateCheck: so mã trong một mẫu xuất file đơn với các câu hỏi của lá đơn này (bản chụp lúc nộp),
+  /** POST ExportFormRequest → ExportTemplateCheck: so mã trong một mẫu xuất đơn với các câu hỏi của lá đơn này (bản chụp lúc nộp),
       để người xuất file thấy mã nào đơn không có (sẽ để trống) trước khi xuất. Xem được đơn thì kiểm được, như formExport */
   formExportCheck: '/forms/:code/export-check',
-  /** POST ExportStatsRequest → file .xlsx: điền các lá đơn của loại đơn (mọi trạng thái, theo thứ tự nộp) vào một mẫu
-      xuất file thống kê (nút Xuất thống kê ở trình soạn loại đơn). Chọn một phiên bản thì file có một sheet; chọn "all" thì
+  /** POST ExportFormListRequest → file .xlsx: điền các lá đơn của loại đơn (mọi trạng thái, theo thứ tự nộp) vào một mẫu
+      xuất danh sách đơn (nút Xuất danh sách đơn ở trình soạn loại đơn). Chọn một phiên bản thì file có một sheet; chọn "all" thì
       mỗi phiên bản một sheet, đều là bản sao cấu trúc của mẫu. Có thể giới hạn theo ngày nộp.
-      Cần quyền manageFormTypes; mẫu không phải mẫu thống kê thì 404; phiên bản không có thì 404 */
-  statsExport: '/form-types/:formTypeId/export-templates/:templateId/export',
+      Cần quyền manageFormTypes; mẫu không phải mẫu danh sách đơn thì 404; phiên bản không có thì 404 */
+  formListExport: '/form-types/:formTypeId/export-templates/:templateId/export',
 } as const;
 
 /**
@@ -59,7 +59,7 @@ export function exportTemplatesPath(formTypeId: string): string {
  * Đường dẫn API các lệnh với một mẫu đã lưu.
  * @param formTypeId  mã loại đơn
  * @param templateId  id mẫu
- * @param action      'file': mẫu gốc · 'check': kiểm tra mã · 'export': xuất file thống kê
+ * @param action      'file': mẫu gốc · 'check': kiểm tra mã · 'export': xuất danh sách đơn
  * @returns           vd '/form-types/xmr/export-templates/tpl-1/check'
  */
 export function exportTemplatePath(formTypeId: string, templateId: string, action: 'file' | 'check' | 'export'): string {
@@ -67,7 +67,7 @@ export function exportTemplatePath(formTypeId: string, templateId: string, actio
 }
 
 /**
- * Đường dẫn API xuất file một lá đơn.
+ * Đường dẫn API xuất một lá đơn.
  * @param code  mã đơn
  * @returns     vd '/forms/XMR-2026-001-00001/export'
  */
@@ -95,14 +95,14 @@ export const DOCX_CONTENT_TYPE = 'application/vnd.openxmlformats-officedocument.
 /** Kiểu nội dung của file Excel .xlsx. */
 export const XLSX_CONTENT_TYPE = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
 
-/** Mẫu dùng để làm gì: 'form' xuất file một lá đơn (Word) · 'stats' xuất file thống kê mọi lá đơn (Excel). */
-export const ExportTemplatePurposeSchema = z.enum(['form', 'stats']);
+/** Mẫu dùng để làm gì: 'form' xuất một lá đơn (Word) · 'list' xuất danh sách mọi lá đơn (Excel). */
+export const ExportTemplatePurposeSchema = z.enum(['form', 'list']);
 export type ExportTemplatePurpose = z.infer<typeof ExportTemplatePurposeSchema>;
 
 /** Đuôi file, kiểu nội dung, nhãn loại file của mẫu theo mục đích. */
 export const EXPORT_TEMPLATE_FILE: Record<ExportTemplatePurpose, { extension: string; contentType: string; typeLabel: string }> = {
   form: { extension: '.docx', contentType: DOCX_CONTENT_TYPE, typeLabel: 'DOCX' },
-  stats: { extension: '.xlsx', contentType: XLSX_CONTENT_TYPE, typeLabel: 'XLSX' },
+  list: { extension: '.xlsx', contentType: XLSX_CONTENT_TYPE, typeLabel: 'XLSX' },
 };
 
 /**
@@ -119,7 +119,7 @@ export function hasTemplateExtension(fileName: string, purpose: ExportTemplatePu
 export const ExportTemplateSchema = z.object({
   id: z.string(),
   purpose: ExportTemplatePurposeSchema,
-  /** Tên mẫu, hiện khi chọn mẫu lúc Xuất file; mặc định là tên file bỏ đuôi */
+  /** Tên mẫu, hiện khi chọn mẫu lúc Xuất đơn; mặc định là tên file bỏ đuôi */
   name: z.string(),
   /** Tên file lúc tải lên, vd 'mau-don.docx' */
   fileName: z.string(),
@@ -178,8 +178,8 @@ export type ExportFormRequest = z.infer<typeof ExportFormRequestSchema>;
 /** Ngày dạng 'YYYY-MM-DD'. */
 const DaySchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Ngày phải có dạng YYYY-MM-DD.');
 
-/** Body của POST /form-types/:formTypeId/export-templates/:templateId/export: điều kiện chọn đơn của popup Xuất thống kê. */
-export const ExportStatsRequestSchema = z
+/** Body của POST /form-types/:formTypeId/export-templates/:templateId/export: điều kiện chọn đơn của popup Xuất danh sách đơn. */
+export const ExportFormListRequestSchema = z
   .object({
     /** Số phiên bản, hoặc 'all' = mọi phiên bản (mỗi phiên bản một sheet) */
     version: z.union([z.number().int().positive(), z.literal('all')]),
@@ -192,7 +192,7 @@ export const ExportStatsRequestSchema = z
     message: 'Ngày bắt đầu phải trước hoặc bằng ngày kết thúc.',
     path: ['submittedTo'],
   });
-export type ExportStatsRequest = z.infer<typeof ExportStatsRequestSchema>;
+export type ExportFormListRequest = z.infer<typeof ExportFormListRequestSchema>;
 
 /* ---------- Câu thông báo ---------- */
 
@@ -205,14 +205,14 @@ export const EXPORT_MESSAGES = {
   formTypeNotFound: 'Loại đơn này không còn. Có thể ai đó vừa xóa.',
   /** Mẫu không có (404) */
   templateNotFound: 'Mẫu xuất file này không còn. Có thể ai đó vừa xóa.',
-  /** Xuất thống kê phiên bản không có (404) */
+  /** Xuất danh sách đơn với phiên bản không có (404) */
   versionNotFound: 'Phiên bản này không còn. Có thể ai đó vừa xóa.',
-  /** Xuất file đơn không có, hoặc không được xem (404) */
+  /** Xuất đơn không có, hoặc không được xem (404) */
   formNotFound: 'Không có đơn này, hoặc bạn không có quyền xem.',
-  /** Tải lên mẫu xuất file đơn không phải .docx (422) */
-  notDocx: 'Mẫu xuất file đơn phải là file Word .docx (Word 2007 trở lên). File .doc cũ hãy mở bằng Word và lưu lại thành .docx.',
-  /** Tải lên mẫu xuất file thống kê không phải .xlsx (422) */
-  notXlsx: 'Mẫu xuất file thống kê phải là file Excel .xlsx (Excel 2007 trở lên). File .xls cũ hãy mở bằng Excel và lưu lại thành .xlsx.',
+  /** Tải lên mẫu xuất đơn không phải .docx (422) */
+  notDocx: 'Mẫu xuất đơn phải là file Word .docx (Word 2007 trở lên). File .doc cũ hãy mở bằng Word và lưu lại thành .docx.',
+  /** Tải lên mẫu xuất danh sách đơn không phải .xlsx (422) */
+  notXlsx: 'Mẫu xuất danh sách đơn phải là file Excel .xlsx (Excel 2007 trở lên). File .xls cũ hãy mở bằng Excel và lưu lại thành .xlsx.',
   /** File .docx không đọc được (422) */
   unreadable: 'Không đọc được file này. Hãy chắc đây là file Word .docx.',
   /** File .xlsx không đọc được (422) */
@@ -236,16 +236,16 @@ export const EXPORT_MESSAGES = {
 /** Câu báo file mẫu sai loại / không đọc được, theo mục đích của mẫu. */
 export const TEMPLATE_FILE_MESSAGES: Record<ExportTemplatePurpose, { wrongType: string; unreadable: string }> = {
   form: { wrongType: EXPORT_MESSAGES.notDocx, unreadable: EXPORT_MESSAGES.unreadable },
-  stats: { wrongType: EXPORT_MESSAGES.notXlsx, unreadable: EXPORT_MESSAGES.unreadableXlsx },
+  list: { wrongType: EXPORT_MESSAGES.notXlsx, unreadable: EXPORT_MESSAGES.unreadableXlsx },
 };
 
 /**
  * Mục đích của một file mẫu theo đuôi file.
  * @param fileName  tên file
- * @returns         'form' (.docx), 'stats' (.xlsx); đuôi khác thì null
+ * @returns         'form' (.docx), 'list' (.xlsx); đuôi khác thì null
  */
 export function templatePurposeOfFile(fileName: string): ExportTemplatePurpose | null {
   if (hasTemplateExtension(fileName, 'form')) return 'form';
-  if (hasTemplateExtension(fileName, 'stats')) return 'stats';
+  if (hasTemplateExtension(fileName, 'list')) return 'list';
   return null;
 }

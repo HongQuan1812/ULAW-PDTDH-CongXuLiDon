@@ -1,4 +1,4 @@
-/* Đọc mẫu xuất file đơn (Word) theo mẫu của Phòng Đào tạo: mỗi loại đơn của shared/src/seed/school-form-types.ts một mẫu,
+/* Đọc mẫu xuất đơn (Word) theo mẫu của Phòng Đào tạo: mỗi loại đơn của shared/src/seed/school-form-types.ts một mẫu,
    tệp ở shared/src/seed/export-templates/<mã loại đơn>.docx (dữ liệu seed; đọc ở đây vì shared/ dùng chung với web, không đọc tệp được). Seed dev (seed.ts) và seed bản thật (production-seed.ts) cùng đọc.
    Sửa mẫu: thay tệp .docx cùng tên. Dev restart là có; bản thật không ghi đè, cán bộ tải mẫu mới ở trình soạn loại đơn. */
 import { readdirSync, readFileSync } from 'node:fs';

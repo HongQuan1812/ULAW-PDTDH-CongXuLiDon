@@ -2,7 +2,7 @@ import ExcelJS from 'exceljs';
 import { describe, expect, test } from 'vitest';
 import { FormSectionSchema } from '../aux-schema/form-types--sections';
 import type { ExportData } from './exports--tags';
-import { checkXlsxTemplate, createStatsStarterXlsx, isReadableXlsx, renderXlsxByVersion } from './exports--xlsx';
+import { checkXlsxTemplate, createFormListStarterXlsx, isReadableXlsx, renderXlsxByVersion } from './exports--xlsx';
 
 /**
  * Điền mẫu cho một phiên bản duy nhất (file chỉ có một sheet).
@@ -12,7 +12,7 @@ import { checkXlsxTemplate, createStatsStarterXlsx, isReadableXlsx, renderXlsxBy
  * @returns            file đã điền
  */
 const renderXlsxTemplate = (bytes: ArrayBuffer | Uint8Array, formsData: readonly ExportData[], summaryData: ExportData) =>
-  renderXlsxByVersion(bytes, [{ sheetName: 'Thống kê', formsData, summaryData }]);
+  renderXlsxByVersion(bytes, [{ sheetName: 'Danh sách đơn', formsData, summaryData }]);
 
 /** Loại đơn thử: một câu chữ, một bảng có cột tính tổng. */
 const sections = [
@@ -44,7 +44,7 @@ const sections = [
 async function makeTemplate(cells: string[]): Promise<ArrayBuffer> {
   const workbook = new ExcelJS.Workbook();
   const sheet = workbook.addWorksheet('Đơn');
-  sheet.addRow(['Thống kê {loai_don} ngày {ngay_xuat}']);
+  sheet.addRow(['Danh sách {loai_don} ngày {ngay_xuat}']);
   sheet.addRow(['STT', 'Mã đơn', 'Lý do', 'Môn']);
   sheet.addRow(cells).font = { bold: true };
   sheet.addRow(['Tổng: {so_don} đơn']);
@@ -71,7 +71,7 @@ describe('renderXlsxTemplate', () => {
     ];
     const sheet = await readSheet(await renderXlsxTemplate(template, forms, { so_don: 2, loai_don: 'Xét miễn môn', ngay_xuat: '13/11/2026' }));
 
-    expect(sheet.getCell('A1').value).toBe('Thống kê Xét miễn môn ngày 13/11/2026');
+    expect(sheet.getCell('A1').value).toBe('Danh sách Xét miễn môn ngày 13/11/2026');
     expect(sheet.getRow(3).values).toEqual([undefined, 1, 'A-1', 'Chuyển trường', '1. Triết · 3', 3]);
     expect(sheet.getRow(4).values).toEqual([undefined, 2, 'A-2', '', '', 0]);
     expect(sheet.getCell('B4').font?.bold).toBe(true);
@@ -137,9 +137,9 @@ describe('bảng nhiều dòng (gộp ô)', () => {
   });
 });
 
-describe('createStatsStarterXlsx', () => {
+describe('createFormListStarterXlsx', () => {
   test('file mẫu dựng sẵn: đầu cột 2 tầng (tên câu bảng gộp ngang trên các cột), mã ở hàng mẫu; không mã sai; xuất được', async () => {
-    const starter = await createStatsStarterXlsx(sections);
+    const starter = await createFormListStarterXlsx(sections);
     const sheet = await readSheet(starter);
     expect(sheet.getCell('A1').value).toBe('Danh sách đơn {loai_don}');
 
@@ -206,10 +206,10 @@ describe('renderXlsxByVersion', () => {
 
     // Assert
     expect(workbook.worksheets.map((sheet) => sheet.name)).toEqual(['Phiên bản 1', 'Phiên bản 2']);
-    expect(first!.getCell('A1').value).toBe('Thống kê Đơn bản 1 ngày 13/11/2026');
+    expect(first!.getCell('A1').value).toBe('Danh sách Đơn bản 1 ngày 13/11/2026');
     expect(first!.getRow(3).values).toEqual([undefined, 1, 'A-1', 'Một', '']);
     expect(first!.getCell('A4').value).toBe('Tổng: 1 đơn');
-    expect(second!.getCell('A1').value).toBe('Thống kê Đơn bản 2 ngày 13/11/2026');
+    expect(second!.getCell('A1').value).toBe('Danh sách Đơn bản 2 ngày 13/11/2026');
     expect(second!.getRow(3).values).toEqual([undefined, 1, 'B-1', '', '']);
     expect(second!.getRow(4).values).toEqual([undefined, 2, 'B-2', 'Hai', '']);
     expect(second!.getCell('B4').font?.bold).toBe(true);

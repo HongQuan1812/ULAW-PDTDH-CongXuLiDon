@@ -1,10 +1,10 @@
-/* Khung nổi "Mẫu xuất file đơn" (Word) và "Mẫu xuất file thống kê" (Excel) trong trình soạn loại đơn: cùng một khung, khác mục đích;
+/* Khung nổi "Mẫu xuất đơn" (Word) và "Mẫu xuất danh sách đơn" (Excel) trong trình soạn loại đơn: cùng một khung, khác mục đích;
    mở từ nút tròn ở cạnh phải màn hình (ExportTemplatesDock.tsx).
    Mẫu thuộc loại đơn (dùng chung mọi phiên bản). Chọn file (bấm hoặc kéo thả, như câu hỏi tải tệp của lá đơn), đổi tên, xóa
    chỉ ghi nhận trong trình duyệt và trình soạn hiện "Chưa lưu"; bấm Lưu mới gửi lên máy chủ (exportTemplateChanges.ts).
    Mã trong mỗi mẫu tự được kiểm tra (không cần bấm nút), theo bản soạn đang hiện
-   (kể cả thay đổi chưa lưu, kể cả mẫu chưa lưu). Muốn xem mẫu điền dữ liệu thật: mẫu đơn thì Xuất file ở trang chi tiết
-   một lá đơn; mẫu thống kê thì Xuất thống kê ở trang Quản lí đơn.
+   (kể cả thay đổi chưa lưu, kể cả mẫu chưa lưu). Muốn xem mẫu điền dữ liệu thật: mẫu đơn thì Xuất đơn ở trang chi tiết
+   một lá đơn; mẫu danh sách đơn thì Xuất danh sách đơn ở đầu trình soạn loại đơn.
    Mỗi lần mở khung, các mục thu gọn bên trong đều đóng. Bấm Esc thì đóng khung. */
 import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
 import {
@@ -43,19 +43,19 @@ const CHECK_REFRESH_DELAY_MS = 800;
 /** Chữ trên khung theo mục đích: tiêu đề, lời giới thiệu, gợi ý ở ô chọn file. */
 export const PANEL_TEXT: Record<ExportTemplatePurpose, { title: string; intro: string; dropHint: string }> = {
   form: {
-    title: 'Mẫu xuất file đơn',
-    intro: 'File Word có chèn mã. Khi bấm “Xuất file” ở chi tiết đơn, các mã được thay bằng dữ liệu của đơn.',
+    title: 'Mẫu xuất đơn',
+    intro: 'File Word có chèn mã. Khi bấm “Xuất đơn” ở chi tiết đơn, các mã được thay bằng dữ liệu của đơn.',
     dropHint: 'Chỉ nhận file Word .docx — bấm Lưu để tải lên',
   },
-  stats: {
-    title: 'Mẫu xuất file thống kê',
+  list: {
+    title: 'Mẫu xuất danh sách đơn',
     intro: 'File Excel có một hàng mẫu chứa mã. Khi xuất, hàng mẫu nhân lên thành mỗi đơn một hàng.',
     dropHint: 'Chỉ nhận file Excel .xlsx — bấm Lưu để tải lên',
   },
 };
 
 export interface ExportTemplatesPanelProps {
-  /** Khung mẫu xuất file đơn (Word) hay thống kê (Excel) */
+  /** Khung mẫu xuất đơn (Word) hay danh sách đơn (Excel) */
   purpose: ExportTemplatePurpose;
   /** Mã loại đơn; null = loại đơn mới chưa lưu (chưa có mẫu nào ở máy chủ) */
   formTypeId: string | null;
@@ -87,7 +87,7 @@ function useSettledValue<Value>(value: Value, delayMs: number): Value {
 }
 
 /**
- * Khung nổi Mẫu xuất file đơn / Mẫu xuất file thống kê (mở từ nút tròn ở cạnh phải, xem ExportTemplatesDock.tsx).
+ * Khung nổi Mẫu xuất đơn / Mẫu xuất danh sách đơn (mở từ nút tròn ở cạnh phải, xem ExportTemplatesDock.tsx).
  * @param props  xem ExportTemplatesPanelProps; onClose: bấm nút đóng
  * @returns      khung nổi: đầu khung (tên, lời giới thiệu, nút đóng) và phần cuộn được (Cách tạo một mẫu, các mẫu, Bảng mã)
  */
@@ -234,7 +234,7 @@ function TemplateList({
   }, [rows, checkDraft, formTypeId, checkRound]);
 
   /**
-   * Thêm các file vừa chọn / kéo thả làm mẫu mới (chưa lưu): bỏ file sai loại (khung mẫu đơn nhận .docx, khung thống kê nhận .xlsx)
+   * Thêm các file vừa chọn / kéo thả làm mẫu mới (chưa lưu): bỏ file sai loại (khung mẫu đơn nhận .docx, khung danh sách đơn nhận .xlsx)
    * và file trùng tên với mẫu cùng khung đang chờ lưu (báo lí do bằng toast).
    * @param chosenFiles  file từ hộp chọn file hoặc kéo thả
    */
@@ -371,7 +371,7 @@ function TemplateList({
                     <EditorIconButton icon="download" label="Tải mẫu gốc về máy" disabled={busy} onClick={() => void downloadTemplate(row)} />
                     <EditorIconButton
                       icon="rename"
-                      label={`Đổi tên: ${purpose === 'form' ? 'tên này hiện khi chọn mẫu lúc Xuất file' : 'tên này cũng là phần sau của tên file xuất ra'}`}
+                      label={`Đổi tên: ${purpose === 'form' ? 'tên này hiện khi chọn mẫu lúc Xuất đơn' : 'tên này cũng là phần sau của tên file xuất ra'}`}
                       disabled={busy || saving}
                       onClick={() => setRenamingId(row.id)}
                     />

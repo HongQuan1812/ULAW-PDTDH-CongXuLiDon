@@ -1,4 +1,4 @@
-/* Hai mục hướng dẫn trong khung "Mẫu xuất file đơn" / "Mẫu xuất file thống kê":
+/* Hai mục hướng dẫn trong khung "Mẫu xuất đơn" / "Mẫu xuất danh sách đơn":
    - "Cách tạo một mẫu" (ExportHowTo, ngay trên khung chọn file, thu gọn được): 3 bước và ví dụ trước / sau;
    - "Bảng mã" (ExportTagGuide, dưới danh sách mẫu): mã câu trả lời của từng câu hỏi và mã chung, mỗi mã một dòng (Gõ vào file Word / Excel · Sẽ được điền bằng).
    Bấm vào mã để sao chép.
@@ -9,11 +9,11 @@ import { Fragment, useState, type ReactNode } from 'react';
 import {
   COMMON_EXPORT_TAG_GROUPS,
   FORM_NUMBER_TAG,
-  STATS_SUMMARY_TAGS,
+  FORM_LIST_SUMMARY_TAGS,
   DOCX_CONTENT_TYPE,
   XLSX_CONTENT_TYPE,
   createFormStarterDocx,
-  createStatsStarterXlsx,
+  createFormListStarterXlsx,
   rowNumberTag,
   type ExportTemplatePurpose,
   type FormSection,
@@ -144,7 +144,7 @@ function TagRow({ tag, meaning }: { tag: string; meaning: string }) {
 }
 
 /** Tên ứng dụng soạn mẫu theo mục đích, ghi trong lời hướng dẫn. */
-const APP_NAME: Record<ExportTemplatePurpose, string> = { form: 'Word', stats: 'Excel' };
+const APP_NAME: Record<ExportTemplatePurpose, string> = { form: 'Word', list: 'Excel' };
 
 /**
  * Độ rộng các cột và đầu bảng của Bảng mã. Mọi nhóm mã dùng chung độ rộng cột, nên các cột thẳng hàng giữa các nhóm.
@@ -174,7 +174,7 @@ function TagTableHead({ purpose }: { purpose: ExportTemplatePurpose }) {
  * @param question  mã của câu hỏi
  * @returns         các dòng bảng
  */
-function StatsQuestionTagRows({ question }: { question: QuestionExportTag }) {
+function FormListQuestionTagRows({ question }: { question: QuestionExportTag }) {
   const kind = question.columns ? undefined : ANSWER_KIND[question.type];
   const rowName = question.rowName || 'dòng';
   return (
@@ -266,7 +266,7 @@ function QuestionTagRows({ question }: { question: QuestionExportTag }) {
 }
 
 interface ExportTagGuideProps {
-  /** Hướng dẫn cho mẫu xuất file đơn (Word) hay thống kê (Excel) */
+  /** Hướng dẫn cho mẫu xuất đơn (Word) hay danh sách đơn (Excel) */
   purpose: ExportTemplatePurpose;
   /** Mã của các câu hỏi đang soạn */
   questionTags: QuestionExportTag[];
@@ -283,7 +283,7 @@ const FORMAT_EXAMPLES = [
 ];
 
 /** Ví dụ của "Cách tạo một mẫu" ở mẫu Excel: tiêu đề, các cột và vài đơn minh họa (mã đơn nhảy cóc để thấy STT khác mã đơn). */
-const STATS_EXAMPLE = {
+const FORM_LIST_EXAMPLE = {
   title: { template: 'Danh sách đơn {loai_don} · {so_don} đơn', filled: 'Danh sách đơn Thôi học · 3 đơn' },
   columns: [
     { header: 'STT', tag: FORM_NUMBER_TAG },
@@ -298,7 +298,7 @@ const STATS_EXAMPLE = {
 };
 
 /**
- * Một bảng nhỏ trông như trang tính Excel, cho ví dụ của mẫu thống kê: dòng tiêu đề chiếm cả bề ngang, đầu cột, các hàng.
+ * Một bảng nhỏ trông như trang tính Excel, cho ví dụ của mẫu danh sách đơn: dòng tiêu đề chiếm cả bề ngang, đầu cột, các hàng.
  * @param label  tên ghi nhỏ phía trên, vd "File mẫu cậu soạn"
  * @param title  chữ của dòng tiêu đề
  * @param rows   các hàng (hàng đầu là đầu cột)
@@ -339,7 +339,7 @@ function SheetExample({ label, title, rows }: { label: string; title: string; ro
 /**
  * Tên file mẫu dựng sẵn, theo tên loại đơn; bỏ các kí tự không dùng được trong tên file.
  * @param formTypeName  tên loại đơn đang soạn
- * @param prefix        phần đầu tên file, vd "Mẫu thống kê"
+ * @param prefix        phần đầu tên file, vd "Mẫu danh sách đơn"
  * @param extension     đuôi file
  * @param version       số phiên bản đang xem
  * @returns             tên file
@@ -367,7 +367,7 @@ function StarterButtons({ purpose, sections, formTypeName, version }: { purpose:
     if (purpose === 'form') {
       return { blob: new Blob([createFormStarterDocx(sections)], { type: DOCX_CONTENT_TYPE }), fileName: starterFileName(formTypeName, 'Mẫu đơn', 'docx', version) };
     }
-    return { blob: new Blob([await createStatsStarterXlsx(sections)], { type: XLSX_CONTENT_TYPE }), fileName: starterFileName(formTypeName, 'Mẫu thống kê', 'xlsx', version) };
+    return { blob: new Blob([await createFormListStarterXlsx(sections)], { type: XLSX_CONTENT_TYPE }), fileName: starterFileName(formTypeName, 'Mẫu danh sách đơn', 'xlsx', version) };
   };
 
   /** Dựng file rồi tải về máy hoặc mở xem. */
@@ -414,8 +414,8 @@ function StarterButtons({ purpose, sections, formTypeName, version }: { purpose:
  * @param version       số phiên bản đang xem (ghi trên nút và tên file)
  * @returns             nội dung mục
  */
-function StatsHowTo({ sections, formTypeName, version }: { sections: readonly FormSection[]; formTypeName: string; version: number }) {
-  const headers = STATS_EXAMPLE.columns.map((column) => column.header);
+function FormListHowTo({ sections, formTypeName, version }: { sections: readonly FormSection[]; formTypeName: string; version: number }) {
+  const headers = FORM_LIST_EXAMPLE.columns.map((column) => column.header);
 
   return (
     <div className={styles.guideBody}>
@@ -429,25 +429,25 @@ function StatsHowTo({ sections, formTypeName, version }: { sections: readonly Fo
           <span>Kéo thả file vào mục trên rồi bấm Lưu. Mã gõ sai sẽ có cảnh báo ngay dưới mẫu.</span>
         </li>
         <li>
-          <b>Xuất file</b>
-          <span>Bấm “Xuất thống kê” ở đầu trang để nhận file Excel có mọi đơn của loại đơn này.</span>
+          <b>Xuất danh sách đơn</b>
+          <span>Bấm “Xuất danh sách đơn” ở đầu trang để nhận file Excel có mọi đơn của loại đơn này.</span>
         </li>
       </ol>
 
       {/* Ví dụ: tiêu đề điền một lần; hàng mẫu nhân lên mỗi đơn một hàng */}
       <div className={styles.sheetExamples} aria-label="Ví dụ">
-        <SheetExample label="File mẫu" title={STATS_EXAMPLE.title.template} rows={[headers, STATS_EXAMPLE.columns.map((column) => `{${column.tag}}`)]} />
+        <SheetExample label="File mẫu" title={FORM_LIST_EXAMPLE.title.template} rows={[headers, FORM_LIST_EXAMPLE.columns.map((column) => `{${column.tag}}`)]} />
         <span className={styles.arrow} aria-hidden="true">
           →
         </span>
-        <SheetExample label="File xuất ra" title={STATS_EXAMPLE.title.filled} rows={[headers, ...STATS_EXAMPLE.forms]} />
+        <SheetExample label="File xuất ra" title={FORM_LIST_EXAMPLE.title.filled} rows={[headers, ...FORM_LIST_EXAMPLE.forms]} />
       </div>
       <p className={styles.hint}>
         Hàng có mã của đơn là <b>hàng mẫu</b>: nhân lên mỗi đơn một hàng. Tiêu đề chỉ có mã của cả file nên điền một lần. {'{stt}'} là số đếm
         1, 2, 3… của hàng, không phải mã đơn.
       </p>
       {/* File mẫu dựng sẵn: đầu cột và mã mọi câu hỏi của loại đơn đang soạn */}
-      <StarterButtons purpose="stats" sections={sections} formTypeName={formTypeName} version={version} />
+      <StarterButtons purpose="list" sections={sections} formTypeName={formTypeName} version={version} />
     </div>
   );
 }
@@ -469,8 +469,8 @@ function FormHowTo({ sections, formTypeName, version }: { sections: readonly For
           <span>Kéo thả file vào mục trên rồi bấm Lưu. Mã gõ sai sẽ có cảnh báo ngay dưới mẫu.</span>
         </li>
         <li>
-          <b>Xuất file</b>
-          <span>Ở chi tiết đơn, bấm “Xuất file” để nhận file Word đã điền sẵn.</span>
+          <b>Xuất đơn</b>
+          <span>Ở chi tiết đơn, bấm “Xuất đơn” để nhận file Word đã điền sẵn.</span>
         </li>
       </ol>
       {/* Ví dụ: mỗi kiểu định dạng của mã một cặp "trong file mẫu → trong file xuất ra", tên định dạng ghi nhỏ phía trên */}
@@ -526,7 +526,7 @@ function TagGroup({ title, purpose, children }: { title: string; purpose: Export
 
 /**
  * Mục "Cách tạo một mẫu" (thu gọn được, mặc định đóng); đặt ngay trên khung chọn file.
- * @param purpose       mẫu xuất file đơn hay thống kê
+ * @param purpose       mẫu xuất đơn hay danh sách đơn
  * @param sections      các phần của loại đơn đang soạn (mẫu Excel dựng file mẫu có sẵn)
  * @param formTypeName  tên loại đơn đang soạn (tên file mẫu có sẵn)
  * @returns             mục thu gọn
@@ -535,7 +535,7 @@ export function ExportHowTo({ purpose, sections, formTypeName, version }: { purp
   return (
     <details className={styles.guide}>
       <summary>Cách tạo một mẫu</summary>
-      {purpose === 'form' ? <FormHowTo sections={sections} formTypeName={formTypeName} version={version} /> : <StatsHowTo sections={sections} formTypeName={formTypeName} version={version} />}
+      {purpose === 'form' ? <FormHowTo sections={sections} formTypeName={formTypeName} version={version} /> : <FormListHowTo sections={sections} formTypeName={formTypeName} version={version} />}
     </details>
   );
 }
@@ -550,9 +550,9 @@ function TagGroups({ purpose, questionTags }: Omit<ExportTagGuideProps, 'version
   return (
     <div className={styles.tagGroups}>
       {/* Mẫu Excel: mã chỉ điền một lần cho cả file */}
-      {purpose === 'stats' && (
+      {purpose === 'list' && (
         <TagGroup title="Tiêu đề file (điền một lần, không lặp theo đơn)" purpose={purpose}>
-          {STATS_SUMMARY_TAGS.map(({ tag, label }) => (
+          {FORM_LIST_SUMMARY_TAGS.map(({ tag, label }) => (
             <TagRow key={tag} tag={tag} meaning={label} />
           ))}
         </TagGroup>
@@ -561,7 +561,7 @@ function TagGroups({ purpose, questionTags }: Omit<ExportTagGuideProps, 'version
         <TagGroup title="Câu trả lời trong đơn" purpose={purpose}>
           {/* khóa theo vị trí: lúc đang soạn hai câu có thể trùng mã (báo lỗi khi Lưu) */}
           {questionTags.map((question, index) =>
-            purpose === 'form' ? <QuestionTagRows key={index} question={question} /> : <StatsQuestionTagRows key={index} question={question} />,
+            purpose === 'form' ? <QuestionTagRows key={index} question={question} /> : <FormListQuestionTagRows key={index} question={question} />,
           )}
         </TagGroup>
       ) : (
@@ -573,7 +573,7 @@ function TagGroups({ purpose, questionTags }: Omit<ExportTagGuideProps, 'version
       {COMMON_EXPORT_TAG_GROUPS.map((group) => (
         <TagGroup key={group.title} title={group.title} purpose={purpose}>
           {/* Mẫu Excel: {stt} đứng đầu nhóm có mã đơn */}
-          {purpose === 'stats' && group.tags.some(({ tag }) => tag === 'ma_don') && (
+          {purpose === 'list' && group.tags.some(({ tag }) => tag === 'ma_don') && (
             <TagRow tag={FORM_NUMBER_TAG} meaning="Số thứ tự đơn (1, 2, 3…), không phải mã đơn" />
           )}
           {group.tags.map(({ tag, label }) => (

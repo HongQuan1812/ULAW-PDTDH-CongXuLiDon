@@ -186,10 +186,10 @@ model FileObject {
   @@index([formCode])
 }
 
-// Mẫu xuất file của một lá đơn (Word) hoặc thống kê mọi lá đơn (Excel)
+// Mẫu xuất file của một lá đơn (Word) hoặc danh sách mọi lá đơn (Excel)
 enum ExportTemplatePurpose {
   form
-  stats
+  list
 }
 
 // Mẫu xuất file theo loại đơn

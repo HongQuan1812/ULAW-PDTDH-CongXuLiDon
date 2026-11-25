@@ -1,14 +1,14 @@
 /* Thay đổi chưa lưu về mẫu xuất file của một loại đơn (như tệp người nộp đơn vừa chọn, xem form-renderer/localFiles.ts):
    thêm (file giữ trong trình duyệt), đổi tên, xóa chỉ ghi nhận ở đây; bấm Lưu ở trình soạn mới gửi lên máy chủ trong một lần.
    Mẫu thuộc loại đơn (mọi phiên bản), nên thay đổi này không theo phiên bản đang soạn.
-   Mẫu xuất file đơn và mẫu xuất file thống kê dùng chung một bộ thay đổi; mỗi khung chỉ hiện các mẫu cùng mục đích. */
+   Mẫu xuất đơn và mẫu xuất danh sách đơn dùng chung một bộ thay đổi; mỗi khung chỉ hiện các mẫu cùng mục đích. */
 import { EXPORT_TEMPLATE_FILE, type ExportTemplate, type ExportTemplatePurpose, type SaveExportTemplatesRequest } from '@ulaw/shared';
 
 /** Mẫu mới chọn từ máy, chưa tải lên. */
 export interface StagedTemplate {
   /** Id tạm, dạng 'local-…'; cũng là tên trường multipart chứa file khi lưu */
   tempId: string;
-  /** Mẫu xuất file đơn (Word) hay thống kê (Excel) */
+  /** Mẫu xuất đơn (Word) hay danh sách đơn (Excel) */
   purpose: ExportTemplatePurpose;
   /** Tên mẫu, mặc định là tên file bỏ đuôi */
   name: string;
@@ -43,7 +43,7 @@ export function hasTemplateChanges(changes: ExportTemplateChanges): boolean {
 /**
  * Giữ một file vừa chọn làm mẫu mới.
  * @param file     file .docx / .xlsx (đã kiểm tra đuôi)
- * @param purpose  mẫu xuất file đơn hay thống kê
+ * @param purpose  mẫu xuất đơn hay danh sách đơn
  * @returns        mẫu mới, tên mẫu = tên file bỏ đuôi
  */
 export function stageTemplate(file: File, purpose: ExportTemplatePurpose): StagedTemplate {
@@ -56,7 +56,7 @@ export function stageTemplate(file: File, purpose: ExportTemplatePurpose): Stage
  * Danh sách mẫu đang hiện của một mục đích: mẫu đã lưu (bỏ mẫu sắp xóa, tên theo tên mới), rồi mẫu mới chưa lưu.
  * @param savedTemplates  mẫu ở máy chủ (mọi mục đích)
  * @param changes         các thay đổi chưa lưu
- * @param purpose         chỉ lấy mẫu xuất file đơn hay thống kê
+ * @param purpose         chỉ lấy mẫu xuất đơn hay danh sách đơn
  * @returns               các dòng theo thứ tự hiện
  */
 export function templateRows(savedTemplates: readonly ExportTemplate[], changes: ExportTemplateChanges, purpose: ExportTemplatePurpose): TemplateRow[] {

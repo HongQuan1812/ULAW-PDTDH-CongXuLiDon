@@ -1,5 +1,5 @@
 /* Hook gọi API xuất file theo mẫu: mẫu của loại đơn (danh sách, lưu các thay đổi, xem mẫu gốc,
-   kiểm tra mã kể cả với file chưa lưu), xuất file một lá đơn (Word) và xuất file thống kê (Excel). */
+   kiểm tra mã kể cả với file chưa lưu), xuất một lá đơn (Word) và xuất danh sách đơn (Excel). */
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   EXPORT_MESSAGES,
@@ -11,7 +11,7 @@ import {
   formExportPath,
   type ExportDraftRequest,
   type ExportFormRequest,
-  type ExportStatsRequest,
+  type ExportFormListRequest,
   type ExportTemplateCheck,
   type ExportTemplatesResponse,
   type SaveExportTemplatesRequest,
@@ -96,7 +96,7 @@ export function checkExportTemplate(formTypeId: string, templateId: string, draf
 }
 
 /**
- * So mã trong một mẫu xuất file đơn với các câu hỏi của lá đơn (bản chụp lúc nộp).
+ * So mã trong một mẫu xuất đơn với các câu hỏi của lá đơn (bản chụp lúc nộp).
  * @param code     mã đơn
  * @param request  mẫu cần kiểm tra
  * @returns        kết quả kiểm tra
@@ -106,7 +106,7 @@ export function checkFormExport(code: string, request: ExportFormRequest): Promi
 }
 
 /**
- * Xuất file một lá đơn theo một mẫu.
+ * Xuất một lá đơn theo một mẫu.
  * @param code     mã đơn
  * @param request  mẫu dùng để điền
  * @returns        file Word đã điền; lỗi thì ném ApiError (câu báo theo EXPORT_MESSAGES)
@@ -116,13 +116,13 @@ export function exportForm(code: string, request: ExportFormRequest): Promise<Do
 }
 
 /**
- * Xuất file thống kê các lá đơn của loại đơn theo một mẫu thống kê.
+ * Xuất danh sách các lá đơn của loại đơn theo một mẫu danh sách đơn.
  * @param formTypeId  mã loại đơn
- * @param templateId  id mẫu thống kê
+ * @param templateId  id mẫu danh sách đơn
  * @param request     phiên bản (số hoặc 'all': mỗi phiên bản một sheet) và khoảng ngày nộp
  * @returns           file Excel đã điền; lỗi thì ném ApiError (câu báo theo EXPORT_MESSAGES)
  */
-export function exportStats(formTypeId: string, templateId: string, request: ExportStatsRequest): Promise<DownloadedFile> {
+export function exportFormList(formTypeId: string, templateId: string, request: ExportFormListRequest): Promise<DownloadedFile> {
   return fetchFile(exportTemplatePath(formTypeId, templateId, 'export'), { method: 'POST', body: JSON.stringify(request) }).catch(toExportError);
 }
 

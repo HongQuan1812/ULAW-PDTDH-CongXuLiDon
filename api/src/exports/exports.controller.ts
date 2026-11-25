@@ -1,5 +1,5 @@
-/* Nhóm API exports: mẫu xuất file của loại đơn, xuất file một lá đơn (Word) và xuất file thống kê (Excel).
-   Xem danh sách mẫu, xuất file một lá đơn chỉ cần đăng nhập; mọi lệnh quản lí mẫu và xuất thống kê cần quyền manageFormTypes.
+/* Nhóm API exports: mẫu xuất file của loại đơn, xuất một lá đơn (Word) và xuất danh sách đơn (Excel).
+   Xem danh sách mẫu, xuất một lá đơn chỉ cần đăng nhập; mọi lệnh quản lí mẫu và xuất danh sách đơn cần quyền manageFormTypes.
    Các lệnh trả file (mẫu gốc, xuất file) trả nội dung .docx / .xlsx, tên file trong Content-Disposition. */
 import { Body, Controller, Get, HttpCode, Param, Post, Put, Req, Res, StreamableFile, UploadedFiles, UseInterceptors } from '@nestjs/common';
 import { AnyFilesInterceptor } from '@nestjs/platform-express';
@@ -11,7 +11,7 @@ import {
   EXPORT_TEMPLATE_FIELDS,
   ExportDraftRequestSchema,
   ExportFormRequestSchema,
-  ExportStatsRequestSchema,
+  ExportFormListRequestSchema,
   ExportTemplateCheckSchema,
   ExportTemplatesResponseSchema,
   SaveExportTemplatesRequestSchema,
@@ -104,7 +104,7 @@ export class ExportsController {
   /** @param exportsService  đọc, lưu, kiểm tra, điền mẫu */
   constructor(private readonly exportsService: ExportsService) {}
 
-  /** @returns  các mẫu của loại đơn (nút Xuất file ở trang chi tiết đơn, các khung mẫu xuất file) */
+  /** @returns  các mẫu của loại đơn (nút Xuất đơn ở trang chi tiết đơn, các khung mẫu xuất file) */
   @Get(EXPORT_ENDPOINTS.templates)
   @RequireLogin()
   @ApiOkResponse({ schema: openApiSchemaOf(ExportTemplatesResponseSchema) })
@@ -186,7 +186,7 @@ export class ExportsController {
   }
 
   /**
-   * Điền dữ liệu của lá đơn vào một mẫu xuất file đơn của loại đơn đó (nút Xuất file).
+   * Điền dữ liệu của lá đơn vào một mẫu xuất đơn của loại đơn đó (nút Xuất đơn).
    * @returns  nội dung file .docx đã điền
    * @throws   404 không có đơn / không được xem, không có mẫu · 422 body sai dạng, mẫu sai cú pháp
    */
@@ -205,7 +205,7 @@ export class ExportsController {
   }
 
   /**
-   * So mã trong một mẫu xuất file đơn với các câu hỏi của lá đơn này (hiện trong hộp "Chọn mẫu" của nút Xuất file).
+   * So mã trong một mẫu xuất đơn với các câu hỏi của lá đơn này (hiện trong hộp "Chọn mẫu" của nút Xuất đơn).
    * @returns  kết quả kiểm tra
    * @throws   404 không có đơn / không được xem, không có mẫu · 422 body sai dạng
    */
@@ -219,22 +219,22 @@ export class ExportsController {
   }
 
   /**
-   * Điền các lá đơn của loại đơn vào một mẫu xuất file thống kê, theo phiên bản và ngày nộp (nút Xuất thống kê).
+   * Điền các lá đơn của loại đơn vào một mẫu xuất danh sách đơn, theo phiên bản và ngày nộp (nút Xuất danh sách đơn).
    * @returns  nội dung file .xlsx đã điền
-   * @throws   404 không có loại đơn, mẫu thống kê, phiên bản · 422 body sai dạng, không đọc được mẫu
+   * @throws   404 không có loại đơn, mẫu danh sách đơn, phiên bản · 422 body sai dạng, không đọc được mẫu
    */
-  @Post(EXPORT_ENDPOINTS.statsExport)
+  @Post(EXPORT_ENDPOINTS.formListExport)
   @HttpCode(200)
   @RequirePermission('manageFormTypes', EXPORT_MESSAGES[403])
   @ApiOkResponse(fileResponse('File Excel .xlsx', [XLSX_CONTENT_TYPE]))
-  async exportStats(
+  async exportFormList(
     @Param('formTypeId') formTypeId: string,
     @Param('templateId') templateId: string,
     @Body() requestBody: unknown,
     @Res({ passthrough: true }) response: Response,
   ): Promise<StreamableFile> {
     await this.exportsService.assertFormTypeExists(formTypeId);
-    const filter = parseOrReject(requestBody, ExportStatsRequestSchema);
-    return sendFile(await this.exportsService.exportStats(formTypeId, templateId, filter), response);
+    const filter = parseOrReject(requestBody, ExportFormListRequestSchema);
+    return sendFile(await this.exportsService.exportFormList(formTypeId, templateId, filter), response);
   }
 }

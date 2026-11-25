@@ -111,7 +111,7 @@ describe('seedProduction', () => {
     expect(await prisma.form.count({ where: { formTypeId: first!.id } })).toBeGreaterThan(0);
   });
 
-  it('thêm mẫu xuất file đơn cho loại đơn chưa có mẫu đơn nào (người tải lên là Admin); đã có mẫu thì giữ nguyên', async () => {
+  it('thêm mẫu xuất đơn cho loại đơn chưa có mẫu đơn nào (người tải lên là Admin); đã có mẫu thì giữ nguyên', async () => {
     const formTypeId = PRODUCTION_FORM_TYPES_SEED[0]!.id;
     const rollback = new Error('rollback');
 
