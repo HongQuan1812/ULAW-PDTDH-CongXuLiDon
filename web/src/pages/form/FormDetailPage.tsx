@@ -6,7 +6,7 @@
    Đơn Đang xét mà mình được ra quyết định (canDecideOn) thì có hàng nút Yêu cầu bổ sung / Từ chối / Duyệt ở đáy trang.
    Loại đơn có mẫu xuất đơn thì có nút "Xuất đơn" ở đầu trang (điền đơn vào mẫu Word, xem trước rồi tải về).
    Cán bộ có quyền internalNotes thấy nút tròn Ghi chú nội bộ ở góc phải dưới (người nộp đơn không thấy).
-   Lịch sử: thêm ở phần sau của bước 5. */
+   Các mục người nộp đơn, người tiếp nhận, người xử lí thu gọn được (trình duyệt nhớ). Lịch sử: làm sau. */
 import { useState, type FormEvent, type ReactNode } from 'react';
 import { Link, useLocation, useParams } from 'react-router';
 import { FORM_MESSAGES, can, canDecideOn, canEditForm, canReceiveForm, canTransferForm, type FormDetail, type FormStatus } from '@ulaw/shared';
@@ -27,7 +27,7 @@ import { useSaveFormChanges } from '../../features/form-renderer/useSaveFormChan
 import { ReceiveFormButton } from '../../features/receive/ReceiveFormButton';
 import { EMPTY_TEXT, formatDateTime } from '../../lib/format';
 import { DecideBar } from './DecideBar';
-import { FormInfoPanel, FormInfoPanelToggle, FormInfoSection, useFormInfoPanel } from './FormInfoPanel';
+import { FormInfoPanel, FormInfoPanelToggle, FormInfoSection, FormInfoSummary, INFO_SECTION_STORAGE_KEY, useFormInfoPanel } from './FormInfoPanel';
 import styles from './FormPage.module.css';
 import { TransferDialog } from './TransferDialog';
 import { SubmitBar, checkBeforeSending, useCommitment } from './SubmitBar';
@@ -151,8 +151,7 @@ function FormDetailView({ form }: { form: FormDetail }) {
           </div>
         )}
         <FormInfoPanel panel={infoPanel}>
-          <FormInfoSection
-            shaded
+          <FormInfoSummary
             rows={[
               ['Trạng thái', <StatusPill status={form.status} />],
               ['Loại đơn', form.formTypeName],
@@ -164,6 +163,7 @@ function FormDetailView({ form }: { form: FormDetail }) {
           {form.receiver && (
             <FormInfoSection
               title="Người tiếp nhận"
+              storageKey={INFO_SECTION_STORAGE_KEY.receiver}
               rows={[
                 ['Họ và tên', form.receiver.name],
                 ['Tiếp nhận lúc', form.receivedAt ? formatDateTime(form.receivedAt) : EMPTY_TEXT],
@@ -173,6 +173,7 @@ function FormDetailView({ form }: { form: FormDetail }) {
           {form.handler && (
             <FormInfoSection
               title="Người xử lí"
+              storageKey={INFO_SECTION_STORAGE_KEY.handler}
               action={canTransferForm(role, form) && <button type="button" onClick={() => setTransferOpen(true)}>Chuyển giao</button>}
               rows={[
                 ['Họ và tên', form.handler.name],
@@ -293,6 +294,7 @@ function ApplicantInfo({ form }: { form: FormDetail }) {
   return (
     <FormInfoSection
       title="Người nộp đơn"
+      storageKey={INFO_SECTION_STORAGE_KEY.applicant}
       action={
         profileLink && (
           <Link to={profileLink} state={{ previousPageLabel: `đơn ${form.code}` } satisfies ReturnState}>

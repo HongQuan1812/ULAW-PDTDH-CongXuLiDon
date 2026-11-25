@@ -9,7 +9,7 @@ import { Button } from '../../components/Button';
 import { Modal } from '../../components/Modal';
 import { useToast } from '../../components/Toast';
 import { BackupTargetDialog } from './BackupTargetDialog';
-import { PanelSection } from './PanelSection';
+import { PanelSection } from '../form/FormInfoPanel';
 import styles from './BackupsPage.module.css';
 
 /**
@@ -96,7 +96,7 @@ export function BackupTargetsCard({
   };
 
   return (
-    <PanelSection title="Nơi lưu" count={overview.targets.length} addLabel="Thêm nơi lưu" onAdd={() => onEdit(null)} storageKey="backupsPanel.targets.collapsed">
+    <PanelSection title="Nơi lưu" count={overview.targets.length} add={{ label: 'Thêm nơi lưu', onClick: () => onEdit(null) }} storageKey="backupsPanel.targets.collapsed" tightBody>
       {overview.targets.length === 0 ? (
         <p className={styles.emptyNote}>Chưa có nơi lưu nào. Vẫn tải bản sao lưu về máy được.</p>
       ) : (

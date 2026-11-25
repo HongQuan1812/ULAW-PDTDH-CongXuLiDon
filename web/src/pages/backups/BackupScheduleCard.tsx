@@ -18,7 +18,7 @@ import { Modal } from '../../components/Modal';
 import { Switch } from '../../components/Switch';
 import { useToast } from '../../components/Toast';
 import { errorText, isTargetUsable } from './BackupTargetsCard';
-import { PanelSection } from './PanelSection';
+import { PanelSection } from '../form/FormInfoPanel';
 import styles from './BackupsPage.module.css';
 
 /** Lịch mới: bật, 02:00 hằng ngày, chưa chọn nơi lưu. */
@@ -44,7 +44,7 @@ export function BackupScheduleCard({ overview }: { overview: BackupsResponse }) 
   const targetNameOf = (targetId: string) => overview.targets.find((target) => target.id === targetId)?.name;
 
   return (
-    <PanelSection title="Lịch định kì" count={overview.schedules.length} addLabel="Thêm lịch" onAdd={() => setEditing(null)} storageKey="backupsPanel.schedules.collapsed">
+    <PanelSection title="Lịch định kì" count={overview.schedules.length} add={{ label: 'Thêm lịch', onClick: () => setEditing(null) }} storageKey="backupsPanel.schedules.collapsed" tightBody>
       {overview.schedules.length === 0 ? (
         <p className={styles.emptyNote}>Chưa có lịch nào, máy chủ không tự sao lưu. Bấm + để thêm lịch.</p>
       ) : (

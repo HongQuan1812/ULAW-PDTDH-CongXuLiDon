@@ -3,9 +3,10 @@
 /* màn hình rộng: thẻ dính khi cuộn, nằm cột bên phải */
 .side{position:sticky;top:calc(var(--nav-h) + 24px + env(safe-area-inset-top,0px));min-width:0}
 .card{display:grid;overflow:hidden;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg)}
-/* không cao quá màn hình: tiêu đề đứng yên, các mục bên dưới cuộn riêng (vd khung Phiên bản có nhiều phiên bản) */
+/* không cao quá màn hình: tiêu đề đứng yên, các mục bên dưới cuộn riêng (vd khung Phiên bản có nhiều phiên bản).
+   Không chặn cuộn lan: cuộn tới đáy / đỉnh khung thì con lăn chuột cuộn tiếp trang. */
 .side .card{grid-template-rows:auto minmax(0,1fr);max-height:calc(100vh - var(--nav-h) - 48px - env(safe-area-inset-top,0px))}
-.side .sections{overflow-y:auto;overscroll-behavior:contain}
+.side .sections{overflow-y:auto}
 .head{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 10px 10px 20px;border-bottom:1px solid var(--line)}
 .head h2{font-size:14px;font-weight:600}
 .hide{display:inline-grid;place-items:center;width:36px;height:36px;border-radius:50%;border:0;background:transparent;color:var(--muted);cursor:pointer;flex:none}
@@ -19,12 +20,33 @@
 .sections{display:flex;flex-direction:column}
 /* màn hình hẹp (khung trượt): tiêu đề khung đứng yên, các mục cuộn bên dưới */
 .sheetSections{flex:0 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain}
-.section{padding:18px 20px;display:grid;gap:12px;border-bottom:1px solid var(--line)}
+.section{flex:none;padding:18px 20px;display:grid;gap:12px;border-bottom:1px solid var(--line)}
 .section:last-child{border-bottom:0}
-/* mục trạng thái, loại đơn, ngày nộp ở đầu khung: nền khác màu */
-.shaded{background:var(--surface-2)}
-.sectionHead{display:flex;align-items:center;justify-content:space-between;gap:8px}
-.sectionHead h3{font-size:12px;font-weight:500;color:var(--faint);text-transform:uppercase;letter-spacing:.05em}
+
+/* mục thu gọn được (PanelSection), kiểu OUTLINE / TIMELINE của VS Code */
+/* khung không đủ cao thì mỗi mục đang mở tự co lại: hàng tiêu đề đứng yên, nội dung bên dưới cuộn riêng */
+.panelSection{border-bottom:1px solid var(--line);display:flex;flex-direction:column;flex:0 1 auto;min-height:0}
+.panelSection:last-child{border-bottom:0}
+/* hàng tiêu đề nền xám, tách khỏi nội dung bên dưới (thu gọn thì chỉ còn đường kẻ của mục) */
+.panelSectionHead{flex:none;display:flex;align-items:center;gap:4px;padding:4px 8px 4px 6px;background:var(--surface-2);border-bottom:1px solid var(--line)}
+.panelSection[data-collapsed="true"] .panelSectionHead{border-bottom:0}
+.panelSectionToggle{flex:1;min-width:0;display:flex;align-items:center;gap:4px;height:36px;padding:0 6px;border:0;border-radius:8px;background:none;color:var(--fg);cursor:pointer;text-align:left}
+.panelSectionToggle:hover{background:var(--hover)}
+.panelSectionToggle h3{font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase}
+.chevron{flex:none;color:var(--muted);transition:transform .15s}
+.panelSectionToggle[aria-expanded="true"] .chevron{transform:rotate(90deg)}
+@media (prefers-reduced-motion:reduce){.chevron{transition:none}}
+.panelSectionCount{margin-left:4px;padding:0 7px;border-radius:999px;background:var(--surface);color:var(--muted);font-size:11.5px;font-weight:500;line-height:18px}
+/* nút / liên kết chữ bên phải hàng tiêu đề, vd "Xem hồ sơ ›", "Chuyển giao" */
+.panelSectionAction{flex:none;display:flex}
+.panelSectionAction :is(a,button){border:0;background:none;color:var(--accent);font-weight:500;font-size:13px;text-decoration:none;cursor:pointer;padding:6px 8px;border-radius:8px;white-space:nowrap}
+.panelSectionAction :is(a,button):hover{background:var(--hover)}
+.panelSectionAdd{display:inline-grid;place-items:center;width:32px;height:32px;border:0;border-radius:8px;background:none;color:var(--muted);cursor:pointer;flex:none}
+.panelSectionAdd:hover{background:var(--hover);color:var(--accent)}
+.panelSectionBody{padding:14px 20px;min-height:0;overflow-y:auto}
+/* khung trượt (màn hình hẹp) che cả trang: giữ cuộn trong khung, không cuộn trang phía sau */
+.sheetSections .panelSectionBody{overscroll-behavior:contain}
+.panelSectionBodyTight{padding:12px 14px}
 
 /* dòng nhãn – giá trị */
 .meta{display:grid;gap:9px;margin:0}
@@ -35,7 +57,3 @@
 @media (max-width:620px){
   .meta>div{grid-template-columns:100px minmax(0,1fr)}
 }
-
-/* nút / liên kết bên phải tiêu đề mục, vd "Xem hồ sơ ›" */
-.sectionHead :is(a,button){border:0;background:none;color:var(--accent);font-weight:500;font-size:13px;text-decoration:none;cursor:pointer;padding:4px 2px}
-.sectionHead :is(a,button):hover{text-decoration:underline;text-underline-offset:3px}

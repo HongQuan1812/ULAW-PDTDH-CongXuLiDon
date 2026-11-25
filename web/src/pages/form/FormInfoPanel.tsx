@@ -144,40 +144,142 @@ export function FormInfoPanel({ panel, title = DEFAULT_PANEL_TITLE, children }: 
 }
 
 /**
- * Một mục trong khung, vd "Người nộp đơn": tiêu đề nhỏ, nút / liên kết bên phải (nếu có), các dòng nhãn – giá trị.
- * @param title   tiêu đề mục; không có thì không có hàng tiêu đề (vd mục trạng thái, ngày nộp ở đầu khung)
- * @param shaded  true: nền khác màu để nổi bật
- * @param action  nút hoặc liên kết bên phải tiêu đề, vd "Xem hồ sơ ›"
- * @param rows    các dòng [nhãn, giá trị]
- * @returns       khối mục
+ * Đọc lựa chọn thu gọn mục đã nhớ; trình duyệt chặn localStorage thì coi như đang mở.
+ * @param storageKey  khóa localStorage của mục
+ * @returns           true khi lần trước người dùng đã thu gọn
  */
-export function FormInfoSection({
-  title,
-  shaded = false,
-  action,
-  rows,
-}: {
-  title?: string;
-  shaded?: boolean;
+function readCollapsed(storageKey: string): boolean {
+  try {
+    return localStorage.getItem(storageKey) === '1';
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Nhớ lựa chọn thu gọn mục; trình duyệt chặn localStorage thì bỏ qua.
+ * @param storageKey  khóa localStorage của mục
+ * @param collapsed   true: đang thu gọn
+ */
+function saveCollapsed(storageKey: string, collapsed: boolean): void {
+  try {
+    localStorage.setItem(storageKey, collapsed ? '1' : '0');
+  } catch {
+    // không lưu được thì lần sau mục mở như mặc định
+  }
+}
+
+interface PanelSectionProps {
+  /** Tên mục, vd "Người nộp đơn", "Lịch định kì" (hiện chữ hoa) */
+  title: string;
+  /** Số mục con, hiện cạnh tên (không có thì không hiện) */
+  count?: number;
+  /** Nút hoặc liên kết chữ bên phải hàng tiêu đề, vd "Xem hồ sơ ›", "Chuyển giao" */
   action?: ReactNode;
-  rows: readonly (readonly [label: string, content: ReactNode])[];
-}) {
+  /** Nút + bên phải hàng tiêu đề: chữ cho trình đọc màn hình và khi rê chuột (vd "Thêm lịch"), lệnh khi bấm */
+  add?: { label: string; onClick: () => void };
+  /** Khóa localStorage nhớ việc thu gọn */
+  storageKey: string;
+  /** true: lề nội dung hẹp hơn, cho danh sách có viền từng mục (vd lịch, nơi lưu) */
+  tightBody?: boolean;
+  children: ReactNode;
+}
+
+/**
+ * Mục thu gọn được trong khung, kiểu các mục OUTLINE / TIMELINE của VS Code:
+ * hàng tiêu đề nền xám, chữ hoa nhỏ, mũi tên ▸ / ▾ (bấm để thu gọn / mở), số mục, nút bên phải. Trình duyệt nhớ mục nào đang thu gọn.
+ * @param props  xem PanelSectionProps
+ * @returns      khối mục: hàng tiêu đề, nội dung (ẩn khi thu gọn)
+ */
+export function PanelSection({ title, count, action, add, storageKey, tightBody = false, children }: PanelSectionProps) {
+  const bodyId = useId();
+  const [collapsed, setCollapsed] = useState(() => readCollapsed(storageKey));
+
+  /** Bấm hàng tiêu đề: thu gọn / mở, nhớ lại. */
+  const toggle = () => {
+    setCollapsed(!collapsed);
+    saveCollapsed(storageKey, !collapsed);
+  };
+
   return (
-    <div className={`${styles.section} ${shaded ? styles.shaded : ''}`}>
-      {title && (
-        <div className={styles.sectionHead}>
+    <section className={styles.panelSection} data-collapsed={collapsed}>
+      <div className={styles.panelSectionHead}>
+        <button type="button" className={styles.panelSectionToggle} aria-expanded={!collapsed} aria-controls={bodyId} onClick={toggle}>
+          <svg className={styles.chevron} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="m9 6 6 6-6 6" />
+          </svg>
           <h3>{title}</h3>
-          {action}
+          {count !== undefined && <span className={styles.panelSectionCount}>{count}</span>}
+        </button>
+        {action && <span className={styles.panelSectionAction}>{action}</span>}
+        {add && (
+          <button type="button" className={styles.panelSectionAdd} aria-label={add.label} title={add.label} onClick={add.onClick}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+              <path d="M12 5v14M5 12h14" />
+            </svg>
+          </button>
+        )}
+      </div>
+      <div id={bodyId} className={`${styles.panelSectionBody} ${tightBody ? styles.panelSectionBodyTight : ''}`} hidden={collapsed}>
+        {children}
+      </div>
+    </section>
+  );
+}
+
+/** Khóa localStorage nhớ việc thu gọn các mục của khung "Thông tin đơn"; trang nộp đơn mới và trang chi tiết đơn dùng chung. */
+export const INFO_SECTION_STORAGE_KEY = {
+  applicant: 'formInfoPanel.applicant.collapsed',
+  receiver: 'formInfoPanel.receiver.collapsed',
+  handler: 'formInfoPanel.handler.collapsed',
+} as const;
+
+/** Các dòng [nhãn, giá trị] của một mục thông tin. */
+type InfoRows = readonly (readonly [label: string, content: ReactNode])[];
+
+/**
+ * Các dòng nhãn – giá trị.
+ * @param rows  các dòng [nhãn, giá trị]
+ * @returns     danh sách <dl>
+ */
+function InfoRowList({ rows }: { rows: InfoRows }) {
+  return (
+    <dl className={styles.meta}>
+      {rows.map(([label, content]) => (
+        <div key={label}>
+          <dt>{label}</dt>
+          <dd>{content}</dd>
         </div>
-      )}
-      <dl className={styles.meta}>
-        {rows.map(([label, content]) => (
-          <div key={label}>
-            <dt>{label}</dt>
-            <dd>{content}</dd>
-          </div>
-        ))}
-      </dl>
+      ))}
+    </dl>
+  );
+}
+
+/**
+ * Mục tóm tắt ở đầu khung (trạng thái, loại đơn, ngày nộp): không có tiêu đề, luôn hiện.
+ * @param rows  các dòng [nhãn, giá trị]
+ * @returns     khối mục
+ */
+export function FormInfoSummary({ rows }: { rows: InfoRows }) {
+  return (
+    <div className={styles.section}>
+      <InfoRowList rows={rows} />
     </div>
+  );
+}
+
+/**
+ * Một mục thông tin thu gọn được, vd "Người nộp đơn": tiêu đề, nút / liên kết bên phải (nếu có), các dòng nhãn – giá trị.
+ * @param title       tiêu đề mục
+ * @param action      nút hoặc liên kết bên phải tiêu đề, vd "Xem hồ sơ ›"
+ * @param storageKey  khóa localStorage nhớ việc thu gọn
+ * @param rows        các dòng [nhãn, giá trị]
+ * @returns           khối mục
+ */
+export function FormInfoSection({ title, action, storageKey, rows }: { title: string; action?: ReactNode; storageKey: string; rows: InfoRows }) {
+  return (
+    <PanelSection title={title} action={action} storageKey={storageKey}>
+      <InfoRowList rows={rows} />
+    </PanelSection>
   );
 }

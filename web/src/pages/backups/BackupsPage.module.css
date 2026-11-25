@@ -23,23 +23,6 @@
 .columns{display:grid;grid-template-columns:minmax(0,1fr);gap:20px;align-items:start}
 .withSide{grid-template-columns:minmax(0,1fr) 360px}
 
-/* các mục trong khung "Lịch và nơi lưu", kiểu OUTLINE / TIMELINE của VS Code (PanelSection) */
-/* khung không đủ cao thì mỗi mục đang mở tự co lại: hàng tiêu đề đứng yên, danh sách bên dưới cuộn riêng */
-.panelSection{border-bottom:1px solid var(--line);display:flex;flex-direction:column;flex:0 1 auto;min-height:0}
-.panelSection:last-child{border-bottom:0}
-/* hàng tiêu đề nền xám, tách khỏi danh sách bên dưới */
-.panelSectionHead{flex:none;display:flex;align-items:center;gap:4px;padding:4px 8px 4px 6px;background:var(--surface-2);border-bottom:1px solid var(--line)}
-.panelSectionToggle{flex:1;min-width:0;display:flex;align-items:center;gap:4px;height:36px;padding:0 6px;border:0;border-radius:8px;background:none;color:var(--fg);cursor:pointer;text-align:left}
-.panelSectionToggle:hover{background:var(--hover)}
-.panelSectionToggle h3{font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase}
-.chevron{flex:none;color:var(--muted);transition:transform .15s}
-.panelSectionToggle[aria-expanded="true"] .chevron{transform:rotate(90deg)}
-@media (prefers-reduced-motion:reduce){.chevron{transition:none}}
-.panelSectionCount{margin-left:4px;padding:0 7px;border-radius:999px;background:var(--surface);color:var(--muted);font-size:11.5px;font-weight:500;line-height:18px}
-.panelSectionAdd{display:inline-grid;place-items:center;width:32px;height:32px;border:0;border-radius:8px;background:none;color:var(--muted);cursor:pointer;flex:none}
-.panelSectionAdd:hover{background:var(--hover);color:var(--accent)}
-.panelSectionBody{padding:12px 14px;min-height:0;overflow-y:auto;overscroll-behavior:contain}
-
 /* danh sách lịch / nơi lưu: mỗi mục một khối có viền, nút Sửa bên phải */
 .itemList{list-style:none;margin:0;padding:0;display:grid;gap:8px}
 .item{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--surface);font-size:12.5px}
