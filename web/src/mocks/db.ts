@@ -34,6 +34,8 @@ import type {
   Session,
   SessionUser,
   StaffRef,
+  StatsFormSource,
+  StatsVersionSource,
   StudentInfo,
   UpdateAccountRequest,
   UpdateProfileRequest,
@@ -1093,6 +1095,26 @@ export function getFormListExportSources(formTypeId: string): {
     forms: forms.map((form) => ({ source: toExportSource(form), version: form.formTypeSnapshot.version })),
     versions: (formType?.versions ?? []).filter((version) => version.status !== 'draft').map(({ version, name }) => ({ version, name })),
     prefix: formType?.prefix ?? formTypeId,
+  };
+}
+
+/**
+ * Dữ liệu để thống kê câu trả lời của một loại đơn (thẻ Thống kê ở trình soạn).
+ * @param formTypeId  mã loại đơn
+ * @returns           các phiên bản đã từng mở kèm cấu trúc, mọi lá đơn của loại đơn; loại đơn không có thì null
+ */
+export function getFormTypeStatsSources(formTypeId: string): { versions: StatsVersionSource[]; forms: StatsFormSource[] } | null {
+  const formType = findFormType(formTypeId);
+  if (!formType) return null;
+  return {
+    versions: formType.versions.filter((version) => version.status !== 'draft').map(({ version, sections }) => ({ version, sections })),
+    forms: FORMS.filter((form) => form.formTypeId === formTypeId).map((form) => ({
+      code: form.code,
+      version: form.formTypeSnapshot.version,
+      status: form.status,
+      submittedAt: form.submittedAt,
+      answers: form.answers,
+    })),
   };
 }
 

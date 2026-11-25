@@ -1,18 +1,21 @@
-/* Nhóm API form-types: loại đơn và các phiên bản. Xem loại đơn đang mở chỉ cần đăng nhập;
+/* Nhóm API form-types: loại đơn, các phiên bản, thống kê câu trả lời. Xem loại đơn đang mở chỉ cần đăng nhập;
    mọi lệnh còn lại cần quyền manageFormTypes. */
-import { Body, Controller, Delete, Get, Param, Post, Put, Res } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, Put, Query, Res } from '@nestjs/common';
 import { ApiCreatedResponse, ApiOkResponse, ApiTags } from '@nestjs/swagger';
 import type { Response } from 'express';
 import {
   FORM_TYPE_ENDPOINTS,
   FORM_TYPE_MESSAGES,
+  FormTypeAnswerStatsSchema,
   FormTypeSchema,
   FormTypesResponseSchema,
   ManagedFormTypeSchema,
   OpenFormTypesResponseSchema,
   SaveFormTypeVersionRequestSchema,
   SetFormTypeVersionStatusRequestSchema,
+  parseFormTypeStatsQueryParams,
   type FormType,
+  type FormTypeAnswerStats,
   type FormTypesResponse,
   type ManagedFormType,
   type OpenFormTypesResponse,
@@ -168,5 +171,19 @@ export class FormTypesController {
     const parsed = SetFormTypeVersionStatusRequestSchema.safeParse(requestBody);
     if (!parsed.success) throw new ApiException(422, FORM_TYPE_MESSAGES.invalidRequest);
     return this.formTypesService.setVersionStatus(formTypeId, parseVersion(versionText), parsed.data.status, staff.id);
+  }
+
+  /**
+   * Thống kê câu trả lời các đơn của loại đơn (thẻ Thống kê ở trình soạn).
+   * @returns  số đơn, số đơn theo trạng thái, thống kê từng câu hỏi
+   * @throws   422 điều kiện sai dạng · 404 không có loại đơn, phiên bản
+   */
+  @Get(FORM_TYPE_ENDPOINTS.stats)
+  @RequirePermission('manageFormTypes', FORM_TYPE_MESSAGES[403])
+  @ApiOkResponse({ schema: openApiSchemaOf(FormTypeAnswerStatsSchema) })
+  answerStats(@Param('formTypeId') formTypeId: string, @Query() queryParams: Record<string, string | undefined>): Promise<FormTypeAnswerStats> {
+    const query = parseFormTypeStatsQueryParams(queryParams);
+    if (!query) throw new ApiException(422, FORM_TYPE_MESSAGES.invalidStatsQuery);
+    return this.formTypesService.findAnswerStats(formTypeId, query);
   }
 }

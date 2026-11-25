@@ -8,9 +8,12 @@ import {
   SaveFormTypeVersionRequestSchema,
   SetFormTypeVersionStatusRequestSchema,
   can,
+  computeFormTypeAnswerStats,
   issueMessages,
+  parseFormTypeStatsQueryParams,
   validateFormTypeDraft,
   type FormType,
+  type FormTypeAnswerStats,
   type FormTypesResponse,
   type ManagedFormType,
   type OpenFormTypesResponse,
@@ -22,6 +25,7 @@ import {
   createFormType,
   deleteFormTypeVersion,
   getFormType,
+  getFormTypeStatsSources,
   getFormTypeSummaries,
   getManagedFormType,
   getOpenFormTypes,
@@ -118,6 +122,20 @@ export const formTypeHandlers = [
     const formType = getManagedFormType(String(params.formTypeId));
     if (!formType) return apiError(404, FORM_TYPE_MESSAGES.notFound);
     return HttpResponse.json<ManagedFormType>(formType);
+  }),
+
+  // Thống kê câu trả lời (thẻ Thống kê ở trình soạn): đọc điều kiện trên đường dẫn
+  http.get(api(ENDPOINTS.formTypes.stats), async ({ params, request }) => {
+    await delay(MOCK_DELAY_MS);
+    const session = await requireManager();
+    if (session instanceof Response) return session;
+    const sources = getFormTypeStatsSources(String(params.formTypeId));
+    if (!sources) return apiError(404, FORM_TYPE_MESSAGES.notFound);
+    const query = parseFormTypeStatsQueryParams(Object.fromEntries(new URL(request.url).searchParams));
+    if (!query) return apiError(422, FORM_TYPE_MESSAGES.invalidStatsQuery);
+    const stats = computeFormTypeAnswerStats(sources.versions, sources.forms, query);
+    if (!stats) return apiError(404, FORM_TYPE_MESSAGES.versionNotFound);
+    return HttpResponse.json<FormTypeAnswerStats>(stats);
   }),
 
   // Thêm phiên bản mới: không được khi đang có phiên bản Nháp

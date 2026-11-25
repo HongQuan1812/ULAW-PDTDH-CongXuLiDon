@@ -6,6 +6,7 @@ export * from './exports--docx';
 export * from './exports--form-list';
 export * from './exports--tags';
 export * from './exports--xlsx';
+export * from './form-types--answer-stats';
 export * from './form-types--stats';
 export * from './forms--codes';
 export * from './forms--statuses';

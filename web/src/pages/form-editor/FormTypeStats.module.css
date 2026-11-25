@@ -1,0 +1,120 @@
+/* Thẻ Thống kê ở trình soạn loại đơn (FormTypeStatsPanel.tsx) */
+.stats{display:grid;gap:24px;min-width:0}
+.card{composes:card from './FormTypeEditor.module.css'}
+.cardHead{composes:cardHead from './FormTypeEditor.module.css'}
+.sectionNumber{composes:sectionNumber from './FormTypeEditor.module.css'}
+.placeholder{min-height:180px;border-radius:var(--r-lg);background:var(--surface-2)}
+.empty{text-align:center;padding:48px 20px;color:var(--muted)}
+
+/* thanh lọc gọn: nút Bộ lọc · câu tóm tắt · số đơn, nút ↻ */
+.filterBar{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);padding:12px 16px;min-width:0}
+.filterCount{display:inline-grid;place-items:center;min-width:20px;height:20px;padding:0 6px;border-radius:999px;background:var(--accent);color:var(--on-accent);font-size:11.5px;font-weight:600}
+.filterSummary{flex:1 1 240px;min-width:0;font-size:13px;color:var(--muted)}
+.total{display:inline-flex;align-items:center;gap:10px;font-size:13px;color:var(--muted);white-space:nowrap}
+.total b{font-size:18px;color:var(--fg);font-weight:600;font-variant-numeric:tabular-nums}
+
+/* hộp chọn điều kiện */
+.filterFields{display:grid;gap:18px}
+.filterField{display:grid;gap:6px;font-size:13px;font-weight:500;color:var(--muted);min-width:0}
+.dateRange{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center;gap:8px}
+.dateError{font-size:12.5px;font-weight:400;color:var(--danger)}
+.statusChips{display:flex;flex-wrap:wrap;gap:6px}
+.statusChip{--chip-bg:var(--accent-soft);--chip-fg:var(--accent);display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 12px;border-radius:999px;
+  border:1px solid var(--line);background:var(--surface);color:var(--muted);font:inherit;font-size:13px;font-weight:500;cursor:pointer}
+.statusChip:hover{background:var(--hover);color:var(--fg)}
+.statusChip:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+.statusChip i{width:7px;height:7px;border-radius:50%;background:var(--chip-fg)}
+.statusChip b{font-weight:600;color:var(--fg);font-variant-numeric:tabular-nums}
+.statusChip.on{background:var(--chip-bg);border-color:transparent;color:var(--chip-fg)}
+.statusChip.on b{color:var(--chip-fg)}
+.dialogButtons{display:flex;align-items:center;gap:10px;margin-top:22px}
+.dialogButtons .total{margin-right:auto}
+
+/* mỗi câu hỏi một khối */
+.questions{display:grid;container:answer-stats / inline-size}
+.question{display:grid;gap:14px;padding:22px 0;border-top:1px solid var(--line);min-width:0}
+.question:first-child{border-top:0;padding-top:4px}
+.question:last-child{padding-bottom:0}
+.questionHead{display:flex;align-items:baseline;gap:6px 12px;flex-wrap:wrap}
+.questionHead h3{font-size:15px;font-weight:600;flex:1 1 320px;min-width:0;margin:0}
+.required{color:var(--s-tc-fg);margin-left:2px}
+.chip{font-size:11.5px;font-weight:500;padding:1px 9px;border-radius:999px;background:var(--s-duyet-bg);color:var(--s-duyet-fg);white-space:nowrap}
+.chipOld{background:var(--s-bs-bg);color:var(--s-bs-fg)}
+.answered{font-size:12.5px;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+.answered b{color:var(--fg);font-weight:600}
+.noAnswer{font-size:13px;color:var(--faint)}
+
+/* vành khuyên + chú thích (Chọn một, Danh sách thả xuống) */
+.donutBody{display:flex;flex-wrap:wrap;gap:18px 26px;align-items:center}
+.donutBody>:first-child{flex-basis:168px}
+.legend{flex:1 1 260px;min-width:0;list-style:none;margin:0;padding:0;display:grid;gap:2px;max-width:520px}
+.legendRow{display:grid;grid-template-columns:10px minmax(0,1fr) auto 3.2em;gap:10px;align-items:baseline;padding:6px 8px;border-radius:8px;font-size:13px;line-height:1.35}
+.legendRow:hover,.legendRow.focused{background:var(--hover)}
+.legendRow i{width:10px;height:10px;border-radius:3px;align-self:center}
+.legendName{min-width:0;overflow-wrap:anywhere}
+.count{color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+.percent{font-weight:600;font-variant-numeric:tabular-nums;text-align:right}
+
+/* cột ngang (Chọn nhiều, cột Chọn) */
+.bars{display:grid;gap:8px;max-width:760px}
+.barRow{display:grid;grid-template-columns:minmax(120px,220px) minmax(0,1fr) auto 3.2em;gap:12px;align-items:center;font-size:13px}
+.barTrack{height:10px;border-radius:999px;background:var(--surface-2);overflow:hidden}
+.barTrack span{display:block;height:100%;border-radius:999px;background:var(--chart-1);transition:width .2s}
+.barName{min-width:0;overflow-wrap:anywhere;line-height:1.35}
+
+/* số, ngày: ô số + cột đứng */
+/* hai cột cố định: ô số bên trái (cùng bề rộng cho câu Số, câu Ngày), biểu đồ bên phải, để các biểu đồ trên dưới thẳng hàng */
+.numberBody{display:grid;grid-template-columns:380px minmax(0,560px);gap:18px 28px;align-items:end}
+.numberTiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.dateTiles{grid-template-columns:repeat(2,minmax(0,1fr))}
+.numberTile{background:var(--surface-2);border-radius:var(--r);padding:10px 14px;display:grid;gap:2px}
+.numberTile span{font-size:12px;color:var(--muted)}
+.numberTile b{font-size:20px;font-weight:600;font-variant-numeric:tabular-nums;line-height:1.25;white-space:nowrap}
+.dateTiles b{font-size:17px}
+.histogram{min-width:0}
+/* khung kéo ngang: mỗi cột ít nhất 48px, nhiều cột quá bề ngang thì cuộn ngang */
+.histogramScroll{min-width:0;overflow-x:auto;overflow-y:hidden;padding-bottom:4px}
+.histogramInner{display:grid;gap:6px;min-width:max(100%,calc(var(--cols) * 48px))}
+.histogramColumns{display:flex;align-items:flex-end;gap:6px;height:120px;border-bottom:1px solid var(--line-2);padding-top:18px}
+.histogramColumn{flex:1;min-width:0;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;height:100%;gap:3px}
+.histogramColumn b{font-size:11.5px;font-weight:600;color:var(--muted);font-variant-numeric:tabular-nums}
+.histogramColumn span{width:100%;max-width:46px;border-radius:5px 5px 0 0;background:var(--chart-1);min-height:2px;transition:height .2s}
+.histogramLabels{display:flex;gap:6px}
+.histogramLabels span{flex:1;min-width:0;text-align:center;font-size:11.5px;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+
+/* chữ: danh sách câu trả lời */
+.answers{list-style:none;margin:0;padding:0;display:grid;gap:6px;max-width:860px}
+.answers li{background:var(--surface-2);border-radius:var(--r);padding:9px 14px;font-size:13.5px;display:flex;gap:12px;align-items:baseline;justify-content:space-between}
+.answerText{min-width:0;overflow-wrap:anywhere;white-space:pre-line}
+.times{font-size:12px;font-weight:600;color:var(--accent);background:var(--accent-soft);border-radius:999px;padding:0 8px;white-space:nowrap;font-variant-numeric:tabular-nums}
+.paragraphs li{display:grid;gap:4px}
+.answerMeta{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.answerMeta a{color:var(--accent);text-decoration:none;font-weight:500}
+.answerMeta a:hover{text-decoration:underline;text-underline-offset:3px}
+.more{justify-self:start;border:0;background:none;color:var(--accent);font:inherit;font-size:13px;font-weight:600;padding:2px;cursor:pointer}
+.more:hover{text-decoration:underline;text-underline-offset:3px}
+.listNote{font-size:12.5px;color:var(--faint)}
+.answerList{display:grid;gap:8px;min-width:0}
+
+/* bảng: mỗi cột một khối con */
+.tableNote{font-size:13px;color:var(--muted);margin:0}
+.columns{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(300px,100%),1fr));gap:12px}
+.column{border:1px solid var(--line);border-radius:var(--r);padding:16px 18px;display:grid;gap:12px;align-content:start;min-width:0}
+.column h4{margin:0;font-size:13.5px;font-weight:600;display:flex;gap:8px;align-items:baseline;flex-wrap:wrap;justify-content:space-between}
+/* trong khối cột bảng: ô số ở trên, biểu đồ ở dưới */
+.column .numberBody{grid-template-columns:minmax(0,1fr)}
+.column .numberTiles{max-width:none}
+.column .bars{max-width:none}
+
+/* tệp */
+.fileBody{display:flex;flex-wrap:wrap;gap:8px}
+.fileBody .numberTile{min-width:150px}
+
+/* thẻ hẹp (màn hình nhỏ, hoặc đang mở khung Phiên bản): ô số ở trên, biểu đồ ở dưới */
+@container answer-stats (max-width:980px){.numberBody{grid-template-columns:minmax(0,1fr)}.numberTiles{max-width:380px}}
+@media (max-width:560px){
+  .barRow{grid-template-columns:minmax(0,1fr) auto 3.2em}
+  .barRow .barTrack{grid-column:1/-1;grid-row:2}
+  .numberTiles{grid-template-columns:repeat(3,minmax(0,1fr))}
+}
+@media (prefers-reduced-motion:reduce){.barTrack span,.histogramColumn span{transition:none}}

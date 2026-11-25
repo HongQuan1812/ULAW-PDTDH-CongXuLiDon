@@ -1,5 +1,5 @@
 /* Trình soạn loại đơn (#/soan-don/<mã loại đơn>[?phien-ban=<số>], tạo mới: #/soan-don/moi).
-   Gồm: nút quay lại, tiêu đề, nút Xuất danh sách đơn, tab Soạn / Xem trước, khung Phiên bản bên phải (màn hình hẹp: trượt ra), nhãn "Chưa lưu", khung báo lỗi, câu nhắc về phiên bản,
+   Gồm: nút quay lại, tiêu đề, nút Xuất danh sách đơn, tab Soạn / Xem trước / Thống kê (loại đơn đã lưu; FormTypeStatsPanel.tsx), khung Phiên bản bên phải (màn hình hẹp: trượt ra), nhãn "Chưa lưu", khung báo lỗi, câu nhắc về phiên bản,
    thẻ Thông tin loại đơn, các phần và câu hỏi, nút + Thêm phần, hàng nút cuối dính đáy màn hình (Xóa · Bỏ thay đổi · Lưu; hai nút cuối chỉ hiện khi có thay đổi).
 
    Phiên bản (xem shared/src/api-contract/form-types.ts):
@@ -46,6 +46,7 @@ import { NO_TEMPLATE_CHANGES, hasTemplateChanges, toSaveTemplatesRequest } from 
 import { FormTypeInfoCard } from './FormTypeInfoCard';
 import { FormInfoPanelToggle, useFormInfoPanel } from '../form/FormInfoPanel';
 import { FormTypePreview } from './FormTypePreview';
+import { FormTypeStatsPanel } from './FormTypeStatsPanel';
 import { FormTypeVersionPanel, VERSION_PANEL_STORAGE_KEY, VERSION_PANEL_TITLE, type VersionChoice } from './FormTypeVersionPanel';
 import { draftFromVersion, moveItem, sameDraft, newFormTypeDraft, newSection, removeAt, replaceAt, type FormTypeDraft } from './formTypeDraft';
 import {
@@ -64,11 +65,12 @@ import { BackButton } from '../../components/BackButton';
 /** Câu báo khi không tải được loại đơn mà máy chủ không gửi kèm câu báo lỗi (vd mất mạng). */
 const LOAD_FAILED_TEXT = 'Không tải được loại đơn.';
 
-/** Hai chế độ của trình soạn: soạn, xem trước. */
-type EditorMode = 'edit' | 'preview';
+/** Các chế độ của trình soạn: soạn, xem trước, thống kê câu trả lời (chỉ loại đơn đã lưu). */
+type EditorMode = 'edit' | 'preview' | 'stats';
 const EDITOR_MODES: readonly (readonly [EditorMode, string])[] = [
   ['edit', 'Soạn'],
   ['preview', 'Xem trước'],
+  ['stats', 'Thống kê'],
 ];
 
 /**
@@ -354,7 +356,7 @@ function FormTypeEditor({ managed, requestedVersion }: FormTypeEditorProps) {
   };
 
   /**
-   * Chuyển giữa Soạn và Xem trước, về đầu trang. Bỏ đích đưa con trỏ, để quay lại tab Soạn không nhảy về ô vừa thêm lần trước.
+   * Chuyển giữa Soạn, Xem trước và Thống kê, về đầu trang. Bỏ đích đưa con trỏ, để quay lại tab Soạn không nhảy về ô vừa thêm lần trước.
    * @param mode  chế độ muốn mở
    */
   const changeEditorMode = (mode: EditorMode) => {
@@ -582,7 +584,7 @@ function FormTypeEditor({ managed, requestedVersion }: FormTypeEditorProps) {
           {/* Xuất danh sách đơn theo mẫu danh sách đơn đã lưu (loại đơn mới chưa lưu thì chưa có) */}
           {managed && <FormListExportButton formTypeId={managed.id} prefix={managed.prefix} versions={managed.versions} viewedVersion={selectedVersion} />}
           <div className={styles.tabs} role="tablist" aria-label="Chế độ">
-            {EDITOR_MODES.map(([mode, label]) => (
+            {EDITOR_MODES.filter(([mode]) => mode !== 'stats' || managed).map(([mode, label]) => (
               <button
                 key={mode}
                 type="button"
@@ -614,7 +616,14 @@ function FormTypeEditor({ managed, requestedVersion }: FormTypeEditorProps) {
             </div>
           )}
 
-          {/* Soạn: chỉ ẩn khi xem trước, không bỏ khỏi trang */}
+          {/* Thống kê: câu trả lời các đơn đã nộp, có bộ lọc riêng (không theo phiên bản đang xem) */}
+          {editorMode === 'stats' && managed && (
+            <div id="editor-panel-stats" role="tabpanel" aria-labelledby="editor-tab-stats">
+              <FormTypeStatsPanel formTypeId={managed.id} versions={managed.versions} />
+            </div>
+          )}
+
+          {/* Soạn: chỉ ẩn khi xem trước, thống kê; không bỏ khỏi trang */}
           <div id="editor-panel-edit" role="tabpanel" aria-labelledby="editor-tab-edit" className={styles.editor} hidden={editorMode !== 'edit'}>
             <FormTypeInfoCard
               draft={shownDraft}

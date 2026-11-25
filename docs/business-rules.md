@@ -192,6 +192,26 @@ Mỗi loại đơn có hai nhóm mẫu, lưu ở máy chủ theo loại đơn, d
 - Theo trạng thái (số đơn và % của từng trạng thái) và theo loại đơn (vành khuyên: 5 loại nhiều đơn nhất mỗi loại một màu, còn lại gộp "Khác" màu xám, bấm để xem; lát từ 10% ghi phần trăm trên hình, số đơn và phần trăm đủ ở chú thích). Máy chủ đếm.
 - Đếm trên **tất cả** đơn, không đổi theo ô tìm kiếm / bộ lọc. Bấm một mục để lọc bảng theo mục đó; bấm lại để bỏ lọc.
 
+## Thống kê câu trả lời của loại đơn
+
+Thẻ **Thống kê** ở trình soạn loại đơn (cạnh Soạn, Xem trước; chỉ loại đơn đã lưu), kiểu Google Form. Cần quyền `manageFormTypes`.
+API `GET /form-types/:formTypeId/stats`; máy chủ đếm và chia nhóm bằng `computeFormTypeAnswerStats` (`shared/src/business-rules/form-types--answer-stats.ts`), API giả dùng cùng hàm.
+
+- **Điều kiện** chỉ quyết định đơn nào được đếm: phiên bản (Tất cả hoặc một phiên bản đã phát hành), khoảng ngày nộp (tính cả hai đầu), trạng thái (bấm nhiều nút được; không chọn = mọi trạng thái).
+  Số trên các nút trạng thái đếm theo phiên bản và ngày nộp, chưa lọc trạng thái.
+- **Gộp phiên bản**: các phần, câu hỏi theo thứ tự của phiên bản mới nhất; phần, câu chỉ có ở phiên bản cũ chen vào sau phần, câu đứng trước nó. Câu trùng id là một câu (tên, bắt buộc, lựa chọn lấy theo phiên bản mới nhất).
+  Câu chỉ có ở một số phiên bản thì ghi "Chỉ có ở phiên bản …" và chỉ tính đơn của các phiên bản đó. Cột bảng gộp theo tên cột. Bỏ khối thông báo.
+- Mỗi câu hỏi ghi số đơn có trả lời / số đơn có câu này, rồi thống kê theo loại:
+  - **Chọn một, Danh sách thả xuống**: vành khuyên, phần trăm trên số đơn trả lời. **Chọn nhiều**: cột ngang, phần trăm trên số đơn trả lời (tổng có thể quá 100%).
+    Lựa chọn theo thứ tự soạn (kể cả lựa chọn chưa ai chọn), rồi các giá trị khác (vd lựa chọn của phiên bản cũ), nhiều trước.
+  - **Số**: nhỏ nhất, trung bình, lớn nhất và cột đứng. Không quá 10 giá trị khác nhau (nguyên hay lẻ): mỗi giá trị một cột.
+    Còn lại chia đều, tối đa 8 nhóm, độ rộng tròn (…, 0,5, 1, 2, 5, 10…), mốc đầu là bội của độ rộng (vd 0–4, 5–9; số lẻ ghi 5–6 = từ 5 tới dưới 6).
+  - **Ngày**: sớm nhất, muộn nhất và cột đứng theo khoảng từ ngày sớm nhất tới muộn nhất: dưới 2 tuần theo ngày · dưới 2 tháng theo tuần (tuần lịch, cột ghi thứ Hai đầu tuần) · dưới 2 năm theo tháng (T6/26) · từ 2 năm theo năm. Không có nhóm "Trước …"; nhóm 0 ở giữa vẫn hiện.
+  - **Trả lời ngắn**: gộp câu trùng (không phân biệt hoa thường, bỏ khoảng trắng thừa), nhiều trước; hiện 4 câu, "Xem thêm" mở tới 50 câu.
+  - **Đoạn văn**: 20 câu mới nhất kèm mã đơn (bấm để mở đơn), ngày nộp; hiện 3 câu. Xem đủ thì dùng Xuất danh sách đơn.
+  - **Tải tệp**: tổng số tệp, trung bình mỗi đơn, tỉ lệ theo đuôi tệp.
+  - **Bảng nhiều dòng**: số dòng, trung bình mỗi đơn; mỗi cột thống kê như câu hỏi cùng kiểu (cột Chọn: phần trăm trên số dòng có điền).
+
 ## Cấu hình email
 
 - Chỉ cấu hình phía **gửi**: tên người gửi, chữ kí. Địa chỉ gửi lấy từ cấu hình SMTP của máy chủ, chỉ hiện ra.

@@ -4,36 +4,14 @@
    Bấm một loại đơn (lát hoặc dòng chú thích) thì lọc bảng bên dưới; bấm lại để bỏ lọc. */
 import { useState } from 'react';
 import type { FormStats, FormTypeCount } from '@ulaw/shared';
+import { DonutChart, percentText, sliceColorClass, type DonutSlice } from '../../components/DonutChart';
 import styles from './FormStatsPanel.module.css';
 
 /** Số loại đơn có màu riêng; còn lại gộp thành "Khác". */
 const COLORED_TYPE_COUNT = 5;
 
-/** Lát chiếm từ tỉ lệ này trở lên mới ghi phần trăm trên hình. */
-const SLICE_LABEL_MIN_SHARE = 0.1;
-
 /** Khóa của lát "Khác" (không trùng id loại đơn nào). */
 const OTHER_KEY = '__other__';
-
-/* Kích thước vành khuyên trong viewBox 0 0 200 200: tâm, bán kính giữa vành, độ dày vành */
-const CENTER = 100;
-const RING_RADIUS = 74;
-const RING_WIDTH = 36;
-
-/* Khoảng hở giữa hai lát, tính theo % chu vi */
-const SLICE_GAP = 0.6;
-
-/** Một lát của vành khuyên. */
-interface Slice {
-  /** id loại đơn, hoặc OTHER_KEY */
-  key: string;
-  name: string;
-  count: number;
-  /** tỉ lệ trên tổng số đơn, 0..1 */
-  share: number;
-  /** thứ tự màu 1..5; 0 = lát "Khác" */
-  colorIndex: number;
-}
 
 interface FormTypeDonutProps {
   stats: FormStats;
@@ -44,27 +22,17 @@ interface FormTypeDonutProps {
 }
 
 /**
- * Phần trăm làm tròn để hiện; có đơn mà dưới 1% thì ghi "<1%".
- * @param share  tỉ lệ 0..1
- * @returns      vd "28%"
- */
-function percentText(share: number): string {
-  if (share > 0 && share < 0.005) return '<1%';
-  return `${Math.round(share * 100)}%`;
-}
-
-/**
  * Chia các loại đơn thành lát có màu và phần "Khác".
  * @param stats  số liệu thống kê (byType đã sắp từ nhiều đến ít)
  * @returns      slices: các lát theo thứ tự vẽ · otherTypes: các loại đơn nằm trong "Khác"
  */
-function buildSlices(stats: FormStats): { slices: Slice[]; otherTypes: FormTypeCount[] } {
+function buildSlices(stats: FormStats): { slices: DonutSlice[]; otherTypes: FormTypeCount[] } {
   // 5 loại nhiều nhất (có đơn) có màu riêng
   const shareOf = (count: number) => (stats.total ? count / stats.total : 0);
   const coloredTypes = stats.byType.filter((type) => type.count > 0).slice(0, COLORED_TYPE_COUNT);
   const coloredIds = new Set(coloredTypes.map((type) => type.formTypeId));
   const otherTypes = stats.byType.filter((type) => !coloredIds.has(type.formTypeId));
-  const slices: Slice[] = coloredTypes.map((type, i) => ({
+  const slices: DonutSlice[] = coloredTypes.map((type, i) => ({
     key: type.formTypeId,
     name: type.formTypeName,
     count: type.count,
@@ -105,9 +73,10 @@ export function FormTypeDonut({ stats, activeFormTypeId, onToggleFormType }: For
 
   return (
     <div className={styles.donutBody}>
-      <DonutFigure
+      <DonutChart
         slices={slices}
         total={stats.total}
+        unit="đơn"
         focusedKey={slices.some((slice) => slice.key === focusedKey) ? focusedKey : null}
         onHover={setHoveredKey}
         onClickSlice={clickSlice}
@@ -134,7 +103,7 @@ export function FormTypeDonut({ stats, activeFormTypeId, onToggleFormType }: For
                 onBlur={() => setHoveredKey(null)}
                 onClick={() => clickSlice(slice.key)}
               >
-                <i className={styles[`slice_${slice.colorIndex}`]} />
+                <i className={sliceColorClass(slice.colorIndex)} />
                 <span className={styles.legendName}>
                   {slice.name}
                   {isOther ? <span className={styles.chevron}>{showOtherList ? ' ▴' : ' ▾'}</span> : null}
@@ -170,91 +139,6 @@ export function FormTypeDonut({ stats, activeFormTypeId, onToggleFormType }: For
           );
         })}
       </ul>
-    </div>
-  );
-}
-
-interface DonutFigureProps {
-  slices: Slice[];
-  total: number;
-  /** Lát đang làm nổi (rê chuột hoặc đang lọc), null = không lát nào */
-  focusedKey: string | null;
-  onHover: (key: string | null) => void;
-  onClickSlice: (key: string) => void;
-}
-
-/**
- * Hình vành khuyên: mỗi lát là một cung tròn (vẽ bằng nét của hình tròn, nên lát 100% vẫn đúng), tổng số đơn ở giữa.
- * Chuột bấm được lát; bàn phím dùng các nút ở chú thích (hình ẩn với trình đọc màn hình).
- * @param props  xem DonutFigureProps
- * @returns      khối hình
- */
-function DonutFigure({ slices, total, focusedKey, onHover, onClickSlice }: DonutFigureProps) {
-  // Vị trí bắt đầu của từng lát, tính theo % chu vi từ 12 giờ, theo chiều kim đồng hồ
-  const gap = slices.length > 1 ? SLICE_GAP : 0;
-  let startPercent = 0;
-  const placedSlices = slices.map((slice) => {
-    const sweepPercent = slice.share * 100;
-    const placed = { slice, startPercent, sweepPercent };
-    startPercent += sweepPercent;
-    return placed;
-  });
-
-  return (
-    <div className={`${styles.donut} ${focusedKey ? styles.hasFocus : ''}`} aria-hidden="true" onMouseLeave={() => onHover(null)}>
-      <svg viewBox="0 0 200 200">
-        {/* Vành nền (thấy khi chưa có đơn nào) */}
-        <circle cx={CENTER} cy={CENTER} r={RING_RADIUS} fill="none" className={styles.ringTrack} strokeWidth={RING_WIDTH} />
-
-        {/* Các lát */}
-        {placedSlices.map(({ slice, startPercent: sliceStart, sweepPercent }) => {
-          const visiblePercent = Math.max(sweepPercent - gap, 0.4);
-          return (
-            <circle
-              key={slice.key}
-              cx={CENTER}
-              cy={CENTER}
-              r={RING_RADIUS}
-              fill="none"
-              strokeWidth={RING_WIDTH}
-              pathLength={100}
-              strokeDasharray={`${visiblePercent} ${100 - visiblePercent}`}
-              strokeDashoffset={-(sliceStart + gap / 2)}
-              transform={`rotate(-90 ${CENTER} ${CENTER})`}
-              className={`${styles.sliceArc} ${styles[`slice_${slice.colorIndex}`]} ${slice.key === focusedKey ? styles.focused : ''}`}
-              onMouseEnter={() => onHover(slice.key)}
-              onClick={() => onClickSlice(slice.key)}
-            >
-              <title>{`${slice.name}: ${slice.count} đơn (${percentText(slice.share)})`}</title>
-            </circle>
-          );
-        })}
-
-        {/* Phần trăm trên các lát lớn */}
-        {placedSlices
-          .filter(({ slice }) => slice.share >= SLICE_LABEL_MIN_SHARE)
-          .map(({ slice, startPercent: sliceStart, sweepPercent }) => {
-            const middleAngle = ((sliceStart + sweepPercent / 2) / 100) * Math.PI * 2;
-            return (
-              <text
-                key={slice.key}
-                x={CENTER + RING_RADIUS * Math.sin(middleAngle)}
-                y={CENTER - RING_RADIUS * Math.cos(middleAngle)}
-                textAnchor="middle"
-                dominantBaseline="central"
-                className={`${styles.sliceLabel} ${slice.colorIndex === 0 ? styles.sliceLabelOther : ''}`}
-              >
-                {percentText(slice.share)}
-              </text>
-            );
-          })}
-      </svg>
-
-      {/* Tổng số đơn ở giữa */}
-      <div className={styles.donutCenter}>
-        <b>{total}</b>
-        <span>đơn</span>
-      </div>
     </div>
   );
 }
