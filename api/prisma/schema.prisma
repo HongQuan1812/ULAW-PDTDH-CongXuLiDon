@@ -32,6 +32,18 @@ enum FormTypeStatus {
   closed
 }
 
+// Việc ghi vào lịch sử đơn (FORM_EVENT_ACTIONS của shared)
+enum FormEventAction {
+  submit
+  edit
+  supplement
+  receive
+  requestSupplement
+  approve
+  reject
+  transfer
+}
+
 model User {
   id            String   @id
   email         String   @unique
@@ -46,16 +58,18 @@ model User {
   mainStudentId String?
   createdAt     DateTime @default(now()) @db.Timestamptz(3)
 
-  students         StudentInfo[]
-  forms            Form[]            @relation("FormOwner")
-  receivedForms    Form[]            @relation("FormReceiver")
-  handledForms     Form[]            @relation("FormHandler")
-  formTypeVersions FormTypeVersion[]
-  exportTemplates  ExportTemplate[]
-  emailSettings    EmailSettings[]
-  authSessions     AuthSession[]
-  formNotes        FormNote[]
-  backupRuns       BackupRun[]
+  students          StudentInfo[]
+  forms             Form[]            @relation("FormOwner")
+  receivedForms     Form[]            @relation("FormReceiver")
+  handledForms      Form[]            @relation("FormHandler")
+  formTypeVersions  FormTypeVersion[]
+  exportTemplates   ExportTemplate[]
+  emailSettings     EmailSettings[]
+  authSessions      AuthSession[]
+  formNotes         FormNote[]
+  formEvents        FormEvent[]       @relation("FormEventActor")
+  receivedTransfers FormEvent[]       @relation("FormEventToStaff")
+  backupRuns        BackupRun[]
 }
 
 // Phiên đăng nhập: trình duyệt giữ cookie chứa mã ngẫu nhiên, ở đây chỉ lưu bản băm SHA-256 của mã đó
@@ -140,6 +154,7 @@ model Form {
 
   files  FileObject[]
   notes  FormNote[]
+  events FormEvent[]
 
   @@index([ownerId, submittedAt])
   @@index([status])
@@ -154,6 +169,26 @@ model FormCodeCounter {
   last    Int    @default(0)
 
   @@id([prefix, year, version])
+}
+
+// Lịch sử đơn: mỗi lần nộp, sửa, tiếp nhận, ra quyết định, chuyển giao một dòng (ai làm, lúc nào, đơn sang trạng thái nào, lí do)
+model FormEvent {
+  id        Int             @id @default(autoincrement())
+  formCode  String
+  form      Form            @relation(fields: [formCode], references: [code], onDelete: Cascade)
+  action    FormEventAction
+  // Trạng thái đơn ngay sau việc này
+  status    FormStatus
+  actorId   String
+  actor     User            @relation("FormEventActor", fields: [actorId], references: [id])
+  // Lí do khi Yêu cầu bổ sung / Từ chối; "" = không có
+  note      String          @default("")
+  // Cán bộ nhận đơn khi Chuyển giao
+  toStaffId String?
+  toStaff   User?           @relation("FormEventToStaff", fields: [toStaffId], references: [id])
+  at        DateTime        @db.Timestamptz(3)
+
+  @@index([formCode, at])
 }
 
 // Ghi chú nội bộ của cán bộ trên lá đơn (người nộp đơn không thấy), nối thành chuỗi theo lúc viết
@@ -202,9 +237,9 @@ model ExportTemplate {
   fileName     String
   sizeBytes    Int
   content      Bytes
-  uploadedAt   DateTime @db.Timestamptz(3)
+  uploadedAt   DateTime              @db.Timestamptz(3)
   uploadedById String
-  uploadedBy   User     @relation(fields: [uploadedById], references: [id])
+  uploadedBy   User                  @relation(fields: [uploadedById], references: [id])
 
   @@index([formTypeId])
 }

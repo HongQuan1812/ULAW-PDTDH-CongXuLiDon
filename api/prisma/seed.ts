@@ -53,6 +53,7 @@ async function clearAll(prisma: PrismaClient): Promise<void> {
     prisma.backupTarget.deleteMany(),
     prisma.backupSchedule.deleteMany(),
     prisma.fileObject.deleteMany(),
+    prisma.formEvent.deleteMany(),
     prisma.form.deleteMany(),
     prisma.formCodeCounter.deleteMany(),
     prisma.exportTemplate.deleteMany(),
@@ -147,6 +148,11 @@ async function seedAll(prisma: PrismaClient): Promise<void> {
       answers: form.answers as unknown as Prisma.InputJsonValue,
       formTypeSnapshot: form.formTypeSnapshot as unknown as Prisma.InputJsonValue,
     })),
+  });
+  await prisma.formEvent.createMany({
+    data: forms.flatMap((form) =>
+      form.history.map(({ action, at, actorId, status, note, toStaffId }) => ({ formCode: form.code, action, status, actorId, note, toStaffId, at: toDate(at) })),
+    ),
   });
 
   const lastSequenceByKey = new Map<string, ReturnType<typeof parseFormCode>>();

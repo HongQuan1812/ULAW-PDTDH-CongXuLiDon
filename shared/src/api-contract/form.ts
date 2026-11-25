@@ -5,7 +5,8 @@
 import { z } from 'zod';
 import { FormSectionSchema } from '../aux-schema/form-types--sections';
 import { FormAnswersSchema } from '../aux-schema/forms--answers';
-import { FORM_STATUSES } from '../aux-schema/forms--statuses';
+import { FORM_EVENT_ACTIONS, type FormEventAction } from '../aux-schema/forms--events';
+import { FORM_STATUSES, type FormStatus } from '../aux-schema/forms--statuses';
 
 /* ---------- Đường dẫn (phần sau /api) ---------- */
 
@@ -116,6 +117,22 @@ export const ApplicantRefSchema = z.object({
 });
 export type ApplicantRef = z.infer<typeof ApplicantRefSchema>;
 
+/** Một dòng lịch sử của lá đơn: ai làm gì, lúc nào, đơn sang trạng thái nào. */
+export const FormEventSchema = z.object({
+  action: z.enum(FORM_EVENT_ACTIONS),
+  /** Lúc làm, giờ Việt Nam 'YYYY-MM-DDTHH:mm' */
+  at: z.string(),
+  /** Người làm (người nộp đơn, hoặc cán bộ) */
+  actor: ApplicantRefSchema,
+  /** Trạng thái đơn ngay sau việc này (sửa đơn, chuyển giao thì giữ trạng thái cũ) */
+  status: z.enum(FORM_STATUSES),
+  /** Lí do khi Yêu cầu bổ sung / Từ chối; "" = không có */
+  note: z.string(),
+  /** Cán bộ nhận đơn khi Chuyển giao; việc khác thì null */
+  toStaff: StaffRefSchema.nullable(),
+});
+export type FormEvent = z.infer<typeof FormEventSchema>;
+
 /** Trả về từ GET /forms/:code: một lá đơn đủ nội dung, đủ để vẽ trang chi tiết đơn. */
 export const FormDetailSchema = FormSummarySchema.extend({
   /** Lần lưu gần nhất (nộp, sửa, bổ sung), giờ Việt Nam 'YYYY-MM-DDTHH:mm'; chưa sửa lần nào thì bằng submittedAt */
@@ -135,6 +152,8 @@ export const FormDetailSchema = FormSummarySchema.extend({
   sections: z.array(FormSectionSchema),
   /** Câu trả lời theo id câu hỏi */
   answers: FormAnswersSchema,
+  /** Lịch sử của đơn, cũ nhất trước */
+  history: z.array(FormEventSchema),
 });
 export type FormDetail = z.infer<typeof FormDetailSchema>;
 
@@ -169,6 +188,18 @@ export const SUBMIT_FORM_FIELDS = {
 /** Các quyết định cán bộ ra cho đơn Đang xét: mã trùng mã trạng thái đơn chuyển sang (Cần bổ sung, Đã duyệt, Từ chối). */
 export const FORM_DECISIONS = ['bs', 'duyet', 'tc'] as const;
 export type FormDecision = (typeof FORM_DECISIONS)[number];
+
+/** Việc ghi vào lịch sử khi ra từng quyết định. */
+export const DECISION_EVENT_ACTION: Record<FormDecision, FormEventAction> = { bs: 'requestSupplement', duyet: 'approve', tc: 'reject' };
+
+/**
+ * Việc ghi vào lịch sử khi lưu nội dung đơn đã sửa.
+ * @param statusBefore  trạng thái đơn trước khi lưu
+ * @returns             'supplement' nếu đơn đang Cần bổ sung (lưu xong sang Đã bổ sung), còn lại 'edit'
+ */
+export function editEventAction(statusBefore: FormStatus): FormEventAction {
+  return statusBefore === 'bs' ? 'supplement' : 'edit';
+}
 
 /**
  * Body của POST /forms/:code/decision. Lí do không bắt buộc (gửi chuỗi rỗng "" nếu không có);

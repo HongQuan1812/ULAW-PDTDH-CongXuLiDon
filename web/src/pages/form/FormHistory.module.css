@@ -1,0 +1,23 @@
+/* Mục Lịch sử trong khung "Thông tin đơn": dòng thời gian, cũ nhất ở trên. */
+.timeline{list-style:none;margin:0;padding:0;display:grid}
+.event{position:relative;display:grid;grid-template-columns:14px minmax(0,1fr);gap:10px;padding-bottom:14px}
+.event:last-child{padding-bottom:0}
+/* đường nối từ chấm này xuống chấm kế tiếp */
+.event::before{content:"";position:absolute;left:6px;top:14px;bottom:-2px;width:2px;background:var(--line)}
+.event:last-child::before{display:none}
+
+/* chấm màu theo trạng thái đơn sau việc đó; việc không đổi trạng thái (sửa đơn, chuyển giao) thì xám */
+.dot{width:14px;height:14px;border-radius:50%;margin-top:3px;border:3px solid var(--surface);box-shadow:0 0 0 1px var(--line-2);background:var(--faint)}
+.nop{background:var(--s-nop-fg)}
+.xet{background:var(--s-xet-fg)}
+.bs{background:var(--s-bs-fg)}
+.bsg{background:var(--s-bsg-fg)}
+.duyet{background:var(--s-duyet-fg)}
+.tc{background:var(--s-tc-fg)}
+
+.text{display:grid;gap:2px;min-width:0}
+.what{font-size:13.5px;font-weight:500;overflow-wrap:anywhere}
+.who{font-size:12.5px;color:var(--muted);overflow-wrap:anywhere}
+.who time{font-variant-numeric:tabular-nums}
+/* lí do Yêu cầu bổ sung / Từ chối */
+.note{margin-top:4px;font-size:12.5px;background:var(--surface-2);border-radius:8px;padding:6px 10px;overflow-wrap:anywhere;white-space:pre-line}

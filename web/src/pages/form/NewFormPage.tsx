@@ -19,7 +19,7 @@ import { discardNewFormDraft, keepNewFormDraft, readNewFormDraft } from '../../f
 import { useFormAnswers } from '../../features/form-renderer/useFormAnswers';
 import { useSubmitNewForm } from '../../features/form-renderer/useSubmitNewForm';
 import { SHOW_DEMO } from '../../lib/env';
-import { FormInfoPanel, FormInfoPanelToggle, FormInfoSection, useFormInfoPanel } from './FormInfoPanel';
+import { FormInfoPanel, FormInfoPanelToggle, FormInfoSection, INFO_SECTION_STORAGE_KEY, useFormInfoPanel } from './FormInfoPanel';
 import styles from './FormPage.module.css';
 import { SubmitBar, checkBeforeSending, useCommitment } from './SubmitBar';
 import { useLeavePage } from './useLeavePage';
@@ -198,6 +198,7 @@ function ApplicantInfo() {
   return (
     <FormInfoSection
       title="Người nộp đơn"
+      storageKey={INFO_SECTION_STORAGE_KEY.applicant}
       action={
         <Link to={PAGE_PATH.profile} state={{ previousPageLabel: 'đơn đang soạn' } satisfies ReturnState}>
           Xem hồ sơ ›
@@ -223,6 +224,7 @@ function OtherApplicantInfo({ applicantId, name, email }: { applicantId: string;
   return (
     <FormInfoSection
       title="Người nộp đơn"
+      storageKey={INFO_SECTION_STORAGE_KEY.applicant}
       action={
         <Link to={personProfilePath(applicantId)} state={{ previousPageLabel: 'đơn đang soạn' } satisfies ReturnState}>
           Xem hồ sơ ›

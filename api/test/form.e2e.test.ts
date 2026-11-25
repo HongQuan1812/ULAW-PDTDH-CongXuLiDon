@@ -154,11 +154,12 @@ describe('form (nộp, chi tiết, sửa)', () => {
     const forbidden = await submitXmr(applicantCookie, { body: { ...body, applicantId: 'cb-1' } }).expect(403);
     expect(forbidden.body.message).toBe(FORM_MESSAGES.submitForApplicantForbidden);
 
-    // Admin nộp thay: đơn thuộc về người nộp; không có người đó thì 404
+    // Admin nộp thay: đơn thuộc về người nộp, lịch sử ghi admin là người nộp; không có người đó thì 404
     const adminCookie = await loginAs('admin');
     const summary = FormSummarySchema.parse((await submitXmr(adminCookie, { body }).expect(201)).body);
     createdCodes.push(summary.code);
     expect(await prisma.form.findUniqueOrThrow({ where: { code: summary.code } })).toMatchObject({ ownerId: applicantId });
+    expect(await prisma.formEvent.findMany({ where: { formCode: summary.code } })).toMatchObject([{ action: 'submit', status: 'nop', actorId: 'cb-3' }]);
     expect((await submitXmr(adminCookie, { body: { ...body, applicantId: 'khong-co' } }).expect(404)).body.message).toBe(FORM_MESSAGES.applicantNotFound);
   });
 

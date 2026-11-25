@@ -181,7 +181,7 @@ describe('phiên bản loại đơn', () => {
     expect(getFormType('xmr')).toMatchObject({ version: 2, name: 'Xét miễn môn mới' });
 
     const year = new Date().getFullYear();
-    const newForm = addForm('sv-1', getFormType('xmr')!, xmrAnswers([['Triết học', 3, 'Triết học', '3 TC', 8]], []), new Map());
+    const newForm = addForm('sv-1', 'sv-1', getFormType('xmr')!, xmrAnswers([['Triết học', 3, 'Triết học', '3 TC', 8]], []), new Map());
     expect(newForm.code).toMatch(new RegExp(`^XMR-${year}-002-[0-9]{5}$`));
 
     // Mở lại phiên bản 1: phiên bản 2 tự đóng
@@ -235,7 +235,7 @@ describe('nộp đơn mới', () => {
       .map((code) => Number(code.slice(-5)));
 
     // Nộp xong: mã kế tiếp, Đã nộp, đứng đầu bảng
-    const newForm = addForm('sv-1', xmr, answers, new Map([['local-1', bangDiem]]));
+    const newForm = addForm('sv-1', 'sv-1', xmr, answers, new Map([['local-1', bangDiem]]));
     expect(newForm.code).toMatch(new RegExp(`^XMR-${year}-001-[0-9]{5}$`));
     expect(Number(newForm.code.slice(-5))).toBeGreaterThan(Math.max(0, ...sameYearSequences));
     expect(newForm.status).toBe('nop');
@@ -288,9 +288,11 @@ describe('sửa đơn', () => {
     const oldFile = (before.answers['minh-chung'] as FileRef[])[0]!;
     const newFile = { id: 'local-9', name: 'ban-co-xac-nhan.pdf', sizeBytes: 4 };
 
-    const saved = updateForm(supplementCode, xmrAnswers([['Logic học', 2, 'Logic', '2 TC', 7]], [oldFile, newFile]), new Map([['local-9', new File(['%PDF'], 'ban-co-xac-nhan.pdf')]]))!;
+    const saved = updateForm('sv-1', supplementCode, xmrAnswers([['Logic học', 2, 'Logic', '2 TC', 7]], [oldFile, newFile]), new Map([['local-9', new File(['%PDF'], 'ban-co-xac-nhan.pdf')]]))!;
     expect(saved.status).toBe('bsg');
     expect(saved.updatedAt).not.toBe(before.updatedAt);
+    expect(saved.history.slice(0, -1)).toEqual(before.history);
+    expect(saved.history.at(-1)).toMatchObject({ action: 'supplement', at: saved.updatedAt, actor: { id: 'sv-1' }, status: 'bsg' });
     expect(saved.answers['hoc-phan']).toEqual([['Logic học', 2, 'Logic', '2 TC', 7]]);
     const files = saved.answers['minh-chung'] as FileRef[];
     expect(files[0]).toEqual(oldFile);
@@ -303,10 +305,10 @@ describe('sửa đơn', () => {
     const xmr = getFormType('xmr')!;
     const files = [new File(['%PDF'], 'a.pdf'), new File(['%PDF'], 'b.pdf')];
     const answers = xmrAnswers([['Logic học', 2, 'Logic', '2 TC', 7]], files.map((file, i) => ({ id: `local-${i}`, name: file.name, sizeBytes: 4 })));
-    const { code } = addForm('sv-1', xmr, answers, new Map(files.map((file, i) => [`local-${i}`, file])));
+    const { code } = addForm('sv-1', 'sv-1', xmr, answers, new Map(files.map((file, i) => [`local-${i}`, file])));
     const [keptFile, removedFile] = getFilesOfForm(code);
 
-    updateForm(code, { ...answers, 'minh-chung': [keptFile!] }, new Map());
+    updateForm('sv-1', code, { ...answers, 'minh-chung': [keptFile!] }, new Map());
     expect(getFilesOfForm(code)).toEqual([keptFile]);
     expect(getSavedFileIds(code).has(removedFile!.id)).toBe(false);
   });
@@ -333,19 +335,20 @@ describe('ra quyết định về đơn', () => {
   const underReviewCode = () => getFormsOf('sv-1').find((form) => form.status === 'xet')!.code;
 
   test('Yêu cầu bổ sung: chuyển sang Cần bổ sung và lưu lí do', () => {
-    const decidedForm = decideForm(underReviewCode(), 'bs', 'Thiếu bảng điểm')!;
+    const decidedForm = decideForm(underReviewCode(), 'bs', 'Thiếu bảng điểm', 'cb-1')!;
     expect(decidedForm.status).toBe('bs');
     expect(decidedForm.note).toBe('Thiếu bảng điểm');
+    expect(decidedForm.history.at(-1)).toMatchObject({ action: 'requestSupplement', at: decidedForm.decidedAt, actor: { id: 'cb-1' }, status: 'bs', note: 'Thiếu bảng điểm' });
   });
 
   test('Từ chối: chuyển sang Từ chối và lưu lí do', () => {
-    const decidedForm = decideForm(underReviewCode(), 'tc', 'Không đủ điều kiện')!;
+    const decidedForm = decideForm(underReviewCode(), 'tc', 'Không đủ điều kiện', 'cb-1')!;
     expect(decidedForm.status).toBe('tc');
     expect(decidedForm.note).toBe('Không đủ điều kiện');
   });
 
   test('Duyệt: chuyển sang Đã duyệt và xóa lí do', () => {
-    const decidedForm = decideForm(underReviewCode(), 'duyet', 'ghi chú cũ')!;
+    const decidedForm = decideForm(underReviewCode(), 'duyet', 'ghi chú cũ', 'cb-1')!;
     expect(decidedForm.status).toBe('duyet');
     expect(decidedForm.note).toBe('');
   });
@@ -353,13 +356,13 @@ describe('ra quyết định về đơn', () => {
   test('không đổi người xử lí và lần lưu gần nhất của đơn', () => {
     const code = underReviewCode();
     const before = getFormDetail(code, { id: 'cb-3', role: 'admin' })!;
-    const decidedForm = decideForm(code, 'bs', '')!;
+    const decidedForm = decideForm(code, 'bs', '', 'cb-1')!;
     expect(decidedForm.handler).toEqual(before.handler);
     expect(decidedForm.updatedAt).toBe(before.updatedAt);
   });
 
   test('trả về null khi không có đơn', () => {
-    expect(decideForm('XMR-0000-00000', 'duyet', '')).toBeNull();
+    expect(decideForm('XMR-0000-00000', 'duyet', '', 'cb-1')).toBeNull();
   });
 });
 
@@ -381,18 +384,19 @@ describe('chuyển giao đơn', () => {
     const { code, handler } = underReview();
     const before = getFormDetail(code, { id: 'cb-3', role: 'admin' })!;
     const newHandler = getTransferTargets(code)![0]!;
-    const transferred = transferForm(code, newHandler.id)!;
+    const transferred = transferForm(code, newHandler.id, 'cb-1')!;
     expect(transferred.handler).toEqual(newHandler);
     expect(transferred.handler?.id).not.toBe(handler.id);
     expect(transferred.handlerSince).not.toBe(before.handlerSince);
     expect(transferred.receiver).toEqual(before.receiver);
     expect(transferred.status).toBe(before.status);
+    expect(transferred.history.at(-1)).toMatchObject({ action: 'transfer', at: transferred.handlerSince, actor: { id: 'cb-1' }, toStaff: newHandler });
   });
 
   test('trả về null khi không có đơn hoặc không có cán bộ nhận', () => {
     const { code } = underReview();
-    expect(transferForm('XMR-0000-00000', 'cb-2')).toBeNull();
-    expect(transferForm(code, 'khong-co')).toBeNull();
+    expect(transferForm('XMR-0000-00000', 'cb-2', 'cb-1')).toBeNull();
+    expect(transferForm(code, 'khong-co', 'cb-1')).toBeNull();
     expect(getTransferTargets('XMR-0000-00000')).toBeNull();
   });
 });
@@ -468,7 +472,7 @@ describe('nội dung tệp đính kèm', () => {
   });
 
   test('tệp người nộp vừa tải lên thì trả về đúng nội dung đã lưu', async () => {
-    const newForm = addForm('sv-1', getFormType('xmr')!, { 'minh-chung': [{ id: 'local-1', name: 'ghi-chu.png', sizeBytes: 3 }] }, new Map([['local-1', new File(['abc'], 'ghi-chu.png')]]));
+    const newForm = addForm('sv-1', 'sv-1', getFormType('xmr')!, { 'minh-chung': [{ id: 'local-1', name: 'ghi-chu.png', sizeBytes: 3 }] }, new Map([['local-1', new File(['abc'], 'ghi-chu.png')]]));
     const savedFile = getFilesOfForm(newForm.code)[0]!;
     expect(await getFileContent(savedFile.id, student)?.text()).toBe('abc');
   });
@@ -545,7 +549,7 @@ describe('tài khoản', () => {
     updateAccount('cb-2', { name: 'Trần Quốc Việt', cccd: '', phone: '', role: 'nguoiNopDon' }, admin);
     const code = getAllForms().find((form) => form.status === 'xet')!.code;
     expect(getTransferTargets(code)!.map((staff) => staff.id)).not.toContain('cb-2');
-    expect(transferForm(code, 'cb-2')).toBeNull();
+    expect(transferForm(code, 'cb-2', 'cb-1')).toBeNull();
     expect(getFormsHandledBy('cb-2')).toHaveLength(handledBefore);
   });
 

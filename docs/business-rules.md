@@ -93,6 +93,10 @@ nop Đã nộp ──Tiếp nhận──▶ xet Đang xét ──▶ duyet Đã 
   Hết 10 giây mới gửi, trạng thái đổi và thư tự động mới đi. Mỗi đơn chỉ chờ một thao tác một lúc. Việc chờ nằm ở trình duyệt (`web/src/lib/undoScheduler.ts`),
   máy chủ không đổi; đóng hẳn trang trong lúc chờ thì thao tác mất (trình duyệt hỏi lại trước khi đóng). Tiếp nhận, Chuyển giao, Nộp đơn, sửa đơn của người nộp không chờ.
 - Mọi bước chuyển trạng thái đi qua **một chỗ duy nhất** ở máy chủ (`forms/workflow.service.ts`).
+- **Lịch sử đơn**: mỗi lần nộp đơn, sửa đơn, bổ sung đơn (sửa đơn Cần bổ sung), tiếp nhận, yêu cầu bổ sung, duyệt, từ chối, chuyển giao ghi một dòng:
+  ai làm, lúc nào, đơn sang trạng thái nào, lí do (yêu cầu bổ sung, từ chối), cán bộ nhận (chuyển giao). Ghi trong cùng transaction với việc đó; việc bị từ chối (403, 409…) không ghi.
+  Nộp thay thì người làm là cán bộ bấm nộp. Ai xem được đơn thì xem được lịch sử: mục **Lịch sử** cuối khung "Thông tin đơn" ở trang chi tiết đơn,
+  cũ nhất ở trên, chấm màu theo trạng thái sau việc đó (sửa đơn, chuyển giao không đổi trạng thái thì chấm xám).
 - **Mã đơn** `<TIỀN TỐ>-<NĂM>-<PHIÊN BẢN>-<STT>`, vd `XMR-2026-001-00001` (`shared/src/business-rules/forms--codes.ts`).
   Số thứ tự tăng theo từng tiền tố và từng năm, đếm tiếp qua các phiên bản. Máy chủ sinh mã trong transaction.
 - **Nộp đơn gửi câu trả lời và mọi tệp trong một lần.** Máy chủ kiểm tra hết; sai một chỗ thì không lưu gì.

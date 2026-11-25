@@ -36,6 +36,23 @@ describe('dữ liệu mẫu', () => {
     expect(unknownUserIds).toEqual([]);
   });
 
+  test('lịch sử khớp với đơn: bắt đầu bằng Nộp đơn, theo thứ tự thời gian, khớp các mốc và trạng thái hiện tại', () => {
+    for (const form of seedForms()) {
+      const { history } = form;
+      const times = history.map((event) => event.at);
+      const actorIds = history.flatMap((event) => [event.actorId, event.toStaffId]).filter((id) => id !== null);
+
+      expect(history[0]).toMatchObject({ action: 'submit', at: form.submittedAt, actorId: form.ownerId, status: 'nop' });
+      expect(times).toEqual([...times].sort());
+      expect(history.at(-1)!.status).toBe(form.status);
+      expect(actorIds.filter((id) => !(id in SEED_ACCOUNTS))).toEqual([]);
+      if (form.receivedAt) expect(history.findLast((event) => event.action === 'receive')!.at).toBe(form.receivedAt);
+      if (form.decidedAt) expect(history.findLast((event) => ['requestSupplement', 'approve', 'reject'].includes(event.action))!.at).toBe(form.decidedAt);
+      if (form.handlerId !== form.receiverId) expect(history.findLast((event) => event.action === 'transfer')).toMatchObject({ action: 'transfer', toStaffId: form.handlerId, at: form.handlerSince });
+      expect(history.findLast((event) => event.actorId === form.ownerId)!.at).toBe(form.updatedAt);
+    }
+  });
+
   test('mã đơn không trùng nhau', () => {
     const codes = seedForms().map((form) => form.code);
 

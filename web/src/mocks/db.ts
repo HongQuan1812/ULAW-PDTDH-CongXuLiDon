@@ -42,6 +42,7 @@ import type {
 } from '@ulaw/shared';
 import {
   ACCOUNT_MESSAGES,
+  DECISION_EVENT_ACTION,
   DRIVE_ROOT_FOLDER_ID,
   DRIVE_ROOT_FOLDER_NAME,
   backupFileName,
@@ -50,6 +51,7 @@ import {
   FORM_STATUSES,
   FORM_TYPE_MESSAGES,
   can,
+  editEventAction,
   formDetailPath,
   formTypeStatusOf,
   isAnswerable,
@@ -699,6 +701,14 @@ function toDetail(form: MockForm): FormDetail {
     decidedAt: form.decidedAt,
     sections: structuredClone(form.formTypeSnapshot.sections),
     answers: structuredClone(form.answers),
+    history: form.history.map(({ action, at, actorId, status, note, toStaffId }) => ({
+      action,
+      at,
+      actor: personRef(actorId),
+      status,
+      note,
+      toStaff: staffOf(toStaffId),
+    })),
   };
 }
 
@@ -711,15 +721,16 @@ export function vietnamNow(): string {
 }
 
 /**
- * Lưu một lá đơn mới nộp cùng các tệp của nó, trong một bước: sinh mã đơn, trạng thái Đã nộp, chưa ai tiếp nhận.
+ * Lưu một lá đơn mới nộp cùng các tệp của nó, trong một bước: sinh mã đơn, trạng thái Đã nộp, chưa ai tiếp nhận, ghi lịch sử Nộp đơn.
  * Câu trả lời và tệp đã được kiểm tra trước (validateAnswers, validateFile); hàm này không trả lỗi giữa chừng.
+ * @param submitterId    id người bấm nộp (khác ownerId khi nộp thay)
  * @param ownerId        id người nộp
  * @param formType       loại đơn lúc nộp (lưu bản chụp, để sửa loại đơn sau này không làm hỏng đơn cũ)
  * @param answers        câu trả lời theo id câu hỏi; tệp mang id tạm của trình duyệt
  * @param filesByTempId  nội dung tệp theo id tạm
  * @returns              dòng tóm tắt của đơn mới, có mã đơn
  */
-export function addForm(ownerId: string, formType: FormType, answers: FormAnswers, filesByTempId: ReadonlyMap<string, File>): FormSummary {
+export function addForm(submitterId: string, ownerId: string, formType: FormType, answers: FormAnswers, filesByTempId: ReadonlyMap<string, File>): FormSummary {
   const submittedAt = vietnamNow();
   const code = nextFormCode(formType.prefix, Number(submittedAt.slice(0, 4)), formType.version, FORMS.map((form) => form.code));
   const keptAnswers = storeAnswers(code, formType.sections, answers, filesByTempId, {});
@@ -741,6 +752,7 @@ export function addForm(ownerId: string, formType: FormType, answers: FormAnswer
     decidedAt: null,
     answers: keptAnswers,
     formTypeSnapshot: structuredClone(formType),
+    history: [{ action: 'submit', at: submittedAt, actorId: submitterId, status: 'nop', note: '', toStaffId: null }],
   });
   return toSummary(FORMS[0]!);
 }
@@ -802,23 +814,26 @@ export function getSavedFileIds(code: string): Set<string> {
 }
 
 /**
- * Lưu nội dung đã sửa của một lá đơn cùng các tệp mới, trong một bước. Đơn Cần bổ sung chuyển sang Đã bổ sung.
+ * Lưu nội dung đã sửa của một lá đơn cùng các tệp mới, trong một bước, ghi lịch sử Sửa đơn / Bổ sung đơn. Đơn Cần bổ sung chuyển sang Đã bổ sung.
  * Tệp bị gỡ khỏi đơn thì xóa hẳn, sau khi đơn đã lưu.
  * Quyền sửa, câu trả lời và tệp đã được kiểm tra trước (canEditForm, validateAnswers, validateSentFiles).
+ * @param editorId       id người bấm lưu
  * @param code           mã đơn
  * @param answers        câu trả lời mới theo id câu hỏi; tệp mới mang id tạm
  * @param filesByTempId  nội dung tệp mới theo id tạm
  * @returns              lá đơn sau khi lưu; không có đơn thì null
  */
-export function updateForm(code: string, answers: FormAnswers, filesByTempId: ReadonlyMap<string, File>): FormDetail | null {
+export function updateForm(editorId: string, code: string, answers: FormAnswers, filesByTempId: ReadonlyMap<string, File>): FormDetail | null {
   const form = FORMS.find((candidate) => candidate.code === code);
   if (!form) return null;
 
-  // Lưu câu trả lời, tệp mới; đơn Cần bổ sung thành Đã bổ sung
+  // Lưu câu trả lời, tệp mới; đơn Cần bổ sung thành Đã bổ sung; ghi lịch sử
   const oldFileIds = getSavedFileIds(code);
+  const action = editEventAction(form.status);
   form.answers = storeAnswers(code, form.formTypeSnapshot.sections, answers, filesByTempId, form.answers);
   form.updatedAt = vietnamNow();
   if (form.status === 'bs') form.status = 'bsg';
+  form.history.push({ action, at: form.updatedAt, actorId: editorId, status: form.status, note: '', toStaffId: null });
 
   // Đơn đã lưu xong: xóa hẳn các tệp bị gỡ
   const keptFileIds = getSavedFileIds(code);
@@ -840,6 +855,7 @@ export function receiveForm(code: string, staffId: string): FormDetail | null {
   if (!form) return null;
   const receivedAt = vietnamNow();
   Object.assign(form, { status: 'xet', note: '', receiverId: staffId, receivedAt, handlerId: staffId, handlerSince: receivedAt });
+  form.history.push({ action: 'receive', at: receivedAt, actorId: staffId, status: 'xet', note: '', toStaffId: null });
   return toDetail(form);
 }
 
@@ -849,12 +865,16 @@ export function receiveForm(code: string, staffId: string): FormDetail | null {
  * @param code      mã đơn
  * @param decision  quyết định: 'bs' · 'duyet' · 'tc' (cũng là trạng thái mới của đơn)
  * @param note      lí do (đã bỏ khoảng trắng đầu cuối, "" nếu không ghi); Duyệt thì bỏ qua lí do và xóa lí do cũ
+ * @param staffId   id cán bộ ra quyết định (ghi lịch sử)
  * @returns         lá đơn sau khi ra quyết định; không có đơn thì null
  */
-export function decideForm(code: string, decision: FormDecision, note: string): FormDetail | null {
+export function decideForm(code: string, decision: FormDecision, note: string, staffId: string): FormDetail | null {
   const form = FORMS.find((candidate) => candidate.code === code);
   if (!form) return null;
-  Object.assign(form, { status: decision, note: decision === 'duyet' ? '' : note, decidedAt: vietnamNow() });
+  const decidedAt = vietnamNow();
+  const savedNote = decision === 'duyet' ? '' : note;
+  Object.assign(form, { status: decision, note: savedNote, decidedAt });
+  form.history.push({ action: DECISION_EVENT_ACTION[decision], at: decidedAt, actorId: staffId, status: decision, note: savedNote, toStaffId: null });
   return toDetail(form);
 }
 
@@ -876,13 +896,16 @@ export function getTransferTargets(code: string): StaffRef[] | null {
  * Người tiếp nhận, trạng thái, lí do không đổi. Quyền và trạng thái đã được kiểm tra trước (canTransferForm).
  * @param code       mã đơn
  * @param toStaffId  id cán bộ nhận
+ * @param actorId    id cán bộ bấm Chuyển giao (ghi lịch sử)
  * @returns          lá đơn sau khi chuyển giao; không có đơn hoặc không có cán bộ đó thì null
  */
-export function transferForm(code: string, toStaffId: string): FormDetail | null {
+export function transferForm(code: string, toStaffId: string, actorId: string): FormDetail | null {
   const form = FORMS.find((candidate) => candidate.code === code);
   const toStaff = accounts[toStaffId];
   if (!form || !toStaff || !can(toStaff.role, 'decide')) return null;
-  Object.assign(form, { handlerId: toStaffId, handlerSince: vietnamNow() });
+  const handlerSince = vietnamNow();
+  Object.assign(form, { handlerId: toStaffId, handlerSince });
+  form.history.push({ action: 'transfer', at: handlerSince, actorId, status: form.status, note: '', toStaffId });
   return toDetail(form);
 }
 

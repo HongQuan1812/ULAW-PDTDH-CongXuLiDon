@@ -166,6 +166,17 @@ describe('workflow (tiếp nhận, quyết định, chuyển giao)', () => {
     expect(approved).toMatchObject({ status: 'duyet', note: '' });
     expect(approved.decidedAt).not.toBeNull();
     expect(messageOf(await post(staff, `${code}/decision`, { decision: 'tc', note: '' }).expect(409))).toBe(FORM_MESSAGES.notDecidable);
+
+    // Lịch sử: mỗi bước một dòng, cũ nhất trước, ai làm, đơn sang trạng thái nào, lí do; lần bị từ chối 409 không ghi
+    expect(approved.history.map(({ action, actor, status, note }) => ({ action, actorId: actor.id, status, note }))).toEqual([
+      { action: 'submit', actorId: approved.applicant.id, status: 'nop', note: '' },
+      { action: 'receive', actorId: 'cb-1', status: 'xet', note: '' },
+      { action: 'requestSupplement', actorId: 'cb-1', status: 'bs', note: 'Thiếu bảng điểm' },
+      { action: 'supplement', actorId: approved.applicant.id, status: 'bsg', note: '' },
+      { action: 'receive', actorId: 'cb-1', status: 'xet', note: '' },
+      { action: 'approve', actorId: 'cb-1', status: 'duyet', note: '' },
+    ]);
+    expect(approved.history.at(-1)!.at).toBe(approved.decidedAt);
   });
 
   it('từ chối: lưu lí do; đơn do người khác phụ trách thì chỉ admin (decideAny) quyết định được', async () => {
@@ -210,6 +221,7 @@ describe('workflow (tiếp nhận, quyết định, chuyển giao)', () => {
     const moved = FormDetailSchema.parse((await post(staff, `${code}/transfer`, { toStaffId: 'cb-3' }).expect(200)).body);
     expect(moved).toMatchObject({ status: 'xet', receiver: { id: 'cb-1' }, handler: { id: 'cb-3' } });
     expect(Date.parse(moved.handlerSince!)).toBeGreaterThanOrEqual(Date.parse(moved.receivedAt!));
+    expect(moved.history.at(-1)).toMatchObject({ action: 'transfer', actor: { id: 'cb-1' }, status: 'xet', toStaff: { id: 'cb-3' }, at: moved.handlerSince });
 
     // Đã có kết quả thì không chuyển giao được nữa
     const admin = await loginAs('admin');
