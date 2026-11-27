@@ -199,3 +199,16 @@ export function formDeadline(maxDays: number | null, history: readonly DeadlineE
   const state: DeadlineState = now > dueAt ? 'overdue' : remainingMinutes <= DUE_SOON_MINUTES ? 'dueSoon' : 'onTrack';
   return { state, maxDays, dueAt, remainingMinutes };
 }
+
+/**
+ * Câu nói thêm cạnh tình trạng hạn: còn bao lâu, trễ bao lâu.
+ * @param deadline  hạn của lá đơn (formDeadline)
+ * @returns         vd 'Còn 2 ngày 3 giờ', 'Trễ 5 giờ', 'Còn 3 ngày, tính tiếp khi bổ sung xong';
+ *                  Xong đúng hạn, hoặc trễ chỉ trong ngày nghỉ (chưa tốn giờ làm việc nào) thì null
+ */
+export function deadlineDetailText(deadline: FormDeadline): string | null {
+  const duration = workingDurationText(deadline.remainingMinutes);
+  if (deadline.state === 'paused') return `Còn ${duration}, tính tiếp khi bổ sung xong`;
+  if (deadline.state === 'onTrack' || deadline.state === 'dueSoon') return `Còn ${duration}`;
+  return deadline.remainingMinutes < 0 ? `Trễ ${duration}` : null;
+}

@@ -3,6 +3,7 @@ import type { FormEventAction } from '../aux-schema/forms--events';
 import type { FormStatus } from '../aux-schema/forms--statuses';
 import {
   addWorkingMinutes,
+  deadlineDetailText,
   formDeadline,
   isWorkingDay,
   vietnamTimeOf,
@@ -147,5 +148,22 @@ describe('hạn xử lí của lá đơn', () => {
 
     expect(formDeadline(3, approvedOnTime, '2026-12-20T00:00', NO_HOLIDAYS)).toEqual({ state: 'doneOnTime', maxDays: 3, dueAt: '2026-12-02T10:00', remainingMinutes: HOUR });
     expect(formDeadline(3, rejectedLate, '2026-12-20T00:00', NO_HOLIDAYS)).toMatchObject({ state: 'doneLate', remainingMinutes: -DAY });
+  });
+});
+
+describe('câu nói thêm cạnh tình trạng hạn', () => {
+  it('còn hạn, sắp tới hạn, tạm dừng nói còn bao lâu; quá hạn, xong trễ nói trễ bao lâu', () => {
+    const base = { maxDays: 3, dueAt: '2026-12-02T10:00' };
+    expect(deadlineDetailText({ ...base, state: 'onTrack', remainingMinutes: 2 * DAY + 3 * HOUR })).toBe('Còn 2 ngày 3 giờ');
+    expect(deadlineDetailText({ ...base, state: 'dueSoon', remainingMinutes: 5 * HOUR })).toBe('Còn 5 giờ');
+    expect(deadlineDetailText({ ...base, state: 'paused', dueAt: null, remainingMinutes: 3 * DAY })).toBe('Còn 3 ngày, tính tiếp khi bổ sung xong');
+    expect(deadlineDetailText({ ...base, state: 'overdue', remainingMinutes: -DAY })).toBe('Trễ 1 ngày');
+    expect(deadlineDetailText({ ...base, state: 'doneLate', remainingMinutes: -2 * HOUR })).toBe('Trễ 2 giờ');
+  });
+
+  it('xong đúng hạn, hoặc qua hạn chỉ trong ngày nghỉ, thì không nói thêm', () => {
+    const base = { maxDays: 3, dueAt: '2026-12-05T00:00' };
+    expect(deadlineDetailText({ ...base, state: 'doneOnTime', remainingMinutes: DAY })).toBeNull();
+    expect(deadlineDetailText({ ...base, state: 'overdue', remainingMinutes: 0 })).toBeNull();
   });
 });
