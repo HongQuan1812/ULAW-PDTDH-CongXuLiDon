@@ -36,10 +36,14 @@
 .tab:focus-visible{outline:2px solid var(--focus);outline-offset:-2px;border-radius:var(--r)}
 /* chấm màu theo trạng thái; lúc đang tắt thì xám, có ô lỗi thì đỏ */
 .dot{width:8px;height:8px;border-radius:50%;flex:none}
-.dot[data-status="nop"]{background:var(--s-nop-fg)}
-.dot[data-status="bs"]{background:var(--s-bs-fg)}
-.dot[data-status="tc"]{background:var(--s-tc-fg)}
-.dot[data-status="duyet"]{background:var(--s-duyet-fg)}
+.dot[data-kind="nop"]{background:var(--s-nop-fg)}
+.dot[data-kind="bs"],.dot[data-kind="dueSoon"]{background:var(--s-bs-fg)}
+.dot[data-kind="tc"],.dot[data-kind="overdue"]{background:var(--s-tc-fg)}
+.dot[data-kind="duyet"]{background:var(--s-duyet-fg)}
+.dot[data-kind="transferred"]{background:var(--s-xet-fg)}
+/* vạch ngăn trước tab đầu của nhóm thư cho cán bộ */
+.tabGroupStart{position:relative;margin-left:13px}
+.tabGroupStart::before{content:"";position:absolute;left:-9px;top:12px;bottom:10px;width:1px;background:var(--line)}
 .tabOff .dot{background:var(--faint)}
 .dot.dotError{background:var(--danger);box-shadow:0 0 0 3px var(--danger-soft)}
 .offTag{font-size:11.5px;font-weight:500;padding:1px 7px;border-radius:999px;background:var(--surface-2);color:var(--muted)}
