@@ -4,9 +4,9 @@
    Nút › đầu dòng (và nút mở / đóng tất cả ở tiêu đề) sổ xuống phần xem nhanh ngay trong bảng (QuickView). */
 import { Fragment, useMemo, useState, type KeyboardEvent, type ReactElement, type ReactNode } from 'react';
 import { useNavigate } from 'react-router';
-import { NOTE_COUNT_FIELD_KEY, can, type FormSummary } from '@ulaw/shared';
+import { DEADLINE_STATE_FIELD_KEY, NOTE_COUNT_FIELD_KEY, can, type DeadlineState, type FormSummary } from '@ulaw/shared';
 import { formPath, PAGE_LABEL, type FormPageState } from '../../app/paths';
-import { StatusPill } from '../../components/StatusPill';
+import { DeadlinePill, StatusPill } from '../../components/StatusPill';
 import { LoadError } from '../../components/LoadError';
 import { HeaderCell } from '../../components/table/HeaderCell';
 import { Highlight } from '../../components/table/Highlight';
@@ -121,7 +121,7 @@ export function FormTable<Row extends FormSummary>({
   };
 
   /**
-   * Một ô của dòng: 4 cột thông tin đơn có cách hiện riêng; cột thêm hiện chữ, ô trống ghi "—".
+   * Một ô của dòng: 4 cột thông tin đơn và cột Tình trạng hạn có cách hiện riêng; cột thêm hiện chữ, ô trống ghi "—".
    * @param field  cột
    * @param form   đơn của dòng
    * @returns      thẻ <td>
@@ -154,6 +154,14 @@ export function FormTable<Row extends FormSummary>({
       return (
         <td key={field.key}>
           <StatusPill status={form.status} query={query} />
+        </td>
+      );
+    }
+    if (field.key === DEADLINE_STATE_FIELD_KEY) {
+      const deadlineState = field.getValue(form) as DeadlineState | null;
+      return (
+        <td key={field.key}>
+          {deadlineState ? <DeadlinePill state={deadlineState} query={query} /> : <span className={tableStyles.dash}>{EMPTY_TEXT}</span>}
         </td>
       );
     }

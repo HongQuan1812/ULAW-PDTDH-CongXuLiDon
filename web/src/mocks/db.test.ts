@@ -287,6 +287,14 @@ describe('chi tiết đơn', () => {
     expect(form.deadline?.dueAt).toBe(formDeadline(10, form.history, form.submittedAt, holidayDatesOf(getHolidays()))?.dueAt);
   });
 
+  test('bảng Quản lí đơn, Đơn phụ trách: tình trạng hạn mỗi dòng khớp chi tiết đơn', () => {
+    const staff = { id: 'cb-1', role: 'admin' as const };
+    for (const row of [...getAllForms(), ...getFormsHandledBy('cb-1')]) {
+      expect(row.deadlineState).toBe(getFormDetail(row.code, staff)!.deadline?.state ?? null);
+    }
+    expect(getAllForms().some((row) => row.deadlineState !== null)).toBe(true);
+  });
+
   test('người nộp đơn không xem được đơn người khác; cán bộ xem được; mã không có thì null', () => {
     const otherCode = getFormsHandledBy('cb-1').find((form) => !getFormsOf('sv-1').some((own) => own.code === form.code))!.code;
     expect(getFormDetail(otherCode, { id: 'sv-1', role: 'nguoiNopDon' })).toBeNull();

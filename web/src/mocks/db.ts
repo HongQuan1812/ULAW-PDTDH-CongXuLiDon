@@ -24,6 +24,7 @@ import type {
   FormTypeStatus,
   FormTypeSummary,
   FormTypeVersion,
+  DeadlineState,
   HandledFormSummary,
   ManagedFormType,
   ManagedFormSummary,
@@ -557,6 +558,16 @@ function toSummary({ code, formTypeId, formTypeName, submittedAt, status }: Mock
 }
 
 /**
+ * Tình trạng hạn xử lí của đơn (cột Tình trạng hạn), tính như ở chi tiết đơn.
+ * @param form  lá đơn trong API giả
+ * @param now   bây giờ, giờ Việt Nam 'YYYY-MM-DDTHH:mm'
+ * @returns     tình trạng hạn; null nếu loại đơn lúc nộp không có hạn
+ */
+function deadlineStateOf(form: MockForm, now: string): DeadlineState | null {
+  return formDeadline(form.formTypeSnapshot.maxProcessingDays, form.history, now, holidayDatesOf(holidays))?.state ?? null;
+}
+
+/**
  * Tên, email hiện tại của một tài khoản (người nộp, người tiếp nhận, người xử lí của đơn; người lưu loại đơn).
  * Đơn chỉ lưu id, nên đổi họ tên tài khoản thì tên mới hiện ở mọi nơi.
  * @param userId  id tài khoản
@@ -611,11 +622,13 @@ export function getFormsOf(userId: string): FormSummary[] {
 /**
  * Lấy các đơn một cán bộ đã tiếp nhận hoặc đang xử lí.
  * @param staffId  id tài khoản cán bộ
- * @returns        các đơn kèm người tiếp nhận, người xử lí, số ghi chú; không có thì []
+ * @returns        các đơn kèm tình trạng hạn, người tiếp nhận, người xử lí, số ghi chú; không có thì []
  */
 export function getFormsHandledBy(staffId: string): HandledFormSummary[] {
+  const now = vietnamNow();
   return FORMS.filter((form) => form.receiverId === staffId || form.handlerId === staffId).map((form) => ({
     ...toSummary(form),
+    deadlineState: deadlineStateOf(form, now),
     receiver: staffOf(form.receiverId),
     handler: staffOf(form.handlerId),
     noteCount: countFormNotes(form.code),
@@ -624,14 +637,16 @@ export function getFormsHandledBy(staffId: string): HandledFormSummary[] {
 
 /**
  * Lấy mọi đơn của mọi người nộp, cho bảng Quản lí đơn.
- * @returns  các đơn kèm lúc tiếp nhận, số ghi chú và người nộp (SĐT, CCCD che; chưa có thì null)
+ * @returns  các đơn kèm tình trạng hạn, lúc tiếp nhận, số ghi chú và người nộp (SĐT, CCCD che; chưa có thì null)
  */
 export function getAllForms(): ManagedFormSummary[] {
+  const now = vietnamNow();
   return FORMS.map((form) => {
     const person = findPerson(form.ownerId);
     const applicant = personRef(form.ownerId);
     return {
       ...toSummary(form),
+      deadlineState: deadlineStateOf(form, now),
       receivedAt: form.receivedAt,
       noteCount: countFormNotes(form.code),
       applicant: { ...applicant, phone: person?.phone ?? null, maskedCccd: maskCccd(person?.cccd ?? null) },
