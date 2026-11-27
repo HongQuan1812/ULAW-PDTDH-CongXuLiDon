@@ -9,6 +9,7 @@ describe('danh sách mọi đơn (Quản lí đơn)', () => {
     formTypeName: 'Xét miễn môn',
     submittedAt: '2026-11-01T08:30',
     status: 'nop',
+    deadlineState: null,
     receivedAt: null,
     noteCount: 0,
     applicant: { id: 'sv-2', name: 'Trần Thị Bảo Ngọc', email: 'baongoc.tran@hcmulaw.edu.vn', phone: null, maskedCccd: null },
@@ -37,6 +38,22 @@ describe('danh sách mọi đơn (Quản lí đơn)', () => {
     expect(sorted.rows.map((form) => form.noteCount)).toEqual([12, 3, 0]);
     const filtered = applyListQuery(forms, MANAGED_FORM_LIST_FIELDS, { page: 1, pageSize: 10, search: '', sort: [], filters: [{ fieldKey: 'noteCount', operator: 'range', value: '', from: '1', to: '' }] }, FORM_LIST_DEFAULT_SORTING);
     expect(filtered.rows.map((form) => form.noteCount).sort((a, b) => a - b)).toEqual([3, 12]);
+  });
+
+  test('cột Tình trạng hạn: sắp xếp gấp nhất trước, đơn không có hạn luôn cuối; lọc theo tình trạng', () => {
+    const states = ['doneOnTime', null, 'onTrack', 'overdue', 'paused', 'dueSoon', 'doneLate'] as const;
+    const forms = states.map((deadlineState, index) => ({ ...managedForm, code: `XMM-2026-001-0000${index + 1}`, deadlineState }) as ManagedFormSummary);
+    const listQuery = (sort: { id: string; desc: boolean }[], filters: { fieldKey: string; operator: 'equals'; value: string; from: string; to: string }[]) =>
+      applyListQuery(forms, MANAGED_FORM_LIST_FIELDS, { page: 1, pageSize: 10, search: '', sort, filters }, FORM_LIST_DEFAULT_SORTING).rows.map((form) => form.deadlineState);
+
+    expect(listQuery([{ id: 'deadlineState', desc: false }], [])).toEqual(['overdue', 'dueSoon', 'onTrack', 'paused', 'doneLate', 'doneOnTime', null]);
+    expect(listQuery([{ id: 'deadlineState', desc: true }], [])).toEqual(['doneOnTime', 'doneLate', 'paused', 'onTrack', 'dueSoon', 'overdue', null]);
+    expect(listQuery([], [{ fieldKey: 'deadlineState', operator: 'equals', value: 'overdue', from: '', to: '' }])).toEqual(['overdue']);
+  });
+
+  test('tình trạng hạn chỉ nhận giá trị đã định, hoặc null', () => {
+    expect(ManagedFormsResponseSchema.safeParse({ ...pageMeta, forms: [{ ...managedForm, deadlineState: 'overdue' }] }).success).toBe(true);
+    expect(ManagedFormsResponseSchema.safeParse({ ...pageMeta, forms: [{ ...managedForm, deadlineState: 'late' }] }).success).toBe(false);
   });
 
   test('CCCD đầy đủ trả theo id người nộp', () => {
