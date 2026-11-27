@@ -26,6 +26,7 @@ function draftOf(prefix: string, overrides: Partial<SaveFormTypeVersionRequest> 
     prefix,
     name: 'Loại đơn thử',
     description: null,
+    maxProcessingDays: null,
     status: 'draft',
     sections: [{ id: 's1', title: 'Phần một', main: true, questions: [{ id: 'q1', type: 'text', label: 'Nội dung thử', required: true }] }],
     ...overrides,
@@ -70,7 +71,7 @@ describe('form-types', () => {
     expect(open.formTypes.map((formType) => formType.id)).toContain('xmr');
 
     const detail = FormTypeSchema.parse((await request(server()).get('/api/form-types/xmr').set('Cookie', cookie).expect(200)).body);
-    expect(detail.status).toBe('open');
+    expect(detail).toMatchObject({ status: 'open', maxProcessingDays: 10 });
     expect(detail.sections.length).toBeGreaterThan(0);
 
     for (const call of [
@@ -120,6 +121,8 @@ describe('form-types', () => {
     const blankTitle = draftOf('ZTT', { sections: [{ id: 's1', title: ' ', main: false, questions: [{ id: 'q1', type: 'text', label: 'Nội dung thử', required: false }] }] });
     expect((await post(blankTitle).expect(422)).body.message).toContain('Phần 1: nhập tiêu đề phần.');
     expect((await post(draftOf('abc')).expect(422)).body.message).toBe(FORM_TYPE_DRAFT_MESSAGES.prefixFormat);
+    expect((await post(draftOf('ZTT', { maxProcessingDays: 0 })).expect(422)).body.message).toBe('Thời gian xử lí tối đa ít nhất 1 ngày làm việc.');
+    expect((await post(draftOf('ZTT', { maxProcessingDays: 2.5 })).expect(422)).body.message).toBe('Thời gian xử lí tối đa phải là số nguyên.');
     expect((await post(draftOf('XMR')).expect(409)).body.message).toBe(FORM_TYPE_DRAFT_MESSAGES.prefixTaken('XMR'));
   });
 
@@ -135,7 +138,9 @@ describe('form-types', () => {
     expect(created.versions).toHaveLength(1);
     expect(created.versions[0]).toMatchObject({ version: 1, status: 'draft', updatedBy: { id: 'cb-1' } });
     const edited = ManagedFormTypeSchema.parse((await call('put', `/${id}/versions/1`).send(draftOf('ZTU', { name: 'Tên mới', description: '' })).expect(200)).body);
-    expect(edited).toMatchObject({ prefix: 'ZTU', versions: [{ name: 'Tên mới', description: null }] });
+    expect(edited).toMatchObject({ prefix: 'ZTU', versions: [{ name: 'Tên mới', description: null, maxProcessingDays: null }] });
+    const withDeadline = ManagedFormTypeSchema.parse((await call('put', `/${id}/versions/1`).send(draftOf('ZTU', { maxProcessingDays: 7 })).expect(200)).body);
+    expect(withDeadline.versions[0]).toMatchObject({ maxProcessingDays: 7 });
     await call('put', `/${id}/versions/1`).send(draftOf('ZTT')).expect(200);
 
     // Phiên bản Nháp: không đổi trạng thái bằng /status; phiên bản không có thì 404

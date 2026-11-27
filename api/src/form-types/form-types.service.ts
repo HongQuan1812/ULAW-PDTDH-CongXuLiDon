@@ -50,8 +50,7 @@ export class FormTypesService {
       status: row.status,
       name: row.name,
       description: row.description,
-      // chưa lưu ở database (bước 2 của Hạn xử lí đơn thêm cột)
-      maxProcessingDays: null,
+      maxProcessingDays: row.maxProcessingDays,
       sections: row.sections as unknown as FormSection[],
       updatedAt: toVietnamTime(row.updatedAt),
       updatedBy: { id: row.updatedBy.id, name: row.updatedBy.name, email: row.updatedBy.email },
@@ -212,8 +211,7 @@ export class FormTypesService {
       description: opened.description,
       version: opened.version,
       status: opened.status,
-      // chưa lưu ở database (bước 2 của Hạn xử lí đơn thêm cột)
-      maxProcessingDays: null,
+      maxProcessingDays: opened.maxProcessingDays,
       sections: opened.sections as unknown as FormSection[],
     };
   }
@@ -252,6 +250,7 @@ export class FormTypesService {
               status: draft.status,
               name: draft.name,
               description: draft.description,
+              maxProcessingDays: draft.maxProcessingDays,
               sections: draft.sections as unknown as Prisma.InputJsonValue,
               updatedAt: new Date(),
               updatedById: staffId,
@@ -289,6 +288,7 @@ export class FormTypesService {
             status: 'draft',
             name: draft.name,
             description: draft.description,
+            maxProcessingDays: draft.maxProcessingDays,
             sections: draft.sections as unknown as Prisma.InputJsonValue,
             updatedAt: new Date(),
             updatedById: staffId,
@@ -324,6 +324,7 @@ export class FormTypesService {
           data: {
             name: draft.name,
             description: draft.description,
+            maxProcessingDays: draft.maxProcessingDays,
             sections: draft.sections as unknown as Prisma.InputJsonValue,
             updatedAt: new Date(),
             updatedById: staffId,

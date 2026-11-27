@@ -122,8 +122,7 @@ async function seedAll(prisma: PrismaClient): Promise<void> {
   await prisma.formType.createMany({ data: formTypes.map(({ id, prefix }) => ({ id, prefix })) });
   await prisma.formTypeVersion.createMany({
     data: formTypes.flatMap((formType) =>
-      // maxProcessingDays: chưa có cột ở database (bước 2 của Hạn xử lí đơn thêm cột)
-      formType.versions.map(({ updatedAt, sections, maxProcessingDays: _maxProcessingDays, ...version }) => ({
+      formType.versions.map(({ updatedAt, sections, ...version }) => ({
         ...version,
         formTypeId: formType.id,
         sections: sections as unknown as Prisma.InputJsonValue,
