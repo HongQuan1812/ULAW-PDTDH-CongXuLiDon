@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, test } from 'vitest';
-import { FORM_TYPE_SEED, MULTI_VERSION_SEED_FORM_TYPE_ID, type FileRef } from '@ulaw/shared';
+import { FORM_TYPE_SEED, MULTI_VERSION_SEED_FORM_TYPE_ID, formDeadline, holidayDatesOf, type FileRef } from '@ulaw/shared';
 import {
   addForm,
   addFormTypeVersion,
@@ -279,6 +279,12 @@ describe('chi tiết đơn', () => {
     expect(form.receiver).not.toBeNull();
     expect(form.receivedAt! > form.submittedAt).toBe(true);
     expect(form.handlerSince! >= form.receivedAt!).toBe(true);
+  });
+
+  test('hạn xử lí tính theo bản chụp loại đơn (xmr: 10 ngày làm việc) và ngày nghỉ', () => {
+    const form = getFormDetail('XMR-2026-001-01520', { id: 'sv-1', role: 'nguoiNopDon' })!;
+    expect(form.deadline?.maxDays).toBe(10);
+    expect(form.deadline?.dueAt).toBe(formDeadline(10, form.history, form.submittedAt, holidayDatesOf(getHolidays()))?.dueAt);
   });
 
   test('người nộp đơn không xem được đơn người khác; cán bộ xem được; mã không có thì null', () => {

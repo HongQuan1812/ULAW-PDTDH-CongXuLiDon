@@ -1,4 +1,4 @@
-import { FORM_STATUS_LABEL, FORM_TYPE_STATUS_LABEL, type FormStatus, type FormTypeStatus } from '@ulaw/shared';
+import { DEADLINE_STATE_LABEL, FORM_STATUS_LABEL, FORM_TYPE_STATUS_LABEL, type DeadlineState, type FormStatus, type FormTypeStatus } from '@ulaw/shared';
 import { Highlight } from './table/Highlight';
 import styles from './StatusPill.module.css';
 
@@ -30,6 +30,24 @@ export function FormTypeStatusPill({ status, query = '' }: { status: FormTypeSta
   return (
     <span className={`${styles.pill} ${styles[FORM_TYPE_STATUS_COLOR[status]]}`}>
       <Highlight text={FORM_TYPE_STATUS_LABEL[status]} query={query} />
+    </span>
+  );
+}
+
+/* Màu nhãn tình trạng hạn cũng mượn màu trạng thái lá đơn:
+   Còn hạn xanh dương, Sắp tới hạn vàng, Quá hạn và Xong trễ hạn đỏ, Tạm dừng tím, Xong đúng hạn xanh lá. */
+const DEADLINE_STATE_COLOR: Record<DeadlineState, FormStatus> = { onTrack: 'xet', dueSoon: 'bs', overdue: 'tc', paused: 'bsg', doneOnTime: 'duyet', doneLate: 'tc' };
+
+/**
+ * Nhãn tình trạng hạn xử lí của lá đơn, cùng kiểu với nhãn trạng thái lá đơn.
+ * @param state  tình trạng hạn, vd 'overdue'
+ * @param query  chữ trong ô tìm kiếm của bảng, để tô sáng phần khớp (không bắt buộc)
+ * @returns      thẻ <span>, vd "Quá hạn" màu đỏ
+ */
+export function DeadlinePill({ state, query = '' }: { state: DeadlineState; query?: string }) {
+  return (
+    <span className={`${styles.pill} ${styles[DEADLINE_STATE_COLOR[state]]}`}>
+      <Highlight text={DEADLINE_STATE_LABEL[state]} query={query} />
     </span>
   );
 }

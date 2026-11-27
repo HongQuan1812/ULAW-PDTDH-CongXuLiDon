@@ -63,7 +63,7 @@ import { bypass } from 'msw';
 import { buildSamplePdf } from './samplePdf';
 import { REAL_BACKEND_GROUPS } from './realBackendGroups';
 import type { SeedAccount, SeedForm, SeedFormType, SeedFormTypeVersion } from '@ulaw/shared';
-import { HOLIDAYS_SEED, compareHolidays, findOverlappingHoliday, type Holiday, type HolidayInput } from '@ulaw/shared';
+import { HOLIDAYS_SEED, compareHolidays, findOverlappingHoliday, formDeadline, holidayDatesOf, type Holiday, type HolidayInput } from '@ulaw/shared';
 import {
   BACKUP_SCHEDULES_SEED,
   BACKUP_TARGETS_SEED,
@@ -701,6 +701,7 @@ function toDetail(form: MockForm): FormDetail {
     handler: staffOf(form.handlerId),
     handlerSince: form.handlerSince,
     decidedAt: form.decidedAt,
+    deadline: formDeadline(form.formTypeSnapshot.maxProcessingDays, form.history, vietnamNow(), holidayDatesOf(holidays)),
     sections: structuredClone(form.formTypeSnapshot.sections),
     answers: structuredClone(form.answers),
     history: form.history.map(({ action, at, actorId, status, note, toStaffId }) => ({

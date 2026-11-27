@@ -20,8 +20,6 @@
 .sections{display:flex;flex-direction:column}
 /* màn hình hẹp (khung trượt): tiêu đề khung đứng yên, các mục cuộn bên dưới */
 .sheetSections{flex:0 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain}
-.section{flex:none;padding:18px 20px;display:grid;gap:12px;border-bottom:1px solid var(--line)}
-.section:last-child{border-bottom:0}
 
 /* mục thu gọn được (PanelSection), kiểu OUTLINE / TIMELINE của VS Code */
 /* khung không đủ cao thì mỗi mục đang mở tự co lại: hàng tiêu đề đứng yên, nội dung bên dưới cuộn riêng */
@@ -30,7 +28,7 @@
 /* mục không cuộn riêng (Người nộp đơn, Người tiếp nhận, Người xử lí): giữ đủ dòng, phần thiếu để các mục khác co */
 .panelSectionFixed{flex:none}
 .panelSectionFixed .panelSectionBody{overflow:visible}
-/* mục cuộn duy nhất trong khung (vd Lịch sử): co hết phần thiếu nhưng không thấp hơn hàng tiêu đề (36px + lề 8px + đường kẻ 1px),
+/* mục cuộn riêng trong khung (Thông tin chung, Lịch sử): co hết phần thiếu nhưng không thấp hơn hàng tiêu đề (36px + lề 8px + đường kẻ 1px),
    để khung không phải cuộn chung; chỉ khi các mục không co đã cao hơn cả khung thì danh sách mục mới cuộn */
 .panelSectionMinHeight{min-height:45px}
 /* hàng tiêu đề nền xám, tách khỏi nội dung bên dưới (thu gọn thì chỉ còn đường kẻ của mục) */
