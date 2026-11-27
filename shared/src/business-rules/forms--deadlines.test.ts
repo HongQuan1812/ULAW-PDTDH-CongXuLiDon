@@ -1,8 +1,9 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, test } from 'vitest';
 import type { FormEventAction } from '../aux-schema/forms--events';
 import type { FormStatus } from '../aux-schema/forms--statuses';
 import {
   addWorkingMinutes,
+  countDeadlineStates,
   deadlineDetailText,
   formDeadline,
   isWorkingDay,
@@ -97,11 +98,16 @@ describe('hạn xử lí của lá đơn', () => {
     expect(formDeadline(3, SUBMITTED_AND_RECEIVED, '2026-11-27T10:00', new Set(['2026-12-01']))).toMatchObject({ dueAt: '2026-12-03T10:00' });
   });
 
-  it('đang chờ bổ sung: Tạm dừng, chưa có hạn, ghi thời gian còn lại', () => {
+  it('đang chờ bổ sung: chưa có hạn, ghi thời gian còn lại; tình trạng theo phần còn lại, không theo bây giờ', () => {
     const history = [...SUBMITTED_AND_RECEIVED, event('requestSupplement', '2026-11-30T10:00', 'bs')];
 
-    // đã dùng 14 giờ Thứ Sáu + 10 giờ Thứ Hai
-    expect(formDeadline(3, history, '2026-12-03T08:00', NO_HOLIDAYS)).toEqual({ state: 'paused', maxDays: 3, dueAt: null, remainingMinutes: 2 * DAY });
+    // đã dùng 14 giờ Thứ Sáu + 10 giờ Thứ Hai: còn 2 ngày, bao lâu sau vẫn Còn hạn
+    expect(formDeadline(3, history, '2026-12-03T08:00', NO_HOLIDAYS)).toEqual({ state: 'onTrack', maxDays: 3, dueAt: null, remainingMinutes: 2 * DAY });
+    expect(formDeadline(3, history, '2027-01-20T08:00', NO_HOLIDAYS)).toMatchObject({ state: 'onTrack', dueAt: null });
+
+    // dừng khi còn 1 ngày trở xuống: Sắp tới hạn; dừng khi đã qua hạn: Quá hạn
+    expect(formDeadline(2, history, '2026-12-03T08:00', NO_HOLIDAYS)).toMatchObject({ state: 'dueSoon', dueAt: null, remainingMinutes: DAY });
+    expect(formDeadline(1, history, '2026-12-03T08:00', NO_HOLIDAYS)).toMatchObject({ state: 'overdue', dueAt: null, remainingMinutes: 0 });
   });
 
   it('bổ sung xong: chạy tiếp phần còn lại từ lúc bổ sung; nhiều lần chờ thì cộng dồn', () => {
@@ -152,11 +158,12 @@ describe('hạn xử lí của lá đơn', () => {
 });
 
 describe('câu nói thêm cạnh tình trạng hạn', () => {
-  it('còn hạn, sắp tới hạn, tạm dừng nói còn bao lâu; quá hạn, xong trễ nói trễ bao lâu', () => {
+  it('còn hạn, sắp tới hạn nói còn bao lâu; quá hạn, xong trễ nói trễ bao lâu; đang chờ bổ sung thì nói thêm', () => {
     const base = { maxDays: 3, dueAt: '2026-12-02T10:00' };
     expect(deadlineDetailText({ ...base, state: 'onTrack', remainingMinutes: 2 * DAY + 3 * HOUR })).toBe('Còn 2 ngày 3 giờ');
     expect(deadlineDetailText({ ...base, state: 'dueSoon', remainingMinutes: 5 * HOUR })).toBe('Còn 5 giờ');
-    expect(deadlineDetailText({ ...base, state: 'paused', dueAt: null, remainingMinutes: 3 * DAY })).toBe('Còn 3 ngày, tính tiếp khi bổ sung xong');
+    expect(deadlineDetailText({ ...base, state: 'onTrack', dueAt: null, remainingMinutes: 3 * DAY })).toBe('Còn 3 ngày, tính tiếp khi bổ sung xong');
+    expect(deadlineDetailText({ ...base, state: 'overdue', dueAt: null, remainingMinutes: -5 * HOUR })).toBe('Trễ 5 giờ, tính tiếp khi bổ sung xong');
     expect(deadlineDetailText({ ...base, state: 'overdue', remainingMinutes: -DAY })).toBe('Trễ 1 ngày');
     expect(deadlineDetailText({ ...base, state: 'doneLate', remainingMinutes: -2 * HOUR })).toBe('Trễ 2 giờ');
   });
@@ -165,5 +172,15 @@ describe('câu nói thêm cạnh tình trạng hạn', () => {
     const base = { maxDays: 3, dueAt: '2026-12-05T00:00' };
     expect(deadlineDetailText({ ...base, state: 'doneOnTime', remainingMinutes: DAY })).toBeNull();
     expect(deadlineDetailText({ ...base, state: 'overdue', remainingMinutes: 0 })).toBeNull();
+  });
+});
+
+describe('đếm đơn theo tình trạng hạn', () => {
+  test('đủ mọi tình trạng (chưa có thì 0), đơn không có hạn đếm riêng', () => {
+    expect(countDeadlineStates(['overdue', null, 'overdue', 'onTrack', null, null])).toEqual({
+      byDeadline: { onTrack: 1, dueSoon: 0, overdue: 2, doneOnTime: 0, doneLate: 0 },
+      noDeadline: 3,
+    });
+    expect(countDeadlineStates([]).noDeadline).toBe(0);
   });
 });

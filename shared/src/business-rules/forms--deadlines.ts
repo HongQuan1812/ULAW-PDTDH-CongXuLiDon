@@ -4,7 +4,7 @@
    - Hạn: đồng hồ chạy từ đúng lúc nộp, đủ N × 24 giờ làm việc (N = thời gian xử lí tối đa của loại đơn) là hết hạn.
    - Chờ bổ sung: đồng hồ dừng từ lúc Yêu cầu bổ sung tới lúc sinh viên gửi bổ sung, rồi chạy tiếp phần còn lại.
    Mọi thời điểm là giờ Việt Nam 'YYYY-MM-DDTHH:mm', ngày dạng 'YYYY-MM-DD'. Chỉ có hàm thuần. */
-import type { DeadlineState, FormDeadline } from '../aux-schema/forms--deadlines';
+import { DEADLINE_STATES, type DeadlineState, type FormDeadline } from '../aux-schema/forms--deadlines';
 import type { FormEventAction } from '../aux-schema/forms--events';
 import type { FormStatus } from '../aux-schema/forms--statuses';
 
@@ -182,8 +182,12 @@ export function formDeadline(maxDays: number | null, history: readonly DeadlineE
     if (event.action === 'supplement' && runningSince === null) runningSince = event.at;
   }
 
-  // Đang chờ bổ sung: chưa có hạn, chỉ biết còn bao nhiêu khi tiếp tục
-  if (runningSince === null) return { state: 'paused', maxDays, dueAt: null, remainingMinutes: totalMinutes - usedMinutes };
+  // Đang chờ bổ sung: chưa có hạn, chỉ biết còn bao nhiêu khi tiếp tục; tình trạng theo phần còn lại đó (đã dùng hết trước khi dừng thì Quá hạn)
+  if (runningSince === null) {
+    const remainingMinutes = totalMinutes - usedMinutes;
+    const state: DeadlineState = remainingMinutes <= 0 ? 'overdue' : remainingMinutes <= DUE_SOON_MINUTES ? 'dueSoon' : 'onTrack';
+    return { state, maxDays, dueAt: null, remainingMinutes };
+  }
   const dueAt = addWorkingMinutes(runningSince, totalMinutes - usedMinutes, holidays);
 
   // Đã Duyệt / Từ chối: so lúc ra quyết định với hạn
@@ -203,12 +207,29 @@ export function formDeadline(maxDays: number | null, history: readonly DeadlineE
 /**
  * Câu nói thêm cạnh tình trạng hạn: còn bao lâu, trễ bao lâu.
  * @param deadline  hạn của lá đơn (formDeadline)
- * @returns         vd 'Còn 2 ngày 3 giờ', 'Trễ 5 giờ', 'Còn 3 ngày, tính tiếp khi bổ sung xong';
+ * @returns         vd 'Còn 2 ngày 3 giờ', 'Trễ 5 giờ', 'Còn 3 ngày, tính tiếp khi bổ sung xong' (đang chờ bổ sung);
  *                  Xong đúng hạn, hoặc trễ chỉ trong ngày nghỉ (chưa tốn giờ làm việc nào) thì null
  */
 export function deadlineDetailText(deadline: FormDeadline): string | null {
   const duration = workingDurationText(deadline.remainingMinutes);
-  if (deadline.state === 'paused') return `Còn ${duration}, tính tiếp khi bổ sung xong`;
+  if (deadline.dueAt === null) return `${deadline.remainingMinutes > 0 ? 'Còn' : 'Trễ'} ${duration}, tính tiếp khi bổ sung xong`;
   if (deadline.state === 'onTrack' || deadline.state === 'dueSoon') return `Còn ${duration}`;
   return deadline.remainingMinutes < 0 ? `Trễ ${duration}` : null;
+}
+
+/* ---------- Thống kê ---------- */
+
+/**
+ * Đếm đơn theo tình trạng hạn (khung Theo tình trạng hạn ở trang Quản lí đơn).
+ * @param states  tình trạng hạn của từng đơn; null = loại đơn không có hạn
+ * @returns       byDeadline: số đơn mỗi tình trạng (đủ mọi tình trạng, chưa có thì 0) · noDeadline: số đơn không có hạn
+ */
+export function countDeadlineStates(states: readonly (DeadlineState | null)[]): { byDeadline: Record<DeadlineState, number>; noDeadline: number } {
+  const byDeadline = Object.fromEntries(DEADLINE_STATES.map((state) => [state, 0])) as Record<DeadlineState, number>;
+  let noDeadline = 0;
+  for (const state of states) {
+    if (state === null) noDeadline += 1;
+    else byDeadline[state] += 1;
+  }
+  return { byDeadline, noDeadline };
 }

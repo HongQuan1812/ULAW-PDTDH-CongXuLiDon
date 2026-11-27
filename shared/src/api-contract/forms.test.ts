@@ -41,13 +41,13 @@ describe('danh sách mọi đơn (Quản lí đơn)', () => {
   });
 
   test('cột Tình trạng hạn: sắp xếp gấp nhất trước, đơn không có hạn luôn cuối; lọc theo tình trạng', () => {
-    const states = ['doneOnTime', null, 'onTrack', 'overdue', 'paused', 'dueSoon', 'doneLate'] as const;
+    const states = ['doneOnTime', null, 'onTrack', 'overdue', 'dueSoon', 'doneLate'] as const;
     const forms = states.map((deadlineState, index) => ({ ...managedForm, code: `XMM-2026-001-0000${index + 1}`, deadlineState }) as ManagedFormSummary);
     const listQuery = (sort: { id: string; desc: boolean }[], filters: { fieldKey: string; operator: 'equals'; value: string; from: string; to: string }[]) =>
       applyListQuery(forms, MANAGED_FORM_LIST_FIELDS, { page: 1, pageSize: 10, search: '', sort, filters }, FORM_LIST_DEFAULT_SORTING).rows.map((form) => form.deadlineState);
 
-    expect(listQuery([{ id: 'deadlineState', desc: false }], [])).toEqual(['overdue', 'dueSoon', 'onTrack', 'paused', 'doneLate', 'doneOnTime', null]);
-    expect(listQuery([{ id: 'deadlineState', desc: true }], [])).toEqual(['doneOnTime', 'doneLate', 'paused', 'onTrack', 'dueSoon', 'overdue', null]);
+    expect(listQuery([{ id: 'deadlineState', desc: false }], [])).toEqual(['overdue', 'dueSoon', 'onTrack', 'doneLate', 'doneOnTime', null]);
+    expect(listQuery([{ id: 'deadlineState', desc: true }], [])).toEqual(['doneOnTime', 'doneLate', 'onTrack', 'dueSoon', 'overdue', null]);
     expect(listQuery([], [{ fieldKey: 'deadlineState', operator: 'equals', value: 'overdue', from: '', to: '' }])).toEqual(['overdue']);
   });
 
@@ -67,6 +67,8 @@ describe('thống kê (Quản lí đơn)', () => {
     total: 3,
     byStatus: { nop: 1, xet: 2, bs: 0, bsg: 0, duyet: 0, tc: 0 },
     byType: [{ formTypeId: 'xmm', formTypeName: 'Xét miễn môn', formTypeStatus: 'open', count: 3 }],
+    byDeadline: { onTrack: 1, dueSoon: 0, overdue: 1, doneOnTime: 0, doneLate: 0 },
+    noDeadline: 1,
   };
 
   test('đường dẫn: GET /forms/stats', () => {
@@ -81,5 +83,12 @@ describe('thống kê (Quản lí đơn)', () => {
     const { tc: _tc, ...missingStatus } = stats.byStatus;
     expect(FormStatsSchema.safeParse({ ...stats, byStatus: missingStatus }).success).toBe(false);
     expect(FormStatsSchema.safeParse({ ...stats, byType: [{ ...stats.byType[0], formTypeStatus: 'x' }] }).success).toBe(false);
+  });
+
+  test('từ chối khi thiếu một tình trạng hạn hoặc thiếu số đơn không có hạn', () => {
+    const { doneLate: _doneLate, ...missingState } = stats.byDeadline;
+    expect(FormStatsSchema.safeParse({ ...stats, byDeadline: missingState }).success).toBe(false);
+    const { noDeadline: _noDeadline, ...withoutNoDeadline } = stats;
+    expect(FormStatsSchema.safeParse(withoutNoDeadline).success).toBe(false);
   });
 });

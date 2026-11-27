@@ -14,10 +14,12 @@ export const MaxProcessingDaysSchema = z
   .nullable();
 
 /**
- * onTrack: còn hơn 1 ngày làm việc · dueSoon: hôm nay là hạn, hoặc hạn là ngày làm việc kế tiếp · overdue: qua hạn, chưa có kết quả ·
- * paused: đang chờ người nộp bổ sung (hạn tạm dừng) · doneOnTime / doneLate: đã Duyệt / Từ chối, trước hoặc sau hạn
+ * onTrack: còn hơn 1 ngày làm việc · dueSoon: còn 1 ngày làm việc trở xuống · overdue: qua hạn, chưa có kết quả ·
+ * doneOnTime / doneLate: đã Duyệt / Từ chối, trước hoặc sau hạn.
+ * Đang chờ bổ sung thì đồng hồ dừng nhưng không có tình trạng riêng (trạng thái đơn Cần bổ sung đã nói điều đó):
+ * xếp theo thời gian còn lại lúc dừng, như khi đồng hồ đang chạy.
  */
-export const DEADLINE_STATES = ['onTrack', 'dueSoon', 'overdue', 'paused', 'doneOnTime', 'doneLate'] as const;
+export const DEADLINE_STATES = ['onTrack', 'dueSoon', 'overdue', 'doneOnTime', 'doneLate'] as const;
 export type DeadlineState = (typeof DEADLINE_STATES)[number];
 
 /* Tên hiển thị. */
@@ -25,7 +27,6 @@ export const DEADLINE_STATE_LABEL: Record<DeadlineState, string> = {
   onTrack: 'Còn hạn',
   dueSoon: 'Sắp tới hạn',
   overdue: 'Quá hạn',
-  paused: 'Tạm dừng',
   doneOnTime: 'Xong đúng hạn',
   doneLate: 'Xong trễ hạn',
 };
@@ -35,10 +36,10 @@ export const FormDeadlineSchema = z.object({
   state: z.enum(DEADLINE_STATES),
   /** Thời gian xử lí tối đa lúc nộp (theo bản chụp loại đơn), ngày làm việc */
   maxDays: z.number().int().positive(),
-  /** Thời điểm hết hạn, giờ Việt Nam 'YYYY-MM-DDTHH:mm'; Tạm dừng thì null vì chưa biết sinh viên bổ sung lúc nào */
+  /** Thời điểm hết hạn, giờ Việt Nam 'YYYY-MM-DDTHH:mm'; đang chờ bổ sung (đồng hồ dừng) thì null vì chưa biết sinh viên bổ sung lúc nào */
   dueAt: z.string().nullable(),
   /** Thời gian làm việc còn lại, tính bằng phút (mỗi ngày làm việc 24 giờ); âm = đã trễ bấy nhiêu.
-      Tạm dừng: còn lại khi sinh viên bổ sung xong · Xong: còn dư (≥ 0) hay trễ (< 0) lúc ra quyết định */
+      Đang chờ bổ sung: còn lại khi sinh viên bổ sung xong · Xong: còn dư (≥ 0) hay trễ (< 0) lúc ra quyết định */
   remainingMinutes: z.number().int(),
 });
 export type FormDeadline = z.infer<typeof FormDeadlineSchema>;
