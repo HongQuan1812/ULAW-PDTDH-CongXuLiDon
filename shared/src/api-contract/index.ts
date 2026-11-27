@@ -11,6 +11,7 @@ import { FORM_TYPE_ENDPOINTS } from './form-types';
 import { FORM_ENDPOINTS } from './form';
 import { FORMS_ENDPOINTS } from './forms';
 import { HEALTH_ENDPOINTS } from './health';
+import { HOLIDAY_ENDPOINTS } from './holidays';
 import { PROFILE_ENDPOINTS } from './profile';
 
 export * from './common';
@@ -26,6 +27,7 @@ export * from './form-types';
 export * from './form';
 export * from './forms';
 export * from './health';
+export * from './holidays';
 export * from './profile';
 
 /** Mọi đường dẫn API, theo nhóm. Vd ENDPOINTS.auth.me */
@@ -42,5 +44,6 @@ export const ENDPOINTS = {
   forms: FORMS_ENDPOINTS,
   formTypes: FORM_TYPE_ENDPOINTS,
   health: HEALTH_ENDPOINTS,
+  holidays: HOLIDAY_ENDPOINTS,
   profile: PROFILE_ENDPOINTS,
 } as const;

@@ -6,6 +6,7 @@ export * from './production-form-types';
 export * from './forms';
 export * from './email-settings';
 export * from './backups';
+export * from './holidays';
 export * from './export-template';
 export { addHours } from './time';
 export { cloneSeedValue } from './clone';

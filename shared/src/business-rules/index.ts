@@ -11,5 +11,6 @@ export * from './form-types--stats';
 export * from './forms--codes';
 export * from './forms--deadlines';
 export * from './forms--statuses';
+export * from './holidays';
 export * from './lists--display-text';
 export * from './lists--query';

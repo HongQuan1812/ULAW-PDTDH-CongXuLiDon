@@ -19,6 +19,7 @@ export const PERMISSIONS = [
   'manageEmail', //        trang Cấu hình email: người gửi, bật / tắt và nội dung email báo khi đơn đổi trạng thái
   'manageDataSources', //  trang Nguồn dữ liệu: xem cấu hình và tình trạng kết nối tới database trường
   'manageBackups', //      trang Sao lưu: nơi lưu, sao lưu ngay, lịch định kì, lịch sử
+  'manageHolidays', //     trang Ngày nghỉ: thêm, sửa, xóa ngày nghỉ (lễ, Tết, nghỉ bù) mà hạn xử lí đơn không tính
 ] as const;
 export type Permission = (typeof PERMISSIONS)[number];
 
@@ -32,12 +33,13 @@ export const PAGES = [
   'emailSettings', // Cấu hình email
   'dataSources', //  Nguồn dữ liệu
   'backups', //      Sao lưu
+  'holidays', //     Ngày nghỉ
 ] as const;
 export type Page = (typeof PAGES)[number];
 
 /* Các trang nằm trong trang Cấu hình: không hiện riêng trên menu, mở từ thẻ trong trang Cấu hình.
    Vai trò thấy trang nào trong này thì phải thấy cả 'settings'. */
-export const SETTINGS_PAGES = ['emailSettings', 'dataSources', 'backups'] as const satisfies readonly Page[];
+export const SETTINGS_PAGES = ['emailSettings', 'dataSources', 'backups', 'holidays'] as const satisfies readonly Page[];
 
 export const ROLE_IDS = ['nguoiNopDon', 'nguoiXuLiDon', 'admin'] as const;
 export type RoleId = (typeof ROLE_IDS)[number];
