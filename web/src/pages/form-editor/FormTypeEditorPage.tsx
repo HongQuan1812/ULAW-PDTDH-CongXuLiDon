@@ -141,6 +141,7 @@ function toSaveRequest(draft: FormTypeDraft): SaveFormTypeVersionRequest {
     prefix: draft.prefix,
     name: draft.name.trim(),
     description: draft.description.trim() || null,
+    maxProcessingDays: draft.maxProcessingDays,
     status: draft.status === 'open' ? 'open' : 'draft',
     sections: draft.sections,
   };

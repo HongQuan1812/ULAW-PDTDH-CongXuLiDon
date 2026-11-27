@@ -399,8 +399,7 @@ function versionFromInput(version: number, input: SaveFormTypeVersionRequest, st
     status: 'draft',
     name: input.name,
     description: input.description,
-    // trình soạn chưa gửi lên (bước 2 của Hạn xử lí đơn thêm ô)
-    maxProcessingDays: null,
+    maxProcessingDays: input.maxProcessingDays,
     sections: structuredClone(input.sections),
     updatedAt: vietnamNow(),
     updatedById: staffId,

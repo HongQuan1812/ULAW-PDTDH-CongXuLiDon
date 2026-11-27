@@ -158,8 +158,8 @@ describe('loại đơn', () => {
 describe('phiên bản loại đơn', () => {
   /** Bản soạn hợp lệ dựng từ phiên bản đang mở của loại đơn chính xmr, đổi tên và trạng thái. */
   const xmrInput = (name: string, status: 'draft' | 'open') => {
-    const { prefix, description, sections } = getFormType('xmr')!;
-    return { prefix, name, description, status, sections };
+    const { prefix, description, maxProcessingDays, sections } = getFormType('xmr')!;
+    return { prefix, name, description, maxProcessingDays, status, sections };
   };
 
   test('thêm phiên bản Nháp; đang có Nháp thì không thêm được nữa; phiên bản đã khóa không sửa được', () => {
@@ -168,6 +168,11 @@ describe('phiên bản loại đơn', () => {
       [2, 'draft'],
       [1, 'open'],
     ]);
+    expect(added.ok && added.formType.versions[0]!.maxProcessingDays).toBe(10);
+    expect(saveFormTypeVersion('xmr', 2, { ...xmrInput('Xét miễn môn mới', 'draft'), maxProcessingDays: 3 }, 'cb-1')).toMatchObject({
+      ok: true,
+      formType: { versions: [{ version: 2, maxProcessingDays: 3 }, { version: 1, maxProcessingDays: 10 }] },
+    });
     expect(addFormTypeVersion('xmr', xmrInput('Bản khác', 'draft'), 'cb-1')).toMatchObject({ ok: false, status: 409 });
     expect(saveFormTypeVersion('xmr', 1, xmrInput('Sửa bản đã khóa', 'draft'), 'cb-1')).toMatchObject({ ok: false, status: 409 });
 
@@ -503,7 +508,7 @@ describe('thống kê đơn (Quản lí đơn)', () => {
   test('số theo loại đơn cộng lại bằng tổng, kể cả loại chưa có đơn (đếm 0) và ghi trạng thái loại đơn', () => {
     // Thêm một loại đơn chưa có đơn nào
     const { description, sections } = getFormType('xmr')!;
-    createFormType({ prefix: 'MOI', name: 'Loại đơn mới', description, status: 'draft', sections }, 'cb-1');
+    createFormType({ prefix: 'MOI', name: 'Loại đơn mới', description, maxProcessingDays: null, status: 'draft', sections }, 'cb-1');
 
     const stats = getFormStats();
     expect(stats.byType.reduce((sum, type) => sum + type.count, 0)).toBe(stats.total);
