@@ -22,6 +22,8 @@ export interface SeedFormTypeVersion {
   status: FormTypeStatus;
   name: string;
   description: string | null;
+  /** Thời gian xử lí tối đa, ngày làm việc; null = không có hạn */
+  maxProcessingDays: number | null;
   sections: FormSection[];
   updatedAt: string;
   updatedById: string;
@@ -55,8 +57,8 @@ function seedUpdate(i: number): { updatedAt: string; updatedById: string } {
  */
 export function seedFormTypes(): SeedFormType[] {
   return FORM_TYPE_SEED.map((formType, i) => {
-    const { id, prefix, name, description, status, sections } = cloneSeedValue(formType);
-    const latest: SeedFormTypeVersion = { version: 1, status, name, description, sections, ...seedUpdate(i) };
+    const { id, prefix, name, description, status, maxProcessingDays, sections } = cloneSeedValue(formType);
+    const latest: SeedFormTypeVersion = { version: 1, status, name, description, maxProcessingDays, sections, ...seedUpdate(i) };
     if (id !== MULTI_VERSION_SEED_FORM_TYPE_ID) return { id, prefix, versions: [latest] };
     const firstVersion: SeedFormTypeVersion = {
       ...cloneSeedValue(latest),

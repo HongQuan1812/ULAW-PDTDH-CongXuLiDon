@@ -11,6 +11,7 @@ import { z } from 'zod';
 import { QUESTION_TYPES, TABLE_COLUMN_TYPES, type QuestionType } from '../aux-schema/form-types--question-types';
 import { FormSectionSchema } from '../aux-schema/form-types--sections';
 import { FORM_TYPE_STATUSES } from '../aux-schema/form-types--statuses';
+import { MaxProcessingDaysSchema } from '../aux-schema/forms--deadlines';
 import { FORM_STATUSES, type FormStatus } from '../aux-schema/forms--statuses';
 import { StaffRefSchema } from './form';
 
@@ -116,6 +117,8 @@ export const FormTypeSchema = OpenFormTypeSchema.extend({
   /** Số phiên bản, vd 2 */
   version: z.number().int().positive().default(1),
   status: z.enum(FORM_TYPE_STATUSES),
+  /** Thời gian xử lí tối đa, ngày làm việc; null = không có hạn. Bản chụp đơn cũ chưa có mục này thì null */
+  maxProcessingDays: MaxProcessingDaysSchema.default(null),
   sections: z.array(FormSectionSchema),
 });
 export type FormType = z.infer<typeof FormTypeSchema>;
@@ -127,6 +130,8 @@ export const FormTypeVersionSchema = z.object({
   name: z.string(),
   /** Mô tả ngắn; null = không có */
   description: z.string().nullable(),
+  /** Thời gian xử lí tối đa, ngày làm việc; null = không có hạn */
+  maxProcessingDays: MaxProcessingDaysSchema,
   sections: z.array(FormSectionSchema),
   /** Lần lưu gần nhất, giờ Việt Nam 'YYYY-MM-DDTHH:mm' */
   updatedAt: z.string(),

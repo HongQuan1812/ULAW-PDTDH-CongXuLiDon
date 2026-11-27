@@ -398,6 +398,8 @@ function versionFromInput(version: number, input: SaveFormTypeVersionRequest, st
     status: 'draft',
     name: input.name,
     description: input.description,
+    // trình soạn chưa gửi lên (bước 2 của Hạn xử lí đơn thêm ô)
+    maxProcessingDays: null,
     sections: structuredClone(input.sections),
     updatedAt: vietnamNow(),
     updatedById: staffId,
@@ -533,8 +535,8 @@ export function getFormType(formTypeId: string): FormType | null {
   const formType = findFormType(formTypeId);
   const opened = formType && openVersion(formType);
   if (!formType || !opened) return null;
-  const { version, status, name, description, sections } = structuredClone(opened);
-  return { id: formType.id, prefix: formType.prefix, name, description, version, status, sections };
+  const { version, status, name, description, maxProcessingDays, sections } = structuredClone(opened);
+  return { id: formType.id, prefix: formType.prefix, name, description, version, status, maxProcessingDays, sections };
 }
 
 /* ---------- Lá đơn ---------- */

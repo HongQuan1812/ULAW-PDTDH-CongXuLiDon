@@ -50,6 +50,8 @@ export class FormTypesService {
       status: row.status,
       name: row.name,
       description: row.description,
+      // chưa lưu ở database (bước 2 của Hạn xử lí đơn thêm cột)
+      maxProcessingDays: null,
       sections: row.sections as unknown as FormSection[],
       updatedAt: toVietnamTime(row.updatedAt),
       updatedBy: { id: row.updatedBy.id, name: row.updatedBy.name, email: row.updatedBy.email },
@@ -210,6 +212,8 @@ export class FormTypesService {
       description: opened.description,
       version: opened.version,
       status: opened.status,
+      // chưa lưu ở database (bước 2 của Hạn xử lí đơn thêm cột)
+      maxProcessingDays: null,
       sections: opened.sections as unknown as FormSection[],
     };
   }

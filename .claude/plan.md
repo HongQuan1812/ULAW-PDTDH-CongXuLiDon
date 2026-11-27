@@ -195,6 +195,32 @@ Workflow đã đổi (commit `aa00be2`): push vào `main` thì máy dev nào đa
 - Mật khẩu SMTP, `GOOGLE_CLIENT_SECRET`, mật khẩu Postgres bản thật chỉ nằm trong `.env.prod` trên máy chủ, không commit, không đóng gói vào image.
 - Không dùng `down -v` (`pnpm prod:wipe`) trên máy chủ thật: xóa luôn volume, mất dữ liệu và tệp tải lên (dev thì không sao, bật lại là seed lại).
 
+## Hạn xử lí đơn (đang làm)
+
+Người soạn loại đơn đặt **thời gian xử lí tối đa** (số ngày làm việc) cho từng phiên bản loại đơn. Mỗi lá đơn có hạn xử lí; sinh viên và cán bộ thấy hạn, cán bộ lọc được đơn sắp tới hạn / quá hạn, người xử lí nhận thư nhắc.
+
+Làm trên nhánh `han-xu-li`, **từng bước một**: xong bước nào thì chạy test, cậu bấm thử, cậu cho phép thì mới commit, rồi mới sang bước sau.
+
+Luật tính hạn (đã chốt):
+
+- Đơn vị: **ngày làm việc** = trọn 24 giờ của Thứ Hai đến Thứ Sáu, theo giờ Việt Nam, **trừ ngày nghỉ** (lễ, Tết, nghỉ bù) do Admin nhập. Không có ngày làm bù: Thứ Bảy, Chủ nhật luôn là ngày nghỉ.
+- Hạn đặt ở **phiên bản** loại đơn, đi theo bản chụp lúc nộp: sửa hạn của loại đơn không đổi hạn của đơn đã nộp. Để trống = loại đơn không có hạn, đơn không hiện gì về hạn.
+- Tính theo **thời điểm**, ngay từ **lúc nộp**: đồng hồ chạy từ đúng lúc nộp, chỉ chạy trong ngày làm việc, đủ N × 24 giờ là hết hạn. Vd nộp 10:00 Thứ Sáu, hạn 3 ngày → 10:00 Thứ Tư tuần sau; nộp 15:00 Thứ Bảy → đồng hồ chạy từ 00:00 Thứ Hai.
+- **Tạm dừng khi chờ bổ sung**: đồng hồ dừng từ lúc Yêu cầu bổ sung, sinh viên gửi bổ sung thì chạy tiếp phần còn lại (không tính lại từ đầu). Đang chờ bổ sung thì chưa có hạn, chỉ ghi còn bao lâu.
+- Tình trạng hạn: Còn hạn · Sắp tới hạn (còn 1 ngày làm việc trở xuống) · Quá hạn · Tạm dừng (chờ bổ sung) · Xong đúng hạn / Xong trễ hạn (đã Duyệt / Từ chối).
+- Tình trạng tính ở máy chủ mỗi lần trả đơn, từ lịch sử đơn (`FormEvent`), không lưu riêng.
+
+| # | Bước | Gồm | |
+|---|---|---|---|
+| 0 | Luật dùng chung | `shared/`: thêm `maxProcessingDays` (số nguyên 1–365 hoặc null) vào phiên bản loại đơn và bản chụp · hàm thuần tính ngày làm việc (nhận danh sách ngày nghỉ), tính hạn và tình trạng hạn từ lịch sử · test đủ các trường hợp: cuối tuần, ngày nghỉ, tạm dừng nhiều lần, đang chờ bổ sung, xong đúng hạn / trễ hạn | ✓ |
+| 1 | Ngày nghỉ | trang **Ngày nghỉ** trong Cấu hình (thẻ mới, chỉ Admin, quyền mới trong `ROLES`): thêm / sửa / xóa ngày nghỉ (một ngày hoặc một khoảng ngày, kèm tên, vd "Tết Nguyên đán") · hợp đồng `shared/src/api-contract/holidays.ts` · API giả, backend (bảng `Holiday`, migration) · seed dev có sẵn ngày nghỉ 2026–2027 để thử; bản thật để trống, Admin tự nhập · test | |
+| 2 | Trình soạn loại đơn | ô "Thời gian xử lí tối đa (ngày làm việc)" trong khung thông tin loại đơn, để trống được · kiểm tra như các ô khác · API giả lưu · backend: cột mới ở `FormTypeVersion`, migration, lưu và trả về · seed: loại đơn dev có hạn, bản thật để trống (Phòng tự đặt) | |
+| 3 | Hạn ở chi tiết đơn | `FormDetail` thêm hạn và tình trạng hạn · khung Thông tin đơn hiện: hạn, còn N ngày / trễ N ngày / tạm dừng chờ bổ sung / xong đúng hạn · sinh viên và cán bộ cùng thấy · API giả, backend, test | |
+| 4 | Bảng đơn | chỉ thêm cột Tình trạng hạn (lọc: sắp tới hạn, quá hạn…; không có cột ngày hạn) ở Quản lí đơn và Đơn phụ trách · API giả, backend, test | |
+| 5 | Thư nhắc: cấu hình | trang Cấu hình email thêm hai tab **Nhắc sắp tới hạn**, **Nhắc quá hạn** (bật / tắt, tiêu đề, nội dung như bốn thư cho sinh viên) · mã chèn mới `{han_xu_li}` · ghi rõ người nhận của từng tab: thư cho sinh viên gửi người nộp đơn, thư nhắc gửi người xử lí · hợp đồng `email.ts` đổi từ "bốn lúc gửi theo trạng thái" sang sáu lúc gửi · API giả, backend lưu, gửi thư thử · dữ liệu cấu hình email đã lưu ở bản thật tự thêm hai tab mặc định (không mất bốn thư cũ) · test | |
+| 6 | Thư nhắc: gửi | backend tự kiểm mỗi 10 phút, chỉ gửi từ 07:00: "sắp tới hạn" (trước 1 ngày làm việc) và "quá hạn" · người nhận: **người xử lí**; đơn chưa tiếp nhận (chưa có người xử lí) thì gửi **mọi Admin** · mỗi đơn mỗi loại thư gửi một lần cho mỗi hạn (hạn lùi vì bổ sung thì nhắc lại theo hạn mới), ghi vào cột mới của `Form` để restart không gửi trùng · `dev-email` gửi về `DEV_EMAIL_REDIRECT_TO` như thư khác · test | |
+| 7 | Tài liệu | `docs/business-rules.md`, README (nếu có biến mới), cây thư mục trong `.claude/CLAUDE.md` nếu thêm tệp | |
+
 ## Loại đơn theo mẫu Word ✓
 
 Mẫu Word ở Google Drive, thư mục `CongXuLiDon/Mẫu Đơn` (32 mẫu), đánh số theo ngày sửa, cũ trước. Đơn 1, 2 làm lần lượt; ngày 18/11/2026 đã soạn sẵn cả 30 đơn còn lại vào database dev ở dạng **Nháp**. Ngày 18/11/2026 cậu đã duyệt, sửa xong cả 32 đơn; đã đưa cả 32 vào seed. Seed dev và seed bản thật đều có đủ 32 (muốn chừa mã nào khỏi bản thật thì thêm vào `PRODUCTION_EXCLUDED_FORM_TYPE_PREFIXES` trong `shared/src/seed/production-form-types.ts`). Còn hỏi Phòng: giữ cả `DN` và `DNPA` hay bỏ một.

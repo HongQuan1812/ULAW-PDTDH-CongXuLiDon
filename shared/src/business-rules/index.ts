@@ -9,6 +9,7 @@ export * from './exports--xlsx';
 export * from './form-types--answer-stats';
 export * from './form-types--stats';
 export * from './forms--codes';
+export * from './forms--deadlines';
 export * from './forms--statuses';
 export * from './lists--display-text';
 export * from './lists--query';
