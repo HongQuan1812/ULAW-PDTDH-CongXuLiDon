@@ -73,7 +73,8 @@
 .guide>summary:hover,.tagGroup>summary:hover{color:var(--accent)}
 .guideBody{display:grid;gap:12px;padding:0 18px 18px}
 .steps{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;counter-reset:step}
-.steps li{counter-increment:step;display:grid;gap:6px;align-content:start;padding:16px;border-radius:var(--r-lg);background:var(--surface);font-size:13px;color:var(--muted)}
+/* mỗi bước chiếm 2 dòng của lưới cha (subgrid): tên bước cùng một dòng, lời giải thích cùng một dòng, như thẻ trang Cấu hình */
+.steps li{counter-increment:step;display:grid;grid-row:span 2;grid-template-rows:subgrid;row-gap:6px;align-content:start;padding:16px;border-radius:var(--r-lg);background:var(--surface);font-size:13px;color:var(--muted)}
 .steps li b{color:var(--fg);font-size:14px;font-weight:600;display:flex;gap:8px;align-items:center}
 .steps li b::before{content:counter(step);display:inline-grid;place-items:center;width:22px;height:22px;border-radius:50%;background:var(--accent);color:var(--on-accent);font-size:12px;flex:none}
 /* ví dụ: 3 cột (trong file mẫu · → · trong file xuất ra); mỗi kiểu định dạng có tên ghi nhỏ trải hết bề ngang ở trên,

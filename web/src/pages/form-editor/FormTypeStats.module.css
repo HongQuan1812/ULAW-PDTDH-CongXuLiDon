@@ -100,7 +100,8 @@
 /* bảng: mỗi cột một khối con */
 .tableNote{font-size:13px;color:var(--muted);margin:0}
 .columns{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(300px,100%),1fr));gap:12px}
-.column{border:1px solid var(--line);border-radius:var(--r);padding:16px 18px;display:grid;gap:12px;align-content:start;min-width:0}
+/* mỗi khối chiếm 2 dòng của lưới cha (subgrid): tên cột cùng một dòng, phần thống kê cùng một dòng, như thẻ trang Cấu hình */
+.column{border:1px solid var(--line);border-radius:var(--r);padding:16px 18px;display:grid;grid-row:span 2;grid-template-rows:subgrid;row-gap:12px;align-content:start;min-width:0}
 .column h4{margin:0;font-size:13.5px;font-weight:600;display:flex;gap:8px;align-items:baseline;flex-wrap:wrap;justify-content:space-between}
 /* trong khối cột bảng: ô số ở trên, biểu đồ ở dưới */
 .column .numberBody{grid-template-columns:minmax(0,1fr)}
