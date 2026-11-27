@@ -2,7 +2,7 @@
    ở đây kiểm tra không trùng ngày với ngày nghỉ khác (findOverlappingHoliday của shared, giống API giả). */
 import { randomUUID } from 'node:crypto';
 import { Injectable } from '@nestjs/common';
-import { HOLIDAY_MESSAGES, findOverlappingHoliday, type Holiday, type HolidayInput, type HolidaysResponse } from '@ulaw/shared';
+import { HOLIDAY_MESSAGES, findOverlappingHoliday, holidayDatesOf, type Holiday, type HolidayDates, type HolidayInput, type HolidaysResponse } from '@ulaw/shared';
 import { ApiException } from '../common/api-exception';
 import { PrismaService } from '../common/prisma.service';
 import type { Holiday as HolidayRow } from '../generated/prisma/client';
@@ -29,6 +29,14 @@ export class HolidaysService {
   async findAll(): Promise<HolidaysResponse> {
     const rows = await this.prisma.holiday.findMany({ orderBy: [{ startDate: 'asc' }, { endDate: 'asc' }] });
     return { holidays: rows.map(toHoliday) };
+  }
+
+  /**
+   * Mọi ngày nghỉ, trải thành từng ngày, để tính hạn xử lí đơn.
+   * @returns  tập ngày 'YYYY-MM-DD'
+   */
+  async holidayDates(): Promise<HolidayDates> {
+    return holidayDatesOf((await this.findAll()).holidays);
   }
 
   /**

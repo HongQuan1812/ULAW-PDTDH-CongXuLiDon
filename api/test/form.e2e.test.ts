@@ -13,9 +13,12 @@ import {
   FormDetailSchema,
   FormSummarySchema,
   fileContentPath,
+  formDeadline,
+  holidayDatesOf,
   type RoleId,
 } from '@ulaw/shared';
 import { PrismaService } from '../src/common/prisma.service';
+import { fromDbDate } from '../src/holidays/holiday-dates';
 import { createTestApp } from './create-test-app';
 
 const SUBJECT_ROW = ['Luật Hiến pháp', 3, 'Hiến pháp học', '3 TC', 8];
@@ -112,6 +115,25 @@ describe('form (nộp, chi tiết, sửa)', () => {
     // Đơn hiện trong bảng "Đơn đã nộp"
     const mine = await request(server()).get('/api/forms/mine').query({ search: summary.code }).set('Cookie', cookie).expect(200);
     expect(mine.body.forms.map((form: { code: string }) => form.code)).toEqual([summary.code]);
+  });
+
+  it('hạn xử lí: tính theo bản chụp loại đơn và ngày nghỉ; bản chụp không có hạn thì null', async () => {
+    const cookie = await loginAs('nguoiNopDon');
+    const summary = await submitOk(cookie);
+    const getDetail = async () => FormDetailSchema.parse((await request(server()).get(`/api/forms/${summary.code}`).set('Cookie', cookie).expect(200)).body);
+
+    // Loại đơn xmr ở dữ liệu mẫu có hạn 10 ngày làm việc: vừa nộp thì Còn hạn, hạn tính có trừ ngày nghỉ trong database
+    const detail = await getDetail();
+    const holidayRows = await prisma.holiday.findMany();
+    const holidayDates = holidayDatesOf(holidayRows.map((row) => ({ startDate: fromDbDate(row.startDate), endDate: fromDbDate(row.endDate) })));
+    expect(detail.deadline).toMatchObject({ state: 'onTrack', maxDays: 10 });
+    expect(detail.deadline?.dueAt).toBe(formDeadline(10, detail.history, detail.submittedAt, holidayDates)?.dueAt);
+
+    // Đơn nộp trước khi có hạn xử lí (bản chụp không có maxProcessingDays): không có hạn
+    const row = await prisma.form.findUniqueOrThrow({ where: { code: summary.code } });
+    const { maxProcessingDays: _maxProcessingDays, ...oldSnapshot } = row.formTypeSnapshot as Record<string, unknown>;
+    await prisma.form.update({ where: { code: summary.code }, data: { formTypeSnapshot: oldSnapshot as object } });
+    expect((await getDetail()).deadline).toBeNull();
   });
 
   it('nộp nhiều đơn cùng lúc: mã không trùng, liên tiếp', async () => {
