@@ -1,6 +1,6 @@
 /* Vành khuyên "Theo tình trạng hạn" ở khung thống kê Quản lí đơn.
-   Mỗi tình trạng một lát, màu như nhãn tình trạng hạn ở bảng (Quá hạn đỏ, Sắp tới hạn vàng…); chỉ đếm đơn có hạn.
-   Chú thích đủ 5 tình trạng (kể cả chưa có đơn, để vẫn bấm lọc được), kèm số đơn và phần trăm.
+   Mỗi tình trạng một lát, màu như nhãn tình trạng hạn ở bảng (Quá hạn đỏ, Sắp tới hạn vàng…, Không có hạn xám).
+   Chú thích đủ 6 tình trạng (kể cả chưa có đơn, để vẫn bấm lọc được), kèm số đơn và phần trăm.
    Bấm một lát hoặc dòng chú thích thì lọc bảng bên dưới; bấm lại để bỏ lọc. */
 import { useState } from 'react';
 import { DEADLINE_STATES, DEADLINE_STATE_LABEL, type DeadlineState, type FormStats } from '@ulaw/shared';
@@ -19,29 +19,28 @@ interface DeadlineDonutProps {
 /**
  * Vành khuyên và chú thích của khung "Theo tình trạng hạn".
  * @param props  xem DeadlineDonutProps
- * @returns      hình (số đơn có hạn ở giữa) và chú thích; mỗi dòng chú thích là nút bấm để lọc bảng
+ * @returns      hình (tổng số đơn ở giữa) và chú thích; mỗi dòng chú thích là nút bấm để lọc bảng
  */
 export function DeadlineDonut({ stats, activeDeadlineState, onToggleDeadlineState }: DeadlineDonutProps) {
   const [hoveredKey, setHoveredKey] = useState<string | null>(null);
   const focusedKey = hoveredKey ?? activeDeadlineState;
 
-  // Mỗi tình trạng một lát, phần trăm tính trên số đơn có hạn
-  const withDeadline = stats.total - stats.noDeadline;
+  // Mỗi tình trạng một lát; Không có hạn dùng màu xám "Khác" của biểu đồ (colorIndex 0, không có màu riêng)
   const slices: DonutSlice[] = DEADLINE_STATES.map((state) => ({
     key: state,
     name: DEADLINE_STATE_LABEL[state],
     count: stats.byDeadline[state],
-    share: withDeadline ? stats.byDeadline[state] / withDeadline : 0,
+    share: stats.total ? stats.byDeadline[state] / stats.total : 0,
     colorIndex: 0,
-    colorClass: styles[`bar_${DEADLINE_STATE_COLOR[state]}`],
+    colorClass: state === 'none' ? undefined : styles[`bar_${DEADLINE_STATE_COLOR[state]}`],
   }));
 
   return (
     <div className={styles.donutBody}>
       <DonutChart
         slices={slices}
-        total={withDeadline}
-        unit="đơn có hạn"
+        total={stats.total}
+        unit="đơn"
         focusedKey={focusedKey}
         onHover={setHoveredKey}
         onClickSlice={(key) => onToggleDeadlineState(key as DeadlineState)}

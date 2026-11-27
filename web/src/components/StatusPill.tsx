@@ -35,8 +35,8 @@ export function FormTypeStatusPill({ status, query = '' }: { status: FormTypeSta
 }
 
 /* Màu nhãn tình trạng hạn cũng mượn màu trạng thái lá đơn:
-   Còn hạn xanh dương, Sắp tới hạn vàng, Quá hạn và Xong trễ hạn đỏ, Xong đúng hạn xanh lá. */
-export const DEADLINE_STATE_COLOR: Record<DeadlineState, FormStatus> = { onTrack: 'xet', dueSoon: 'bs', overdue: 'tc', doneOnTime: 'duyet', doneLate: 'tc' };
+   Còn hạn xanh dương, Sắp tới hạn vàng, Quá hạn và Xong trễ hạn đỏ, Xong đúng hạn xanh lá; riêng Không có hạn màu xám ('none'). */
+export const DEADLINE_STATE_COLOR: Record<DeadlineState, FormStatus | 'none'> = { onTrack: 'xet', dueSoon: 'bs', overdue: 'tc', doneOnTime: 'duyet', doneLate: 'tc', none: 'none' };
 
 /**
  * Nhãn tình trạng hạn xử lí của lá đơn, cùng kiểu với nhãn trạng thái lá đơn.

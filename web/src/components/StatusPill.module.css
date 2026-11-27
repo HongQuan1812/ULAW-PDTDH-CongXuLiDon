@@ -7,3 +7,5 @@
 .bsg{background:var(--s-bsg-bg);color:var(--s-bsg-fg)}
 .duyet{background:var(--s-duyet-bg);color:var(--s-duyet-fg)}
 .tc{background:var(--s-tc-bg);color:var(--s-tc-fg)}
+/* Không có hạn (tình trạng hạn): xám */
+.none{background:var(--surface-2);color:var(--muted)}

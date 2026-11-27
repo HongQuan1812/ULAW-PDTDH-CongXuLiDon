@@ -158,10 +158,9 @@ export function FormTable<Row extends FormSummary>({
       );
     }
     if (field.key === DEADLINE_STATE_FIELD_KEY) {
-      const deadlineState = field.getValue(form) as DeadlineState | null;
       return (
         <td key={field.key}>
-          {deadlineState ? <DeadlinePill state={deadlineState} query={query} /> : <span className={tableStyles.dash}>{EMPTY_TEXT}</span>}
+          <DeadlinePill state={field.getValue(form) as DeadlineState} query={query} />
         </td>
       );
     }

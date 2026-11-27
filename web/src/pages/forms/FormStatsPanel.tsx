@@ -1,6 +1,6 @@
 /* Ba khung thống kê đầu trang Quản lí đơn:
    "Theo trạng thái" (tổng, thanh tỉ lệ nhiều màu, 6 ô), "Theo loại đơn" (vành khuyên, FormTypeDonut)
-   và "Theo tình trạng hạn" (vành khuyên, DeadlineDonut; nằm dưới khung trạng thái, chỉ đếm đơn có hạn).
+   và "Theo tình trạng hạn" (vành khuyên, DeadlineDonut; nằm dưới khung trạng thái).
    Số liệu đếm trên TẤT CẢ đơn, không đổi theo ô tìm kiếm / bộ lọc của bảng.
    Bấm một ô trạng thái, một loại đơn hoặc một ô tình trạng hạn thì lọc bảng bên dưới; bấm lại để bỏ lọc. */
 import {
@@ -109,7 +109,7 @@ export function FormStatsPanel({
       </section>
 
       <section className={styles.card} aria-labelledby="stats-deadline-title">
-        {/* Tiêu đề, nút ↻ · số đơn có hạn (phần trăm tính trên số này), số đơn không có hạn */}
+        {/* Tiêu đề, nút ↻ · tổng số đơn */}
         <div className={styles.head}>
           <div className={styles.titleGroup}>
             <h2 id="stats-deadline-title">Theo tình trạng hạn</h2>
@@ -117,8 +117,7 @@ export function FormStatsPanel({
           </div>
           {stats ? (
             <span className={styles.total}>
-              <b>{stats.total - stats.noDeadline}</b> đơn có hạn
-              {stats.noDeadline ? <span className={styles.totalNote}> · {stats.noDeadline} đơn không có hạn</span> : null}
+              <b>{stats.total}</b> đơn
             </span>
           ) : null}
         </div>

@@ -12,7 +12,6 @@
 .titleGroup{display:flex;align-items:center;gap:10px;min-width:0}
 .total{font-size:13px;color:var(--muted)}
 .total b{font-size:18px;color:var(--fg);font-weight:600}
-.totalNote{color:var(--faint)}
 .placeholder{min-height:120px;border-radius:var(--r);background:var(--surface-2)}
 
 .ratioBar{display:flex;height:8px;border-radius:999px;overflow:hidden;gap:2px;background:var(--surface-2)}

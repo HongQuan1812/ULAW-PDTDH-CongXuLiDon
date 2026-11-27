@@ -87,19 +87,22 @@ function AtTime({ time }: { time: string | null }) {
 
 /**
  * Hai dòng hạn xử lí ở đầu khung "Thông tin đơn": hạn (kèm thời gian xử lí tối đa), tình trạng hạn (kèm còn / trễ bao lâu).
- * @param deadline  hạn của lá đơn; null = loại đơn không có hạn
- * @returns         các dòng [nhãn, giá trị]; không có hạn thì không có dòng nào
+ * @param deadline  hạn của lá đơn
+ * @returns         các dòng [nhãn, giá trị]; loại đơn không giới hạn thì hạn ghi "Không giới hạn"
  */
-function deadlineRows(deadline: FormDeadline | null): [string, ReactNode][] {
-  if (!deadline) return [];
+function deadlineRows(deadline: FormDeadline): [string, ReactNode][] {
   const detail = deadlineDetailText(deadline);
   return [
     [
       'Hạn xử lí',
-      <span className={styles.deadlineValue}>
-        {deadline.dueAt ? formatDateTime(deadline.dueAt) : 'Chưa có, chờ bổ sung'}
-        <span className={styles.deadlineNote}>Tối đa {deadline.maxDays} ngày làm việc</span>
-      </span>,
+      deadline.maxDays === null ? (
+        'Không giới hạn'
+      ) : (
+        <span className={styles.deadlineValue}>
+          {deadline.dueAt ? formatDateTime(deadline.dueAt) : 'Chưa có, chờ bổ sung'}
+          <span className={styles.deadlineNote}>Tối đa {deadline.maxDays} ngày làm việc</span>
+        </span>
+      ),
     ],
     [
       'Tình trạng hạn',

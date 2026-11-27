@@ -561,10 +561,10 @@ function toSummary({ code, formTypeId, formTypeName, submittedAt, status }: Mock
  * Tình trạng hạn xử lí của đơn (cột Tình trạng hạn), tính như ở chi tiết đơn.
  * @param form  lá đơn trong API giả
  * @param now   bây giờ, giờ Việt Nam 'YYYY-MM-DDTHH:mm'
- * @returns     tình trạng hạn; null nếu loại đơn lúc nộp không có hạn
+ * @returns     tình trạng hạn ('none' nếu loại đơn lúc nộp không giới hạn)
  */
-function deadlineStateOf(form: MockForm, now: string): DeadlineState | null {
-  return formDeadline(form.formTypeSnapshot.maxProcessingDays, form.history, now, holidayDatesOf(holidays))?.state ?? null;
+function deadlineStateOf(form: MockForm, now: string): DeadlineState {
+  return formDeadline(form.formTypeSnapshot.maxProcessingDays, form.history, now, holidayDatesOf(holidays)).state;
 }
 
 /**
@@ -657,7 +657,7 @@ export function getAllForms(): ManagedFormSummary[] {
 /**
  * Đếm đơn theo trạng thái, theo loại đơn và theo tình trạng hạn (ba khung thống kê của Quản lí đơn), trên tất cả đơn.
  * @returns  tổng số đơn, số đơn mỗi trạng thái (đủ 6 trạng thái), số đơn mỗi loại đơn (nhiều nhất trước, bằng nhau thì theo tên),
- *           số đơn mỗi tình trạng hạn và số đơn không có hạn
+ *           số đơn mỗi tình trạng hạn
  */
 export function getFormStats(): FormStats {
   const byStatus = Object.fromEntries(FORM_STATUSES.map((status) => [status, 0])) as FormStats['byStatus'];
@@ -674,7 +674,7 @@ export function getFormStats(): FormStats {
     count: countByType.get(formType.id) ?? 0,
   })).sort((a, b) => b.count - a.count || a.formTypeName.localeCompare(b.formTypeName, 'vi'));
   const now = vietnamNow();
-  return { total: FORMS.length, byStatus, byType, ...countDeadlineStates(FORMS.map((form) => deadlineStateOf(form, now))) };
+  return { total: FORMS.length, byStatus, byType, byDeadline: countDeadlineStates(FORMS.map((form) => deadlineStateOf(form, now))) };
 }
 
 /**

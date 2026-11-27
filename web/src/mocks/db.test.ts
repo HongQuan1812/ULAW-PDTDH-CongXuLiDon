@@ -283,16 +283,16 @@ describe('chi tiết đơn', () => {
 
   test('hạn xử lí tính theo bản chụp loại đơn (xmr: 10 ngày làm việc) và ngày nghỉ', () => {
     const form = getFormDetail('XMR-2026-001-01520', { id: 'sv-1', role: 'nguoiNopDon' })!;
-    expect(form.deadline?.maxDays).toBe(10);
-    expect(form.deadline?.dueAt).toBe(formDeadline(10, form.history, form.submittedAt, holidayDatesOf(getHolidays()))?.dueAt);
+    expect(form.deadline.maxDays).toBe(10);
+    expect(form.deadline.dueAt).toBe(formDeadline(10, form.history, form.submittedAt, holidayDatesOf(getHolidays())).dueAt);
   });
 
   test('bảng Quản lí đơn, Đơn phụ trách: tình trạng hạn mỗi dòng khớp chi tiết đơn', () => {
     const staff = { id: 'cb-1', role: 'admin' as const };
     for (const row of [...getAllForms(), ...getFormsHandledBy('cb-1')]) {
-      expect(row.deadlineState).toBe(getFormDetail(row.code, staff)!.deadline?.state ?? null);
+      expect(row.deadlineState).toBe(getFormDetail(row.code, staff)!.deadline.state);
     }
-    expect(getAllForms().some((row) => row.deadlineState !== null)).toBe(true);
+    expect(getAllForms().some((row) => row.deadlineState !== 'none')).toBe(true);
   });
 
   test('người nộp đơn không xem được đơn người khác; cán bộ xem được; mã không có thì null', () => {
@@ -517,7 +517,7 @@ describe('thống kê đơn (Quản lí đơn)', () => {
     expect(stats.total).toBe(getAllForms().length);
     expect(Object.values(stats.byStatus).reduce((sum, count) => sum + count, 0)).toBe(stats.total);
     expect(Object.keys(stats.byStatus)).toHaveLength(6);
-    expect(Object.values(stats.byDeadline).reduce((sum, count) => sum + count, 0) + stats.noDeadline).toBe(stats.total);
+    expect(Object.values(stats.byDeadline).reduce((sum, count) => sum + count, 0)).toBe(stats.total);
     expect(stats.byDeadline.overdue).toBe(getAllForms().filter((row) => row.deadlineState === 'overdue').length);
   });
 
