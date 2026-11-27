@@ -161,14 +161,14 @@ export function workingDurationText(minutes: number): string {
 
 /**
  * Hạn xử lí và tình trạng hạn của một lá đơn, tính từ lịch sử.
- * @param maxDays   thời gian xử lí tối đa lúc nộp (bản chụp loại đơn), ngày làm việc; null = loại đơn không có hạn
+ * @param maxDays   thời gian xử lí tối đa lúc nộp (bản chụp loại đơn), ngày làm việc; null = không giới hạn
  * @param history   lịch sử đơn, cũ nhất trước, dòng đầu là Nộp đơn
  * @param now       bây giờ, giờ Việt Nam 'YYYY-MM-DDTHH:mm' (vietnamTimeOf(new Date()))
  * @param holidays  các ngày nghỉ
- * @returns         hạn và tình trạng hạn; null nếu loại đơn không có hạn hoặc lịch sử trống
+ * @returns         hạn và tình trạng hạn; không giới hạn (hoặc lịch sử trống) thì tình trạng 'none', các số null
  */
-export function formDeadline(maxDays: number | null, history: readonly DeadlineEvent[], now: string, holidays: HolidayDates): FormDeadline | null {
-  if (maxDays === null || history.length === 0) return null;
+export function formDeadline(maxDays: number | null, history: readonly DeadlineEvent[], now: string, holidays: HolidayDates): FormDeadline {
+  if (maxDays === null || history.length === 0) return { state: 'none', maxDays: null, dueAt: null, remainingMinutes: null };
   const totalMinutes = maxDays * WORKING_DAY_MINUTES;
 
   // Cộng thời gian đã dùng của các đoạn đồng hồ chạy; đang chờ bổ sung thì runningSince = null
@@ -208,9 +208,10 @@ export function formDeadline(maxDays: number | null, history: readonly DeadlineE
  * Câu nói thêm cạnh tình trạng hạn: còn bao lâu, trễ bao lâu.
  * @param deadline  hạn của lá đơn (formDeadline)
  * @returns         vd 'Còn 2 ngày 3 giờ', 'Trễ 5 giờ', 'Còn 3 ngày, tính tiếp khi bổ sung xong' (đang chờ bổ sung);
- *                  Xong đúng hạn, hoặc trễ chỉ trong ngày nghỉ (chưa tốn giờ làm việc nào) thì null
+ *                  Không có hạn, Xong đúng hạn, hoặc trễ chỉ trong ngày nghỉ (chưa tốn giờ làm việc nào) thì null
  */
 export function deadlineDetailText(deadline: FormDeadline): string | null {
+  if (deadline.remainingMinutes === null) return null;
   const duration = workingDurationText(deadline.remainingMinutes);
   if (deadline.dueAt === null) return `${deadline.remainingMinutes > 0 ? 'Còn' : 'Trễ'} ${duration}, tính tiếp khi bổ sung xong`;
   if (deadline.state === 'onTrack' || deadline.state === 'dueSoon') return `Còn ${duration}`;
@@ -221,15 +222,11 @@ export function deadlineDetailText(deadline: FormDeadline): string | null {
 
 /**
  * Đếm đơn theo tình trạng hạn (khung Theo tình trạng hạn ở trang Quản lí đơn).
- * @param states  tình trạng hạn của từng đơn; null = loại đơn không có hạn
- * @returns       byDeadline: số đơn mỗi tình trạng (đủ mọi tình trạng, chưa có thì 0) · noDeadline: số đơn không có hạn
+ * @param states  tình trạng hạn của từng đơn
+ * @returns       số đơn mỗi tình trạng (đủ mọi tình trạng, chưa có thì 0)
  */
-export function countDeadlineStates(states: readonly (DeadlineState | null)[]): { byDeadline: Record<DeadlineState, number>; noDeadline: number } {
+export function countDeadlineStates(states: readonly DeadlineState[]): Record<DeadlineState, number> {
   const byDeadline = Object.fromEntries(DEADLINE_STATES.map((state) => [state, 0])) as Record<DeadlineState, number>;
-  let noDeadline = 0;
-  for (const state of states) {
-    if (state === null) noDeadline += 1;
-    else byDeadline[state] += 1;
-  }
-  return { byDeadline, noDeadline };
+  for (const state of states) byDeadline[state] += 1;
+  return byDeadline;
 }

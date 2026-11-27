@@ -149,8 +149,8 @@ export const FormDetailSchema = FormSummarySchema.extend({
   handlerSince: z.string().nullable(),
   /** Lúc ra quyết định gần nhất (Yêu cầu bổ sung / Duyệt / Từ chối), giờ Việt Nam 'YYYY-MM-DDTHH:mm'; null = chưa ra quyết định */
   decidedAt: z.string().nullable(),
-  /** Hạn xử lí và tình trạng hạn, máy chủ tính lúc trả đơn (formDeadline); null = loại đơn lúc nộp không có hạn */
-  deadline: FormDeadlineSchema.nullable(),
+  /** Hạn xử lí và tình trạng hạn, máy chủ tính lúc trả đơn (formDeadline) */
+  deadline: FormDeadlineSchema,
   /** Các phần, câu hỏi của loại đơn LÚC NỘP (bản chụp), để sửa loại đơn sau này không làm hỏng đơn cũ */
   sections: z.array(FormSectionSchema),
   /** Câu trả lời theo id câu hỏi */

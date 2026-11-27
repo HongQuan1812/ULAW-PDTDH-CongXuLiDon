@@ -71,9 +71,10 @@ describe('thời gian làm việc', () => {
 });
 
 describe('hạn xử lí của lá đơn', () => {
-  it('loại đơn không có hạn, hoặc lịch sử trống, thì không có hạn', () => {
-    expect(formDeadline(null, SUBMITTED_AND_RECEIVED, '2026-11-27T10:00', NO_HOLIDAYS)).toBeNull();
-    expect(formDeadline(3, [], '2026-11-27T10:00', NO_HOLIDAYS)).toBeNull();
+  it('loại đơn không giới hạn, hoặc lịch sử trống: tình trạng Không có hạn, các số null', () => {
+    const none = { state: 'none', maxDays: null, dueAt: null, remainingMinutes: null };
+    expect(formDeadline(null, SUBMITTED_AND_RECEIVED, '2026-11-27T10:00', NO_HOLIDAYS)).toEqual(none);
+    expect(formDeadline(3, [], '2026-11-27T10:00', NO_HOLIDAYS)).toEqual(none);
   });
 
   it('hạn tính ngay từ lúc nộp; Còn hạn → Sắp tới hạn (còn 1 ngày trở xuống) → Quá hạn', () => {
@@ -168,6 +169,10 @@ describe('câu nói thêm cạnh tình trạng hạn', () => {
     expect(deadlineDetailText({ ...base, state: 'doneLate', remainingMinutes: -2 * HOUR })).toBe('Trễ 2 giờ');
   });
 
+  it('không có hạn thì không nói thêm', () => {
+    expect(deadlineDetailText({ state: 'none', maxDays: null, dueAt: null, remainingMinutes: null })).toBeNull();
+  });
+
   it('xong đúng hạn, hoặc qua hạn chỉ trong ngày nghỉ, thì không nói thêm', () => {
     const base = { maxDays: 3, dueAt: '2026-12-05T00:00' };
     expect(deadlineDetailText({ ...base, state: 'doneOnTime', remainingMinutes: DAY })).toBeNull();
@@ -176,11 +181,15 @@ describe('câu nói thêm cạnh tình trạng hạn', () => {
 });
 
 describe('đếm đơn theo tình trạng hạn', () => {
-  test('đủ mọi tình trạng (chưa có thì 0), đơn không có hạn đếm riêng', () => {
-    expect(countDeadlineStates(['overdue', null, 'overdue', 'onTrack', null, null])).toEqual({
-      byDeadline: { onTrack: 1, dueSoon: 0, overdue: 2, doneOnTime: 0, doneLate: 0 },
-      noDeadline: 3,
+  test('đủ mọi tình trạng (chưa có thì 0), kể cả Không có hạn', () => {
+    expect(countDeadlineStates(['overdue', 'none', 'overdue', 'onTrack', 'none', 'none'])).toEqual({
+      onTrack: 1,
+      dueSoon: 0,
+      overdue: 2,
+      doneOnTime: 0,
+      doneLate: 0,
+      none: 3,
     });
-    expect(countDeadlineStates([]).noDeadline).toBe(0);
+    expect(Object.values(countDeadlineStates([]))).toEqual([0, 0, 0, 0, 0, 0]);
   });
 });

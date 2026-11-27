@@ -35,8 +35,8 @@ export const FORMS_ENDPOINTS = {
 export const MyFormsResponseSchema = ListPageMetaSchema.extend({ forms: z.array(FormSummarySchema) });
 export type MyFormsResponse = z.infer<typeof MyFormsResponseSchema>;
 
-/** Tình trạng hạn xử lí của đơn (cột Tình trạng hạn), máy chủ tính lúc trả trang (formDeadline); null = loại đơn lúc nộp không có hạn. */
-const DeadlineStateSchema = z.enum(DEADLINE_STATES).nullable();
+/** Tình trạng hạn xử lí của đơn (cột Tình trạng hạn), máy chủ tính lúc trả trang (formDeadline). */
+const DeadlineStateSchema = z.enum(DEADLINE_STATES);
 
 /** Một dòng trong bảng "Đơn phụ trách": thông tin chính của đơn, kèm người tiếp nhận và người xử lí. */
 export const HandledFormSummarySchema = FormSummarySchema.extend({
@@ -101,10 +101,8 @@ export const FormStatsSchema = z.object({
   /** Đủ mọi trạng thái, trạng thái chưa có đơn thì 0 */
   byStatus: z.object(Object.fromEntries(FORM_STATUSES.map((status) => [status, z.number().int().min(0)])) as Record<(typeof FORM_STATUSES)[number], z.ZodNumber>),
   byType: z.array(FormTypeCountSchema),
-  /** Số đơn theo tình trạng hạn (khung Theo tình trạng hạn), đủ mọi tình trạng, tình trạng chưa có đơn thì 0; chỉ đếm đơn có hạn */
+  /** Số đơn theo tình trạng hạn (khung Theo tình trạng hạn), đủ mọi tình trạng, tình trạng chưa có đơn thì 0 */
   byDeadline: z.object(Object.fromEntries(DEADLINE_STATES.map((state) => [state, z.number().int().min(0)])) as Record<DeadlineState, z.ZodNumber>),
-  /** Số đơn của loại đơn không có hạn (lúc nộp), không có mặt trong byDeadline */
-  noDeadline: z.number().int().min(0),
 });
 export type FormStats = z.infer<typeof FormStatsSchema>;
 
@@ -145,22 +143,22 @@ function noteCountField<Row extends { noteCount: number }>(): TableField<Row> {
 /** Tên cột Tình trạng hạn của bảng Đơn phụ trách và Quản lí đơn. */
 export const DEADLINE_STATE_FIELD_KEY = 'deadlineState';
 
-/** Thứ tự cột Tình trạng hạn khi sắp xếp tăng dần: gấp nhất trước (Quá hạn → Sắp tới hạn → Còn hạn → Xong trễ hạn → Xong đúng hạn). */
-const DEADLINE_STATE_ORDER: Record<DeadlineState, number> = { overdue: 0, dueSoon: 1, onTrack: 2, doneLate: 3, doneOnTime: 4 };
+/** Thứ tự cột Tình trạng hạn khi sắp xếp tăng dần: gấp nhất trước (Quá hạn → Sắp tới hạn → Còn hạn → Không có hạn → Xong trễ hạn → Xong đúng hạn). */
+const DEADLINE_STATE_ORDER: Record<DeadlineState, number> = { overdue: 0, dueSoon: 1, onTrack: 2, none: 3, doneLate: 4, doneOnTime: 5 };
 
 /**
- * Cột Tình trạng hạn: lọc theo tình trạng (lựa chọn cố định), sắp xếp gấp nhất trước; đơn không có hạn thì ô trống.
+ * Cột Tình trạng hạn: lọc theo tình trạng (lựa chọn cố định), sắp xếp gấp nhất trước.
  * @returns  khai báo cột cho bảng có deadlineState
  */
-function deadlineStateField<Row extends { deadlineState: DeadlineState | null }>(): TableField<Row> {
+function deadlineStateField<Row extends { deadlineState: DeadlineState }>(): TableField<Row> {
   return {
     key: DEADLINE_STATE_FIELD_KEY,
     label: 'Tình trạng hạn',
     type: 'select',
     getValue: (form) => form.deadlineState,
-    getLabel: (form) => (form.deadlineState ? DEADLINE_STATE_LABEL[form.deadlineState] : ''),
+    getLabel: (form) => DEADLINE_STATE_LABEL[form.deadlineState],
     options: DEADLINE_STATES.map((state) => ({ value: state, label: DEADLINE_STATE_LABEL[state] })),
-    getOrder: (form) => (form.deadlineState ? DEADLINE_STATE_ORDER[form.deadlineState] : DEADLINE_STATES.length),
+    getOrder: (form) => DEADLINE_STATE_ORDER[form.deadlineState],
   };
 }
 
