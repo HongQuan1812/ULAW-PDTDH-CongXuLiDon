@@ -16,6 +16,7 @@ export const API_GROUPS = [
   'form',
   'forms',
   'health',
+  'holidays',
   'profile',
 ] as const;
 export type ApiGroup = (typeof API_GROUPS)[number];

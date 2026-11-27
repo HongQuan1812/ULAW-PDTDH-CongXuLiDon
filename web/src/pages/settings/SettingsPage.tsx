@@ -13,6 +13,7 @@ const SETTINGS_PAGE_DESCRIPTION: Record<(typeof SETTINGS_PAGES)[number], string>
   emailSettings: 'Người gửi, chữ kí, thư tự động khi đơn đổi trạng thái',
   dataSources: 'Kết nối tới database trường',
   backups: 'Nơi lưu, sao lưu ngay, lịch định kì, lịch sử',
+  holidays: 'Lễ, Tết, nghỉ bù: hạn xử lí đơn không tính các ngày này',
 };
 
 /**

@@ -63,6 +63,7 @@ import { bypass } from 'msw';
 import { buildSamplePdf } from './samplePdf';
 import { REAL_BACKEND_GROUPS } from './realBackendGroups';
 import type { SeedAccount, SeedForm, SeedFormType, SeedFormTypeVersion } from '@ulaw/shared';
+import { HOLIDAYS_SEED, compareHolidays, findOverlappingHoliday, type Holiday, type HolidayInput } from '@ulaw/shared';
 import {
   BACKUP_SCHEDULES_SEED,
   BACKUP_TARGETS_SEED,
@@ -972,6 +973,7 @@ export function resetMockDb(): void {
   EXPORT_TEMPLATES = seedExportTemplates();
   FORM_NOTES.clear();
   resetBackups();
+  holidays = [...HOLIDAYS_SEED];
   try {
     sessionStorage.removeItem(ACCOUNTS_KEY);
   } catch {
@@ -1657,4 +1659,47 @@ export function updateFormNote(code: string, noteId: string, content: RichTextDo
  */
 export function deleteFormNote(code: string, noteId: string): void {
   FORM_NOTES.set(code, (FORM_NOTES.get(code) ?? []).filter((note) => note.id !== noteId));
+}
+
+/* ---------- Ngày nghỉ ---------- */
+
+/** Ngày nghỉ trong API giả: bắt đầu bằng ngày nghỉ mẫu 2026–2027. */
+let holidays: Holiday[] = [...HOLIDAYS_SEED];
+
+/** Số tăng dần để đặt id ngày nghỉ mới. */
+let holidaySequence = 0;
+
+/**
+ * Mọi ngày nghỉ.
+ * @returns  bản sao, sớm trước muộn sau
+ */
+export function getHolidays(): Holiday[] {
+  return structuredClone(holidays).sort(compareHolidays);
+}
+
+/**
+ * Thêm hoặc sửa một ngày nghỉ; không cho trùng ngày với ngày nghỉ khác.
+ * @param input      ngày nghỉ (đã kiểm tra bằng HolidayInputSchema)
+ * @param holidayId  id ngày nghỉ cần sửa; không có = thêm mới
+ * @returns          ngày nghỉ sau khi lưu · 'notFound' · { overlaps: tên ngày nghỉ bị trùng }
+ */
+export function saveHoliday(input: HolidayInput, holidayId?: string): Holiday | 'notFound' | { overlaps: string } {
+  if (holidayId && !holidays.some((holiday) => holiday.id === holidayId)) return 'notFound';
+  const overlapping = findOverlappingHoliday(input, holidays, holidayId);
+  if (overlapping) return { overlaps: overlapping.name };
+
+  const saved: Holiday = { id: holidayId ?? `holiday-${++holidaySequence}`, ...input };
+  holidays = holidayId ? holidays.map((holiday) => (holiday.id === holidayId ? saved : holiday)) : [...holidays, saved];
+  return structuredClone(saved);
+}
+
+/**
+ * Xóa một ngày nghỉ.
+ * @param holidayId  id ngày nghỉ
+ * @returns          ngày nghỉ vừa xóa; không có thì null
+ */
+export function deleteHoliday(holidayId: string): Holiday | null {
+  const removed = holidays.find((holiday) => holiday.id === holidayId) ?? null;
+  holidays = holidays.filter((holiday) => holiday.id !== holidayId);
+  return removed;
 }

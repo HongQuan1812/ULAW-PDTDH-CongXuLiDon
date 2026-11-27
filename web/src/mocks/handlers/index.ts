@@ -12,6 +12,7 @@ import { formTypeHandlers } from './form-types';
 import { formHandlers } from './form';
 import { formsHandlers } from './forms';
 import { healthHandlers } from './health';
+import { holidayHandlers } from './holidays';
 import { profileHandlers } from './profile';
 import { createRandomFailureHandler } from './random-failure';
 
@@ -32,6 +33,7 @@ const HANDLER_GROUPS: readonly (readonly [ApiGroup, readonly HttpHandler[]])[] =
   ['files', fileHandlers],
   ['form-types', formTypeHandlers],
   ['health', healthHandlers],
+  ['holidays', holidayHandlers],
   ['profile', profileHandlers],
 ];
 

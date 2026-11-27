@@ -5,6 +5,9 @@ import {
   addFormTypeVersion,
   createFormType,
   decideForm,
+  deleteHoliday,
+  getHolidays,
+  saveHoliday,
   deleteFormTypeVersion,
   getFormTypeSummaries,
   getManagedFormType,
@@ -559,5 +562,26 @@ describe('tài khoản', () => {
     expect(demoAccountFor('nguoiXuLiDon')).toBe('cb-2');
     updateAccount('cb-2', { name: 'Trần Quốc Việt', cccd: '', phone: '', role: 'nguoiNopDon' }, admin);
     expect(demoAccountFor('nguoiXuLiDon')).toBeNull();
+  });
+});
+
+describe('ngày nghỉ', () => {
+  beforeEach(() => resetMockDb());
+
+  test('có sẵn ngày nghỉ mẫu, xếp theo lịch; thêm, sửa, xóa; trùng ngày thì báo tên ngày nghỉ bị trùng', () => {
+    const seeded = getHolidays();
+    expect(seeded.length).toBeGreaterThan(0);
+    expect(seeded.map((holiday) => holiday.startDate)).toEqual(seeded.map((holiday) => holiday.startDate).sort());
+
+    const added = saveHoliday({ name: 'Nghỉ thử', startDate: '2026-12-24', endDate: '2026-12-25' });
+    expect(added).toMatchObject({ name: 'Nghỉ thử' });
+    if (typeof added === 'string' || 'overlaps' in added) throw new Error('phải thêm được');
+    expect(saveHoliday({ name: 'Trùng', startDate: '2026-12-25', endDate: '2026-12-25' })).toEqual({ overlaps: 'Nghỉ thử' });
+    expect(saveHoliday({ name: 'Nghỉ thử', startDate: '2026-12-25', endDate: '2026-12-26' }, added.id)).toMatchObject({ endDate: '2026-12-26' });
+    expect(saveHoliday({ name: 'X', startDate: '2026-12-28', endDate: '2026-12-28' }, 'khong-co')).toBe('notFound');
+
+    expect(deleteHoliday(added.id)).toMatchObject({ id: added.id });
+    expect(deleteHoliday(added.id)).toBeNull();
+    expect(getHolidays()).toHaveLength(seeded.length);
   });
 });
