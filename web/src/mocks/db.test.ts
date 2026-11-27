@@ -517,6 +517,8 @@ describe('thống kê đơn (Quản lí đơn)', () => {
     expect(stats.total).toBe(getAllForms().length);
     expect(Object.values(stats.byStatus).reduce((sum, count) => sum + count, 0)).toBe(stats.total);
     expect(Object.keys(stats.byStatus)).toHaveLength(6);
+    expect(Object.values(stats.byDeadline).reduce((sum, count) => sum + count, 0) + stats.noDeadline).toBe(stats.total);
+    expect(stats.byDeadline.overdue).toBe(getAllForms().filter((row) => row.deadlineState === 'overdue').length);
   });
 
   test('số theo loại đơn cộng lại bằng tổng, kể cả loại chưa có đơn (đếm 0) và ghi trạng thái loại đơn', () => {

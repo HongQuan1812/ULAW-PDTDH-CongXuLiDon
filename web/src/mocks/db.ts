@@ -64,7 +64,7 @@ import { bypass } from 'msw';
 import { buildSamplePdf } from './samplePdf';
 import { REAL_BACKEND_GROUPS } from './realBackendGroups';
 import type { SeedAccount, SeedForm, SeedFormType, SeedFormTypeVersion } from '@ulaw/shared';
-import { HOLIDAYS_SEED, compareHolidays, findOverlappingHoliday, formDeadline, holidayDatesOf, type Holiday, type HolidayInput } from '@ulaw/shared';
+import { HOLIDAYS_SEED, compareHolidays, countDeadlineStates, findOverlappingHoliday, formDeadline, holidayDatesOf, type Holiday, type HolidayInput } from '@ulaw/shared';
 import {
   BACKUP_SCHEDULES_SEED,
   BACKUP_TARGETS_SEED,
@@ -655,8 +655,9 @@ export function getAllForms(): ManagedFormSummary[] {
 }
 
 /**
- * Đếm đơn theo trạng thái và theo loại đơn (hai khung thống kê của Quản lí đơn), trên tất cả đơn.
- * @returns  tổng số đơn, số đơn mỗi trạng thái (đủ 6 trạng thái) và số đơn mỗi loại đơn (nhiều nhất trước, bằng nhau thì theo tên)
+ * Đếm đơn theo trạng thái, theo loại đơn và theo tình trạng hạn (ba khung thống kê của Quản lí đơn), trên tất cả đơn.
+ * @returns  tổng số đơn, số đơn mỗi trạng thái (đủ 6 trạng thái), số đơn mỗi loại đơn (nhiều nhất trước, bằng nhau thì theo tên),
+ *           số đơn mỗi tình trạng hạn và số đơn không có hạn
  */
 export function getFormStats(): FormStats {
   const byStatus = Object.fromEntries(FORM_STATUSES.map((status) => [status, 0])) as FormStats['byStatus'];
@@ -672,7 +673,8 @@ export function getFormStats(): FormStats {
     formTypeStatus: formTypeStatusOf(formType.versions.map((version) => version.status)),
     count: countByType.get(formType.id) ?? 0,
   })).sort((a, b) => b.count - a.count || a.formTypeName.localeCompare(b.formTypeName, 'vi'));
-  return { total: FORMS.length, byStatus, byType };
+  const now = vietnamNow();
+  return { total: FORMS.length, byStatus, byType, ...countDeadlineStates(FORMS.map((form) => deadlineStateOf(form, now))) };
 }
 
 /**
