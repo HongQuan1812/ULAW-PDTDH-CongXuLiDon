@@ -8,6 +8,7 @@ import {
   BACKUP_TARGETS_SEED,
   EMAIL_SETTINGS_SEED,
   EMAIL_SETTINGS_SEED_UPDATE,
+  HOLIDAYS_SEED,
   SAMPLE_EXPORT_TEMPLATE_BASE64,
   SEED_ACCOUNTS,
   SEED_EXPORT_TEMPLATE,
@@ -19,6 +20,7 @@ import {
 } from '@ulaw/shared';
 import { DEFAULT_BACKUP_DIR, DEFAULT_UPLOAD_DIR } from '../src/config/app-config';
 import { loadDevEnvFile } from '../src/config/env-file';
+import { toDbDate } from '../src/holidays/holiday-dates';
 import { PrismaClient, type Prisma } from '../src/generated/prisma/client';
 import { loadSeedExportTemplates } from './load-seed-export-templates';
 
@@ -52,6 +54,7 @@ async function clearAll(prisma: PrismaClient): Promise<void> {
     prisma.backupRun.deleteMany(),
     prisma.backupTarget.deleteMany(),
     prisma.backupSchedule.deleteMany(),
+    prisma.holiday.deleteMany(),
     prisma.fileObject.deleteMany(),
     prisma.formEvent.deleteMany(),
     prisma.form.deleteMany(),
@@ -212,6 +215,11 @@ async function seedAll(prisma: PrismaClient): Promise<void> {
   // Sao lưu: nơi lưu và lịch mẫu, chưa có lần sao lưu nào
   await prisma.backupTarget.createMany({ data: [...BACKUP_TARGETS_SEED] });
   await prisma.backupSchedule.createMany({ data: BACKUP_SCHEDULES_SEED.map((schedule) => ({ ...schedule })) });
+
+  // Ngày nghỉ mẫu 2026–2027 (bản thật để trống, Admin tự nhập)
+  await prisma.holiday.createMany({
+    data: HOLIDAYS_SEED.map((holiday) => ({ ...holiday, startDate: toDbDate(holiday.startDate), endDate: toDbDate(holiday.endDate) })),
+  });
 }
 
 const prisma = new PrismaClient({ adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL }) });

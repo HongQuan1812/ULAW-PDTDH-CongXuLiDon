@@ -334,3 +334,17 @@ model BackupRun {
   @@index([startedAt])
   @@index([targetId, status])
 }
+
+// ---------- Ngày nghỉ (trang Ngày nghỉ của Admin) ----------
+
+// Ngày nghỉ ngoài Thứ Bảy, Chủ nhật (lễ, Tết, nghỉ bù): hạn xử lí đơn không tính những ngày này.
+// Một ngày hoặc một khoảng ngày liền nhau, tính cả hai đầu; các ngày nghỉ không trùng nhau (kiểm ở API)
+model Holiday {
+  id        String   @id
+  name      String
+  startDate DateTime @db.Date
+  endDate   DateTime @db.Date
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+
+  @@index([startDate])
+}

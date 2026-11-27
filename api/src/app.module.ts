@@ -15,6 +15,7 @@ import { AccountsModule } from './accounts/accounts.module';
 import { EmailModule } from './email/email.module';
 import { DataSourcesModule } from './data-sources/data-sources.module';
 import { BackupsModule } from './backups/backups.module';
+import { HolidaysModule } from './holidays/holidays.module';
 
-@Module({ imports: [ConfigModule, PrismaModule, AuthModule, HealthModule, ProfileModule, AccountsModule, FormTypesModule, FilesModule, FormsModule, FormModule, ExportsModule, FormNotesModule, EmailModule, DataSourcesModule, BackupsModule] })
+@Module({ imports: [ConfigModule, PrismaModule, AuthModule, HealthModule, ProfileModule, AccountsModule, FormTypesModule, FilesModule, FormsModule, FormModule, ExportsModule, FormNotesModule, EmailModule, DataSourcesModule, BackupsModule, HolidaysModule] })
 export class AppModule {}
