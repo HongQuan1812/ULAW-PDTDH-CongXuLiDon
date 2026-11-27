@@ -4,10 +4,11 @@
      - màn hình rộng: nằm bên phải nội dung đơn; bấm › để ẩn, nút "Thông tin đơn" ở đầu trang để hiện lại
        (nhớ lựa chọn trong trình duyệt này)
      - màn hình hẹp (≤ 1100px): ẩn sẵn, bấm "Thông tin đơn" để trượt ra từ bên phải; bấm ra ngoài, × hoặc Esc để đóng */
-import { useCallback, useId, useState, type ReactNode } from 'react';
+import { useCallback, useId, useRef, useState, type ReactNode } from 'react';
 import { Button } from '../../components/Button';
 import { Sheet } from '../../components/Sheet';
 import { useMediaQuery } from '../../lib/useMediaQuery';
+import { useWheelPassThrough } from '../../lib/useWheelPassThrough';
 import styles from './FormInfoPanel.module.css';
 
 /** Điều kiện màn hình hẹp: khung chuyển sang dạng trượt ra. */
@@ -118,6 +119,9 @@ export function FormInfoPanelToggle({ panel, label = DEFAULT_PANEL_TITLE }: { pa
  */
 export function FormInfoPanel({ panel, title = DEFAULT_PANEL_TITLE, children }: { panel: FormInfoPanelState; title?: string; children: ReactNode }) {
   const titleId = useId();
+  const sideRef = useRef<HTMLElement>(null);
+  // Màn hình rộng: các mục cuộn tới đáy / đỉnh thì lăn tiếp cuộn luôn trang, không phải rê chuột
+  useWheelPassThrough(sideRef, !panel.isNarrow && panel.isOpen);
   if (panel.isNarrow) {
     return (
       <Sheet open={panel.isOpen} onClose={panel.closePanel} title={title}>
@@ -127,7 +131,7 @@ export function FormInfoPanel({ panel, title = DEFAULT_PANEL_TITLE, children }: 
   }
   if (!panel.isOpen) return null;
   return (
-    <aside className={styles.side} aria-labelledby={titleId}>
+    <aside ref={sideRef} className={styles.side} aria-labelledby={titleId}>
       <section className={styles.card}>
         <div className={styles.head}>
           <h2 id={titleId}>{title}</h2>
