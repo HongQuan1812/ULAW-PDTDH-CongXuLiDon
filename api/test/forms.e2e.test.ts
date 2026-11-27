@@ -110,6 +110,7 @@ describe('forms (danh sách đơn)', () => {
     const stats = FormStatsSchema.parse((await request(server()).get('/api/forms/stats').set('Cookie', cookie).expect(200)).body);
     expect(stats.total).toBe(await prisma.form.count());
     expect(Object.values(stats.byStatus).reduce((sum, count) => sum + count, 0)).toBe(stats.total);
+    expect(Object.values(stats.byDeadline).reduce((sum, count) => sum + count, 0) + stats.noDeadline).toBe(stats.total);
     expect(stats.byType.reduce((sum, row) => sum + row.count, 0)).toBe(stats.total);
     const counts = stats.byType.map((row) => row.count);
     expect(counts).toEqual([...counts].sort((a, b) => b - a));

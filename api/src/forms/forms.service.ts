@@ -9,6 +9,7 @@ import {
   HANDLED_FORM_LIST_FIELDS,
   MANAGED_FORM_LIST_FIELDS,
   applyListQuery,
+  countDeadlineStates,
   formDeadline,
   maskCccd,
   type DeadlineState,
@@ -184,15 +185,18 @@ export class FormsService {
   }
 
   /**
-   * Đếm đơn theo trạng thái và theo loại đơn, trên tất cả đơn.
+   * Đếm đơn theo trạng thái, theo loại đơn và theo tình trạng hạn, trên tất cả đơn.
    * @returns  tổng số đơn, số đơn mỗi trạng thái (đủ 6 trạng thái), số đơn mỗi loại đơn
-   *           (nhiều nhất trước, bằng nhau thì theo tên; tên và trạng thái theo phiên bản mới nhất)
+   *           (nhiều nhất trước, bằng nhau thì theo tên; tên và trạng thái theo phiên bản mới nhất),
+   *           số đơn mỗi tình trạng hạn và số đơn không có hạn
    */
   async getStats(): Promise<FormStats> {
-    const [statusGroups, typeGroups, formTypes] = await Promise.all([
+    const [statusGroups, typeGroups, formTypes, formsWithEvents, holidayDates] = await Promise.all([
       this.prisma.form.groupBy({ by: ['status'], _count: { _all: true } }),
       this.prisma.form.groupBy({ by: ['formTypeId'], _count: { _all: true } }),
       this.prisma.formType.findMany({ include: { versions: { orderBy: { version: 'asc' } } } }),
+      this.prisma.form.findMany({ include: DEADLINE_EVENTS }),
+      this.holidays.holidayDates(),
     ]);
 
     const byStatus = Object.fromEntries(FORM_STATUSES.map((status) => [status, 0])) as FormStats['byStatus'];
@@ -208,7 +212,11 @@ export class FormsService {
         return [{ formTypeId: formType.id, formTypeName: latest.name, formTypeStatus, count: countByType.get(formType.id) ?? 0 }];
       })
       .sort((a, b) => b.count - a.count || a.formTypeName.localeCompare(b.formTypeName, 'vi'));
-    return { total: Object.values(byStatus).reduce((sum, count) => sum + count, 0), byStatus, byType };
+
+    // Tình trạng hạn: tính từng đơn như ở bảng, rồi đếm
+    const now = toVietnamTime(new Date());
+    const deadlineCounts = countDeadlineStates(formsWithEvents.map((form) => this.deadlineStateOf(form, holidayDates, now)));
+    return { total: Object.values(byStatus).reduce((sum, count) => sum + count, 0), byStatus, byType, ...deadlineCounts };
   }
 
   /**
