@@ -9,12 +9,16 @@ import {
   HANDLED_FORM_LIST_FIELDS,
   MANAGED_FORM_LIST_FIELDS,
   applyListQuery,
+  formDeadline,
   maskCccd,
+  type DeadlineState,
   type FormCccdsResponse,
   type FormStats,
   type FormSummary,
+  type FormType,
   type HandledFormSummary,
   type HandledFormsResponse,
+  type HolidayDates,
   type ListQuery,
   type ManagedFormSummary,
   type ManagedFormsResponse,
@@ -23,7 +27,8 @@ import {
 } from '@ulaw/shared';
 import { PrismaService } from '../common/prisma.service';
 import { toVietnamTime } from '../common/vietnam-time';
-import type { Form, User } from '../generated/prisma/client';
+import { HolidaysService } from '../holidays/holidays.service';
+import type { Form, FormEvent, Prisma, User } from '../generated/prisma/client';
 
 /** Đếm ghi chú nội bộ kèm mỗi đơn (cột Ghi chú). */
 const NOTE_COUNT = { _count: { select: { notes: true } } } as const;
@@ -31,13 +36,41 @@ const NOTE_COUNT = { _count: { select: { notes: true } } } as const;
 /** Số ghi chú Prisma đếm kèm đơn. */
 type WithNoteCount = { _count: { notes: number } };
 
-/** Đơn kèm hai cán bộ liên quan và số ghi chú, đủ để dựng dòng "Đơn phụ trách". */
-type FormWithStaff = Form & WithNoteCount & { receiver: User | null; handler: User | null };
+/** Lịch sử đơn kèm mỗi đơn, cũ nhất trước, để tính tình trạng hạn (cột Tình trạng hạn). */
+const DEADLINE_EVENTS = {
+  events: { select: { action: true, at: true, status: true }, orderBy: [{ at: 'asc' as const }, { id: 'asc' as const }] },
+} satisfies Prisma.FormInclude;
+
+/** Lịch sử Prisma đọc kèm đơn. */
+type WithDeadlineEvents = { events: Pick<FormEvent, 'action' | 'at' | 'status'>[] };
+
+/** Đơn kèm hai cán bộ liên quan, số ghi chú và lịch sử, đủ để dựng dòng "Đơn phụ trách". */
+type FormWithStaff = Form & WithNoteCount & WithDeadlineEvents & { receiver: User | null; handler: User | null };
 
 @Injectable()
 export class FormsService {
-  /** @param prisma  kết nối database */
-  constructor(private readonly prisma: PrismaService) {}
+  /**
+   * @param prisma    kết nối database
+   * @param holidays  ngày nghỉ, để tính tình trạng hạn
+   */
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly holidays: HolidaysService,
+  ) {}
+
+  /**
+   * Tình trạng hạn xử lí của đơn, tính như ở chi tiết đơn (formDeadline).
+   * @param form          đơn kèm lịch sử, cũ nhất trước
+   * @param holidayDates  các ngày nghỉ
+   * @param now           bây giờ, giờ Việt Nam 'YYYY-MM-DDTHH:mm'
+   * @returns             tình trạng hạn; null nếu loại đơn lúc nộp không có hạn
+   */
+  private deadlineStateOf(form: Form & WithDeadlineEvents, holidayDates: HolidayDates, now: string): DeadlineState | null {
+    // Đơn nộp trước khi có hạn xử lí thì bản chụp không có mục này: coi như không có hạn
+    const snapshot = form.formTypeSnapshot as unknown as Partial<FormType>;
+    const history = form.events.map((event) => ({ action: event.action, at: toVietnamTime(event.at), status: event.status }));
+    return formDeadline(snapshot.maxProcessingDays ?? null, history, now, holidayDates)?.state ?? null;
+  }
 
   /**
    * Dựng một dòng tóm tắt của đơn.
@@ -56,24 +89,35 @@ export class FormsService {
   }
 
   /**
-   * Dựng dòng "Đơn phụ trách": tóm tắt kèm người tiếp nhận, người xử lí, số ghi chú.
-   * @param form  đơn kèm hai cán bộ và số ghi chú
-   * @returns     dòng theo HandledFormSummarySchema
+   * Dựng dòng "Đơn phụ trách": tóm tắt kèm tình trạng hạn, người tiếp nhận, người xử lí, số ghi chú.
+   * @param form          đơn kèm hai cán bộ, số ghi chú và lịch sử
+   * @param holidayDates  các ngày nghỉ, để tính tình trạng hạn
+   * @param now           bây giờ, giờ Việt Nam 'YYYY-MM-DDTHH:mm'
+   * @returns             dòng theo HandledFormSummarySchema
    */
-  private toHandledSummary(form: FormWithStaff): HandledFormSummary {
+  private toHandledSummary(form: FormWithStaff, holidayDates: HolidayDates, now: string): HandledFormSummary {
     const toStaff = (staff: User | null) => (staff ? { id: staff.id, name: staff.name, email: staff.email } : null);
-    return { ...this.toSummary(form), receiver: toStaff(form.receiver), handler: toStaff(form.handler), noteCount: form._count.notes };
+    return {
+      ...this.toSummary(form),
+      deadlineState: this.deadlineStateOf(form, holidayDates, now),
+      receiver: toStaff(form.receiver),
+      handler: toStaff(form.handler),
+      noteCount: form._count.notes,
+    };
   }
 
   /**
-   * Dựng dòng bảng Quản lí đơn: tóm tắt kèm lúc tiếp nhận, số ghi chú và người nộp (CCCD che).
-   * @param form  đơn kèm người nộp và số ghi chú
-   * @returns     dòng theo ManagedFormSummarySchema
+   * Dựng dòng bảng Quản lí đơn: tóm tắt kèm tình trạng hạn, lúc tiếp nhận, số ghi chú và người nộp (CCCD che).
+   * @param form          đơn kèm người nộp, số ghi chú và lịch sử
+   * @param holidayDates  các ngày nghỉ, để tính tình trạng hạn
+   * @param now           bây giờ, giờ Việt Nam 'YYYY-MM-DDTHH:mm'
+   * @returns             dòng theo ManagedFormSummarySchema
    */
-  private toManagedSummary(form: Form & WithNoteCount & { owner: User }): ManagedFormSummary {
+  private toManagedSummary(form: Form & WithNoteCount & WithDeadlineEvents & { owner: User }, holidayDates: HolidayDates, now: string): ManagedFormSummary {
     const { owner } = form;
     return {
       ...this.toSummary(form),
+      deadlineState: this.deadlineStateOf(form, holidayDates, now),
       receivedAt: form.receivedAt ? toVietnamTime(form.receivedAt) : null,
       noteCount: form._count.notes,
       applicant: { id: owner.id, name: owner.name, email: owner.email, phone: owner.phone, maskedCccd: maskCccd(owner.cccd) },
@@ -99,12 +143,16 @@ export class FormsService {
    * @returns          theo HandledFormsResponseSchema
    */
   async findFormsHandledBy(staffId: string, listQuery: ListQuery): Promise<HandledFormsResponse> {
-    const forms = await this.prisma.form.findMany({
-      where: { OR: [{ receiverId: staffId }, { handlerId: staffId }] },
-      include: { receiver: true, handler: true, ...NOTE_COUNT },
-    });
+    const [forms, holidayDates] = await Promise.all([
+      this.prisma.form.findMany({
+        where: { OR: [{ receiverId: staffId }, { handlerId: staffId }] },
+        include: { receiver: true, handler: true, ...NOTE_COUNT, ...DEADLINE_EVENTS },
+      }),
+      this.holidays.holidayDates(),
+    ]);
+    const now = toVietnamTime(new Date());
     const { rows, ...pageMeta } = applyListQuery(
-      forms.map((form) => this.toHandledSummary(form)),
+      forms.map((form) => this.toHandledSummary(form, holidayDates, now)),
       HANDLED_FORM_LIST_FIELDS,
       listQuery,
       FORM_LIST_DEFAULT_SORTING,
@@ -119,10 +167,14 @@ export class FormsService {
    * @returns               theo ManagedFormsResponseSchema
    */
   async findManaged(listQuery: ListQuery, canSearchCccd: boolean): Promise<ManagedFormsResponse> {
-    const forms = await this.prisma.form.findMany({ include: { owner: true, ...NOTE_COUNT } });
+    const [forms, holidayDates] = await Promise.all([
+      this.prisma.form.findMany({ include: { owner: true, ...NOTE_COUNT, ...DEADLINE_EVENTS } }),
+      this.holidays.holidayDates(),
+    ]);
+    const now = toVietnamTime(new Date());
     const fullCccdByFormCode = new Map(forms.map((form) => [form.code, form.owner.cccd ?? '']));
     const { rows, ...pageMeta } = applyListQuery(
-      forms.map((form) => this.toManagedSummary(form)),
+      forms.map((form) => this.toManagedSummary(form, holidayDates, now)),
       MANAGED_FORM_LIST_FIELDS,
       listQuery,
       FORM_LIST_DEFAULT_SORTING,

@@ -8,6 +8,7 @@ import {
   COMMON_MESSAGES,
   FORMS_MESSAGES,
   FormCccdsResponseSchema,
+  FormDetailSchema,
   FormStatsSchema,
   HandledFormsResponseSchema,
   ManagedFormsResponseSchema,
@@ -122,6 +123,26 @@ describe('forms (danh sách đơn)', () => {
     const page = HandledFormsResponseSchema.parse((await request(server()).get('/api/forms/handled').query({ pageSize: 100 }).set('Cookie', cookie).expect(200)).body);
     expect(page.total).toBe(await prisma.form.count({ where: { OR: [{ receiverId: me }, { handlerId: me }] } }));
     expect(page.forms.every((form) => form.receiver?.id === me || form.handler?.id === me)).toBe(true);
+  });
+
+  it('GET /forms, /forms/handled: tình trạng hạn mỗi dòng khớp chi tiết đơn; lọc, sắp xếp được theo tình trạng hạn', async () => {
+    const cookie = await loginAs('admin');
+    const all = ManagedFormsResponseSchema.parse((await request(server()).get('/api/forms').query({ pageSize: 100 }).set('Cookie', cookie).expect(200)).body);
+    const handled = HandledFormsResponseSchema.parse((await request(server()).get('/api/forms/handled').query({ pageSize: 100 }).set('Cookie', cookie).expect(200)).body);
+
+    // Vài đơn mỗi bảng: tình trạng hạn như ở chi tiết đơn (loại đơn dữ liệu mẫu có hạn nên có dòng khác null)
+    expect(all.forms.some((form) => form.deadlineState !== null)).toBe(true);
+    for (const row of [...all.forms.slice(0, 5), ...handled.forms.slice(0, 5)]) {
+      const detail = FormDetailSchema.parse((await request(server()).get(`/api/forms/${row.code}`).set('Cookie', cookie).expect(200)).body);
+      expect(row.deadlineState).toBe(detail.deadline?.state ?? null);
+    }
+
+    // Lọc theo một tình trạng đang có: chỉ còn dòng đúng tình trạng đó
+    const someState = all.forms.find((form) => form.deadlineState !== null)!.deadlineState!;
+    const filters = JSON.stringify([{ fieldKey: 'deadlineState', operator: 'equals', value: someState, from: '', to: '' }]);
+    const filtered = ManagedFormsResponseSchema.parse((await request(server()).get('/api/forms').query({ pageSize: 100, filters }).set('Cookie', cookie).expect(200)).body);
+    expect(filtered.total).toBeGreaterThanOrEqual(all.forms.filter((form) => form.deadlineState === someState).length);
+    expect(filtered.forms.every((form) => form.deadlineState === someState)).toBe(true);
   });
 
   it('GET /forms/cccds: trả CCCD đầy đủ của người nộp đã hỏi, 422 khi thiếu danh sách', async () => {
