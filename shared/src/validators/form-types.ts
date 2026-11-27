@@ -1,6 +1,7 @@
 /* Kiểm tra bản soạn loại đơn trước khi lưu.
    Trình soạn dùng để báo lỗi và tô đỏ ô sai; API giả và backend dùng lại để kiểm tra lần cuối, nên câu báo giống nhau. */
 import type { FormSection } from '../aux-schema/form-types--sections';
+import { MaxProcessingDaysSchema } from '../aux-schema/forms--deadlines';
 import type { FormTypeStatus } from '../aux-schema/form-types--statuses';
 import { COMMON_EXPORT_TAGS, EXPORT_TAG_PATTERN, FORM_COUNT_TAG, FORM_NUMBER_TAG, columnTag, questionTag, rowNumberTag } from '../business-rules/exports--tags';
 
@@ -40,6 +41,7 @@ export const FORM_TYPE_PREFIX_PATTERN = /^[A-Z]{2,5}$/;
 export const FORM_TYPE_ISSUE_TARGET = {
   name: 'name',
   prefix: 'prefix',
+  maxProcessingDays: 'max-processing-days',
   sectionTitle: (sectionId: string) => `section-title:${sectionId}`,
   questionLabel: (questionId: string) => `question-label:${questionId}`,
   option: (questionId: string, optionIndex: number) => `option:${questionId}:${optionIndex}`,
@@ -61,6 +63,8 @@ export interface FormTypeIssue {
 export interface FormTypeDraftInput {
   name: string;
   prefix: string;
+  /** Thời gian xử lí tối đa, ngày làm việc; null = không có hạn */
+  maxProcessingDays: number | null;
   status: FormTypeStatus;
   sections: readonly FormSection[];
 }
@@ -79,6 +83,8 @@ export function validateFormTypeDraft(draft: FormTypeDraftInput, otherPrefixes: 
   if (!draft.name.trim()) add(FORM_TYPE_ISSUE_TARGET.name, FORM_TYPE_DRAFT_MESSAGES.nameRequired);
   if (!FORM_TYPE_PREFIX_PATTERN.test(draft.prefix)) add(FORM_TYPE_ISSUE_TARGET.prefix, FORM_TYPE_DRAFT_MESSAGES.prefixFormat);
   else if (otherPrefixes.includes(draft.prefix)) add(FORM_TYPE_ISSUE_TARGET.prefix, FORM_TYPE_DRAFT_MESSAGES.prefixTaken(draft.prefix));
+  const maxDaysCheck = MaxProcessingDaysSchema.safeParse(draft.maxProcessingDays);
+  if (!maxDaysCheck.success) add(FORM_TYPE_ISSUE_TARGET.maxProcessingDays, maxDaysCheck.error.issues[0]!.message);
 
   // Từng phần, từng câu hỏi
   draft.sections.forEach((section, sectionIndex) => {

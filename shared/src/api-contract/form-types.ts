@@ -187,6 +187,8 @@ export const SaveFormTypeVersionRequestSchema = z.object({
   name: z.string().trim().min(1),
   /** Mô tả ngắn; null = không có */
   description: z.string().trim().nullable(),
+  /** Thời gian xử lí tối đa, ngày làm việc; null = không có hạn. Khoảng cho phép do validateFormTypeDraft kiểm tra (câu báo như trình soạn) */
+  maxProcessingDays: z.number().nullable(),
   /** Nháp: lưu để soạn tiếp · Đang mở: mở phiên bản này (phiên bản đang mở khác tự đóng) */
   status: z.enum(DRAFT_SAVE_STATUSES),
   sections: z.array(FormSectionSchema).min(1),

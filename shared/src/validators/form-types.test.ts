@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { FormSectionSchema, type FormSection } from '../aux-schema/form-types--sections';
+import { MAX_PROCESSING_DAYS_LIMIT } from '../aux-schema/forms--deadlines';
 import { EMPTY_RICH_TEXT_DOC } from '../aux-schema/rich-text';
 import { FORM_TYPE_DRAFT_MESSAGES, FORM_TYPE_ISSUE_TARGET, issueMessages, validateFormTypeDraft, type FormTypeDraftInput } from './form-types';
 
@@ -7,6 +8,7 @@ import { FORM_TYPE_DRAFT_MESSAGES, FORM_TYPE_ISSUE_TARGET, issueMessages, valida
 const validDraft = (): FormTypeDraftInput => ({
   name: 'Xin bảo lưu',
   prefix: 'BL',
+  maxProcessingDays: null,
   status: 'open',
   sections: [FormSectionSchema.parse({ id: 's1', title: 'Lí do', questions: [{ id: 'q1', type: 'text', label: 'Lí do bảo lưu' }] })],
 });
@@ -20,6 +22,15 @@ describe('validateFormTypeDraft', () => {
     const issues = validateFormTypeDraft({ ...validDraft(), name: ' ', prefix: 'B' }, []);
     expect(issues.map((issue) => issue.target)).toEqual([FORM_TYPE_ISSUE_TARGET.name, FORM_TYPE_ISSUE_TARGET.prefix]);
     expect(validateFormTypeDraft({ ...validDraft(), prefix: 'XMM' }, ['XMM'])[0]!.message).toBe(FORM_TYPE_DRAFT_MESSAGES.prefixTaken('XMM'));
+  });
+
+  it('thời gian xử lí tối đa: để trống hoặc số nguyên 1–365', () => {
+    expect(validateFormTypeDraft({ ...validDraft(), maxProcessingDays: 1 }, [])).toEqual([]);
+    expect(validateFormTypeDraft({ ...validDraft(), maxProcessingDays: MAX_PROCESSING_DAYS_LIMIT }, [])).toEqual([]);
+    for (const maxProcessingDays of [0, -3, 1.5, MAX_PROCESSING_DAYS_LIMIT + 1]) {
+      const issues = validateFormTypeDraft({ ...validDraft(), maxProcessingDays }, []);
+      expect(issues.map((issue) => issue.target)).toEqual([FORM_TYPE_ISSUE_TARGET.maxProcessingDays]);
+    }
   });
 
   it('báo tiêu đề phần, nội dung câu hỏi, lựa chọn, cột, định dạng tệp; khối thông báo không cần nội dung', () => {

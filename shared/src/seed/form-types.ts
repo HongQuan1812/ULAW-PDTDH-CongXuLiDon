@@ -6,9 +6,16 @@ import { cloneSeedValue } from './clone';
 import { SCHOOL_FORM_TYPES_SEED } from './school-form-types';
 import { addHours } from './time';
 
+/** Thời gian xử lí tối đa của loại đơn ở dev (ngày làm việc), để thấy hạn xử lí đơn; loại đơn không có trong bảng thì DEV_DEFAULT_MAX_PROCESSING_DAYS.
+    null = không có hạn, để thấy đơn không có hạn trông thế nào. Bản thật để trống, Phòng tự đặt. */
+const DEV_MAX_PROCESSING_DAYS: Readonly<Record<string, number | null>> = { xmr: 10, dn: null };
+const DEV_DEFAULT_MAX_PROCESSING_DAYS = 5;
+
 /* Loại đơn ban đầu: các loại đơn thật theo mẫu Word (SCHOOL_FORM_TYPES_SEED), seed bản thật cũng dùng (trừ vài mã, xem production-form-types.ts).
-   Ở dev mọi loại đơn đều Đang mở (bản thật để Nháp), để nộp thử được ngay. */
-export const FORM_TYPE_SEED: readonly FormType[] = SCHOOL_FORM_TYPES_SEED.map((formType) => FormTypeSchema.parse({ ...formType, status: 'open' }));
+   Ở dev mọi loại đơn đều Đang mở (bản thật để Nháp), để nộp thử được ngay, và có hạn xử lí (bản thật để trống). */
+export const FORM_TYPE_SEED: readonly FormType[] = SCHOOL_FORM_TYPES_SEED.map((formType) =>
+  FormTypeSchema.parse({ ...formType, status: 'open', maxProcessingDays: formType.id in DEV_MAX_PROCESSING_DAYS ? DEV_MAX_PROCESSING_DAYS[formType.id] : DEV_DEFAULT_MAX_PROCESSING_DAYS }),
+);
 
 /** Loại đơn chính của dữ liệu mẫu: có nhiều đơn nhất (đủ trang, đủ trạng thái), có sẵn mẫu xuất Word. */
 export const MAIN_SEED_FORM_TYPE_ID = 'xmr';

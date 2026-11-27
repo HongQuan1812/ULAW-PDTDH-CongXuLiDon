@@ -22,7 +22,7 @@ export function findSeedProblems(): string[] {
   for (const formType of formTypes) {
     const otherPrefixes = formTypes.filter((other) => other.id !== formType.id).map((other) => other.prefix);
     for (const version of formType.versions) {
-      const draft = { name: version.name, prefix: formType.prefix, status: version.status, sections: version.sections };
+      const draft = { name: version.name, prefix: formType.prefix, maxProcessingDays: version.maxProcessingDays, status: version.status, sections: version.sections };
       for (const issue of validateFormTypeDraft(draft, otherPrefixes)) {
         problems.push(`Loại đơn ${formType.id} v${version.version}: ${issue.message}`);
       }
