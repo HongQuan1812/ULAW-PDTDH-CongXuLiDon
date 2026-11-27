@@ -30,10 +30,8 @@ export function SettingsPage() {
         {visiblePages.map((page) => (
           <Link key={page} to={PAGE_PATH[page]} className={styles.card}>
             <span className={styles.icon}>{PAGE_ICON[page]}</span>
-            <span className={styles.text}>
-              <strong>{PAGE_LABEL[page]}</strong>
-              <span>{SETTINGS_PAGE_DESCRIPTION[page]}</span>
-            </span>
+            <strong className={styles.title}>{PAGE_LABEL[page]}</strong>
+            <span className={styles.description}>{SETTINGS_PAGE_DESCRIPTION[page]}</span>
           </Link>
         ))}
       </nav>
