@@ -1,10 +1,11 @@
-/* MÃ CHÈN VÀO EMAIL báo cho người nộp đơn.
+/* MÃ CHÈN VÀO EMAIL tự động (thư cho người nộp đơn và thư cho cán bộ).
    Admin gõ mã trong ngoặc nhọn vào tiêu đề và nội dung thư, vd {ho_ten}; lúc gửi, máy chủ thay mã bằng dữ liệu của đơn.
    Trang Cấu hình email (xem trước), API giả và backend (gửi thư thật, gửi thư thử) cùng dùng file này. */
-import { formatDate } from './lists--display-text';
+import type { FormDeadline } from '../aux-schema/forms--deadlines';
+import { formatDate, formatDateTime } from './lists--display-text';
 
 /** Các mã dùng được, theo thứ tự hiện trên trang. */
-export const EMAIL_TAGS = ['ho_ten', 'ma_don', 'loai_don', 'ngay_nop', 'nguoi_xu_li', 'ly_do', 'link_don', 'chu_ki'] as const;
+export const EMAIL_TAGS = ['ho_ten', 'ma_don', 'loai_don', 'ngay_nop', 'han_xu_li', 'nguoi_xu_li', 'nguoi_chuyen_giao', 'ly_do', 'link_don', 'chu_ki'] as const;
 export type EmailTag = (typeof EMAIL_TAGS)[number];
 
 /** Ý nghĩa của từng mã, hiện khi rê chuột lên nút chèn mã. */
@@ -13,7 +14,9 @@ export const EMAIL_TAG_LABEL: Record<EmailTag, string> = {
   ma_don: 'Mã đơn',
   loai_don: 'Tên loại đơn',
   ngay_nop: 'Ngày nộp',
-  nguoi_xu_li: 'Người xử lí đơn',
+  han_xu_li: 'Hạn xử lí đơn',
+  nguoi_xu_li: 'Người xử lí đơn (thư chuyển giao: người nhận đơn)',
+  nguoi_chuyen_giao: 'Người chuyển giao đơn (chỉ có ở thư chuyển giao)',
   ly_do: 'Lí do (ghi chú của người xử lí)',
   link_don: 'Đường dẫn tới đơn',
   chu_ki: 'Chữ kí cuối thư',
@@ -28,13 +31,18 @@ export const EMAIL_SAMPLE_VALUES: Omit<EmailTagValues, 'chu_ki'> = {
   ma_don: 'XMR-2026-001-00001',
   loai_don: 'Thôi học',
   ngay_nop: '30/10/2026',
+  han_xu_li: '09:30 · 06/11/2026',
   nguoi_xu_li: 'Phạm Thu Hà',
+  nguoi_chuyen_giao: 'Lê Minh Tuấn',
   ly_do: 'Thiếu bảng điểm bản chính, vui lòng tải lại tệp rõ hơn.',
   link_don: 'https://dichvu.hcmulaw.edu.vn/#/don/XMR-2026-001-00001',
 };
 
-/** Email người nộp đơn mẫu, hiện ở dòng "Tới" của khung xem trước. */
+/** Email người nộp đơn mẫu, hiện ở dòng "Tới" của khung xem trước thư cho người nộp đơn. */
 export const EMAIL_SAMPLE_RECIPIENT = 'vanan.nguyen@hcmulaw.edu.vn';
+
+/** Email cán bộ mẫu (người xử lí đơn Phạm Thu Hà), hiện ở dòng "Tới" của khung xem trước thư cho cán bộ. */
+export const EMAIL_SAMPLE_STAFF_RECIPIENT = 'thuha.pham@hcmulaw.edu.vn';
 
 /** Chữ thêm vào đầu tiêu đề thư gửi thử. */
 export const TEST_EMAIL_SUBJECT_PREFIX = '[Thử] ';
@@ -95,7 +103,7 @@ export function fillEmailTemplate(template: string, values: EmailTagValues): str
     .join('');
 }
 
-/** Dữ liệu của một lá đơn dùng để điền mã vào thư báo cho người nộp đơn. */
+/** Dữ liệu của một lá đơn dùng để điền mã vào thư. */
 export interface FormEmailSource {
   applicantName: string;
   code: string;
@@ -106,6 +114,20 @@ export interface FormEmailSource {
   handlerName: string | null;
   /** lí do người xử lí ghi khi Yêu cầu bổ sung / Từ chối; "" = không có */
   note: string;
+  /** hạn xử lí của đơn (formDeadline) */
+  deadline: FormDeadline;
+  /** người chuyển giao đơn, chỉ thư chuyển giao có; thư khác bỏ trống */
+  transferrerName?: string;
+}
+
+/**
+ * Chữ thay cho mã {han_xu_li}.
+ * @param deadline  hạn của lá đơn (formDeadline)
+ * @returns         vd '09:30 · 06/11/2026'; loại đơn không giới hạn thì 'Không giới hạn'; đang chờ bổ sung thì 'Chưa có, chờ bổ sung'
+ */
+export function deadlineTagText(deadline: FormDeadline): string {
+  if (deadline.maxDays === null) return 'Không giới hạn';
+  return deadline.dueAt ? formatDateTime(deadline.dueAt) : 'Chưa có, chờ bổ sung';
 }
 
 /**
@@ -119,11 +141,11 @@ export function formLink(webBaseUrl: string, code: string): string {
 }
 
 /**
- * Giá trị thay cho từng mã của thư báo về một lá đơn.
+ * Giá trị thay cho từng mã của thư về một lá đơn.
  * @param form        dữ liệu của lá đơn
  * @param signature   chữ kí cuối thư (cấu hình người gửi)
  * @param webBaseUrl  địa chỉ gốc của cổng, để dựng {link_don}
- * @returns           giá trị của mọi mã; chưa có người xử lí, lí do thì chữ trống
+ * @returns           giá trị của mọi mã; chưa có người xử lí, người chuyển giao, lí do thì chữ trống
  */
 export function formEmailTagValues(form: FormEmailSource, signature: string, webBaseUrl: string): EmailTagValues {
   return {
@@ -131,7 +153,9 @@ export function formEmailTagValues(form: FormEmailSource, signature: string, web
     ma_don: form.code,
     loai_don: form.formTypeName,
     ngay_nop: formatDate(form.submittedAt),
+    han_xu_li: deadlineTagText(form.deadline),
     nguoi_xu_li: form.handlerName ?? '',
+    nguoi_chuyen_giao: form.transferrerName ?? '',
     ly_do: form.note,
     link_don: formLink(webBaseUrl, form.code),
     chu_ki: signature,

@@ -1,10 +1,11 @@
 /* HỢP ĐỒNG nhóm API Cấu hình email (chỉ vai trò có quyền manageEmail): đường dẫn, dữ liệu gửi / nhận, câu thông báo.
-   Trang này chỉ cấu hình phía GỬI: người gửi, bật / tắt và nội dung thư của bốn lúc gửi.
-   Người nhận không cấu hình: thư luôn gửi tới email của người nộp đơn (email trên trang Thông tin cá nhân).
+   Trang này chỉ cấu hình phía GỬI: người gửi, bật / tắt và nội dung thư của bảy lúc gửi (EMAIL_EVENT_KINDS).
+   Người nhận không cấu hình (EMAIL_EVENT_RECIPIENT): bốn thư theo trạng thái gửi người nộp đơn (email trên trang Thông tin cá nhân),
+   hai thư nhắc hạn gửi người xử lí đơn (chưa tiếp nhận thì mọi Admin), thư chuyển giao gửi người nhận đơn.
    Địa chỉ gửi lấy từ cấu hình SMTP của máy chủ, chỉ hiện ra, không sửa được. Người nộp đơn bấm "Trả lời" thì thư về chính địa chỉ gửi. Mã chèn vào thư: xem business-rules/email--tags.ts.
    API giả (MSW), frontend và backend cùng theo file này. */
 import { z } from 'zod';
-import { EMAIL_EVENT_STATUSES } from '../aux-schema/email--events';
+import { EMAIL_EVENT_KINDS, EMAIL_EVENT_LABEL } from '../aux-schema/email--events';
 import { RichTextDocSchema, isRichTextEmpty } from '../aux-schema/rich-text';
 import { StaffRefSchema } from './form';
 
@@ -12,7 +13,7 @@ import { StaffRefSchema } from './form';
 
 export const EMAIL_ENDPOINTS = {
   /** GET → EmailSettingsResponse: cấu hình đang dùng.
-      PUT EmailSettings → EmailSettingsResponse: lưu cả cấu hình (người gửi và bốn lúc gửi) trong một lần */
+      PUT EmailSettings → EmailSettingsResponse: lưu cả cấu hình (người gửi và bảy lúc gửi) trong một lần */
   settings: '/email-settings',
   /** POST SendTestEmailRequest → SendTestEmailResponse: gửi một thư thử theo bản đang soạn (chưa cần lưu), dùng dữ liệu mẫu */
   test: '/email-settings/test',
@@ -33,22 +34,22 @@ export type EmailSender = z.infer<typeof EmailSenderSchema>;
 /** Thư của một lúc gửi. Đang tắt thì không gửi, nhưng tiêu đề và nội dung vẫn giữ để bật lại.
     Nội dung là văn bản có định dạng (in đậm, tiêu đề, danh sách…), lưu dạng JSON của Tiptap; máy chủ đổi sang HTML lúc gửi. */
 export const EmailEventSettingSchema = z.object({
-  status: z.enum(EMAIL_EVENT_STATUSES),
+  kind: z.enum(EMAIL_EVENT_KINDS),
   enabled: z.boolean(),
   subject: z.string().trim().min(1, 'Nhập tiêu đề thư.'),
   body: RichTextDocSchema.refine((body) => !isRichTextEmpty(body), 'Nhập nội dung thư.'),
 });
 export type EmailEventSetting = z.infer<typeof EmailEventSettingSchema>;
 
-/** Cả cấu hình. Body của PUT /email-settings. Có đủ bốn lúc gửi, mỗi lúc đúng một lần, theo thứ tự EMAIL_EVENT_STATUSES. */
+/** Cả cấu hình. Body của PUT /email-settings. Có đủ bảy lúc gửi, mỗi lúc đúng một lần, theo thứ tự EMAIL_EVENT_KINDS. */
 export const EmailSettingsSchema = z.object({
   sender: EmailSenderSchema,
   events: z
     .array(EmailEventSettingSchema)
     .refine(
       (events) =>
-        events.length === EMAIL_EVENT_STATUSES.length && events.every((event, index) => event.status === EMAIL_EVENT_STATUSES[index]),
-      'Cần đủ bốn lúc gửi email: Đã nộp, Cần bổ sung, Từ chối, Đã duyệt.',
+        events.length === EMAIL_EVENT_KINDS.length && events.every((event, index) => event.kind === EMAIL_EVENT_KINDS[index]),
+      `Cần đủ bảy lúc gửi email: ${EMAIL_EVENT_KINDS.map((kind) => EMAIL_EVENT_LABEL[kind]).join(', ')}.`,
     ),
 });
 export type EmailSettings = z.infer<typeof EmailSettingsSchema>;
