@@ -115,7 +115,7 @@ export class FormService {
       handler: toStaff(form.handler),
       handlerSince: form.handlerSince ? toVietnamTime(form.handlerSince) : null,
       decidedAt: form.decidedAt ? toVietnamTime(form.decidedAt) : null,
-      // Đơn nộp trước khi có hạn xử lí thì bản chụp không có mục này: coi như không có hạn
+      // Đơn nộp trước khi có hạn xử lí thì bản chụp không có mục này: coi như không giới hạn
       deadline: formDeadline(snapshot.maxProcessingDays ?? null, history, now, holidayDates),
       sections: snapshot.sections,
       answers: form.answers as unknown as FormAnswers,

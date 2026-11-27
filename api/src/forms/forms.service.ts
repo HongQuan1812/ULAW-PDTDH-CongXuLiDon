@@ -64,13 +64,13 @@ export class FormsService {
    * @param form          đơn kèm lịch sử, cũ nhất trước
    * @param holidayDates  các ngày nghỉ
    * @param now           bây giờ, giờ Việt Nam 'YYYY-MM-DDTHH:mm'
-   * @returns             tình trạng hạn; null nếu loại đơn lúc nộp không có hạn
+   * @returns             tình trạng hạn ('none' nếu loại đơn lúc nộp không giới hạn)
    */
-  private deadlineStateOf(form: Form & WithDeadlineEvents, holidayDates: HolidayDates, now: string): DeadlineState | null {
-    // Đơn nộp trước khi có hạn xử lí thì bản chụp không có mục này: coi như không có hạn
+  private deadlineStateOf(form: Form & WithDeadlineEvents, holidayDates: HolidayDates, now: string): DeadlineState {
+    // Đơn nộp trước khi có hạn xử lí thì bản chụp không có mục này: coi như không giới hạn
     const snapshot = form.formTypeSnapshot as unknown as Partial<FormType>;
     const history = form.events.map((event) => ({ action: event.action, at: toVietnamTime(event.at), status: event.status }));
-    return formDeadline(snapshot.maxProcessingDays ?? null, history, now, holidayDates)?.state ?? null;
+    return formDeadline(snapshot.maxProcessingDays ?? null, history, now, holidayDates).state;
   }
 
   /**
@@ -188,7 +188,7 @@ export class FormsService {
    * Đếm đơn theo trạng thái, theo loại đơn và theo tình trạng hạn, trên tất cả đơn.
    * @returns  tổng số đơn, số đơn mỗi trạng thái (đủ 6 trạng thái), số đơn mỗi loại đơn
    *           (nhiều nhất trước, bằng nhau thì theo tên; tên và trạng thái theo phiên bản mới nhất),
-   *           số đơn mỗi tình trạng hạn và số đơn không có hạn
+   *           số đơn mỗi tình trạng hạn
    */
   async getStats(): Promise<FormStats> {
     const [statusGroups, typeGroups, formTypes, formsWithEvents, holidayDates] = await Promise.all([
@@ -215,8 +215,8 @@ export class FormsService {
 
     // Tình trạng hạn: tính từng đơn như ở bảng, rồi đếm
     const now = toVietnamTime(new Date());
-    const deadlineCounts = countDeadlineStates(formsWithEvents.map((form) => this.deadlineStateOf(form, holidayDates, now)));
-    return { total: Object.values(byStatus).reduce((sum, count) => sum + count, 0), byStatus, byType, ...deadlineCounts };
+    const byDeadline = countDeadlineStates(formsWithEvents.map((form) => this.deadlineStateOf(form, holidayDates, now)));
+    return { total: Object.values(byStatus).reduce((sum, count) => sum + count, 0), byStatus, byType, byDeadline };
   }
 
   /**

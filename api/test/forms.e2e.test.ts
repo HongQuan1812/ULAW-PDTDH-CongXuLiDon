@@ -110,7 +110,7 @@ describe('forms (danh sách đơn)', () => {
     const stats = FormStatsSchema.parse((await request(server()).get('/api/forms/stats').set('Cookie', cookie).expect(200)).body);
     expect(stats.total).toBe(await prisma.form.count());
     expect(Object.values(stats.byStatus).reduce((sum, count) => sum + count, 0)).toBe(stats.total);
-    expect(Object.values(stats.byDeadline).reduce((sum, count) => sum + count, 0) + stats.noDeadline).toBe(stats.total);
+    expect(Object.values(stats.byDeadline).reduce((sum, count) => sum + count, 0)).toBe(stats.total);
     expect(stats.byType.reduce((sum, row) => sum + row.count, 0)).toBe(stats.total);
     const counts = stats.byType.map((row) => row.count);
     expect(counts).toEqual([...counts].sort((a, b) => b - a));
@@ -131,15 +131,15 @@ describe('forms (danh sách đơn)', () => {
     const all = ManagedFormsResponseSchema.parse((await request(server()).get('/api/forms').query({ pageSize: 100 }).set('Cookie', cookie).expect(200)).body);
     const handled = HandledFormsResponseSchema.parse((await request(server()).get('/api/forms/handled').query({ pageSize: 100 }).set('Cookie', cookie).expect(200)).body);
 
-    // Vài đơn mỗi bảng: tình trạng hạn như ở chi tiết đơn (loại đơn dữ liệu mẫu có hạn nên có dòng khác null)
-    expect(all.forms.some((form) => form.deadlineState !== null)).toBe(true);
+    // Vài đơn mỗi bảng: tình trạng hạn như ở chi tiết đơn (dữ liệu mẫu có đơn có hạn lẫn đơn không có hạn)
+    expect(all.forms.some((form) => form.deadlineState !== 'none')).toBe(true);
     for (const row of [...all.forms.slice(0, 5), ...handled.forms.slice(0, 5)]) {
       const detail = FormDetailSchema.parse((await request(server()).get(`/api/forms/${row.code}`).set('Cookie', cookie).expect(200)).body);
-      expect(row.deadlineState).toBe(detail.deadline?.state ?? null);
+      expect(row.deadlineState).toBe(detail.deadline.state);
     }
 
     // Lọc theo một tình trạng đang có: chỉ còn dòng đúng tình trạng đó
-    const someState = all.forms.find((form) => form.deadlineState !== null)!.deadlineState!;
+    const someState = all.forms.find((form) => form.deadlineState !== 'none')!.deadlineState;
     const filters = JSON.stringify([{ fieldKey: 'deadlineState', operator: 'equals', value: someState, from: '', to: '' }]);
     const filtered = ManagedFormsResponseSchema.parse((await request(server()).get('/api/forms').query({ pageSize: 100, filters }).set('Cookie', cookie).expect(200)).body);
     expect(filtered.total).toBeGreaterThanOrEqual(all.forms.filter((form) => form.deadlineState === someState).length);

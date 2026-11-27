@@ -127,13 +127,13 @@ describe('form (nộp, chi tiết, sửa)', () => {
     const holidayRows = await prisma.holiday.findMany();
     const holidayDates = holidayDatesOf(holidayRows.map((row) => ({ startDate: fromDbDate(row.startDate), endDate: fromDbDate(row.endDate) })));
     expect(detail.deadline).toMatchObject({ state: 'onTrack', maxDays: 10 });
-    expect(detail.deadline?.dueAt).toBe(formDeadline(10, detail.history, detail.submittedAt, holidayDates)?.dueAt);
+    expect(detail.deadline.dueAt).toBe(formDeadline(10, detail.history, detail.submittedAt, holidayDates).dueAt);
 
-    // Đơn nộp trước khi có hạn xử lí (bản chụp không có maxProcessingDays): không có hạn
+    // Đơn nộp trước khi có hạn xử lí (bản chụp không có maxProcessingDays): Không có hạn
     const row = await prisma.form.findUniqueOrThrow({ where: { code: summary.code } });
     const { maxProcessingDays: _maxProcessingDays, ...oldSnapshot } = row.formTypeSnapshot as Record<string, unknown>;
     await prisma.form.update({ where: { code: summary.code }, data: { formTypeSnapshot: oldSnapshot as object } });
-    expect((await getDetail()).deadline).toBeNull();
+    expect((await getDetail()).deadline).toEqual({ state: 'none', maxDays: null, dueAt: null, remainingMinutes: null });
   });
 
   it('nộp nhiều đơn cùng lúc: mã không trùng, liên tiếp', async () => {
