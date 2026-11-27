@@ -2,12 +2,13 @@
    Tiêu đề, nội dung theo trang Cấu hình email; lúc gửi đang tắt thì không gửi. Người nhận là email của người nộp đơn.
    Gửi sau khi đơn đã lưu và không chờ: thư lỗi chỉ ghi log, không làm hỏng việc nộp đơn, ra quyết định. */
 import { Injectable, Logger } from '@nestjs/common';
-import { formEmailTagValues, type EmailEventStatus, type EmailSettings, type FormType } from '@ulaw/shared';
+import { formDeadline, formEmailTagValues, type EmailEventStatus, type FormType } from '@ulaw/shared';
 import { PrismaService } from '../common/prisma.service';
 import { toVietnamTime } from '../common/vietnam-time';
 import { AppConfig } from '../config/app-config';
 import { buildEmailContent } from './email-content';
-import { SETTINGS_ROW_ID } from './email-settings.service';
+import { HolidaysService } from '../holidays/holidays.service';
+import { readStoredEmailSettings, SETTINGS_ROW_ID } from './email-settings.service';
 import { MailSenderService } from './mail-sender.service';
 
 @Injectable()
@@ -18,11 +19,13 @@ export class FormEmailService {
    * @param prisma      đọc đơn, cấu hình email
    * @param mailSender  gửi thư
    * @param config      địa chỉ gốc của cổng; bản giả hay thật, địa chỉ nhận thay của bản giả dev-email
+   * @param holidays    ngày nghỉ, để tính hạn xử lí (mã {han_xu_li})
    */
   constructor(
     private readonly prisma: PrismaService,
     private readonly mailSender: MailSenderService,
     private readonly config: AppConfig,
+    private readonly holidays: HolidaysService,
   ) {}
 
   /**
@@ -45,21 +48,30 @@ export class FormEmailService {
   async sendStatusEmail(code: string, status: EmailEventStatus): Promise<boolean> {
     // Cấu hình của lúc gửi này; đang tắt thì thôi
     const settingsRow = await this.prisma.emailSettings.findUnique({ where: { id: SETTINGS_ROW_ID } });
-    const settings = settingsRow?.settings as unknown as EmailSettings | undefined;
-    const event = settings?.events.find((candidate) => candidate.status === status);
-    if (!settings || !event?.enabled) return false;
+    if (!settingsRow) return false;
+    const settings = readStoredEmailSettings(settingsRow.settings);
+    const event = settings.events.find((candidate) => candidate.kind === status);
+    if (!event?.enabled) return false;
 
     // Dựng thư từ dữ liệu của đơn
-    const form = await this.prisma.form.findUnique({ where: { code }, include: { owner: true, handler: true } });
+    const form = await this.prisma.form.findUnique({
+      where: { code },
+      include: { owner: true, handler: true, events: { select: { action: true, at: true, status: true }, orderBy: [{ at: 'asc' }, { id: 'asc' }] } },
+    });
     if (!form) return false;
+    const snapshot = form.formTypeSnapshot as unknown as FormType;
+    const history = form.events.map((formEvent) => ({ action: formEvent.action, at: toVietnamTime(formEvent.at), status: formEvent.status }));
+    // Đơn nộp trước khi có hạn xử lí thì bản chụp không có mục này: coi như không giới hạn
+    const deadline = formDeadline(snapshot.maxProcessingDays ?? null, history, toVietnamTime(new Date()), await this.holidays.holidayDates());
     const tagValues = formEmailTagValues(
       {
         applicantName: form.owner.name,
         code: form.code,
-        formTypeName: (form.formTypeSnapshot as unknown as FormType).name,
+        formTypeName: snapshot.name,
         submittedAt: toVietnamTime(form.submittedAt),
         handlerName: form.handler?.name ?? null,
         note: form.note,
+        deadline,
       },
       settings.sender.signature,
       this.config.webBaseUrl,

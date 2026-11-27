@@ -75,10 +75,31 @@ describe('thư tự động báo cho người nộp đơn', () => {
   });
 
   it('lúc gửi đang tắt: không gửi', async () => {
-    await writeSettings({ ...EMAIL_SETTINGS_SEED, events: EMAIL_SETTINGS_SEED.events.map((event) => ({ ...event, enabled: event.status !== 'duyet' })) });
+    await writeSettings({ ...EMAIL_SETTINGS_SEED, events: EMAIL_SETTINGS_SEED.events.map((event) => ({ ...event, enabled: event.kind !== 'duyet' })) });
     expect(await formEmail.sendStatusEmail(FORM_CODE, 'duyet')).toBe(false);
     expect(await formEmail.sendStatusEmail(FORM_CODE, 'nop')).toBe(true);
     expect(sentEmails).toHaveLength(1);
+  });
+
+  it('cấu hình lưu kiểu cũ (bốn lúc gửi, ghi status): vẫn gửi theo thư đã lưu', async () => {
+    const oldSettings = {
+      sender: EMAIL_SETTINGS_SEED.sender,
+      events: EMAIL_SETTINGS_SEED.events.slice(0, 4).map(({ kind, ...event }) => ({ ...event, status: kind, subject: `Cũ ${kind}` })),
+    };
+    await prisma.emailSettings.update({ where: { id: 1 }, data: { settings: oldSettings as unknown as Prisma.InputJsonValue } });
+    expect(await formEmail.sendStatusEmail(FORM_CODE, 'bs')).toBe(true);
+    expect(sentEmails.map((email) => email.subject)).toEqual(['Cũ bs']);
+  });
+
+  it('mã {han_xu_li}: điền hạn xử lí của đơn', async () => {
+    const tagged: EmailSettings = {
+      ...EMAIL_SETTINGS_SEED,
+      events: EMAIL_SETTINGS_SEED.events.map((event) => (event.kind === 'nop' ? { ...event, subject: 'Hạn: {han_xu_li}' } : event)),
+    };
+    await writeSettings(tagged);
+    expect(await formEmail.sendStatusEmail(FORM_CODE, 'nop')).toBe(true);
+    expect(sentEmails[0]!.subject).toMatch(/^Hạn: (\d{2}:\d{2} · \d{2}\/\d{2}\/\d{4}|Không giới hạn|Chưa có, chờ bổ sung)$/);
+    expect(sentEmails[0]!.subject).not.toContain('{han_xu_li}');
   });
 
   it('bản thật (dev-email trong ALWAYS_REAL_APIS): gửi tới email người nộp đơn, không về địa chỉ nhận thay', async () => {

@@ -7,6 +7,7 @@ import request, { type Response } from 'supertest';
 import {
   ApiErrorBodySchema,
   EMAIL_ENDPOINTS,
+  EMAIL_EVENT_KINDS,
   EMAIL_SAMPLE_VALUES,
   EMAIL_MESSAGES,
   EMAIL_SETTINGS_SEED,
@@ -81,7 +82,7 @@ describe('email', () => {
     const cookie = await loginAs('nguoiXuLiDon');
     const response = await request(server()).get(`/api${EMAIL_ENDPOINTS.settings}`).set('Cookie', cookie).expect(200);
     const settingsResponse = EmailSettingsResponseSchema.parse(response.body);
-    expect(settingsResponse.settings.events.map((event) => event.status)).toEqual(['nop', 'bs', 'tc', 'duyet']);
+    expect(settingsResponse.settings.events.map((event) => event.kind)).toEqual([...EMAIL_EVENT_KINDS]);
     expect(settingsResponse.updatedAt).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/);
     expect(settingsResponse.mailServerConnected).toBe(true);
   });
@@ -90,7 +91,7 @@ describe('email', () => {
     const cookie = await loginAs('admin');
     const newSettings: EmailSettings = {
       sender: { name: 'Phòng Đào tạo (thử)', signature: '' },
-      events: EMAIL_SETTINGS_SEED.events.map((event) => ({ ...event, enabled: event.status !== 'tc' })),
+      events: EMAIL_SETTINGS_SEED.events.map((event) => ({ ...event, enabled: event.kind !== 'tc' })),
     };
     const saveResponse = await request(server()).put(`/api${EMAIL_ENDPOINTS.settings}`).set('Cookie', cookie).send(newSettings).expect(200);
     const saved = EmailSettingsResponseSchema.parse(saveResponse.body);
