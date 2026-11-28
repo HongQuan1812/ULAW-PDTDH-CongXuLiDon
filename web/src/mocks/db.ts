@@ -29,7 +29,7 @@ import type {
   HandledFormSummary,
   ManagedFormType,
   ManagedFormSummary,
-  OpenFormType,
+  OpenFormTypeChoice,
   RichTextDoc,
   RoleId,
   SaveFormTypeTimeSettingsRequest,
@@ -56,6 +56,7 @@ import {
   dueScheduleSteps,
   issueMessages,
   markScheduleStepDone,
+  pendingCloseAt,
   scheduledStatusChangeOf,
   timeSettingsAfterSave,
   validateFormTypeDraft,
@@ -543,14 +544,16 @@ export function deleteFormTypeVersion(
 }
 
 /**
- * Các loại đơn đang nhận đơn (có phiên bản Đang mở), theo tên của phiên bản đang mở.
+ * Các loại đơn đang nhận đơn (có phiên bản Đang mở), theo tên của phiên bản đang mở, kèm giờ tự đóng chưa chạy.
  * @returns  loại đơn, chưa có cấu trúc các phần; không có thì []
  */
-export function getOpenFormTypes(): OpenFormType[] {
+export function getOpenFormTypes(): OpenFormTypeChoice[] {
   runDueFormTypeSchedules();
   return FORM_TYPES.flatMap((formType) => {
     const opened = openVersion(formType);
-    return opened ? [{ id: formType.id, name: opened.name, prefix: formType.prefix, description: opened.description }] : [];
+    if (!opened) return [];
+    const acceptsUntil = pendingCloseAt(timeSettingsOf(formType));
+    return [{ id: formType.id, name: opened.name, prefix: formType.prefix, description: opened.description, acceptsUntil }];
   });
 }
 

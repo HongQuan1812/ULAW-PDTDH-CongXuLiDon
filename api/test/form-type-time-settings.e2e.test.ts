@@ -12,6 +12,7 @@ import {
   FormTypeSchema,
   FormTypeTimeSettingsSchema,
   ManagedFormTypeSchema,
+  OpenFormTypesResponseSchema,
   type FormTypeStatus,
   type RoleId,
   type SaveFormTypeTimeSettingsRequest,
@@ -104,6 +105,12 @@ describe('cấu hình thời gian của loại đơn', () => {
     await app.close();
   });
 
+  /** Dòng của loại đơn thử trong hộp chọn loại đơn khi nộp đơn; không đang nhận đơn thì undefined. */
+  async function openChoice() {
+    const response = await request(server()).get('/api/form-types/open').set('Cookie', cookie).expect(200);
+    return OpenFormTypesResponseSchema.parse(response.body).formTypes.find((formType) => formType.id === TEST_ID);
+  }
+
   it('người nộp đơn: 403; loại đơn không có: 404', async () => {
     const studentCookie = await loginAs('nguoiNopDon');
     for (const call of [request(server()).get(path).set('Cookie', studentCookie), request(server()).put(path).set('Cookie', studentCookie).send({})]) {
@@ -125,6 +132,8 @@ describe('cấu hình thời gian của loại đơn', () => {
     // Trang nộp đơn (đơn nộp chụp đúng dữ liệu này)
     const detail = FormTypeSchema.parse((await request(server()).get(`/api/form-types/${TEST_ID}`).set('Cookie', cookie).expect(200)).body);
     expect(detail.maxProcessingDays).toBe(3);
+    // Không hẹn giờ đóng thì hộp chọn loại đơn không ghi hạn nhận đơn
+    expect((await openChoice())?.acceptsUntil).toBeNull();
   });
 
   it('lưu giờ hẹn; sai luật thì 422 với câu báo như khung Cấu hình thời gian', async () => {
@@ -158,8 +167,11 @@ describe('cấu hình thời gian của loại đơn', () => {
 
     expect(await checkAt('2026-12-01T08:00')).toEqual(['open 2']);
     expect(await versionStatuses()).toEqual(['closed', 'open']);
+    // Hộp chọn loại đơn: "Nhận đơn đến …" theo giờ tự đóng chưa chạy
+    expect((await openChoice())?.acceptsUntil).toBe('2026-12-05T17:00');
     expect(await checkAt('2026-12-05T17:00')).toEqual(['close 2']);
     expect(await versionStatuses()).toEqual(['closed', 'closed']);
+    expect(await openChoice()).toBeUndefined();
     expect(await readSettings()).toMatchObject({ autoOpen: { done: true }, autoClose: { done: true } });
   });
 

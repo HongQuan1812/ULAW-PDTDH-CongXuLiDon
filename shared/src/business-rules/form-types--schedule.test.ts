@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { EMPTY_FORM_TYPE_TIME_SETTINGS, type FormTypeTimeSettings } from '../api-contract/form-types';
+import { EMPTY_FORM_TYPE_TIME_SETTINGS, FORM_TYPE_TIME_MESSAGES, type FormTypeTimeSettings } from '../api-contract/form-types';
 import { dueScheduleSteps, markScheduleStepDone, pendingCloseAt, scheduledStatusChangeOf, timeSettingsAfterSave } from './form-types--schedule';
 
 /** Hẹn mở phiên bản 2 lúc 08:00 01/12, đóng lúc 17:00 05/12; chưa chạy. */
@@ -87,5 +87,9 @@ describe('pendingCloseAt', () => {
     expect(pendingCloseAt(scheduled())).toBe('2026-12-05T17:00');
     expect(pendingCloseAt(markScheduleStepDone(scheduled(), 'close'))).toBeNull();
     expect(pendingCloseAt(EMPTY_FORM_TYPE_TIME_SETTINGS)).toBeNull();
+  });
+
+  it('câu hạn nhận đơn ghi giờ trước, ngày sau', () => {
+    expect(FORM_TYPE_TIME_MESSAGES.acceptsUntil('2026-12-05T17:00')).toBe('Nhận đơn đến 17:00 05/12/2026');
   });
 });

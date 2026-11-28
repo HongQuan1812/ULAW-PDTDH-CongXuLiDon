@@ -8,4 +8,6 @@
 /* tiền tố mã đơn, vd XMR */
 .prefix{display:inline-grid;place-items:center;min-width:38px;height:22px;padding:0 7px;border-radius:6px;background:var(--surface-2);color:var(--muted);font-size:10.5px;font-weight:600;letter-spacing:.05em}
 .description{font-size:13px;color:var(--muted)}
+/* hạn nhận đơn (loại đơn có hẹn giờ tự đóng) */
+.acceptsUntil{font-size:12.5px;font-weight:600;color:var(--s-bs-fg)}
 .count{font-size:12.5px;color:var(--muted)}

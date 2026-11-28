@@ -120,8 +120,15 @@ export const OpenFormTypeSchema = z.object({
 });
 export type OpenFormType = z.infer<typeof OpenFormTypeSchema>;
 
+/** Một dòng trong hộp chọn loại đơn khi nộp đơn: loại đơn đang nhận đơn, kèm hạn nhận đơn nếu có. */
+export const OpenFormTypeChoiceSchema = OpenFormTypeSchema.extend({
+  /** Giờ tự đóng chưa chạy, giờ Việt Nam 'YYYY-MM-DDTHH:mm' (hiện "Nhận đơn đến …"); không hẹn đóng thì null */
+  acceptsUntil: z.string().nullable(),
+});
+export type OpenFormTypeChoice = z.infer<typeof OpenFormTypeChoiceSchema>;
+
 /** Trả về từ GET /form-types/open. */
-export const OpenFormTypesResponseSchema = z.object({ formTypes: z.array(OpenFormTypeSchema) });
+export const OpenFormTypesResponseSchema = z.object({ formTypes: z.array(OpenFormTypeChoiceSchema) });
 export type OpenFormTypesResponse = z.infer<typeof OpenFormTypesResponseSchema>;
 
 /** Một phiên bản loại đơn để nộp đơn: thông tin chung, số phiên bản, trạng thái và cấu trúc nội dung (các phần → câu hỏi).
@@ -522,6 +529,8 @@ export const FORM_TYPE_TIME_MESSAGES = {
   saved: (name: string) => `Đã lưu cấu hình thời gian của ${name}.`,
   /** Lưu cùng nội dung loại đơn mà riêng cấu hình thời gian lỗi */
   notSaved: (reason: string) => `Chưa lưu được cấu hình thời gian: ${reason} Bấm Lưu để thử lại.`,
+  /** Hạn nhận đơn ở hộp chọn loại đơn, vd "Nhận đơn đến 17:00 05/12/2026" (at: 'YYYY-MM-DDTHH:mm') */
+  acceptsUntil: (at: string) => `Nhận đơn đến ${at.slice(11, 16)} ${at.slice(0, 10).split('-').reverse().join('/')}`,
   /** Bấm Lưu khi cấu hình đã lưu chưa tải xong (không biết giờ nào vừa sửa) */
   notLoaded: 'Chưa tải xong cấu hình thời gian, thử lại sau giây lát.',
 } as const;

@@ -146,7 +146,7 @@ describe('loại đơn', () => {
   test('chỉ trả loại đơn Đang mở, không kèm trạng thái', () => {
     const openFormTypes = getOpenFormTypes();
     expect(openFormTypes.map((formType) => formType.id)).toEqual(FORM_TYPE_SEED.map((formType) => formType.id));
-    expect(openFormTypes[0]).toEqual({ id: 'dkhpm', name: 'Đăng ký học phần muộn', prefix: 'DKHPM', description: FORM_TYPE_SEED[0]!.description });
+    expect(openFormTypes[0]).toEqual({ id: 'dkhpm', name: 'Đăng ký học phần muộn', prefix: 'DKHPM', description: FORM_TYPE_SEED[0]!.description, acceptsUntil: null });
   });
 
   test('loại đơn đủ cấu trúc: loại đơn chính đủ các phần; loại đơn nhiều phiên bản trả phiên bản đang mở', () => {
@@ -179,9 +179,14 @@ describe('cấu hình thời gian của loại đơn', () => {
     expect(statusesOf(MULTI_VERSION_SEED_FORM_TYPE_ID)).toEqual([[2, 'open'], [1, 'closed']]);
     runDueFormTypeSchedules('2099-01-01T08:00');
     expect(statusesOf(MULTI_VERSION_SEED_FORM_TYPE_ID)).toEqual([[2, 'closed'], [1, 'open']]);
+    // Hộp chọn loại đơn ghi hạn nhận đơn; loại đơn không hẹn đóng thì null
+    const openChoices = getOpenFormTypes();
+    expect(openChoices.find((formType) => formType.id === MULTI_VERSION_SEED_FORM_TYPE_ID)?.acceptsUntil).toBe(autoClose.at);
+    expect(openChoices.find((formType) => formType.id === 'xmr')?.acceptsUntil).toBeNull();
     runDueFormTypeSchedules('2099-01-03T00:00');
     expect(statusesOf(MULTI_VERSION_SEED_FORM_TYPE_ID)).toEqual([[2, 'closed'], [1, 'closed']]);
     expect(getFormTypeTimeSettings(MULTI_VERSION_SEED_FORM_TYPE_ID)).toMatchObject({ autoOpen: { ...autoOpen, done: true }, autoClose: { ...autoClose, done: true } });
+    expect(getOpenFormTypes().some((formType) => formType.id === MULTI_VERSION_SEED_FORM_TYPE_ID)).toBe(false);
 
     // Mở tay lại sau đó: đã chạy rồi nên không đóng lại nữa
     setFormTypeVersionStatus(MULTI_VERSION_SEED_FORM_TYPE_ID, 2, 'open', 'cb-1');

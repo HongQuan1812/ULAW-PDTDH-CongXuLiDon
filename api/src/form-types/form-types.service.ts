@@ -9,6 +9,7 @@ import {
   dueScheduleSteps,
   issueMessages,
   markScheduleStepDone,
+  pendingCloseAt,
   scheduledStatusChangeOf,
   timeSettingsAfterSave,
   validateFormTypeDraft,
@@ -229,7 +230,7 @@ export class FormTypesService {
   }
 
   /**
-   * Các loại đơn đang nhận đơn (có phiên bản Đang mở), theo tên của phiên bản đang mở.
+   * Các loại đơn đang nhận đơn (có phiên bản Đang mở), theo tên của phiên bản đang mở, kèm giờ tự đóng chưa chạy.
    * @returns  theo OpenFormTypesResponseSchema, chưa có cấu trúc các phần
    */
   async findOpen(): Promise<OpenFormTypesResponse> {
@@ -238,7 +239,15 @@ export class FormTypesService {
       orderBy: { id: 'asc' },
       include: { versions: { where: { status: 'open' } } },
     });
-    return { formTypes: rows.map((row) => ({ id: row.id, name: row.versions[0]!.name, prefix: row.prefix, description: row.versions[0]!.description })) };
+    return {
+      formTypes: rows.map((row) => ({
+        id: row.id,
+        name: row.versions[0]!.name,
+        prefix: row.prefix,
+        description: row.versions[0]!.description,
+        acceptsUntil: pendingCloseAt(timeSettingsOf(row)),
+      })),
+    };
   }
 
   /**
