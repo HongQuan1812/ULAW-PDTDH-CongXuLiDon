@@ -1,6 +1,6 @@
 /* Ba khung thống kê đầu trang Quản lí đơn:
    "Theo trạng thái" (tổng, thanh tỉ lệ nhiều màu, 6 ô), "Theo loại đơn" (vành khuyên, FormTypeDonut)
-   và "Theo tình trạng hạn" (vành khuyên, DeadlineDonut; nằm dưới khung trạng thái).
+   và "Theo tình trạng hạn" (thanh ngang, DeadlineBars; nằm dưới khung trạng thái).
    Số liệu đếm trên TẤT CẢ đơn, không đổi theo ô tìm kiếm / bộ lọc của bảng.
    Bấm một ô trạng thái, một loại đơn hoặc một ô tình trạng hạn thì lọc bảng bên dưới; bấm lại để bỏ lọc. */
 import {
@@ -14,7 +14,7 @@ import { LoadError, loadErrorMessage } from '../../components/LoadError';
 import { RefreshButton } from '../../components/RefreshButton';
 import type { UseQueryResult } from '@tanstack/react-query';
 import styles from './FormStatsPanel.module.css';
-import { DeadlineDonut } from './DeadlineDonut';
+import { DeadlineBars } from './DeadlineBars';
 import { FormTypeDonut } from './FormTypeDonut';
 
 interface FormStatsPanelProps {
@@ -123,7 +123,7 @@ export function FormStatsPanel({
         </div>
         {errorMessage ? <LoadError message={errorMessage} /> : null}
         {stats ? (
-          <DeadlineDonut stats={stats} activeDeadlineState={activeDeadlineState} onToggleDeadlineState={onToggleDeadlineState} />
+          <DeadlineBars stats={stats} activeDeadlineState={activeDeadlineState} onToggleDeadlineState={onToggleDeadlineState} />
         ) : null}
         {!stats && !errorMessage ? <div className={styles.placeholder} aria-busy="true" /> : null}
       </section>

@@ -16,9 +16,9 @@
 
 .ratioBar{display:flex;height:8px;border-radius:999px;overflow:hidden;gap:2px;background:var(--surface-2)}
 .ratioBar span{min-width:3px}
-/* màu theo trạng thái lá đơn: nền (thanh, chấm, ô màu chú thích) và nét (lát vành khuyên Theo tình trạng hạn) */
-.bar_nop{background:var(--s-nop-fg);stroke:var(--s-nop-fg)}.bar_xet{background:var(--s-xet-fg);stroke:var(--s-xet-fg)}.bar_bs{background:var(--s-bs-fg);stroke:var(--s-bs-fg)}
-.bar_bsg{background:var(--s-bsg-fg);stroke:var(--s-bsg-fg)}.bar_duyet{background:var(--s-duyet-fg);stroke:var(--s-duyet-fg)}.bar_tc{background:var(--s-tc-fg);stroke:var(--s-tc-fg)}
+/* màu theo trạng thái lá đơn: nền (thanh, chấm, thanh Theo tình trạng hạn); Không có hạn màu xám */
+.bar_nop{background:var(--s-nop-fg)}.bar_xet{background:var(--s-xet-fg)}.bar_bs{background:var(--s-bs-fg)}
+.bar_bsg{background:var(--s-bsg-fg)}.bar_duyet{background:var(--s-duyet-fg)}.bar_tc{background:var(--s-tc-fg)}.bar_none{background:var(--faint)}
 
 /* mỗi ô chiếm 4 dòng của lưới cha (subgrid): khoảng trống · tên trạng thái · số · khoảng trống.
    Tên trạng thái cùng một dòng, số cùng một dòng (tên ô nào xuống dòng thì cả hàng theo, giống ô số ở thẻ Thống kê loại đơn);
@@ -54,3 +54,14 @@
 
 @media (max-width:960px){.stats{grid-template-columns:minmax(0,1fr)}.typeCard{grid-column:auto;grid-row:auto}}
 @media (max-width:520px){.tiles{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+/* Theo tình trạng hạn: mỗi tình trạng một hàng thanh ngang (tên · thanh · số đơn · phần trăm), bấm để lọc */
+.deadlineBars{list-style:none;margin:0;padding:0;display:grid;gap:2px}
+.deadlineBarRow{width:100%;font:inherit;color:var(--fg);text-align:left;cursor:pointer;background:none;border:1px solid transparent;border-radius:8px;
+  display:grid;grid-template-columns:minmax(90px,8.5em) minmax(0,1fr) auto 3.2em;gap:12px;align-items:center;padding:8px;font-size:13px;line-height:1.35}
+.deadlineBarRow:hover{background:var(--hover)}
+.deadlineBarRow.on{border-color:var(--accent);background:var(--accent-soft)}
+.deadlineBarRow:focus-visible{outline:2px solid var(--focus);outline-offset:1px}
+.deadlineTrack{height:10px;border-radius:999px;background:var(--surface-2);overflow:hidden}
+.deadlineTrack span{display:block;height:100%;border-radius:999px;transition:width .2s}
+@media (prefers-reduced-motion:reduce){.deadlineTrack span{transition:none}}

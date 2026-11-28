@@ -1,6 +1,6 @@
 /* Hình vành khuyên dùng chung: khung "Theo loại đơn" ở Quản lí đơn, câu Chọn một / Danh sách thả xuống ở thẻ Thống kê loại đơn.
-   Mỗi lát một màu biểu đồ (--chart-1 … --chart-5, 0 = xám "Khác"), hoặc màu riêng (colorClass, vd khung "Theo tình trạng hạn"); lát từ 10% trở lên ghi phần trăm trên hình; tổng ở giữa.
-   Chú thích do nơi dùng tự vẽ (ô màu lấy lớp từ sliceClassOf). */
+   Mỗi lát một màu biểu đồ (--chart-1 … --chart-5, 0 = xám "Khác"); lát từ 10% trở lên ghi phần trăm trên hình; tổng ở giữa.
+   Chú thích do nơi dùng tự vẽ (ô màu lấy lớp từ sliceColorClass). */
 import styles from './DonutChart.module.css';
 
 /* Kích thước vành khuyên trong viewBox 0 0 200 200: tâm, bán kính giữa vành, độ dày vành */
@@ -27,8 +27,6 @@ export interface DonutSlice {
   share: number;
   /** Thứ tự màu 1..5; 0 = xám (lát "Khác") */
   colorIndex: number;
-  /** Lớp tô màu riêng (nét của lát, nền của ô màu ở chú thích), thay cho màu theo colorIndex; vd màu tình trạng hạn */
-  colorClass?: string;
 }
 
 /**
@@ -48,15 +46,6 @@ export function percentText(share: number): string {
  */
 export function sliceColorClass(colorIndex: number): string {
   return styles[`slice_${colorIndex}`]!;
-}
-
-/**
- * Lớp tô màu của một lát: màu riêng nếu có, không thì theo thứ tự màu.
- * @param slice  lát
- * @returns      tên lớp
- */
-export function sliceClassOf(slice: DonutSlice): string {
-  return slice.colorClass ?? sliceColorClass(slice.colorIndex);
 }
 
 interface DonutChartProps {
@@ -112,7 +101,7 @@ export function DonutChart({ slices, total, unit, focusedKey, onHover, onClickSl
                 strokeDasharray={`${visiblePercent} ${100 - visiblePercent}`}
                 strokeDashoffset={-(sliceStart + gap / 2)}
                 transform={`rotate(-90 ${CENTER} ${CENTER})`}
-                className={`${styles.sliceArc} ${onClickSlice ? styles.clickable : ''} ${sliceClassOf(slice)} ${
+                className={`${styles.sliceArc} ${onClickSlice ? styles.clickable : ''} ${sliceColorClass(slice.colorIndex)} ${
                   slice.key === focusedKey ? styles.focused : ''
                 }`}
                 onMouseEnter={() => onHover(slice.key)}
@@ -135,7 +124,7 @@ export function DonutChart({ slices, total, unit, focusedKey, onHover, onClickSl
                 y={CENTER - RING_RADIUS * Math.cos(middleAngle)}
                 textAnchor="middle"
                 dominantBaseline="central"
-                className={`${styles.sliceLabel} ${slice.colorIndex === 0 && !slice.colorClass ? styles.sliceLabelOther : ''}`}
+                className={`${styles.sliceLabel} ${slice.colorIndex === 0 ? styles.sliceLabelOther : ''}`}
               >
                 {percentText(slice.share)}
               </text>
