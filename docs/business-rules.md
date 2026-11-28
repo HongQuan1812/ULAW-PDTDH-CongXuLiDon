@@ -147,7 +147,19 @@ Luật tính hạn: `shared/src/business-rules/forms--deadlines.ts` (hàm thuầ
   - **Đang mở**: nhận đơn; nội dung khóa cứng. Mỗi lúc chỉ một phiên bản mở; mở phiên bản khác thì phiên bản đang mở tự chuyển sang Đã đóng.
   - **Đã đóng**: không nhận đơn mới; đơn đã nộp vẫn xử lí bình thường. Phiên bản đã khóa chỉ đổi qua lại Đang mở / Đã đóng.
   - Muốn sửa nội dung đã khóa thì tạo phiên bản mới.
-- **Thời gian xử lí tối đa** (số ngày làm việc, 1–365, để trống = không giới hạn) đặt ở từng phiên bản, trong khung thông tin loại đơn. Đơn lưu kèm bản chụp lúc nộp, nên sửa hạn của loại đơn không đổi hạn của đơn đã nộp (mục **Hạn xử lí đơn**). Seed dev đặt sẵn hạn cho mọi loại đơn; bản thật để trống, Phòng tự đặt.
+- **Cấu hình thời gian** (nút tròn đồng hồ ở góc phải dưới trình soạn, khung **Cấu hình thời gian**; hợp đồng `GET/PUT /form-types/:id/time-settings`, luật ở `shared/src/business-rules/form-types--schedule.ts`):
+  thuộc **loại đơn**, áp dụng cho mọi phiên bản; sửa không tạo phiên bản mới, bấm Lưu ở hàng nút cuối như mẫu xuất file.
+  - **Thời gian xử lí tối đa** (số ngày làm việc, 1–365, để trống = không giới hạn). Đơn lưu kèm bản chụp lúc nộp, nên sửa chỉ áp dụng cho đơn nộp sau đó, đơn đã nộp giữ hạn cũ (mục **Hạn xử lí đơn**). Seed dev đặt sẵn cho mọi loại đơn; bản thật để trống, Phòng tự đặt.
+  - **Thời gian đóng mở**: mỗi loại đơn **một** giờ tự mở và **một** giờ tự đóng (giờ Việt Nam, tới phút), đều không bắt buộc; giờ đóng phải sau giờ mở. Hẹn đợt mới thì sửa giờ cũ; xóa trống là bỏ hẹn.
+    Giờ hẹn mới hoặc vừa sửa phải sau thời điểm hiện tại; giờ giữ nguyên thì không xét.
+  - **Tự mở** mở phiên bản chọn trong khung (mặc định phiên bản mới nhất, chọn được cả bản Nháp: tới giờ nội dung khóa lại như bấm Đang mở); phiên bản đang mở khác tự đóng. Bản Nháp chưa hợp lệ để mở thì không mở (ghi log).
+    **Tự đóng** đóng phiên bản đang mở; đơn đã nộp vẫn xử lí bình thường.
+  - Backend tự kiểm **mỗi phút** (`FormTypeScheduleService`); máy chủ tắt qua giờ hẹn thì lần kiểm đầu sau khi bật chạy bù, mở trước đóng sau.
+    Chạy xong chỉ **đánh dấu đã chạy** ("✓ đã mở" / "✓ đã đóng"), giờ vẫn hiện trong khung; restart không chạy lại. Sửa sang giờ khác thì bỏ dấu, tới giờ mới lại chạy; đổi phiên bản tự mở, sửa thời gian xử lí không ảnh hưởng dấu.
+    Hệ thống đổi trạng thái không ghi vào lần lưu của phiên bản (người lưu gần nhất giữ nguyên).
+  - **Bấm tay** mở / đóng ở thẻ Thông tin loại đơn vẫn làm được bất cứ lúc nào, giờ hẹn giữ nguyên; tới giờ hẹn mà trạng thái đã đúng thì không đổi gì (vd đã đóng sớm thì tới giờ đóng không làm gì).
+  - API giả không có bộ hẹn giờ chạy nền: mỗi lần đọc loại đơn thì chạy các giờ đã tới.
+  - Mọi thời điểm trong database lưu theo giờ chuẩn UTC (phiên kết nối đặt múi giờ UTC, `api/src/common/database-adapter.ts`); API và giao diện dùng giờ Việt Nam.
 - Mỗi phần có công tắc **Nội dung chính**: chỉ các phần này hiện ở xem nhanh (dòng xổ ra trong các bảng đơn).
 - **Các loại câu hỏi** (`shared/src/aux-schema/form-types--question-types.ts`): trả lời ngắn, đoạn văn, số, ngày, chọn một, chọn nhiều,
   danh sách thả xuống, tải tệp (đuôi tệp và dung lượng tối đa), bảng nhiều dòng (các cột kiểu chữ / số / ngày / chọn, cột số có thể tính tổng, cột ngày xuất file dạng dd/mm/yyyy), khối thông báo.
@@ -155,6 +167,7 @@ Luật tính hạn: `shared/src/business-rules/forms--deadlines.ts` (hàm thuầ
   Câu trả lời lưu theo **id câu hỏi**; kiểm tra câu trả lời ở `shared/src/validators/forms--answers.ts`.
 - Bảng học phần trong các mẫu đơn là câu hỏi bảng nhiều dòng.
 - Nộp đơn: nút **+ Nộp đơn mới** luôn mở hộp chọn loại đơn (kể cả khi chỉ có một loại), liệt kê các loại đang mở.
+  Loại đơn có giờ tự đóng chưa chạy thì ghi hạn nhận đơn, vd "Nhận đơn đến 17:00 05/12/2026".
   Quy trình xử lí dùng chung cho mọi loại đơn.
 
 ## Tệp đính kèm
