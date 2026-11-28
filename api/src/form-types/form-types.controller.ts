@@ -1,4 +1,4 @@
-/* Nhóm API form-types: loại đơn, các phiên bản, thống kê câu trả lời. Xem loại đơn đang mở chỉ cần đăng nhập;
+/* Nhóm API form-types: loại đơn, các phiên bản, cấu hình thời gian, thống kê câu trả lời. Xem loại đơn đang mở chỉ cần đăng nhập;
    mọi lệnh còn lại cần quyền manageFormTypes. */
 import { Body, Controller, Delete, Get, Param, Post, Put, Query, Res } from '@nestjs/common';
 import { ApiCreatedResponse, ApiOkResponse, ApiTags } from '@nestjs/swagger';
@@ -8,14 +8,17 @@ import {
   FORM_TYPE_MESSAGES,
   FormTypeAnswerStatsSchema,
   FormTypeSchema,
+  FormTypeTimeSettingsSchema,
   FormTypesResponseSchema,
   ManagedFormTypeSchema,
   OpenFormTypesResponseSchema,
+  SaveFormTypeTimeSettingsRequestSchema,
   SaveFormTypeVersionRequestSchema,
   SetFormTypeVersionStatusRequestSchema,
   parseFormTypeStatsQueryParams,
   type FormType,
   type FormTypeAnswerStats,
+  type FormTypeTimeSettings,
   type FormTypesResponse,
   type ManagedFormType,
   type OpenFormTypesResponse,
@@ -171,6 +174,35 @@ export class FormTypesController {
     const parsed = SetFormTypeVersionStatusRequestSchema.safeParse(requestBody);
     if (!parsed.success) throw new ApiException(422, FORM_TYPE_MESSAGES.invalidRequest);
     return this.formTypesService.setVersionStatus(formTypeId, parseVersion(versionText), parsed.data.status, staff.id);
+  }
+
+  /**
+   * @returns  cấu hình thời gian của loại đơn
+   * @throws   404 không có loại đơn
+   */
+  @Get(FORM_TYPE_ENDPOINTS.timeSettings)
+  @RequirePermission('manageFormTypes', FORM_TYPE_MESSAGES[403])
+  @ApiOkResponse({ schema: openApiSchemaOf(FormTypeTimeSettingsSchema) })
+  timeSettings(@Param('formTypeId') formTypeId: string): Promise<FormTypeTimeSettings> {
+    return this.formTypesService.findTimeSettings(formTypeId);
+  }
+
+  /**
+   * Lưu cấu hình thời gian (không tạo phiên bản mới).
+   * @returns  cấu hình sau khi lưu
+   * @throws   404 không có loại đơn · 422 sai dạng hoặc sai luật
+   */
+  @Put(FORM_TYPE_ENDPOINTS.timeSettings)
+  @RequirePermission('manageFormTypes', FORM_TYPE_MESSAGES[403])
+  @ApiOkResponse({ schema: openApiSchemaOf(FormTypeTimeSettingsSchema) })
+  saveTimeSettings(@Param('formTypeId') formTypeId: string, @Body() requestBody: unknown): Promise<FormTypeTimeSettings> {
+    const parsed = SaveFormTypeTimeSettingsRequestSchema.safeParse(requestBody);
+    // Giờ hẹn sai dạng thì báo câu riêng; sai dạng khác thì câu chung
+    if (!parsed.success) {
+      const timeIssue = parsed.error.issues.find((issue) => issue.code === 'custom');
+      throw new ApiException(422, timeIssue?.message ?? FORM_TYPE_MESSAGES.invalidRequest);
+    }
+    return this.formTypesService.saveTimeSettings(formTypeId, parsed.data);
   }
 
   /**

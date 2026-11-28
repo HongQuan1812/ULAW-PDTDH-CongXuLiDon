@@ -1,12 +1,18 @@
 /* Quản lí loại đơn: danh sách, loại đơn đang mở, phiên bản (xem, tạo loại đơn, thêm phiên bản, lưu Nháp,
-   mở / đóng, xóa Nháp), thống kê câu trả lời (thẻ Thống kê). Chỉ làm việc với database, việc kiểm tra quyền nằm ở controller. */
-import { Injectable } from '@nestjs/common';
+   mở / đóng, xóa Nháp), cấu hình thời gian (thời gian xử lí, giờ tự mở / đóng, chạy hẹn giờ), thống kê câu trả lời (thẻ Thống kê).
+   Chỉ làm việc với database, việc kiểm tra quyền nằm ở controller. */
+import { Injectable, Logger } from '@nestjs/common';
 import {
   FORM_TYPE_DRAFT_MESSAGES,
   FORM_TYPE_MESSAGES,
   computeFormTypeAnswerStats,
+  dueScheduleSteps,
   issueMessages,
+  markScheduleStepDone,
+  scheduledStatusChangeOf,
+  timeSettingsAfterSave,
   validateFormTypeDraft,
+  validateFormTypeTimeSettings,
   type FormAnswers,
   type FormSection,
   type FormType,
@@ -14,16 +20,19 @@ import {
   type FormTypeStatsQuery,
   type FormTypeStatus,
   type FormTypeSummary,
+  type FormTypeTimeSettings,
   type FormTypeVersion,
   type FormTypesResponse,
   type ManagedFormType,
   type OpenFormTypesResponse,
+  type SaveFormTypeTimeSettingsRequest,
   type SaveFormTypeVersionRequest,
+  type ScheduleStep,
 } from '@ulaw/shared';
 import { ApiException } from '../common/api-exception';
 import { isUniqueViolation } from '../common/prisma-errors';
 import { PrismaService } from '../common/prisma.service';
-import { toVietnamTime } from '../common/vietnam-time';
+import { fromVietnamTime, toVietnamTime } from '../common/vietnam-time';
 import type { FormType as FormTypeRow, FormTypeVersion as VersionRow, Prisma, User } from '../generated/prisma/client';
 
 /** Một phiên bản đọc từ database, kèm cán bộ lưu. */
@@ -34,23 +43,63 @@ type FormTypeWithVersions = FormTypeRow & { versions: VersionWithStaff[] };
 /** Cách đọc một loại đơn: mọi phiên bản (mới nhất trước) kèm cán bộ lưu. */
 const WITH_VERSIONS = { versions: { orderBy: { version: 'desc' }, include: { updatedBy: true } } } as const satisfies Prisma.FormTypeInclude;
 
+/** Một lần hẹn giờ đã chạy: loại đơn, việc, phiên bản đổi trạng thái (null = trạng thái đã đúng sẵn, hoặc không mở được). */
+export interface ScheduleRun {
+  formTypeId: string;
+  kind: ScheduleStep['kind'];
+  changedVersion: number | null;
+}
+
+/**
+ * Đọc cấu hình thời gian từ các cột của loại đơn.
+ * @param row  loại đơn trong database
+ * @returns    theo FormTypeTimeSettingsSchema (giờ Việt Nam)
+ */
+function timeSettingsOf(row: FormTypeRow): FormTypeTimeSettings {
+  return {
+    maxProcessingDays: row.maxProcessingDays,
+    autoOpen:
+      row.autoOpenAt && row.autoOpenVersion !== null ? { at: toVietnamTime(row.autoOpenAt), version: row.autoOpenVersion, done: row.autoOpenDone } : null,
+    autoClose: row.autoCloseAt ? { at: toVietnamTime(row.autoCloseAt), done: row.autoCloseDone } : null,
+  };
+}
+
+/**
+ * Đổi cấu hình thời gian thành các cột để ghi vào loại đơn.
+ * @param settings  cấu hình thời gian
+ * @returns         dữ liệu cập nhật FormType
+ */
+function timeSettingsColumns(settings: FormTypeTimeSettings): Prisma.FormTypeUpdateInput {
+  return {
+    maxProcessingDays: settings.maxProcessingDays,
+    autoOpenAt: settings.autoOpen ? fromVietnamTime(settings.autoOpen.at) : null,
+    autoOpenVersion: settings.autoOpen?.version ?? null,
+    autoOpenDone: settings.autoOpen?.done ?? false,
+    autoCloseAt: settings.autoClose ? fromVietnamTime(settings.autoClose.at) : null,
+    autoCloseDone: settings.autoClose?.done ?? false,
+  };
+}
+
 @Injectable()
 export class FormTypesService {
+  private readonly logger = new Logger(FormTypesService.name);
+
   /** @param prisma  kết nối database */
   constructor(private readonly prisma: PrismaService) {}
 
   /**
    * Đổi một phiên bản trong database sang dạng gửi cho trình soạn.
-   * @param row  phiên bản kèm cán bộ lưu
-   * @returns    theo FormTypeVersionSchema (giờ Việt Nam)
+   * @param row                phiên bản kèm cán bộ lưu
+   * @param maxProcessingDays  thời gian xử lí của loại đơn (đặt ở loại đơn, mọi phiên bản cùng một giá trị)
+   * @returns                  theo FormTypeVersionSchema (giờ Việt Nam)
    */
-  private toVersion(row: VersionWithStaff): FormTypeVersion {
+  private toVersion(row: VersionWithStaff, maxProcessingDays: number | null): FormTypeVersion {
     return {
       version: row.version,
       status: row.status,
       name: row.name,
       description: row.description,
-      maxProcessingDays: row.maxProcessingDays,
+      maxProcessingDays,
       sections: row.sections as unknown as FormSection[],
       updatedAt: toVietnamTime(row.updatedAt),
       updatedBy: { id: row.updatedBy.id, name: row.updatedBy.name, email: row.updatedBy.email },
@@ -63,7 +112,7 @@ export class FormTypesService {
    * @returns    theo ManagedFormTypeSchema
    */
   private async toManaged(row: FormTypeWithVersions): Promise<ManagedFormType> {
-    const [first, ...rest] = row.versions.map((version) => this.toVersion(version));
+    const [first, ...rest] = row.versions.map((version) => this.toVersion(version, row.maxProcessingDays));
     return {
       id: row.id,
       prefix: row.prefix,
@@ -163,7 +212,7 @@ export class FormTypesService {
     const formCountGroups = await this.prisma.form.groupBy({ by: ['formTypeId'], _count: { _all: true } });
     const formCounts = new Map(formCountGroups.map((group) => [group.formTypeId, group._count._all]));
     const formTypes = rows.map((row): FormTypeSummary => {
-      const [latest, ...olderVersions] = row.versions.map((version) => this.toVersion(version));
+      const [latest, ...olderVersions] = row.versions.map((version) => this.toVersion(version, row.maxProcessingDays));
       const { version, status, name, description, updatedAt, updatedBy } = latest!;
       return {
         id: row.id,
@@ -211,7 +260,7 @@ export class FormTypesService {
       description: opened.description,
       version: opened.version,
       status: opened.status,
-      maxProcessingDays: opened.maxProcessingDays,
+      maxProcessingDays: row.maxProcessingDays,
       sections: opened.sections as unknown as FormSection[],
     };
   }
@@ -250,7 +299,6 @@ export class FormTypesService {
               status: draft.status,
               name: draft.name,
               description: draft.description,
-              maxProcessingDays: draft.maxProcessingDays,
               sections: draft.sections as unknown as Prisma.InputJsonValue,
               updatedAt: new Date(),
               updatedById: staffId,
@@ -288,7 +336,6 @@ export class FormTypesService {
             status: 'draft',
             name: draft.name,
             description: draft.description,
-            maxProcessingDays: draft.maxProcessingDays,
             sections: draft.sections as unknown as Prisma.InputJsonValue,
             updatedAt: new Date(),
             updatedById: staffId,
@@ -324,7 +371,6 @@ export class FormTypesService {
           data: {
             name: draft.name,
             description: draft.description,
-            maxProcessingDays: draft.maxProcessingDays,
             sections: draft.sections as unknown as Prisma.InputJsonValue,
             updatedAt: new Date(),
             updatedById: staffId,
@@ -379,6 +425,115 @@ export class FormTypesService {
       return false;
     });
     return deletedWholeFormType ? null : this.findManaged(formTypeId);
+  }
+
+  /**
+   * Cấu hình thời gian của loại đơn (khung Cấu hình thời gian ở trình soạn).
+   * @param formTypeId  mã loại đơn
+   * @returns           theo FormTypeTimeSettingsSchema
+   * @throws            404 không có loại đơn
+   */
+  async findTimeSettings(formTypeId: string): Promise<FormTypeTimeSettings> {
+    const row = await this.prisma.formType.findUnique({ where: { id: formTypeId } });
+    if (!row) throw new ApiException(404, FORM_TYPE_MESSAGES.notFound);
+    return timeSettingsOf(row);
+  }
+
+  /**
+   * Lưu cấu hình thời gian; không tạo phiên bản mới. Giờ không đổi thì giữ dấu đã chạy, sửa giờ thì bỏ dấu.
+   * @param formTypeId  mã loại đơn
+   * @param request     cấu hình gửi lên (đã đúng dạng)
+   * @returns           cấu hình sau khi lưu
+   * @throws            404 không có loại đơn · 422 sai luật (câu báo như khung Cấu hình thời gian)
+   */
+  async saveTimeSettings(formTypeId: string, request: SaveFormTypeTimeSettingsRequest): Promise<FormTypeTimeSettings> {
+    return this.prisma.$transaction(async (transaction) => {
+      const formType = await this.loadFormType(transaction, formTypeId);
+      const previous = timeSettingsOf(formType);
+      const versions = formType.versions.map((version) => version.version);
+      const issues = validateFormTypeTimeSettings(request, versions, previous, toVietnamTime(new Date()));
+      if (issues.length) throw new ApiException(422, issueMessages(issues).join(' '));
+
+      const saved = timeSettingsAfterSave(previous, request);
+      await transaction.formType.update({ where: { id: formTypeId }, data: timeSettingsColumns(saved) });
+      return saved;
+    });
+  }
+
+  /**
+   * Chạy các giờ tự mở / tự đóng đã tới mà chưa chạy (bộ hẹn giờ gọi mỗi phút), rồi đánh dấu đã chạy.
+   * Đổi trạng thái như cán bộ bấm tay (mở thì phiên bản đang mở khác tự đóng); trạng thái đã đúng sẵn thì không đổi gì.
+   * Không ghi lần lưu của phiên bản (người lưu gần nhất giữ nguyên), dấu "✓ đã mở" / "✓ đã đóng" cho biết hệ thống đã chạy.
+   * Bản Nháp chưa hợp lệ để mở (vd chưa có câu hỏi) thì không mở, vẫn đánh dấu đã chạy để không thử lại mỗi phút, ghi log.
+   * @param now  lúc kiểm
+   * @returns    các việc đã chạy
+   */
+  async runDueSchedules(now: Date = new Date()): Promise<ScheduleRun[]> {
+    const dueFormTypes = await this.prisma.formType.findMany({
+      where: { OR: [{ autoOpenDone: false, autoOpenAt: { lte: now } }, { autoCloseDone: false, autoCloseAt: { lte: now } }] },
+      select: { id: true },
+      orderBy: { id: 'asc' },
+    });
+
+    const runs: ScheduleRun[] = [];
+    for (const { id } of dueFormTypes) {
+      runs.push(...(await this.prisma.$transaction((transaction) => this.runFormTypeSchedule(transaction, id, toVietnamTime(now)))));
+    }
+    if (runs.length) this.logger.log(`Hẹn giờ mở / đóng loại đơn: ${runs.map((run) => `${run.formTypeId} ${run.kind}`).join(', ')}`);
+    return runs;
+  }
+
+  /**
+   * Chạy các việc hẹn giờ đã tới của một loại đơn, trong một transaction.
+   * @param transaction  client của transaction đang chạy
+   * @param formTypeId   mã loại đơn
+   * @param nowText      lúc kiểm, giờ Việt Nam 'YYYY-MM-DDTHH:mm'
+   * @returns            các việc đã chạy
+   */
+  private async runFormTypeSchedule(transaction: Prisma.TransactionClient, formTypeId: string, nowText: string): Promise<ScheduleRun[]> {
+    let formType = await this.loadFormType(transaction, formTypeId);
+    let settings = timeSettingsOf(formType);
+    const runs: ScheduleRun[] = [];
+
+    // Từng việc theo thứ tự giờ; đọc lại phiên bản sau mỗi lần đổi (vd vừa mở xong thì việc đóng đóng đúng phiên bản đó)
+    for (const step of dueScheduleSteps(settings, nowText)) {
+      const change = scheduledStatusChangeOf(step, formType.versions);
+      const canApply = change !== null && (await this.canOpenBySchedule(transaction, formType, change.version, change.status));
+      if (change && canApply) {
+        await this.applyStatus(transaction, formTypeId, change.version, change.status);
+        formType = await this.loadFormType(transaction, formTypeId);
+      }
+      settings = markScheduleStepDone(settings, step.kind);
+      runs.push({ formTypeId, kind: step.kind, changedVersion: change && canApply ? change.version : null });
+    }
+
+    await transaction.formType.update({ where: { id: formTypeId }, data: timeSettingsColumns(settings) });
+    return runs;
+  }
+
+  /**
+   * Hẹn giờ có được đổi phiên bản này sang trạng thái này không: mở bản Nháp thì bản Nháp phải hợp lệ như khi bấm Lưu với Đang mở.
+   * @param transaction  client của transaction đang chạy
+   * @param formType     loại đơn kèm các phiên bản
+   * @param version      số phiên bản
+   * @param status       trạng thái mới
+   * @returns            true nếu được; bản Nháp chưa hợp lệ thì false (đã ghi log)
+   */
+  private async canOpenBySchedule(
+    transaction: Prisma.TransactionClient,
+    formType: FormTypeWithVersions,
+    version: number,
+    status: 'open' | 'closed',
+  ): Promise<boolean> {
+    const target = this.findVersion(formType, version);
+    if (status !== 'open' || target.status !== 'draft') return true;
+
+    const others = await transaction.formType.findMany({ where: { id: { not: formType.id } }, select: { prefix: true } });
+    const draft = { name: target.name, prefix: formType.prefix, maxProcessingDays: null, status: 'open' as const, sections: target.sections as unknown as FormSection[] };
+    const issues = validateFormTypeDraft(draft, others.map((other) => other.prefix));
+    if (!issues.length) return true;
+    this.logger.warn(`Không tự mở được phiên bản ${version} của ${formType.id}: ${issueMessages(issues).join(' ')}`);
+    return false;
   }
 
   /**

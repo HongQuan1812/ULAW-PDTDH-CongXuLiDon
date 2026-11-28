@@ -138,10 +138,13 @@ async function seedAll(prisma: PrismaClient): Promise<void> {
 
   // Loại đơn và các phiên bản
   const formTypes = seedFormTypes();
-  await prisma.formType.createMany({ data: formTypes.map(({ id, prefix }) => ({ id, prefix })) });
+  // Thời gian xử lí đặt ở loại đơn: lấy theo phiên bản mới nhất của dữ liệu mẫu
+  await prisma.formType.createMany({
+    data: formTypes.map(({ id, prefix, versions }) => ({ id, prefix, maxProcessingDays: versions.at(-1)!.maxProcessingDays })),
+  });
   await prisma.formTypeVersion.createMany({
     data: formTypes.flatMap((formType) =>
-      formType.versions.map(({ updatedAt, sections, ...version }) => ({
+      formType.versions.map(({ updatedAt, sections, maxProcessingDays: _maxProcessingDays, ...version }) => ({
         ...version,
         formTypeId: formType.id,
         sections: sections as unknown as Prisma.InputJsonValue,

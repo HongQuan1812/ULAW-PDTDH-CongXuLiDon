@@ -139,8 +139,9 @@ describe('form-types', () => {
     expect(created.versions[0]).toMatchObject({ version: 1, status: 'draft', updatedBy: { id: 'cb-1' } });
     const edited = ManagedFormTypeSchema.parse((await call('put', `/${id}/versions/1`).send(draftOf('ZTU', { name: 'Tên mới', description: '' })).expect(200)).body);
     expect(edited).toMatchObject({ prefix: 'ZTU', versions: [{ name: 'Tên mới', description: null, maxProcessingDays: null }] });
+    // Thời gian xử lí đặt ở cấu hình thời gian của loại đơn: lưu phiên bản không đổi được
     const withDeadline = ManagedFormTypeSchema.parse((await call('put', `/${id}/versions/1`).send(draftOf('ZTU', { maxProcessingDays: 7 })).expect(200)).body);
-    expect(withDeadline.versions[0]).toMatchObject({ maxProcessingDays: 7 });
+    expect(withDeadline.versions[0]).toMatchObject({ maxProcessingDays: null });
     await call('put', `/${id}/versions/1`).send(draftOf('ZTT')).expect(200);
 
     // Phiên bản Nháp: không đổi trạng thái bằng /status; phiên bản không có thì 404

@@ -105,6 +105,17 @@ model FormType {
   // Tiền tố mã đơn, vd XMR
   prefix String @unique
 
+  // Cấu hình thời gian (áp dụng cho mọi phiên bản, sửa không tạo phiên bản mới)
+  // Thời gian xử lí tối đa, ngày làm việc; null = không có hạn. Đơn chụp giá trị này lúc nộp
+  maxProcessingDays Int?
+  // Giờ tự mở và phiên bản sẽ mở; null = không hẹn. Done = đã tới giờ và đã chạy
+  autoOpenAt        DateTime? @db.Timestamptz(3)
+  autoOpenVersion   Int?
+  autoOpenDone      Boolean   @default(false)
+  // Giờ tự đóng (đóng phiên bản đang mở); null = không hẹn
+  autoCloseAt       DateTime? @db.Timestamptz(3)
+  autoCloseDone     Boolean   @default(false)
+
   versions        FormTypeVersion[]
   forms           Form[]
   exportTemplates ExportTemplate[]
@@ -117,8 +128,6 @@ model FormTypeVersion {
   status      FormTypeStatus
   name        String
   description String?
-  // Thời gian xử lí tối đa, ngày làm việc; null = không có hạn
-  maxProcessingDays Int?
   // Các phần và câu hỏi (FormSection[])
   sections    Json
   updatedAt   DateTime       @db.Timestamptz(3)
