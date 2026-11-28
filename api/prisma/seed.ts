@@ -14,6 +14,10 @@ import {
   SEED_EXPORT_TEMPLATE,
   SEED_FILE_ID_PREFIX,
   assertSeedValid,
+  deadlineReminderOf,
+  formDeadline,
+  holidayDatesOf,
+  vietnamTimeOf,
   STUDENT_DIRECTORY,
   seedFormTypes,
   seedForms,
@@ -103,6 +107,21 @@ async function clearStorage(): Promise<{ uploads: number; backups: number }> {
 }
 
 /**
+ * Hạn đã nhắc của một đơn mẫu: đơn đang Sắp tới hạn / Quá hạn lúc seed coi như đã nhắc rồi,
+ * để bật dev không gửi cả loạt thư nhắc cho dữ liệu mẫu; chỉ đơn chuyển sang Sắp tới hạn / Quá hạn sau đó mới nhận thư.
+ * @param form  đơn mẫu
+ * @returns     giá trị hai cột hạn đã nhắc
+ */
+function seedRemindedFor(form: ReturnType<typeof seedForms>[number]): { dueSoonRemindedFor: Date | null; overdueRemindedFor: Date | null } {
+  const deadline = formDeadline(form.formTypeSnapshot.maxProcessingDays ?? null, form.history, vietnamTimeOf(new Date()), holidayDatesOf(HOLIDAYS_SEED));
+  const reminder = deadlineReminderOf(deadline);
+  if (!reminder) return { dueSoonRemindedFor: null, overdueRemindedFor: null };
+  const dueAt = toDate(reminder.dueAt);
+  // Đã quá hạn thì thư Sắp tới hạn cũng coi như đã qua
+  return { dueSoonRemindedFor: dueAt, overdueRemindedFor: reminder.kind === 'overdue' ? dueAt : null };
+}
+
+/**
  * Nạp toàn bộ dữ liệu mẫu theo thứ tự khóa ngoại.
  * @param prisma  Prisma Client
  */
@@ -150,6 +169,7 @@ async function seedAll(prisma: PrismaClient): Promise<void> {
       handlerSince: form.handlerSince ? toDate(form.handlerSince) : null,
       answers: form.answers as unknown as Prisma.InputJsonValue,
       formTypeSnapshot: form.formTypeSnapshot as unknown as Prisma.InputJsonValue,
+      ...seedRemindedFor(form),
     })),
   });
   await prisma.formEvent.createMany({

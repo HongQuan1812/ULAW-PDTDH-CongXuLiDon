@@ -153,6 +153,9 @@ model Form {
   answers          Json
   // Bản chụp cấu trúc loại đơn lúc nộp, để sửa loại đơn sau này không làm hỏng đơn cũ
   formTypeSnapshot Json
+  // Hạn xử lí đã gửi thư nhắc Sắp tới hạn / Quá hạn (null: chưa nhắc). Hạn lùi vì bổ sung thì khác giá trị này, nhắc lại theo hạn mới
+  dueSoonRemindedFor DateTime? @db.Timestamptz(3)
+  overdueRemindedFor DateTime? @db.Timestamptz(3)
 
   files  FileObject[]
   notes  FormNote[]

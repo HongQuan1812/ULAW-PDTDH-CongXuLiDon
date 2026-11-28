@@ -217,8 +217,11 @@ describe('workflow (tiếp nhận, quyết định, chuyển giao)', () => {
     }
     expect(messageOf(await post(staff, `${code}/transfer`, {}).expect(422))).toBe(FORM_MESSAGES.invalidBody);
 
-    // Chuyển thành công
+    // Chuyển thành công, báo cho người nhận đơn (kèm tên người chuyển giao)
+    const notifySpy = vi.spyOn(app.get(FormEmailService), 'notifyTransfer').mockImplementation(() => undefined);
     const moved = FormDetailSchema.parse((await post(staff, `${code}/transfer`, { toStaffId: 'cb-3' }).expect(200)).body);
+    expect(notifySpy.mock.calls).toEqual([[code, moved.receiver!.name]]);
+    notifySpy.mockRestore();
     expect(moved).toMatchObject({ status: 'xet', receiver: { id: 'cb-1' }, handler: { id: 'cb-3' } });
     expect(Date.parse(moved.handlerSince!)).toBeGreaterThanOrEqual(Date.parse(moved.receivedAt!));
     expect(moved.history.at(-1)).toMatchObject({ action: 'transfer', actor: { id: 'cb-1' }, status: 'xet', toStaff: { id: 'cb-3' }, at: moved.handlerSince });
