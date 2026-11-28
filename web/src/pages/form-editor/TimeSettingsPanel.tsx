@@ -78,7 +78,6 @@ export function TimeSettingsPanel({ form, settingsQuery, versionChoices, issues,
     <EditorPopup
       title={TIME_SETTINGS_TITLE}
       intro="Áp dụng cho mọi phiên bản của loại đơn, không tạo phiên bản mới. Bấm Lưu ở cuối trang để lưu."
-      className={styles.popup}
       onClose={onClose}
     >
         {isLoading && <p className={styles.hint}>Đang tải cấu hình thời gian…</p>}

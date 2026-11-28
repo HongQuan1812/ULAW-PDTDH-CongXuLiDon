@@ -1,6 +1,4 @@
-/* Khung nổi Cấu hình thời gian: phần riêng bên trong khung (khung, đầu khung dùng chung ở EditorDock.module.css); khung hẹp hơn khung mẫu xuất file. */
-.popup{width:min(620px,calc(100vw - 116px))}
-@media (max-width:640px){.popup{width:auto}}
+/* Khung nổi Cấu hình thời gian: phần riêng bên trong khung (khung, đầu khung dùng chung ở EditorDock.module.css). */
 
 /* hai mục: Thời gian xử lí, Thời gian đóng mở */
 .blocks{display:grid;gap:20px;margin:0;padding:0;border:0;min-width:0}

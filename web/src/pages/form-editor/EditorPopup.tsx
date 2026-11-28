@@ -11,8 +11,6 @@ interface EditorPopupProps {
   title: string;
   /** Lời giới thiệu dưới tên */
   intro: string;
-  /** Lớp CSS thêm cho khung (vd khung hẹp hơn) */
-  className?: string;
   /** Bấm nút đóng hoặc Esc */
   onClose: () => void;
   /** Nội dung, nằm trong phần cuộn được */
@@ -24,12 +22,12 @@ interface EditorPopupProps {
  * @param props  xem EditorPopupProps
  * @returns      thẻ <section role="dialog">
  */
-export function EditorPopup({ title, intro, className, onClose, children }: EditorPopupProps) {
+export function EditorPopup({ title, intro, onClose, children }: EditorPopupProps) {
   const titleId = useId();
   useCloseOnEscape(true, onClose);
 
   return (
-    <section className={`${styles.popup} ${className ?? ''}`} role="dialog" aria-labelledby={titleId}>
+    <section className={styles.popup} role="dialog" aria-labelledby={titleId}>
       {/* Đầu khung: tên, lời giới thiệu, nút đóng */}
       <header className={styles.popupHead}>
         <div>
