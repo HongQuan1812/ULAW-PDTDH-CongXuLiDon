@@ -89,17 +89,15 @@ export class FormTypesService {
 
   /**
    * Đổi một phiên bản trong database sang dạng gửi cho trình soạn.
-   * @param row                phiên bản kèm cán bộ lưu
-   * @param maxProcessingDays  thời gian xử lí của loại đơn (đặt ở loại đơn, mọi phiên bản cùng một giá trị)
-   * @returns                  theo FormTypeVersionSchema (giờ Việt Nam)
+   * @param row  phiên bản kèm cán bộ lưu
+   * @returns     theo FormTypeVersionSchema (giờ Việt Nam)
    */
-  private toVersion(row: VersionWithStaff, maxProcessingDays: number | null): FormTypeVersion {
+  private toVersion(row: VersionWithStaff): FormTypeVersion {
     return {
       version: row.version,
       status: row.status,
       name: row.name,
       description: row.description,
-      maxProcessingDays,
       sections: row.sections as unknown as FormSection[],
       updatedAt: toVietnamTime(row.updatedAt),
       updatedBy: { id: row.updatedBy.id, name: row.updatedBy.name, email: row.updatedBy.email },
@@ -112,7 +110,7 @@ export class FormTypesService {
    * @returns    theo ManagedFormTypeSchema
    */
   private async toManaged(row: FormTypeWithVersions): Promise<ManagedFormType> {
-    const [first, ...rest] = row.versions.map((version) => this.toVersion(version, row.maxProcessingDays));
+    const [first, ...rest] = row.versions.map((version) => this.toVersion(version));
     return {
       id: row.id,
       prefix: row.prefix,
@@ -212,7 +210,7 @@ export class FormTypesService {
     const formCountGroups = await this.prisma.form.groupBy({ by: ['formTypeId'], _count: { _all: true } });
     const formCounts = new Map(formCountGroups.map((group) => [group.formTypeId, group._count._all]));
     const formTypes = rows.map((row): FormTypeSummary => {
-      const [latest, ...olderVersions] = row.versions.map((version) => this.toVersion(version, row.maxProcessingDays));
+      const [latest, ...olderVersions] = row.versions.map((version) => this.toVersion(version));
       const { version, status, name, description, updatedAt, updatedBy } = latest!;
       return {
         id: row.id,
@@ -529,7 +527,7 @@ export class FormTypesService {
     if (status !== 'open' || target.status !== 'draft') return true;
 
     const others = await transaction.formType.findMany({ where: { id: { not: formType.id } }, select: { prefix: true } });
-    const draft = { name: target.name, prefix: formType.prefix, maxProcessingDays: null, status: 'open' as const, sections: target.sections as unknown as FormSection[] };
+    const draft = { name: target.name, prefix: formType.prefix, status: 'open' as const, sections: target.sections as unknown as FormSection[] };
     const issues = validateFormTypeDraft(draft, others.map((other) => other.prefix));
     if (!issues.length) return true;
     this.logger.warn(`Không tự mở được phiên bản ${version} của ${formType.id}: ${issueMessages(issues).join(' ')}`);

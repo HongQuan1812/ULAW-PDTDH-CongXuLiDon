@@ -130,7 +130,7 @@ export const FormTypeSchema = OpenFormTypeSchema.extend({
   /** Số phiên bản, vd 2 */
   version: z.number().int().positive().default(1),
   status: z.enum(FORM_TYPE_STATUSES),
-  /** Thời gian xử lí tối đa, ngày làm việc; null = không có hạn. Bản chụp đơn cũ chưa có mục này thì null */
+  /** Thời gian xử lí tối đa của loại đơn lúc nộp (lấy từ cấu hình thời gian), ngày làm việc; null = không có hạn. Bản chụp đơn cũ chưa có mục này thì null */
   maxProcessingDays: MaxProcessingDaysSchema.default(null),
   sections: z.array(FormSectionSchema),
 });
@@ -143,8 +143,6 @@ export const FormTypeVersionSchema = z.object({
   name: z.string(),
   /** Mô tả ngắn; null = không có */
   description: z.string().nullable(),
-  /** Thời gian xử lí tối đa, ngày làm việc; null = không có hạn */
-  maxProcessingDays: MaxProcessingDaysSchema,
   sections: z.array(FormSectionSchema),
   /** Lần lưu gần nhất, giờ Việt Nam 'YYYY-MM-DDTHH:mm' */
   updatedAt: z.string(),
@@ -200,8 +198,6 @@ export const SaveFormTypeVersionRequestSchema = z.object({
   name: z.string().trim().min(1),
   /** Mô tả ngắn; null = không có */
   description: z.string().trim().nullable(),
-  /** Thời gian xử lí tối đa, ngày làm việc; null = không có hạn. Khoảng cho phép do validateFormTypeDraft kiểm tra (câu báo như trình soạn) */
-  maxProcessingDays: z.number().nullable(),
   /** Nháp: lưu để soạn tiếp · Đang mở: mở phiên bản này (phiên bản đang mở khác tự đóng) */
   status: z.enum(DRAFT_SAVE_STATUSES),
   sections: z.array(FormSectionSchema).min(1),
@@ -230,8 +226,11 @@ export function isVietnamMinute(text: string): boolean {
   return !Number.isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 16) === text;
 }
 
+/** Câu báo khi giờ hẹn sai dạng hoặc gõ chưa đủ ngày, giờ (đặt trước schema vì schema dùng ngay lúc nạp tệp). */
+const INVALID_SCHEDULE_TIME_MESSAGE = 'Giờ hẹn phải có đủ ngày và giờ hợp lệ.';
+
 /** Giờ hẹn: phút có thật, giờ Việt Nam 'YYYY-MM-DDTHH:mm'. */
-const ScheduleMinuteSchema = z.string().refine(isVietnamMinute, 'Giờ hẹn phải có dạng ngày giờ hợp lệ.');
+const ScheduleMinuteSchema = z.string().refine(isVietnamMinute, INVALID_SCHEDULE_TIME_MESSAGE);
 
 /** Giờ tự mở: lúc mở, phiên bản sẽ mở, đã chạy chưa. */
 export const AutoOpenSchema = z.object({
@@ -511,6 +510,8 @@ export const FORM_TYPE_MESSAGES = {
 
 /** Câu thông báo của cấu hình thời gian. */
 export const FORM_TYPE_TIME_MESSAGES = {
+  /** Giờ hẹn sai dạng, hoặc chỉ có ngày mà chưa có giờ (hay ngược lại) */
+  invalidTime: INVALID_SCHEDULE_TIME_MESSAGE,
   /** Giờ đóng không sau giờ mở */
   closeBeforeOpen: 'Giờ tự đóng phải sau giờ tự mở.',
   /** Giờ hẹn mới hoặc vừa sửa không sau thời điểm hiện tại */
@@ -519,4 +520,8 @@ export const FORM_TYPE_TIME_MESSAGES = {
   versionMissing: (version: number) => `Loại đơn không có phiên bản ${version}. Chọn lại phiên bản sẽ mở.`,
   /** Lưu xong */
   saved: (name: string) => `Đã lưu cấu hình thời gian của ${name}.`,
+  /** Lưu cùng nội dung loại đơn mà riêng cấu hình thời gian lỗi */
+  notSaved: (reason: string) => `Chưa lưu được cấu hình thời gian: ${reason} Bấm Lưu để thử lại.`,
+  /** Bấm Lưu khi cấu hình đã lưu chưa tải xong (không biết giờ nào vừa sửa) */
+  notLoaded: 'Chưa tải xong cấu hình thời gian, thử lại sau giây lát.',
 } as const;

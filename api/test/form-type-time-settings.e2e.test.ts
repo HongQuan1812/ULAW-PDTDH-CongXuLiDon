@@ -31,7 +31,6 @@ function draftOf(overrides: Partial<SaveFormTypeVersionRequest> = {}): SaveFormT
     prefix: TEST_PREFIX,
     name: 'Loại đơn hẹn giờ',
     description: null,
-    maxProcessingDays: null,
     status: 'draft',
     sections: [{ id: 's1', title: 'Phần một', main: true, questions: [{ id: 'q1', type: 'text', label: 'Nội dung thử', required: true }] }],
     ...overrides,
@@ -117,12 +116,12 @@ describe('cấu hình thời gian của loại đơn', () => {
     expect(await readSettings()).toEqual({ maxProcessingDays: null, autoOpen: null, autoClose: null });
   });
 
-  it('thời gian xử lí lưu ở loại đơn: mọi phiên bản, trang nộp đơn cùng thấy; không tạo phiên bản mới', async () => {
+  it('thời gian xử lí lưu ở loại đơn: trang nộp đơn thấy; không tạo phiên bản mới', async () => {
     await saveSettings({ maxProcessingDays: 3, autoOpen: null, autoClose: null }).expect(200);
     await request(server()).put(`/api/form-types/${TEST_ID}/versions/1`).set('Cookie', cookie).send(draftOf({ status: 'open' })).expect(200);
 
     const managed = ManagedFormTypeSchema.parse((await request(server()).get(`/api/form-types/${TEST_ID}/versions`).set('Cookie', cookie).expect(200)).body);
-    expect(managed.versions.map((version) => [version.version, version.maxProcessingDays])).toEqual([[1, 3]]);
+    expect(managed.versions.map((version) => version.version)).toEqual([1]);
     // Trang nộp đơn (đơn nộp chụp đúng dữ liệu này)
     const detail = FormTypeSchema.parse((await request(server()).get(`/api/form-types/${TEST_ID}`).set('Cookie', cookie).expect(200)).body);
     expect(detail.maxProcessingDays).toBe(3);
@@ -138,7 +137,7 @@ describe('cấu hình thời gian của loại đơn', () => {
     expect(await messageOf({ ...settings, autoClose: { at: '2099-11-30T17:00' } })).toBe(FORM_TYPE_TIME_MESSAGES.closeBeforeOpen);
     expect(await messageOf({ ...settings, autoOpen: { at: '2099-12-01T08:00', version: 5 } })).toBe(FORM_TYPE_TIME_MESSAGES.versionMissing(5));
     expect(await messageOf({ ...settings, autoClose: { at: '2020-01-01T08:00' } })).toContain(FORM_TYPE_TIME_MESSAGES.inThePast);
-    expect(await messageOf({ ...settings, autoClose: { at: '2099-02-30T08:00' } })).toBe('Giờ hẹn phải có dạng ngày giờ hợp lệ.');
+    expect(await messageOf({ ...settings, autoClose: { at: '2099-02-30T08:00' } })).toBe(FORM_TYPE_TIME_MESSAGES.invalidTime);
     expect(await messageOf({ ...settings, maxProcessingDays: 0 })).toBe('Thời gian xử lí tối đa ít nhất 1 ngày làm việc.');
     expect(await messageOf({ maxProcessingDays: 'năm' })).toBe(FORM_TYPE_MESSAGES.invalidRequest);
   });

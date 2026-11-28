@@ -1,7 +1,8 @@
 /* Thẻ "Thông tin loại đơn" của trình soạn:
-   tên loại đơn, mã đơn, mô tả ngắn, thời gian xử lí tối đa của phiên bản đang xem, và trạng thái của phiên bản đó kèm câu giải thích.
-   Phiên bản Nháp chọn Nháp / Đang mở; phiên bản đã khóa chọn Đang mở / Đã đóng. */
-import { FORM_TYPE_ISSUE_TARGET, FORM_TYPE_STATUS_LABEL, MAX_PROCESSING_DAYS_LIMIT, type FormTypeStatus } from '@ulaw/shared';
+   tên loại đơn, mã đơn, mô tả ngắn của phiên bản đang xem, và trạng thái của phiên bản đó kèm câu giải thích.
+   Phiên bản Nháp chọn Nháp / Đang mở; phiên bản đã khóa chọn Đang mở / Đã đóng.
+   Thời gian xử lí tối đa thuộc loại đơn (mọi phiên bản) nên nằm ở khung Cấu hình thời gian (nút đồng hồ), không ở đây. */
+import { FORM_TYPE_ISSUE_TARGET, FORM_TYPE_STATUS_LABEL, type FormTypeStatus } from '@ulaw/shared';
 import { Field } from '../../components/Field';
 import { GrowingTextarea } from '../../features/form-renderer/GrowingTextarea';
 import { useDraftIssues } from './draftIssues';
@@ -12,7 +13,7 @@ interface FormTypeInfoCardProps {
   draft: FormTypeDraft;
   /** Đã có phiên bản từng được mở: khóa ô mã đơn */
   prefixLocked: boolean;
-  /** Không sửa được tên, mô tả, thời gian xử lí tối đa (phiên bản đã khóa khi đang có phiên bản khác đang soạn) */
+  /** Không sửa được tên, mô tả (phiên bản đã khóa khi đang có phiên bản khác đang soạn) */
   contentLocked: boolean;
   /** Trạng thái đang chọn của phiên bản */
   status: FormTypeStatus;
@@ -20,8 +21,8 @@ interface FormTypeInfoCardProps {
   statusChoices: readonly FormTypeStatus[];
   /** Câu giải thích dưới các nút trạng thái */
   statusHint: string;
-  /** Gọi với tên, mã đơn, mô tả, thời gian xử lí tối đa đã đổi */
-  onChange: (changes: Partial<Pick<FormTypeDraft, 'name' | 'prefix' | 'description' | 'maxProcessingDays'>>) => void;
+  /** Gọi với tên, mã đơn, mô tả đã đổi */
+  onChange: (changes: Partial<Pick<FormTypeDraft, 'name' | 'prefix' | 'description'>>) => void;
   /** Gọi khi chọn trạng thái khác */
   onStatusChange: (status: FormTypeStatus) => void;
 }
@@ -39,7 +40,7 @@ export function FormTypeInfoCard({ draft, prefixLocked, contentLocked, status, s
         <h2 id="form-type-info-title">Thông tin loại đơn</h2>
       </div>
 
-      {/* Tên, mã đơn, mô tả, thời gian xử lí tối đa */}
+      {/* Tên, mã đơn, mô tả */}
       <div className={styles.grid2}>
         <Field label="Tên loại đơn" required hint="Dùng ở mọi nơi: tiêu đề trang đơn, danh sách chọn loại đơn, bảng và thống kê">
           <GrowingTextarea
@@ -79,23 +80,6 @@ export function FormTypeInfoCard({ draft, prefixLocked, contentLocked, status, s
             />
           </Field>
         </div>
-        <Field
-          label="Thời gian xử lí tối đa (ngày làm việc)"
-          hint="Tính từ lúc nộp, chỉ đếm Thứ Hai đến Thứ Sáu, trừ ngày nghỉ; dừng khi chờ bổ sung. Để trống nếu không có hạn"
-        >
-          <input
-            type="number"
-            inputMode="numeric"
-            min={1}
-            max={MAX_PROCESSING_DAYS_LIMIT}
-            step={1}
-            value={draft.maxProcessingDays ?? ''}
-            placeholder="Không có hạn"
-            disabled={contentLocked}
-            aria-invalid={invalidTargets.has(FORM_TYPE_ISSUE_TARGET.maxProcessingDays) || undefined}
-            onChange={(event) => onChange({ maxProcessingDays: event.target.value === '' ? null : Number(event.target.value) })}
-          />
-        </Field>
       </div>
 
       {/* Trạng thái của phiên bản */}

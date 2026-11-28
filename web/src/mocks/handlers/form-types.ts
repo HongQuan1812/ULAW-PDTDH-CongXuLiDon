@@ -1,10 +1,12 @@
-/* API giả: loại đơn (danh sách cho trang Quản lí loại đơn, loại đơn đang mở, phiên bản đang mở của một loại đơn)
-   và các phiên bản (xem, tạo loại đơn, thêm phiên bản, lưu phiên bản Nháp, mở / đóng, xóa phiên bản Nháp). */
+/* API giả: loại đơn (danh sách cho trang Quản lí loại đơn, loại đơn đang mở, phiên bản đang mở của một loại đơn),
+   các phiên bản (xem, tạo loại đơn, thêm phiên bản, lưu phiên bản Nháp, mở / đóng, xóa phiên bản Nháp)
+   và cấu hình thời gian (thời gian xử lí, giờ tự mở / tự đóng). */
 import { delay, http, HttpResponse } from 'msw';
 import {
   ENDPOINTS,
   FORM_TYPE_DRAFT_MESSAGES,
   FORM_TYPE_MESSAGES,
+  SaveFormTypeTimeSettingsRequestSchema,
   SaveFormTypeVersionRequestSchema,
   SetFormTypeVersionStatusRequestSchema,
   can,
@@ -14,6 +16,7 @@ import {
   validateFormTypeDraft,
   type FormType,
   type FormTypeAnswerStats,
+  type FormTypeTimeSettings,
   type FormTypesResponse,
   type ManagedFormType,
   type OpenFormTypesResponse,
@@ -27,10 +30,12 @@ import {
   getFormType,
   getFormTypeStatsSources,
   getFormTypeSummaries,
+  getFormTypeTimeSettings,
   getManagedFormType,
   getOpenFormTypes,
   otherFormTypePrefixes,
   readSession,
+  saveFormTypeTimeSettings,
   saveFormTypeVersion,
   setFormTypeVersionStatus,
   type FormTypeChange,
@@ -179,5 +184,30 @@ export const formTypeHandlers = [
     const parsed = SetFormTypeVersionStatusRequestSchema.safeParse(await request.json().catch(() => null));
     if (!parsed.success) return apiError(422, FORM_TYPE_MESSAGES.invalidRequest);
     return changeResponse(setFormTypeVersionStatus(String(params.formTypeId), Number(params.version), parsed.data.status, session.user.id));
+  }),
+
+  // Cấu hình thời gian của loại đơn
+  http.get(api(ENDPOINTS.formTypes.timeSettings), async ({ params }) => {
+    await delay(MOCK_DELAY_MS);
+    const session = await requireManager();
+    if (session instanceof Response) return session;
+    const settings = getFormTypeTimeSettings(String(params.formTypeId));
+    if (!settings) return apiError(404, FORM_TYPE_MESSAGES.notFound);
+    return HttpResponse.json<FormTypeTimeSettings>(settings);
+  }),
+
+  // Lưu cấu hình thời gian (không tạo phiên bản mới): giờ hẹn sai dạng thì câu riêng, sai dạng khác thì câu chung, sai luật thì 422
+  http.put(api(ENDPOINTS.formTypes.timeSettings), async ({ params, request }) => {
+    await delay(MOCK_DELAY_MS);
+    const session = await requireManager();
+    if (session instanceof Response) return session;
+    const parsed = SaveFormTypeTimeSettingsRequestSchema.safeParse(await request.json().catch(() => null));
+    if (!parsed.success) {
+      const timeIssue = parsed.error.issues.find((issue) => issue.code === 'custom');
+      return apiError(422, timeIssue?.message ?? FORM_TYPE_MESSAGES.invalidRequest);
+    }
+    const change = saveFormTypeTimeSettings(String(params.formTypeId), parsed.data);
+    if (!change.ok) return apiError(change.status, change.message);
+    return HttpResponse.json<FormTypeTimeSettings>(change.settings);
   }),
 ];

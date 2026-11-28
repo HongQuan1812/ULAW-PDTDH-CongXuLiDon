@@ -7,8 +7,6 @@ export interface FormTypeDraft {
   prefix: string;
   /** Mô tả ngắn; '' = không có */
   description: string;
-  /** Thời gian xử lí tối đa, ngày làm việc; null = không có hạn */
-  maxProcessingDays: number | null;
   status: FormTypeStatus;
   sections: FormSection[];
 }
@@ -54,11 +52,11 @@ export function newSection(): FormSection {
 }
 
 /**
- * Bản soạn của loại đơn mới (như "+ Tạo loại đơn"): trạng thái Nháp, không có hạn xử lí, một phần, một câu hỏi trống.
+ * Bản soạn của loại đơn mới (như "+ Tạo loại đơn"): trạng thái Nháp, một phần, một câu hỏi trống.
  * @returns  bản soạn
  */
 export function newFormTypeDraft(): FormTypeDraft {
-  return { name: '', prefix: '', description: '', maxProcessingDays: null, status: 'draft', sections: [newSection()] };
+  return { name: '', prefix: '', description: '', status: 'draft', sections: [newSection()] };
 }
 
 /**
@@ -95,7 +93,6 @@ export function draftFromVersion(prefix: string, version: FormTypeVersion): Form
     name: version.name,
     prefix,
     description: version.description ?? '',
-    maxProcessingDays: version.maxProcessingDays,
     status: version.status,
     sections: structuredClone(version.sections),
   };

@@ -10,7 +10,10 @@ import {
   saveHoliday,
   deleteFormTypeVersion,
   getFormTypeSummaries,
+  getFormTypeTimeSettings,
   getManagedFormType,
+  runDueFormTypeSchedules,
+  saveFormTypeTimeSettings,
   saveFormTypeVersion,
   setFormTypeVersionStatus,
   getAllForms,
@@ -155,11 +158,58 @@ describe('loại đơn', () => {
   });
 });
 
+describe('cấu hình thời gian của loại đơn', () => {
+  /* Giờ hẹn đặt ở năm 2099 để luôn sau thời điểm hiện tại; bộ hẹn giờ chạy bằng runDueFormTypeSchedules với "bây giờ" tự chọn */
+  const statusesOf = (formTypeId: string) => getManagedFormType(formTypeId)!.versions.map((version) => [version.version, version.status]);
+
+  test('thời gian xử lí lưu ở loại đơn: trang nộp đơn thấy; giờ đã qua thì 422', () => {
+    expect(getFormTypeTimeSettings('xmr')).toEqual({ maxProcessingDays: 10, autoOpen: null, autoClose: null });
+    expect(saveFormTypeTimeSettings('xmr', { maxProcessingDays: 3, autoOpen: null, autoClose: null })).toMatchObject({ ok: true });
+    expect(getFormType('xmr')?.maxProcessingDays).toBe(3);
+    expect(saveFormTypeTimeSettings('xmr', { maxProcessingDays: 3, autoOpen: null, autoClose: { at: '2020-01-01T08:00' } })).toMatchObject({ ok: false, status: 422 });
+    expect(saveFormTypeTimeSettings('khong-co', { maxProcessingDays: null, autoOpen: null, autoClose: null })).toMatchObject({ ok: false, status: 404 });
+  });
+
+  test('tới giờ thì mở phiên bản chọn (phiên bản đang mở tự đóng), rồi tới giờ đóng thì đóng; chạy xong đánh dấu ✓', () => {
+    const autoOpen = { at: '2099-01-01T08:00', version: 1 };
+    const autoClose = { at: '2099-01-02T17:00' };
+    expect(saveFormTypeTimeSettings(MULTI_VERSION_SEED_FORM_TYPE_ID, { maxProcessingDays: null, autoOpen, autoClose })).toMatchObject({ ok: true });
+
+    runDueFormTypeSchedules('2099-01-01T07:59');
+    expect(statusesOf(MULTI_VERSION_SEED_FORM_TYPE_ID)).toEqual([[2, 'open'], [1, 'closed']]);
+    runDueFormTypeSchedules('2099-01-01T08:00');
+    expect(statusesOf(MULTI_VERSION_SEED_FORM_TYPE_ID)).toEqual([[2, 'closed'], [1, 'open']]);
+    runDueFormTypeSchedules('2099-01-03T00:00');
+    expect(statusesOf(MULTI_VERSION_SEED_FORM_TYPE_ID)).toEqual([[2, 'closed'], [1, 'closed']]);
+    expect(getFormTypeTimeSettings(MULTI_VERSION_SEED_FORM_TYPE_ID)).toMatchObject({ autoOpen: { ...autoOpen, done: true }, autoClose: { ...autoClose, done: true } });
+
+    // Mở tay lại sau đó: đã chạy rồi nên không đóng lại nữa
+    setFormTypeVersionStatus(MULTI_VERSION_SEED_FORM_TYPE_ID, 2, 'open', 'cb-1');
+    runDueFormTypeSchedules('2099-01-04T00:00');
+    expect(statusesOf(MULTI_VERSION_SEED_FORM_TYPE_ID)).toEqual([[2, 'open'], [1, 'closed']]);
+  });
+
+  test('tự mở bản Nháp hợp lệ; bản Nháp chưa hợp lệ thì không mở, vẫn đánh dấu đã chạy', () => {
+    const { prefix, name, description, sections } = getFormType('xmr')!;
+    addFormTypeVersion('xmr', { prefix, name, description, status: 'draft', sections: [{ id: 's1', title: ' ', main: false, questions: [] }] }, 'cb-1');
+    saveFormTypeTimeSettings('xmr', { maxProcessingDays: null, autoOpen: { at: '2099-01-01T08:00', version: 2 }, autoClose: null });
+    runDueFormTypeSchedules('2099-01-01T08:00');
+    expect(statusesOf('xmr')).toEqual([[2, 'draft'], [1, 'open']]);
+    expect(getFormTypeTimeSettings('xmr')?.autoOpen?.done).toBe(true);
+
+    // Sửa bản Nháp cho hợp lệ, hẹn giờ mới (bỏ dấu) thì tới giờ mở được
+    saveFormTypeVersion('xmr', 2, { prefix, name, description, status: 'draft', sections }, 'cb-1');
+    saveFormTypeTimeSettings('xmr', { maxProcessingDays: null, autoOpen: { at: '2099-02-01T08:00', version: 2 }, autoClose: null });
+    runDueFormTypeSchedules('2099-02-01T08:00');
+    expect(statusesOf('xmr')).toEqual([[2, 'open'], [1, 'closed']]);
+  });
+});
+
 describe('phiên bản loại đơn', () => {
   /** Bản soạn hợp lệ dựng từ phiên bản đang mở của loại đơn chính xmr, đổi tên và trạng thái. */
   const xmrInput = (name: string, status: 'draft' | 'open') => {
-    const { prefix, description, maxProcessingDays, sections } = getFormType('xmr')!;
-    return { prefix, name, description, maxProcessingDays, status, sections };
+    const { prefix, description, sections } = getFormType('xmr')!;
+    return { prefix, name, description, status, sections };
   };
 
   test('thêm phiên bản Nháp; đang có Nháp thì không thêm được nữa; phiên bản đã khóa không sửa được', () => {
@@ -168,11 +218,7 @@ describe('phiên bản loại đơn', () => {
       [2, 'draft'],
       [1, 'open'],
     ]);
-    expect(added.ok && added.formType.versions[0]!.maxProcessingDays).toBe(10);
-    expect(saveFormTypeVersion('xmr', 2, { ...xmrInput('Xét miễn môn mới', 'draft'), maxProcessingDays: 3 }, 'cb-1')).toMatchObject({
-      ok: true,
-      formType: { versions: [{ version: 2, maxProcessingDays: 3 }, { version: 1, maxProcessingDays: 10 }] },
-    });
+    expect(saveFormTypeVersion('xmr', 2, xmrInput('Xét miễn môn mới', 'draft'), 'cb-1')).toMatchObject({ ok: true });
     expect(addFormTypeVersion('xmr', xmrInput('Bản khác', 'draft'), 'cb-1')).toMatchObject({ ok: false, status: 409 });
     expect(saveFormTypeVersion('xmr', 1, xmrInput('Sửa bản đã khóa', 'draft'), 'cb-1')).toMatchObject({ ok: false, status: 409 });
 
@@ -524,7 +570,7 @@ describe('thống kê đơn (Quản lí đơn)', () => {
   test('số theo loại đơn cộng lại bằng tổng, kể cả loại chưa có đơn (đếm 0) và ghi trạng thái loại đơn', () => {
     // Thêm một loại đơn chưa có đơn nào
     const { description, sections } = getFormType('xmr')!;
-    createFormType({ prefix: 'MOI', name: 'Loại đơn mới', description, maxProcessingDays: null, status: 'draft', sections }, 'cb-1');
+    createFormType({ prefix: 'MOI', name: 'Loại đơn mới', description, status: 'draft', sections }, 'cb-1');
 
     const stats = getFormStats();
     expect(stats.byType.reduce((sum, type) => sum + type.count, 0)).toBe(stats.total);

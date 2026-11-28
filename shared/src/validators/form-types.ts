@@ -42,7 +42,6 @@ export const FORM_TYPE_PREFIX_PATTERN = /^[A-Z]{2,5}$/;
 export const FORM_TYPE_ISSUE_TARGET = {
   name: 'name',
   prefix: 'prefix',
-  maxProcessingDays: 'max-processing-days',
   sectionTitle: (sectionId: string) => `section-title:${sectionId}`,
   questionLabel: (questionId: string) => `question-label:${questionId}`,
   option: (questionId: string, optionIndex: number) => `option:${questionId}:${optionIndex}`,
@@ -64,8 +63,6 @@ export interface FormTypeIssue {
 export interface FormTypeDraftInput {
   name: string;
   prefix: string;
-  /** Thời gian xử lí tối đa, ngày làm việc; null = không có hạn */
-  maxProcessingDays: number | null;
   status: FormTypeStatus;
   sections: readonly FormSection[];
 }
@@ -84,8 +81,6 @@ export function validateFormTypeDraft(draft: FormTypeDraftInput, otherPrefixes: 
   if (!draft.name.trim()) add(FORM_TYPE_ISSUE_TARGET.name, FORM_TYPE_DRAFT_MESSAGES.nameRequired);
   if (!FORM_TYPE_PREFIX_PATTERN.test(draft.prefix)) add(FORM_TYPE_ISSUE_TARGET.prefix, FORM_TYPE_DRAFT_MESSAGES.prefixFormat);
   else if (otherPrefixes.includes(draft.prefix)) add(FORM_TYPE_ISSUE_TARGET.prefix, FORM_TYPE_DRAFT_MESSAGES.prefixTaken(draft.prefix));
-  const maxDaysCheck = MaxProcessingDaysSchema.safeParse(draft.maxProcessingDays);
-  if (!maxDaysCheck.success) add(FORM_TYPE_ISSUE_TARGET.maxProcessingDays, maxDaysCheck.error.issues[0]!.message);
 
   // Từng phần, từng câu hỏi
   draft.sections.forEach((section, sectionIndex) => {
@@ -161,7 +156,7 @@ export function validateFormTypeDraft(draft: FormTypeDraftInput, otherPrefixes: 
 
 /** Ô của khung Cấu hình thời gian, để tô đỏ đúng ô. */
 export const FORM_TYPE_TIME_ISSUE_TARGET = {
-  maxProcessingDays: FORM_TYPE_ISSUE_TARGET.maxProcessingDays,
+  maxProcessingDays: 'max-processing-days',
   autoOpenAt: 'auto-open-at',
   autoOpenVersion: 'auto-open-version',
   autoCloseAt: 'auto-close-at',

@@ -1,21 +1,24 @@
 /* Hook gọi API loại đơn: danh sách, loại đơn đang mở, phiên bản đang mở (để nộp đơn);
    các phiên bản (trình soạn): xem, tạo loại đơn, thêm phiên bản, lưu phiên bản Nháp, mở / đóng, xóa phiên bản Nháp;
-   thống kê câu trả lời (thẻ Thống kê). */
+   cấu hình thời gian (nút đồng hồ ở trình soạn); thống kê câu trả lời (thẻ Thống kê). */
 import { keepPreviousData, useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
 import {
   ENDPOINTS,
   formTypeDetailPath,
   formTypeStatsPath,
   formTypeStatsQueryParams,
+  formTypeTimeSettingsPath,
   formTypeVersionPath,
   formTypeVersionStatusPath,
   formTypeVersionsPath,
   type FormType,
   type FormTypeAnswerStats,
   type FormTypeStatsQuery,
+  type FormTypeTimeSettings,
   type FormTypesResponse,
   type ManagedFormType,
   type OpenFormTypesResponse,
+  type SaveFormTypeTimeSettingsRequest,
   type SaveFormTypeVersionRequest,
   type SetFormTypeVersionStatusRequest,
 } from '@ulaw/shared';
@@ -183,5 +186,44 @@ export function useFormTypeAnswerStats(formTypeId: string, query: FormTypeStatsQ
     queryFn: () => apiFetch<FormTypeAnswerStats>(`${formTypeStatsPath(formTypeId)}?${new URLSearchParams(formTypeStatsQueryParams(query))}`),
     placeholderData: keepPreviousData,
     enabled,
+  });
+}
+
+/**
+ * Khóa lưu tạm cấu hình thời gian của một loại đơn.
+ * @param formTypeId  mã loại đơn
+ * @returns           vd ['formTypes', 'timeSettings', 'xmr']
+ */
+export const formTypeTimeSettingsKey = (formTypeId: string) => ['formTypes', 'timeSettings', formTypeId] as const;
+
+/**
+ * Cấu hình thời gian của loại đơn (thời gian xử lí, giờ tự mở / tự đóng). Cần quyền manageFormTypes.
+ * @param formTypeId  mã loại đơn
+ * @param enabled     true thì tải (loại đơn mới chưa lưu thì không tải)
+ * @returns           kết quả useQuery; data = FormTypeTimeSettings
+ */
+export function useFormTypeTimeSettings(formTypeId: string, enabled = true) {
+  return useQuery({
+    queryKey: formTypeTimeSettingsKey(formTypeId),
+    queryFn: () => apiFetch<FormTypeTimeSettings>(formTypeTimeSettingsPath(formTypeId)),
+    enabled,
+  });
+}
+
+/**
+ * Lưu cấu hình thời gian (không tạo phiên bản mới). Xong thì trình soạn dùng ngay cấu hình máy chủ trả về;
+ * trang nộp đơn (thời gian xử lí) và hộp chọn loại đơn tải lại.
+ * @returns  kết quả useMutation; gọi mutateAsync({ formTypeId, saveRequest }). data = cấu hình sau khi lưu
+ */
+export function useSaveFormTypeTimeSettings() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ formTypeId, saveRequest }: { formTypeId: string; saveRequest: SaveFormTypeTimeSettingsRequest }) =>
+      apiFetch<FormTypeTimeSettings>(formTypeTimeSettingsPath(formTypeId), { method: 'PUT', body: JSON.stringify(saveRequest) }),
+    onSuccess: (settings, { formTypeId }) => {
+      queryClient.setQueryData(formTypeTimeSettingsKey(formTypeId), settings);
+      void queryClient.invalidateQueries({ queryKey: OPEN_FORM_TYPES_KEY });
+      void queryClient.invalidateQueries({ queryKey: formTypeDetailKey(formTypeId) });
+    },
   });
 }

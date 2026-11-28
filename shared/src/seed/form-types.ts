@@ -29,17 +29,17 @@ export interface SeedFormTypeVersion {
   status: FormTypeStatus;
   name: string;
   description: string | null;
-  /** Thời gian xử lí tối đa, ngày làm việc; null = không có hạn */
-  maxProcessingDays: number | null;
   sections: FormSection[];
   updatedAt: string;
   updatedById: string;
 }
 
-/** Một loại đơn trong API giả: mã loại đơn, mã đơn, các phiên bản (cũ trước, mới sau). */
+/** Một loại đơn trong API giả: mã loại đơn, mã đơn, thời gian xử lí tối đa, các phiên bản (cũ trước, mới sau). */
 export interface SeedFormType {
   id: string;
   prefix: string;
+  /** Thời gian xử lí tối đa của loại đơn (mọi phiên bản), ngày làm việc; null = không có hạn */
+  maxProcessingDays: number | null;
   versions: SeedFormTypeVersion[];
 }
 
@@ -65,8 +65,8 @@ function seedUpdate(i: number): { updatedAt: string; updatedById: string } {
 export function seedFormTypes(): SeedFormType[] {
   return FORM_TYPE_SEED.map((formType, i) => {
     const { id, prefix, name, description, status, maxProcessingDays, sections } = cloneSeedValue(formType);
-    const latest: SeedFormTypeVersion = { version: 1, status, name, description, maxProcessingDays, sections, ...seedUpdate(i) };
-    if (id !== MULTI_VERSION_SEED_FORM_TYPE_ID) return { id, prefix, versions: [latest] };
+    const latest: SeedFormTypeVersion = { version: 1, status, name, description, sections, ...seedUpdate(i) };
+    if (id !== MULTI_VERSION_SEED_FORM_TYPE_ID) return { id, prefix, maxProcessingDays, versions: [latest] };
     const firstVersion: SeedFormTypeVersion = {
       ...cloneSeedValue(latest),
       status: 'closed',
@@ -74,6 +74,6 @@ export function seedFormTypes(): SeedFormType[] {
       updatedAt: '2026-08-14T09:30',
       updatedById: 'cb-2',
     };
-    return { id, prefix, versions: [firstVersion, { ...latest, version: 2 }] };
+    return { id, prefix, maxProcessingDays, versions: [firstVersion, { ...latest, version: 2 }] };
   });
 }

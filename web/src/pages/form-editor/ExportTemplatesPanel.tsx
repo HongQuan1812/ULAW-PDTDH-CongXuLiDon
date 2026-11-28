@@ -1,12 +1,12 @@
 /* Khung nổi "Mẫu xuất đơn" (Word) và "Mẫu xuất danh sách đơn" (Excel) trong trình soạn loại đơn: cùng một khung, khác mục đích;
-   mở từ nút tròn ở cạnh phải màn hình (ExportTemplatesDock.tsx).
+   mở từ nút tròn ở cạnh phải màn hình (EditorDock.tsx).
    Mẫu thuộc loại đơn (dùng chung mọi phiên bản). Chọn file (bấm hoặc kéo thả, như câu hỏi tải tệp của lá đơn), đổi tên, xóa
    chỉ ghi nhận trong trình duyệt và trình soạn hiện "Chưa lưu"; bấm Lưu mới gửi lên máy chủ (exportTemplateChanges.ts).
    Mã trong mỗi mẫu tự được kiểm tra (không cần bấm nút), theo bản soạn đang hiện
    (kể cả thay đổi chưa lưu, kể cả mẫu chưa lưu). Muốn xem mẫu điền dữ liệu thật: mẫu đơn thì Xuất đơn ở trang chi tiết
    một lá đơn; mẫu danh sách đơn thì Xuất danh sách đơn ở đầu trình soạn loại đơn.
    Mỗi lần mở khung, các mục thu gọn bên trong đều đóng. Bấm Esc thì đóng khung. */
-import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
 import {
   EXPORT_MESSAGES,
   EXPORT_TEMPLATE_FILE,
@@ -29,12 +29,11 @@ import { RefreshButton } from '../../components/RefreshButton';
 import { useToast } from '../../components/Toast';
 import { FilePreview, type PreviewFile } from '../../features/file-preview/FilePreview';
 import { saveToDevice } from '../../lib/saveToDevice';
-import { useCloseOnEscape } from '../../lib/useCloseOnEscape';
 import { checkFailureOf, checkResultOf, type TemplateResult } from '../../features/export/checkResult';
 import { EditorIconButton } from './EditorIconButton';
+import { EditorPopup } from './EditorPopup';
 import { ExportHowTo, ExportTagGuide } from './ExportTagGuide';
 import { removeRow, renameRow, stageTemplate, templateRows, type ExportTemplateChanges, type TemplateRow } from './exportTemplateChanges';
-import { CloseIcon } from '../../components/CloseIcon';
 import styles from './ExportTemplatesPanel.module.css';
 
 /** Chờ người dùng ngừng gõ bao lâu (ms) rồi mới kiểm tra lại mã các mẫu theo bản soạn mới. */
@@ -87,7 +86,7 @@ function useSettledValue<Value>(value: Value, delayMs: number): Value {
 }
 
 /**
- * Khung nổi Mẫu xuất đơn / Mẫu xuất danh sách đơn (mở từ nút tròn ở cạnh phải, xem ExportTemplatesDock.tsx).
+ * Khung nổi Mẫu xuất đơn / Mẫu xuất danh sách đơn (mở từ nút tròn ở cạnh phải, xem EditorDock.tsx).
  * @param props  xem ExportTemplatesPanelProps; onClose: bấm nút đóng
  * @returns      khung nổi: đầu khung (tên, lời giới thiệu, nút đóng) và phần cuộn được (Cách tạo một mẫu, các mẫu, Bảng mã)
  */
@@ -102,7 +101,6 @@ export function ExportTemplatesPanel({
   onClose,
 }: ExportTemplatesPanelProps & { onClose: () => void }) {
   const text = PANEL_TEXT[purpose];
-  const titleId = useId();
   const questionTags = useMemo(() => questionExportTags(draft.sections), [draft.sections]);
 
   // Bản soạn dùng để kiểm tra mã: chờ ngừng gõ rồi mới lấy bản mới
@@ -115,40 +113,23 @@ export function ExportTemplatesPanel({
   /** Nút ↻ cạnh chữ "Các mẫu": ngoài tải lại danh sách mẫu, còn kiểm tra lại mã mọi mẫu. */
   const refreshAll = () => setCheckRound((round) => round + 1);
 
-  // Bấm Esc thì đóng khung, như các hộp thoại khác; đang mở hộp thoại con (xem tệp…) thì Esc chỉ đóng hộp thoại đó
-  useCloseOnEscape(true, onClose);
-
   return (
-    <section className={styles.popup} role="dialog" aria-labelledby={titleId}>
-      {/* Đầu khung: tên, lời giới thiệu, nút đóng */}
-      <header className={styles.popupHead}>
-        <div>
-          <h2 id={titleId}>{text.title}</h2>
-          <p className={styles.intro}>{text.intro}</p>
-        </div>
-        <button type="button" className={styles.closeButton} onClick={onClose} aria-label={`Đóng ${text.title}`} title="Đóng">
-          <CloseIcon size={18} />
-        </button>
-      </header>
-
-      {/* Phần cuộn được */}
-      <div className={styles.popupBody}>
-        <TemplateList
-          purpose={purpose}
-          formTypeId={formTypeId}
-          templatesQuery={templatesQuery}
-          checkRound={checkRound}
-          onRefresh={refreshAll}
-          checkDraft={settledDraft}
-          changes={changes}
-          onChangesChange={onChangesChange}
-          saving={saving}
-          version={version}
-          howTo={<ExportHowTo purpose={purpose} sections={draft.sections} formTypeName={draft.name} version={version} />}
-        />
-        <ExportTagGuide purpose={purpose} questionTags={questionTags} version={version} />
-      </div>
-    </section>
+    <EditorPopup title={text.title} intro={text.intro} onClose={onClose}>
+      <TemplateList
+        purpose={purpose}
+        formTypeId={formTypeId}
+        templatesQuery={templatesQuery}
+        checkRound={checkRound}
+        onRefresh={refreshAll}
+        checkDraft={settledDraft}
+        changes={changes}
+        onChangesChange={onChangesChange}
+        saving={saving}
+        version={version}
+        howTo={<ExportHowTo purpose={purpose} sections={draft.sections} formTypeName={draft.name} version={version} />}
+      />
+      <ExportTagGuide purpose={purpose} questionTags={questionTags} version={version} />
+    </EditorPopup>
   );
 }
 
