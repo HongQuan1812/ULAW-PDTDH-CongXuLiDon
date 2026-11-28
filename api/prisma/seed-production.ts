@@ -2,7 +2,7 @@
    Container bản thật tự chạy mỗi lần bật / restart (api/Dockerfile), email lấy từ FIRST_ADMIN_EMAIL trong .env.prod,
    họ tên từ FIRST_ADMIN_NAME (có thì Admin đăng nhập là vào thẳng, trống thì lần đầu tự nhập).
    Chạy tay: pnpm --filter api seed:production [email trường của Admin], bỏ trống thì lấy FIRST_ADMIN_EMAIL */
-import { PrismaPg } from '@prisma/adapter-pg';
+import { createDatabaseAdapter } from '../src/common/database-adapter';
 import { loadDevEnvFile } from '../src/config/env-file';
 import { PrismaClient } from '../src/generated/prisma/client';
 import { seedProduction } from './production-seed';
@@ -25,7 +25,7 @@ if (!adminEmail) {
   process.exit(1);
 }
 
-const prisma = new PrismaClient({ adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL }) });
+const prisma = new PrismaClient({ adapter: createDatabaseAdapter(process.env.DATABASE_URL) });
 try {
   const report = await seedProduction(prisma, adminEmail, process.env.FIRST_ADMIN_NAME ?? '');
   console.log(`Admin ${adminEmail}: ${ADMIN_MESSAGES[report.admin]}.`);

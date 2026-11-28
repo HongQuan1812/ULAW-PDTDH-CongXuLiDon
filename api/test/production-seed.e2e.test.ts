@@ -1,8 +1,8 @@
 /* Test seed bản thật (prisma/production-seed.ts). Cần database đã migrate và seed dữ liệu mẫu.
    Test tạo tài khoản thử rồi xóa, trả cb-2 và dòng cấu hình email về như seed. */
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { PrismaPg } from '@prisma/adapter-pg';
 import { PRODUCTION_FORM_TYPES_SEED } from '@ulaw/shared';
+import { createDatabaseAdapter } from '../src/common/database-adapter';
 import { PrismaClient } from '../src/generated/prisma/client';
 import { seedProduction } from '../prisma/production-seed';
 
@@ -12,7 +12,7 @@ describe('seedProduction', () => {
   let prisma: PrismaClient;
 
   beforeAll(async () => {
-    prisma = new PrismaClient({ adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL }) });
+    prisma = new PrismaClient({ adapter: createDatabaseAdapter(process.env.DATABASE_URL) });
     await prisma.user.deleteMany({ where: { email: NEW_ADMIN_EMAIL } });
   });
 

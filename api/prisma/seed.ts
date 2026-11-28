@@ -2,7 +2,6 @@
    Chạy: pnpm --filter api prisma db seed. Xóa sạch dữ liệu cũ (database, tệp tải lên, bản sao lưu) rồi nạp lại, chỉ dùng khi phát triển. */
 import { readdir, rm } from 'node:fs/promises';
 import path from 'node:path';
-import { PrismaPg } from '@prisma/adapter-pg';
 import {
   BACKUP_SCHEDULES_SEED,
   BACKUP_TARGETS_SEED,
@@ -22,6 +21,7 @@ import {
   seedFormTypes,
   seedForms,
 } from '@ulaw/shared';
+import { createDatabaseAdapter } from '../src/common/database-adapter';
 import { DEFAULT_BACKUP_DIR, DEFAULT_UPLOAD_DIR } from '../src/config/app-config';
 import { loadDevEnvFile } from '../src/config/env-file';
 import { toDbDate } from '../src/holidays/holiday-dates';
@@ -241,7 +241,7 @@ async function seedAll(prisma: PrismaClient): Promise<void> {
   });
 }
 
-const prisma = new PrismaClient({ adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL }) });
+const prisma = new PrismaClient({ adapter: createDatabaseAdapter(process.env.DATABASE_URL) });
 try {
   // Dữ liệu mẫu phải thỏa mọi luật mới được nạp; kiểm tra trước khi xóa dữ liệu cũ để không mất dữ liệu vô ích
   assertSeedValid();
