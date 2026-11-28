@@ -7,6 +7,7 @@ import {
   can,
   canEditForm,
   editEventAction,
+  formDeadline,
   formatFormCode,
   isEditable,
   validateAnswers,
@@ -18,6 +19,7 @@ import {
   type FormSection,
   type FormSummary,
   type FormType,
+  type HolidayDates,
   type SentFileInfo,
   type SubmitFormRequest,
   type UpdateFormRequest,
@@ -28,6 +30,7 @@ import { toVietnamTime } from '../common/vietnam-time';
 import { FormEmailService } from '../email/form-email.service';
 import { FileStorageService } from '../files/file-storage.service';
 import { FormTypesService } from '../form-types/form-types.service';
+import { HolidaysService } from '../holidays/holidays.service';
 import type { Prisma, Form, FormEvent as FormEventRow, User } from '../generated/prisma/client';
 import { fileRefsIn, mergeAnswers } from './form-answers';
 
@@ -70,22 +73,34 @@ export class FormService {
    * @param storage     lưu tệp trên ổ đĩa
    * @param formTypes   lấy cấu trúc loại đơn đang mở
    * @param formEmail   gửi thư báo đã nhận đơn cho người nộp đơn
+   * @param holidays    ngày nghỉ, để tính hạn xử lí
    */
   constructor(
     private readonly prisma: PrismaService,
     private readonly storage: FileStorageService,
     private readonly formTypes: FormTypesService,
     private readonly formEmail: FormEmailService,
+    private readonly holidays: HolidaysService,
   ) {}
 
   /**
    * Dựng FormDetail từ đơn trong database.
-   * @param form  đơn kèm người nộp, người tiếp nhận, người xử lí
-   * @returns     theo FormDetailSchema
+   * @param form          đơn kèm người nộp, người tiếp nhận, người xử lí
+   * @param holidayDates  các ngày nghỉ, để tính hạn xử lí
+   * @param now           bây giờ, giờ Việt Nam 'YYYY-MM-DDTHH:mm'
+   * @returns             theo FormDetailSchema
    */
-  toDetail(form: FormWithPeople): FormDetail {
+  toDetail(form: FormWithPeople, holidayDates: HolidayDates, now: string): FormDetail {
     const snapshot = form.formTypeSnapshot as unknown as FormType;
     const toStaff = (staff: User | null) => (staff ? { id: staff.id, name: staff.name, email: staff.email } : null);
+    const history = form.events.map((event): FormEvent => ({
+      action: event.action,
+      at: toVietnamTime(event.at),
+      actor: { id: event.actor.id, name: event.actor.name, email: event.actor.email },
+      status: event.status,
+      note: event.note,
+      toStaff: toStaff(event.toStaff),
+    }));
     return {
       code: form.code,
       formTypeId: form.formTypeId,
@@ -100,16 +115,11 @@ export class FormService {
       handler: toStaff(form.handler),
       handlerSince: form.handlerSince ? toVietnamTime(form.handlerSince) : null,
       decidedAt: form.decidedAt ? toVietnamTime(form.decidedAt) : null,
+      // Đơn nộp trước khi có hạn xử lí thì bản chụp không có mục này: coi như không giới hạn
+      deadline: formDeadline(snapshot.maxProcessingDays ?? null, history, now, holidayDates),
       sections: snapshot.sections,
       answers: form.answers as unknown as FormAnswers,
-      history: form.events.map((event): FormEvent => ({
-        action: event.action,
-        at: toVietnamTime(event.at),
-        actor: { id: event.actor.id, name: event.actor.name, email: event.actor.email },
-        status: event.status,
-        note: event.note,
-        toStaff: toStaff(event.toStaff),
-      })),
+      history,
     };
   }
 
@@ -134,7 +144,8 @@ export class FormService {
    * @throws        404 không có đơn, hoặc không được xem
    */
   async findDetail(code: string, viewer: User): Promise<FormDetail> {
-    return this.toDetail(await this.loadViewable(code, viewer));
+    const [form, holidayDates] = await Promise.all([this.loadViewable(code, viewer), this.holidays.holidayDates()]);
+    return this.toDetail(form, holidayDates, toVietnamTime(new Date()));
   }
 
   /**

@@ -165,10 +165,8 @@ function BackupTargetForm({ target, onClose, onRemove }: Omit<BackupTargetDialog
           {BACKUP_TARGET_KINDS.map((targetKind) => (
             <label key={targetKind} className={styles.kindCard}>
               <input type="radio" value={targetKind} {...register('kind')} />
-              <span>
-                <strong>{BACKUP_TARGET_KIND_LABEL[targetKind]}</strong>
-                <small>{KIND_TEXT[targetKind].hint}</small>
-              </span>
+              <strong>{BACKUP_TARGET_KIND_LABEL[targetKind]}</strong>
+              <small>{KIND_TEXT[targetKind].hint}</small>
             </label>
           ))}
         </div>

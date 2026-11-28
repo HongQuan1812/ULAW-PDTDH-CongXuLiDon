@@ -2,23 +2,29 @@
    Chạy: pnpm --filter api prisma db seed. Xóa sạch dữ liệu cũ (database, tệp tải lên, bản sao lưu) rồi nạp lại, chỉ dùng khi phát triển. */
 import { readdir, rm } from 'node:fs/promises';
 import path from 'node:path';
-import { PrismaPg } from '@prisma/adapter-pg';
 import {
   BACKUP_SCHEDULES_SEED,
   BACKUP_TARGETS_SEED,
   EMAIL_SETTINGS_SEED,
   EMAIL_SETTINGS_SEED_UPDATE,
+  HOLIDAYS_SEED,
   SAMPLE_EXPORT_TEMPLATE_BASE64,
   SEED_ACCOUNTS,
   SEED_EXPORT_TEMPLATE,
   SEED_FILE_ID_PREFIX,
   assertSeedValid,
+  deadlineReminderOf,
+  formDeadline,
+  holidayDatesOf,
+  vietnamTimeOf,
   STUDENT_DIRECTORY,
   seedFormTypes,
   seedForms,
 } from '@ulaw/shared';
+import { createDatabaseAdapter } from '../src/common/database-adapter';
 import { DEFAULT_BACKUP_DIR, DEFAULT_UPLOAD_DIR } from '../src/config/app-config';
 import { loadDevEnvFile } from '../src/config/env-file';
+import { toDbDate } from '../src/holidays/holiday-dates';
 import { PrismaClient, type Prisma } from '../src/generated/prisma/client';
 import { loadSeedExportTemplates } from './load-seed-export-templates';
 
@@ -52,6 +58,7 @@ async function clearAll(prisma: PrismaClient): Promise<void> {
     prisma.backupRun.deleteMany(),
     prisma.backupTarget.deleteMany(),
     prisma.backupSchedule.deleteMany(),
+    prisma.holiday.deleteMany(),
     prisma.fileObject.deleteMany(),
     prisma.formEvent.deleteMany(),
     prisma.form.deleteMany(),
@@ -100,6 +107,21 @@ async function clearStorage(): Promise<{ uploads: number; backups: number }> {
 }
 
 /**
+ * Hạn đã nhắc của một đơn mẫu: đơn đang Sắp tới hạn / Quá hạn lúc seed coi như đã nhắc rồi,
+ * để bật dev không gửi cả loạt thư nhắc cho dữ liệu mẫu; chỉ đơn chuyển sang Sắp tới hạn / Quá hạn sau đó mới nhận thư.
+ * @param form  đơn mẫu
+ * @returns     giá trị hai cột hạn đã nhắc
+ */
+function seedRemindedFor(form: ReturnType<typeof seedForms>[number]): { dueSoonRemindedFor: Date | null; overdueRemindedFor: Date | null } {
+  const deadline = formDeadline(form.formTypeSnapshot.maxProcessingDays ?? null, form.history, vietnamTimeOf(new Date()), holidayDatesOf(HOLIDAYS_SEED));
+  const reminder = deadlineReminderOf(deadline);
+  if (!reminder) return { dueSoonRemindedFor: null, overdueRemindedFor: null };
+  const dueAt = toDate(reminder.dueAt);
+  // Đã quá hạn thì thư Sắp tới hạn cũng coi như đã qua
+  return { dueSoonRemindedFor: dueAt, overdueRemindedFor: reminder.kind === 'overdue' ? dueAt : null };
+}
+
+/**
  * Nạp toàn bộ dữ liệu mẫu theo thứ tự khóa ngoại.
  * @param prisma  Prisma Client
  */
@@ -116,7 +138,9 @@ async function seedAll(prisma: PrismaClient): Promise<void> {
 
   // Loại đơn và các phiên bản
   const formTypes = seedFormTypes();
-  await prisma.formType.createMany({ data: formTypes.map(({ id, prefix }) => ({ id, prefix })) });
+  await prisma.formType.createMany({
+    data: formTypes.map(({ id, prefix, maxProcessingDays }) => ({ id, prefix, maxProcessingDays })),
+  });
   await prisma.formTypeVersion.createMany({
     data: formTypes.flatMap((formType) =>
       formType.versions.map(({ updatedAt, sections, ...version }) => ({
@@ -147,6 +171,7 @@ async function seedAll(prisma: PrismaClient): Promise<void> {
       handlerSince: form.handlerSince ? toDate(form.handlerSince) : null,
       answers: form.answers as unknown as Prisma.InputJsonValue,
       formTypeSnapshot: form.formTypeSnapshot as unknown as Prisma.InputJsonValue,
+      ...seedRemindedFor(form),
     })),
   });
   await prisma.formEvent.createMany({
@@ -211,9 +236,14 @@ async function seedAll(prisma: PrismaClient): Promise<void> {
   // Sao lưu: nơi lưu và lịch mẫu, chưa có lần sao lưu nào
   await prisma.backupTarget.createMany({ data: [...BACKUP_TARGETS_SEED] });
   await prisma.backupSchedule.createMany({ data: BACKUP_SCHEDULES_SEED.map((schedule) => ({ ...schedule })) });
+
+  // Ngày nghỉ mẫu 2026–2027 (bản thật để trống, Admin tự nhập)
+  await prisma.holiday.createMany({
+    data: HOLIDAYS_SEED.map((holiday) => ({ ...holiday, startDate: toDbDate(holiday.startDate), endDate: toDbDate(holiday.endDate) })),
+  });
 }
 
-const prisma = new PrismaClient({ adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL }) });
+const prisma = new PrismaClient({ adapter: createDatabaseAdapter(process.env.DATABASE_URL) });
 try {
   // Dữ liệu mẫu phải thỏa mọi luật mới được nạp; kiểm tra trước khi xóa dữ liệu cũ để không mất dữ liệu vô ích
   assertSeedValid();

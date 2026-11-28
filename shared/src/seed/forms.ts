@@ -87,7 +87,8 @@ function latestSnapshot(formTypeId: string): { snapshot: FormType; version: numb
   const formType = SEED_FORM_TYPES.find((candidate) => candidate.id === formTypeId)!;
   const latest = formType.versions.at(-1)!;
   const { name, description, status, sections, version } = cloneSeedValue(latest);
-  return { snapshot: { id: formType.id, prefix: formType.prefix, name, description, version, status, sections }, version };
+  const snapshot = { id: formType.id, prefix: formType.prefix, name, description, version, status, maxProcessingDays: formType.maxProcessingDays, sections };
+  return { snapshot, version };
 }
 
 /** Bản chụp loại đơn chính cho đơn mẫu. */

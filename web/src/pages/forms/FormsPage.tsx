@@ -4,7 +4,7 @@
    Cột "Thời gian tiếp nhận" có nút Tiếp nhận cho đơn đang chờ; nút Hiện CCCD (thanh công cụ, sau nút Lọc) bỏ che số CCCD
    của những người đang có trên trang bảng. */
 import { useMemo, useState, type ReactElement } from 'react';
-import { MANAGED_FORM_LIST_FIELDS, canReceiveForm, type ManagedFormSummary } from '@ulaw/shared';
+import { DEADLINE_STATE_FIELD_KEY, MANAGED_FORM_LIST_FIELDS, canReceiveForm, type ManagedFormSummary } from '@ulaw/shared';
 import { ALL_FORMS_SOURCE, useApplicantCccds, useFormStats } from '../../api/forms';
 import { RefreshButton } from '../../components/RefreshButton';
 import { useCccdToggle } from '../../components/table/CccdToggleButton';
@@ -98,6 +98,8 @@ export function FormsPage() {
         activeFormTypeId={equalsFilterValue(filterRules, 'formType')}
         onToggleStatus={(status) => setFilterRules((rules) => toggleEqualsFilter(rules, 'status', status))}
         onToggleFormType={(formTypeId) => setFilterRules((rules) => toggleEqualsFilter(rules, 'formType', formTypeId))}
+        activeDeadlineState={equalsFilterValue(filterRules, DEADLINE_STATE_FIELD_KEY)}
+        onToggleDeadlineState={(state) => setFilterRules((rules) => toggleEqualsFilter(rules, DEADLINE_STATE_FIELD_KEY, state))}
       />
       <section className={`${profileStyles.card} ${profileStyles.tableCard}`} aria-labelledby="all-forms-title">
         <div className={profileStyles.sectionHead}>

@@ -23,13 +23,16 @@ import type {
   FormType,
   FormTypeStatus,
   FormTypeSummary,
+  FormTypeTimeSettings,
   FormTypeVersion,
+  DeadlineState,
   HandledFormSummary,
   ManagedFormType,
   ManagedFormSummary,
-  OpenFormType,
+  OpenFormTypeChoice,
   RichTextDoc,
   RoleId,
+  SaveFormTypeTimeSettingsRequest,
   SaveFormTypeVersionRequest,
   Session,
   SessionUser,
@@ -50,6 +53,14 @@ import {
   ENDPOINTS,
   FORM_STATUSES,
   FORM_TYPE_MESSAGES,
+  dueScheduleSteps,
+  issueMessages,
+  markScheduleStepDone,
+  pendingCloseAt,
+  scheduledStatusChangeOf,
+  timeSettingsAfterSave,
+  validateFormTypeDraft,
+  validateFormTypeTimeSettings,
   can,
   editEventAction,
   formDetailPath,
@@ -63,6 +74,7 @@ import { bypass } from 'msw';
 import { buildSamplePdf } from './samplePdf';
 import { REAL_BACKEND_GROUPS } from './realBackendGroups';
 import type { SeedAccount, SeedForm, SeedFormType, SeedFormTypeVersion } from '@ulaw/shared';
+import { HOLIDAYS_SEED, compareHolidays, countDeadlineStates, findOverlappingHoliday, formDeadline, holidayDatesOf, type Holiday, type HolidayInput } from '@ulaw/shared';
 import {
   BACKUP_SCHEDULES_SEED,
   BACKUP_TARGETS_SEED,
@@ -82,7 +94,8 @@ import {
 /* Dữ liệu mẫu nằm ở shared/src/seed/ (API giả và seed database của backend dùng chung). Tên "Mock…" giữ cho phần còn lại của tệp. */
 type MockAccount = SeedAccount;
 type MockForm = SeedForm;
-type MockFormType = SeedFormType;
+/** Loại đơn trong API giả: như dữ liệu mẫu, thêm giờ tự mở / tự đóng (dữ liệu mẫu chưa hẹn giờ nào). */
+type MockFormType = SeedFormType & Pick<FormTypeTimeSettings, 'autoOpen' | 'autoClose'>;
 type MockFormTypeVersion = SeedFormTypeVersion;
 
 /* ---------- Tài khoản (hồ sơ, vai trò) ---------- */
@@ -292,7 +305,15 @@ export function isStudentDirectoryDown(userId: string): boolean {
 
 
 /** Các loại đơn hiện có (trình soạn tạo, sửa, xóa được); tải lại trang thì về ban đầu. */
-let FORM_TYPES: MockFormType[] = seedFormTypes();
+let FORM_TYPES: MockFormType[] = seedMockFormTypes();
+
+/**
+ * Loại đơn ban đầu của API giả: dữ liệu mẫu, chưa hẹn giờ mở / đóng.
+ * @returns  các loại đơn
+ */
+function seedMockFormTypes(): MockFormType[] {
+  return seedFormTypes().map((formType) => ({ ...formType, autoOpen: null, autoClose: null }));
+}
 
 /** Mã đơn khóa khi đã có phiên bản từng được mở (Đang mở hoặc Đã đóng). */
 const isPrefixLocked = (formType: MockFormType) => formType.versions.some((version) => version.status !== 'draft');
@@ -318,6 +339,7 @@ function toVersion({ updatedById, ...version }: MockFormTypeVersion): FormTypeVe
  * @returns           loại đơn (phiên bản mới nhất trước); không có thì null
  */
 export function getManagedFormType(formTypeId: string): ManagedFormType | null {
+  runDueFormTypeSchedules();
   const formType = findFormType(formTypeId);
   if (!formType) return null;
   return {
@@ -334,6 +356,7 @@ export function getManagedFormType(formTypeId: string): ManagedFormType | null {
  * @returns  các dòng của bảng
  */
 export function getFormTypeSummaries(): FormTypeSummary[] {
+  runDueFormTypeSchedules();
   return FORM_TYPES.map((formType) => {
     const [latest, ...olderVersions] = formType.versions.map(toVersion).reverse();
     const { version, status, name, description, updatedAt, updatedBy } = latest!;
@@ -415,7 +438,14 @@ export function createFormType(input: SaveFormTypeVersionRequest, staffId: strin
   const baseId = input.prefix.toLowerCase();
   let id = baseId;
   for (let n = 2; findFormType(id); n += 1) id = `${baseId}-${n}`;
-  const formType: MockFormType = { id, prefix: input.prefix, versions: [versionFromInput(1, input, staffId)] };
+  const formType: MockFormType = {
+    id,
+    prefix: input.prefix,
+    maxProcessingDays: null,
+    autoOpen: null,
+    autoClose: null,
+    versions: [versionFromInput(1, input, staffId)],
+  };
   applyVersionStatus(formType, formType.versions[0]!, input.status);
   FORM_TYPES.push(formType);
   return getManagedFormType(id)!;
@@ -514,13 +544,16 @@ export function deleteFormTypeVersion(
 }
 
 /**
- * Các loại đơn đang nhận đơn (có phiên bản Đang mở), theo tên của phiên bản đang mở.
+ * Các loại đơn đang nhận đơn (có phiên bản Đang mở), theo tên của phiên bản đang mở, kèm giờ tự đóng chưa chạy.
  * @returns  loại đơn, chưa có cấu trúc các phần; không có thì []
  */
-export function getOpenFormTypes(): OpenFormType[] {
+export function getOpenFormTypes(): OpenFormTypeChoice[] {
+  runDueFormTypeSchedules();
   return FORM_TYPES.flatMap((formType) => {
     const opened = openVersion(formType);
-    return opened ? [{ id: formType.id, name: opened.name, prefix: formType.prefix, description: opened.description }] : [];
+    if (!opened) return [];
+    const acceptsUntil = pendingCloseAt(timeSettingsOf(formType));
+    return [{ id: formType.id, name: opened.name, prefix: formType.prefix, description: opened.description, acceptsUntil }];
   });
 }
 
@@ -530,11 +563,93 @@ export function getOpenFormTypes(): OpenFormType[] {
  * @returns           phiên bản đang mở; loại đơn không có, hoặc không có phiên bản nào đang mở, thì null
  */
 export function getFormType(formTypeId: string): FormType | null {
+  runDueFormTypeSchedules();
   const formType = findFormType(formTypeId);
   const opened = formType && openVersion(formType);
   if (!formType || !opened) return null;
   const { version, status, name, description, sections } = structuredClone(opened);
-  return { id: formType.id, prefix: formType.prefix, name, description, version, status, sections };
+  return { id: formType.id, prefix: formType.prefix, name, description, version, status, maxProcessingDays: formType.maxProcessingDays, sections };
+}
+
+/* ---------- Cấu hình thời gian của loại đơn ----------
+   API giả không có bộ hẹn giờ chạy nền như backend: mỗi lần đọc loại đơn thì chạy các giờ tự mở / tự đóng đã tới (runDueFormTypeSchedules). */
+
+/**
+ * Cấu hình thời gian của một loại đơn trong API giả.
+ * @param formType  loại đơn
+ * @returns         bản sao cấu hình
+ */
+function timeSettingsOf(formType: MockFormType): FormTypeTimeSettings {
+  return structuredClone({ maxProcessingDays: formType.maxProcessingDays, autoOpen: formType.autoOpen, autoClose: formType.autoClose });
+}
+
+/**
+ * Cấu hình thời gian của loại đơn (khung Cấu hình thời gian).
+ * @param formTypeId  mã loại đơn
+ * @returns           cấu hình; không có loại đơn thì null
+ */
+export function getFormTypeTimeSettings(formTypeId: string): FormTypeTimeSettings | null {
+  runDueFormTypeSchedules();
+  const formType = findFormType(formTypeId);
+  return formType ? timeSettingsOf(formType) : null;
+}
+
+/** Kết quả lưu cấu hình thời gian: thành công kèm cấu hình sau khi lưu, hoặc lỗi (mã HTTP + câu báo). */
+export type TimeSettingsChange = { ok: true; settings: FormTypeTimeSettings } | { ok: false; status: number; message: string };
+
+/**
+ * Lưu cấu hình thời gian như backend: kiểm tra (validateFormTypeTimeSettings), giờ không đổi thì giữ dấu đã chạy.
+ * @param formTypeId  mã loại đơn
+ * @param request     cấu hình gửi lên (đã đúng dạng)
+ * @returns           kết quả
+ */
+export function saveFormTypeTimeSettings(formTypeId: string, request: SaveFormTypeTimeSettingsRequest): TimeSettingsChange {
+  runDueFormTypeSchedules();
+  const formType = findFormType(formTypeId);
+  if (!formType) return { ok: false, status: 404, message: FORM_TYPE_MESSAGES.notFound };
+  const previous = timeSettingsOf(formType);
+  const versions = formType.versions.map((version) => version.version);
+  const issues = validateFormTypeTimeSettings(request, versions, previous, vietnamNow());
+  if (issues.length) return { ok: false, status: 422, message: issueMessages(issues).join(' ') };
+
+  const saved = timeSettingsAfterSave(previous, request);
+  Object.assign(formType, saved);
+  return { ok: true, settings: timeSettingsOf(formType) };
+}
+
+/**
+ * Chạy các giờ tự mở / tự đóng đã tới mà chưa chạy, như bộ hẹn giờ của backend: đổi trạng thái như bấm tay
+ * (không ghi lần lưu của phiên bản), trạng thái đã đúng thì không đổi gì; bản Nháp chưa hợp lệ thì không mở. Chạy xong thì đánh dấu đã chạy.
+ * @param now  lúc kiểm, giờ Việt Nam; mặc định bây giờ
+ */
+export function runDueFormTypeSchedules(now: string = vietnamNow()): void {
+  for (const formType of FORM_TYPES) {
+    let settings = timeSettingsOf(formType);
+    const steps = dueScheduleSteps(settings, now);
+    if (!steps.length) continue;
+
+    // Từng việc theo thứ tự giờ (vừa mở xong thì việc đóng đóng đúng phiên bản đó)
+    for (const step of steps) {
+      const change = scheduledStatusChangeOf(step, formType.versions);
+      const target = change && formType.versions.find((version) => version.version === change.version);
+      if (change && target && canOpenBySchedule(formType, target, change.status)) applyVersionStatus(formType, target, change.status);
+      settings = markScheduleStepDone(settings, step.kind);
+    }
+    Object.assign(formType, { autoOpen: settings.autoOpen, autoClose: settings.autoClose });
+  }
+}
+
+/**
+ * Hẹn giờ có được đổi phiên bản sang trạng thái này không: mở bản Nháp thì bản Nháp phải hợp lệ như khi bấm Lưu với Đang mở.
+ * @param formType  loại đơn
+ * @param target    phiên bản sẽ đổi
+ * @param status    trạng thái mới
+ * @returns         true nếu được
+ */
+function canOpenBySchedule(formType: MockFormType, target: MockFormTypeVersion, status: FormTypeStatus): boolean {
+  if (status !== 'open' || target.status !== 'draft') return true;
+  const draft = { name: target.name, prefix: formType.prefix, status: 'open' as const, sections: target.sections };
+  return validateFormTypeDraft(draft, otherFormTypePrefixes(formType.id)).length === 0;
 }
 
 /* ---------- Lá đơn ---------- */
@@ -552,6 +667,16 @@ let FORMS: MockForm[] = seedForms();
  */
 function toSummary({ code, formTypeId, formTypeName, submittedAt, status }: MockForm): FormSummary {
   return { code, formTypeId, formTypeName, submittedAt, status };
+}
+
+/**
+ * Tình trạng hạn xử lí của đơn (cột Tình trạng hạn), tính như ở chi tiết đơn.
+ * @param form  lá đơn trong API giả
+ * @param now   bây giờ, giờ Việt Nam 'YYYY-MM-DDTHH:mm'
+ * @returns     tình trạng hạn ('none' nếu loại đơn lúc nộp không giới hạn)
+ */
+function deadlineStateOf(form: MockForm, now: string): DeadlineState {
+  return formDeadline(form.formTypeSnapshot.maxProcessingDays, form.history, now, holidayDatesOf(holidays)).state;
 }
 
 /**
@@ -609,11 +734,13 @@ export function getFormsOf(userId: string): FormSummary[] {
 /**
  * Lấy các đơn một cán bộ đã tiếp nhận hoặc đang xử lí.
  * @param staffId  id tài khoản cán bộ
- * @returns        các đơn kèm người tiếp nhận, người xử lí, số ghi chú; không có thì []
+ * @returns        các đơn kèm tình trạng hạn, người tiếp nhận, người xử lí, số ghi chú; không có thì []
  */
 export function getFormsHandledBy(staffId: string): HandledFormSummary[] {
+  const now = vietnamNow();
   return FORMS.filter((form) => form.receiverId === staffId || form.handlerId === staffId).map((form) => ({
     ...toSummary(form),
+    deadlineState: deadlineStateOf(form, now),
     receiver: staffOf(form.receiverId),
     handler: staffOf(form.handlerId),
     noteCount: countFormNotes(form.code),
@@ -622,14 +749,16 @@ export function getFormsHandledBy(staffId: string): HandledFormSummary[] {
 
 /**
  * Lấy mọi đơn của mọi người nộp, cho bảng Quản lí đơn.
- * @returns  các đơn kèm lúc tiếp nhận, số ghi chú và người nộp (SĐT, CCCD che; chưa có thì null)
+ * @returns  các đơn kèm tình trạng hạn, lúc tiếp nhận, số ghi chú và người nộp (SĐT, CCCD che; chưa có thì null)
  */
 export function getAllForms(): ManagedFormSummary[] {
+  const now = vietnamNow();
   return FORMS.map((form) => {
     const person = findPerson(form.ownerId);
     const applicant = personRef(form.ownerId);
     return {
       ...toSummary(form),
+      deadlineState: deadlineStateOf(form, now),
       receivedAt: form.receivedAt,
       noteCount: countFormNotes(form.code),
       applicant: { ...applicant, phone: person?.phone ?? null, maskedCccd: maskCccd(person?.cccd ?? null) },
@@ -638,8 +767,9 @@ export function getAllForms(): ManagedFormSummary[] {
 }
 
 /**
- * Đếm đơn theo trạng thái và theo loại đơn (hai khung thống kê của Quản lí đơn), trên tất cả đơn.
- * @returns  tổng số đơn, số đơn mỗi trạng thái (đủ 6 trạng thái) và số đơn mỗi loại đơn (nhiều nhất trước, bằng nhau thì theo tên)
+ * Đếm đơn theo trạng thái, theo loại đơn và theo tình trạng hạn (ba khung thống kê của Quản lí đơn), trên tất cả đơn.
+ * @returns  tổng số đơn, số đơn mỗi trạng thái (đủ 6 trạng thái), số đơn mỗi loại đơn (nhiều nhất trước, bằng nhau thì theo tên),
+ *           số đơn mỗi tình trạng hạn
  */
 export function getFormStats(): FormStats {
   const byStatus = Object.fromEntries(FORM_STATUSES.map((status) => [status, 0])) as FormStats['byStatus'];
@@ -655,7 +785,8 @@ export function getFormStats(): FormStats {
     formTypeStatus: formTypeStatusOf(formType.versions.map((version) => version.status)),
     count: countByType.get(formType.id) ?? 0,
   })).sort((a, b) => b.count - a.count || a.formTypeName.localeCompare(b.formTypeName, 'vi'));
-  return { total: FORMS.length, byStatus, byType };
+  const now = vietnamNow();
+  return { total: FORMS.length, byStatus, byType, byDeadline: countDeadlineStates(FORMS.map((form) => deadlineStateOf(form, now))) };
 }
 
 /**
@@ -699,6 +830,7 @@ function toDetail(form: MockForm): FormDetail {
     handler: staffOf(form.handlerId),
     handlerSince: form.handlerSince,
     decidedAt: form.decidedAt,
+    deadline: formDeadline(form.formTypeSnapshot.maxProcessingDays, form.history, vietnamNow(), holidayDatesOf(holidays)),
     sections: structuredClone(form.formTypeSnapshot.sections),
     answers: structuredClone(form.answers),
     history: form.history.map(({ action, at, actorId, status, note, toStaffId }) => ({
@@ -965,11 +1097,12 @@ export function getFileContent(fileId: string, viewer: { id: string; role: RoleI
 export function resetMockDb(): void {
   accounts = cloneSeed();
   FORMS = seedForms();
-  FORM_TYPES = seedFormTypes();
+  FORM_TYPES = seedMockFormTypes();
   FILES.clear();
   EXPORT_TEMPLATES = seedExportTemplates();
   FORM_NOTES.clear();
   resetBackups();
+  holidays = [...HOLIDAYS_SEED];
   try {
     sessionStorage.removeItem(ACCOUNTS_KEY);
   } catch {
@@ -1655,4 +1788,47 @@ export function updateFormNote(code: string, noteId: string, content: RichTextDo
  */
 export function deleteFormNote(code: string, noteId: string): void {
   FORM_NOTES.set(code, (FORM_NOTES.get(code) ?? []).filter((note) => note.id !== noteId));
+}
+
+/* ---------- Ngày nghỉ ---------- */
+
+/** Ngày nghỉ trong API giả: bắt đầu bằng ngày nghỉ mẫu 2026–2027. */
+let holidays: Holiday[] = [...HOLIDAYS_SEED];
+
+/** Số tăng dần để đặt id ngày nghỉ mới. */
+let holidaySequence = 0;
+
+/**
+ * Mọi ngày nghỉ.
+ * @returns  bản sao, sớm trước muộn sau
+ */
+export function getHolidays(): Holiday[] {
+  return structuredClone(holidays).sort(compareHolidays);
+}
+
+/**
+ * Thêm hoặc sửa một ngày nghỉ; không cho trùng ngày với ngày nghỉ khác.
+ * @param input      ngày nghỉ (đã kiểm tra bằng HolidayInputSchema)
+ * @param holidayId  id ngày nghỉ cần sửa; không có = thêm mới
+ * @returns          ngày nghỉ sau khi lưu · 'notFound' · { overlaps: tên ngày nghỉ bị trùng }
+ */
+export function saveHoliday(input: HolidayInput, holidayId?: string): Holiday | 'notFound' | { overlaps: string } {
+  if (holidayId && !holidays.some((holiday) => holiday.id === holidayId)) return 'notFound';
+  const overlapping = findOverlappingHoliday(input, holidays, holidayId);
+  if (overlapping) return { overlaps: overlapping.name };
+
+  const saved: Holiday = { id: holidayId ?? `holiday-${++holidaySequence}`, ...input };
+  holidays = holidayId ? holidays.map((holiday) => (holiday.id === holidayId ? saved : holiday)) : [...holidays, saved];
+  return structuredClone(saved);
+}
+
+/**
+ * Xóa một ngày nghỉ.
+ * @param holidayId  id ngày nghỉ
+ * @returns          ngày nghỉ vừa xóa; không có thì null
+ */
+export function deleteHoliday(holidayId: string): Holiday | null {
+  const removed = holidays.find((holiday) => holiday.id === holidayId) ?? null;
+  holidays = holidays.filter((holiday) => holiday.id !== holidayId);
+  return removed;
 }

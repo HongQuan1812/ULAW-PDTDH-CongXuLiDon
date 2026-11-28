@@ -3,9 +3,12 @@
    Lúc gửi đang tắt: phần soạn và xem trước mờ đi và không bấm được, công tắc vẫn bấm được. */
 import { useState, type ReactNode } from 'react';
 import {
+  EMAIL_EVENT_RECIPIENT,
   EMAIL_MESSAGES,
   EMAIL_SAMPLE_RECIPIENT,
+  EMAIL_SAMPLE_STAFF_RECIPIENT,
   EMAIL_SAMPLE_VALUES,
+  isStaffEmailEvent,
   SendTestEmailRequestSchema,
   formLink,
   splitEmailTemplate,
@@ -59,6 +62,11 @@ export function EmailEventEditor({ event, eventIndex, sender, senderAddress, fie
     link_don: formLink(window.location.origin, EMAIL_SAMPLE_VALUES.ma_don),
     chu_ki: sender.signature,
   };
+  // Người nhận mẫu ở dòng "Tới": thư cho cán bộ gửi người xử lí mẫu, thư cho người nộp đơn gửi người nộp mẫu
+  const isStaffEmail = isStaffEmailEvent(event.kind);
+  const sampleRecipientName = isStaffEmail ? EMAIL_SAMPLE_VALUES.nguoi_xu_li : EMAIL_SAMPLE_VALUES.ho_ten;
+  const sampleRecipientEmail = isStaffEmail ? EMAIL_SAMPLE_STAFF_RECIPIENT : EMAIL_SAMPLE_RECIPIENT;
+  const recipientNote = isStaffEmail ? EMAIL_EVENT_RECIPIENT[event.kind] : 'email trên trang Thông tin cá nhân';
   // Lúc gửi đang tắt: làm mờ phần soạn, xem trước (kèm inert để không bấm, không gõ được)
   const dimmedClass = event.enabled ? '' : styles.dimmed;
 
@@ -84,7 +92,7 @@ export function EmailEventEditor({ event, eventIndex, sender, senderAddress, fie
         <div className={styles.captionRow}>
           <p className={styles.caption}>Soạn thư</p>
           <div className={styles.sendToggle}>
-            <span className={styles.sendNote}>{event.enabled ? 'Gửi tới email người nộp đơn' : 'Đang tắt, không gửi email'}</span>
+            <span className={styles.sendNote}>{event.enabled ? `Gửi tới ${EMAIL_EVENT_RECIPIENT[event.kind]}` : 'Đang tắt, không gửi email'}</span>
             <Switch checked={event.enabled} onChange={(isEnabled) => onChange({ enabled: isEnabled })} label="Gửi email" labelBefore />
           </div>
         </div>
@@ -106,7 +114,7 @@ export function EmailEventEditor({ event, eventIndex, sender, senderAddress, fie
             </dd>
             <dt>Tới</dt>
             <dd>
-              {EMAIL_SAMPLE_VALUES.ho_ten} &lt;{EMAIL_SAMPLE_RECIPIENT}&gt; <span className={styles.toNote}>· email trên trang Thông tin cá nhân</span>
+              {sampleRecipientName} &lt;{sampleRecipientEmail}&gt; <span className={styles.toNote}>· {recipientNote}</span>
             </dd>
             <dt>Tiêu đề</dt>
             <dd className={styles.mailSubject}>

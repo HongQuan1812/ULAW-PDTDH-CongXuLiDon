@@ -1,16 +1,18 @@
 /* Trang Cấu hình email (#/cau-hinh/email, vai trò có quyền manageEmail: Người xử lí đơn, Admin).
-   Cấu hình phía GỬI: người gửi, và bốn lúc gửi email báo cho người nộp đơn (Đã nộp · Cần bổ sung · Từ chối · Đã duyệt),
+   Cấu hình phía GỬI: người gửi, và bảy lúc gửi email: bốn thư cho người nộp đơn (Đã nộp · Cần bổ sung · Từ chối · Đã duyệt),
+   ba thư cho cán bộ (Nhắc sắp tới hạn · Nhắc quá hạn · Được chuyển giao);
    mỗi lúc bật / tắt riêng, soạn tiêu đề + nội dung có mã {...}, xem trước bằng dữ liệu mẫu, gửi thư thử.
-   Người nhận không cấu hình: thư luôn gửi tới email trên trang Thông tin cá nhân của người nộp đơn.
+   Người nhận không cấu hình (EMAIL_EVENT_RECIPIENT): ghi rõ ở từng tab.
    Mọi thay đổi sửa trên bản nháp trong trình duyệt; bấm Lưu mới gửi lên máy chủ, Bỏ thay đổi trả về bản đã lưu. */
 import { useState, type KeyboardEvent } from 'react';
 import {
-  EMAIL_EVENT_STATUSES,
+  EMAIL_EVENT_KINDS,
+  EMAIL_EVENT_LABEL,
   EMAIL_MESSAGES,
   EmailSettingsSchema,
-  FORM_STATUS_LABEL,
+  isStaffEmailEvent,
+  type EmailEventKind,
   type EmailEventSetting,
-  type EmailEventStatus,
   type EmailSender,
   type EmailSettings,
   type StaffRef,
@@ -115,13 +117,13 @@ function EmailSettingsEditor({
   const toast = useToast();
   const saveSettings = useSaveEmailSettings();
   const [draft, setDraft] = useState<EmailSettings>(saved);
-  const [selectedStatus, setSelectedStatus] = useState<EmailEventStatus>(EMAIL_EVENT_STATUSES[0]);
+  const [selectedKind, setSelectedKind] = useState<EmailEventKind>(EMAIL_EVENT_KINDS[0]);
   // Chỉ báo lỗi từng ô sau lần bấm Lưu đầu tiên; từ đó lỗi cập nhật ngay khi sửa
   const [showErrors, setShowErrors] = useState(false);
 
   const dirty = JSON.stringify(draft) !== JSON.stringify(saved);
   const fieldErrors = showErrors ? validateSettings(draft) : {};
-  const selectedIndex = EMAIL_EVENT_STATUSES.indexOf(selectedStatus);
+  const selectedIndex = EMAIL_EVENT_KINDS.indexOf(selectedKind);
 
   // Sửa một ô của Người gửi / của lúc gửi đang chọn
   const changeSender = (key: keyof EmailSender, text: string) => setDraft((current) => ({ ...current, sender: { ...current.sender, [key]: text } }));
@@ -136,9 +138,9 @@ function EmailSettingsEditor({
     const errors = validateSettings(draft);
     if (Object.keys(errors).length > 0) {
       setShowErrors(true);
-      const firstEventIndex = EMAIL_EVENT_STATUSES.findIndex((_status, index) => Object.keys(errors).some((path) => path.startsWith(`events.${index}.`)));
+      const firstEventIndex = EMAIL_EVENT_KINDS.findIndex((_kind, index) => Object.keys(errors).some((path) => path.startsWith(`events.${index}.`)));
       const senderHasError = Object.keys(errors).some((path) => path.startsWith('sender.'));
-      if (!senderHasError && firstEventIndex >= 0) setSelectedStatus(EMAIL_EVENT_STATUSES[firstEventIndex]!);
+      if (!senderHasError && firstEventIndex >= 0) setSelectedKind(EMAIL_EVENT_KINDS[firstEventIndex]!);
       return;
     }
     try {
@@ -161,10 +163,10 @@ function EmailSettingsEditor({
   const moveTab = (event: KeyboardEvent<HTMLDivElement>) => {
     if (event.key !== 'ArrowRight' && event.key !== 'ArrowLeft') return;
     event.preventDefault();
-    const step = event.key === 'ArrowRight' ? 1 : EMAIL_EVENT_STATUSES.length - 1;
-    const nextStatus = EMAIL_EVENT_STATUSES[(selectedIndex + step) % EMAIL_EVENT_STATUSES.length]!;
-    setSelectedStatus(nextStatus);
-    document.getElementById(`email-tab-${nextStatus}`)?.focus();
+    const step = event.key === 'ArrowRight' ? 1 : EMAIL_EVENT_KINDS.length - 1;
+    const nextKind = EMAIL_EVENT_KINDS[(selectedIndex + step) % EMAIL_EVENT_KINDS.length]!;
+    setSelectedKind(nextKind);
+    document.getElementById(`email-tab-${nextKind}`)?.focus();
   };
 
   return (
@@ -236,33 +238,35 @@ function EmailSettingsEditor({
         <h2 id="email-content-title" className={styles.contentTitle}>
           Nội dung email
         </h2>
-        {/* bốn lúc gửi email: tab ngang; chấm màu theo trạng thái, lúc đang tắt ghi "Tắt", lúc có ô lỗi thì chấm đỏ */}
+        {/* bảy lúc gửi email: tab ngang, nhóm thư cho người nộp đơn rồi nhóm thư cho cán bộ (vạch ngăn giữa hai nhóm);
+            chấm màu theo lúc gửi, lúc đang tắt ghi "Tắt", lúc có ô lỗi thì chấm đỏ */}
         <div className={styles.tabs} role="tablist" aria-label="Lúc gửi email" onKeyDown={moveTab}>
           {draft.events.map((event, index) => {
             const hasError = Object.keys(fieldErrors).some((path) => path.startsWith(`events.${index}.`));
+            const startsStaffGroup = isStaffEmailEvent(event.kind) && !isStaffEmailEvent(draft.events[index - 1]?.kind ?? event.kind);
             return (
               <button
-                key={event.status}
-                id={`email-tab-${event.status}`}
+                key={event.kind}
+                id={`email-tab-${event.kind}`}
                 type="button"
                 role="tab"
-                aria-selected={event.status === selectedStatus}
+                aria-selected={event.kind === selectedKind}
                 aria-controls="email-event-panel"
-                tabIndex={event.status === selectedStatus ? 0 : -1}
-                className={`${styles.tab} ${event.enabled ? '' : styles.tabOff}`}
-                onClick={() => setSelectedStatus(event.status)}
+                tabIndex={event.kind === selectedKind ? 0 : -1}
+                className={`${styles.tab} ${event.enabled ? '' : styles.tabOff} ${startsStaffGroup ? styles.tabGroupStart : ''}`}
+                onClick={() => setSelectedKind(event.kind)}
               >
-                <span className={`${styles.dot} ${hasError ? styles.dotError : ''}`} data-status={event.status} aria-hidden="true" />
-                {FORM_STATUS_LABEL[event.status]}
+                <span className={`${styles.dot} ${hasError ? styles.dotError : ''}`} data-kind={event.kind} aria-hidden="true" />
+                {EMAIL_EVENT_LABEL[event.kind]}
                 {!event.enabled && <span className={styles.offTag}>Tắt</span>}
                 {hasError && <span className={styles.visuallyHidden}> (có ô chưa đúng)</span>}
               </button>
             );
           })}
         </div>
-        <div id="email-event-panel" role="tabpanel" aria-labelledby={`email-tab-${selectedStatus}`}>
+        <div id="email-event-panel" role="tabpanel" aria-labelledby={`email-tab-${selectedKind}`}>
           <EmailEventEditor
-            key={selectedStatus}
+            key={selectedKind}
             event={draft.events[selectedIndex]!}
             eventIndex={selectedIndex}
             sender={draft.sender}

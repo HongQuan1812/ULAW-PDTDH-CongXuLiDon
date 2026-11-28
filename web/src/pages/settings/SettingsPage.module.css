@@ -1,13 +1,13 @@
-/* Trang Cấu hình. Khung trang dùng chung ProfilePage.module.css. */
+/* Trang Cấu hình. Khung trang dùng chung ProfilePage.module.css. Lưới thẻ, thẻ cũng dùng ở trang Ngày nghỉ (các ngày nghỉ trong năm). */
 
 /* lưới thẻ: tự xuống hàng khi hẹp */
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,280px),1fr));gap:16px}
 
-/* một thẻ: biểu tượng · tên + mô tả, cả thẻ là đường dẫn */
-.card{display:flex;align-items:flex-start;gap:14px;padding:20px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);color:var(--fg);text-decoration:none;transition:border-color .15s,box-shadow .15s}
+/* một thẻ: biểu tượng · tên, các dòng mô tả. Mỗi thẻ chiếm --card-rows dòng của lưới cha (subgrid, mặc định 2: tên · mô tả):
+   tên các thẻ cùng hàng cùng một dòng, mô tả cùng một dòng; tên thẻ nào xuống dòng thì cả hàng theo, mô tả vẫn thẳng hàng */
+.card{display:grid;grid-template-columns:var(--card-icon-size,44px) minmax(0,1fr);grid-row:span var(--card-rows,2);grid-template-rows:subgrid;gap:4px 14px;align-content:start;padding:20px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);color:var(--fg);font:inherit;text-align:left;text-decoration:none;cursor:pointer;transition:border-color .15s,box-shadow .15s}
 .card:hover{border-color:var(--line-2);box-shadow:var(--shadow)}
 .card:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
-.icon{flex:none;width:44px;height:44px;border-radius:12px;display:grid;place-items:center;background:var(--accent-soft);color:var(--accent)}
-.text{display:grid;gap:4px;min-width:0}
-.text strong{font-size:16px;font-weight:600}
-.text span{font-size:13px;color:var(--muted)}
+.icon{grid-column:1;grid-row:1/-1;align-self:start;width:44px;height:44px;border-radius:12px;display:grid;place-items:center;background:var(--accent-soft);color:var(--accent)}
+.title{grid-column:2;font-size:16px;font-weight:600}
+.description{grid-column:2;font-size:13px;color:var(--muted)}

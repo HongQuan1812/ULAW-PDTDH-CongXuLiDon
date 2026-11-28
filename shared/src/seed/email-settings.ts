@@ -27,7 +27,7 @@ export const EMAIL_SETTINGS_SEED: EmailSettings = {
   },
   events: [
     {
-      status: 'nop',
+      kind: 'nop',
       enabled: true,
       subject: '[{ma_don}] Đã nhận đơn {loai_don} của bạn',
       body: letterToRichText(`Chào {ho_ten},
@@ -41,7 +41,7 @@ Trân trọng,
 {chu_ki}`),
     },
     {
-      status: 'bs',
+      kind: 'bs',
       enabled: true,
       subject: '[{ma_don}] Đơn của bạn cần bổ sung',
       body: letterToRichText(`Chào {ho_ten},
@@ -58,7 +58,7 @@ Trân trọng,
 {chu_ki}`),
     },
     {
-      status: 'tc',
+      kind: 'tc',
       enabled: true,
       subject: '[{ma_don}] Đơn của bạn không được duyệt',
       body: letterToRichText(`Chào {ho_ten},
@@ -75,7 +75,7 @@ Trân trọng,
 {chu_ki}`),
     },
     {
-      status: 'duyet',
+      kind: 'duyet',
       enabled: true,
       subject: '[{ma_don}] Đơn của bạn đã được duyệt',
       body: letterToRichText(`Chào {ho_ten},
@@ -87,6 +87,54 @@ Bạn xem kết quả và tải file tại:
 
 Trân trọng,
 {nguoi_xu_li}
+{chu_ki}`),
+    },
+    {
+      kind: 'dueSoon',
+      enabled: true,
+      subject: '[{ma_don}] Đơn sắp tới hạn xử lí',
+      body: letterToRichText(`Kính gửi Thầy/Cô,
+
+Đơn {loai_don} mã {ma_don} của {ho_ten} sắp tới hạn xử lí.
+
+Hạn xử lí: {han_xu_li}
+
+Thầy/Cô vui lòng xử lí đơn tại:
+{link_don}
+
+Trân trọng,
+{chu_ki}`),
+    },
+    {
+      kind: 'overdue',
+      enabled: true,
+      subject: '[{ma_don}] Đơn đã quá hạn xử lí',
+      body: letterToRichText(`Kính gửi Thầy/Cô,
+
+Đơn {loai_don} mã {ma_don} của {ho_ten} đã quá hạn xử lí.
+
+Hạn xử lí: {han_xu_li}
+
+Thầy/Cô vui lòng xử lí đơn sớm tại:
+{link_don}
+
+Trân trọng,
+{chu_ki}`),
+    },
+    {
+      kind: 'transferred',
+      enabled: true,
+      subject: '[{ma_don}] Thầy/Cô được chuyển giao một đơn',
+      body: letterToRichText(`Kính gửi {nguoi_xu_li},
+
+{nguoi_chuyen_giao} đã chuyển giao cho Thầy/Cô đơn {loai_don} mã {ma_don} của {ho_ten}.
+
+Hạn xử lí: {han_xu_li}
+
+Thầy/Cô xem và xử lí đơn tại:
+{link_don}
+
+Trân trọng,
 {chu_ki}`),
     },
   ],

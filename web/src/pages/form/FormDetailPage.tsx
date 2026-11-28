@@ -1,21 +1,21 @@
 /* Trang chi tiết một lá đơn (#/don/<mã đơn>).
    Gồm: tiêu đề, khung thông báo theo trạng thái, nội dung đơn, khung "Thông tin đơn" bên phải
-   (trạng thái, ngày nộp, người nộp đơn, người tiếp nhận, người xử lí, lịch sử).
+   (trạng thái, ngày nộp, hạn xử lí nếu loại đơn có hạn, người nộp đơn, người tiếp nhận, người xử lí, lịch sử).
    Nội dung đơn sửa được khi canEditForm (đơn của mình hoặc Admin, đơn Đã nộp / Cần bổ sung / Đã bổ sung), còn lại chỉ xem.
    Cán bộ có quyền receive thấy nút "Tiếp nhận" ở đầu trang khi đơn Đã nộp / Đã bổ sung.
    Đơn Đang xét mà mình được ra quyết định (canDecideOn) thì có hàng nút Yêu cầu bổ sung / Từ chối / Duyệt ở đáy trang.
    Loại đơn có mẫu xuất đơn thì có nút "Xuất đơn" ở đầu trang (điền đơn vào mẫu Word, xem trước rồi tải về).
    Cán bộ có quyền internalNotes thấy nút tròn Ghi chú nội bộ ở góc phải dưới (người nộp đơn không thấy).
-   Các mục người nộp đơn, người tiếp nhận, người xử lí, lịch sử thu gọn được (trình duyệt nhớ). Lịch sử cũ nhất ở trên. */
+   Các mục thông tin chung, người nộp đơn, người tiếp nhận, người xử lí, lịch sử thu gọn được (trình duyệt nhớ). Lịch sử cũ nhất ở trên. */
 import { useState, type FormEvent, type ReactNode } from 'react';
 import { Link, useLocation, useParams } from 'react-router';
-import { FORM_MESSAGES, can, canDecideOn, canEditForm, canReceiveForm, canTransferForm, type FormDetail, type FormStatus } from '@ulaw/shared';
+import { FORM_MESSAGES, can, canDecideOn, canEditForm, canReceiveForm, canTransferForm, deadlineDetailText, type FormDeadline, type FormDetail, type FormStatus } from '@ulaw/shared';
 import { useFormDetail } from '../../api/form';
 import { PAGE_PATH, personProfilePath, readOpenNotes, type ReturnState } from '../../app/paths';
 import { Button } from '../../components/Button';
 import { LoadError, loadErrorMessage } from '../../components/LoadError';
 import { RefreshButton } from '../../components/RefreshButton';
-import { StatusPill } from '../../components/StatusPill';
+import { DeadlinePill, StatusPill } from '../../components/StatusPill';
 import { useToast } from '../../components/Toast';
 import { useAuth } from '../../features/auth/useAuth';
 import { FormExportButton } from '../../features/export/FormExportButton';
@@ -28,7 +28,7 @@ import { ReceiveFormButton } from '../../features/receive/ReceiveFormButton';
 import { EMPTY_TEXT, formatDateTime } from '../../lib/format';
 import { DecideBar } from './DecideBar';
 import { FormHistory } from './FormHistory';
-import { FormInfoPanel, FormInfoPanelToggle, FormInfoSection, FormInfoSummary, INFO_SECTION_STORAGE_KEY, useFormInfoPanel } from './FormInfoPanel';
+import { FormInfoPanel, FormInfoPanelToggle, FormInfoSection, INFO_SECTION_STORAGE_KEY, useFormInfoPanel } from './FormInfoPanel';
 import styles from './FormPage.module.css';
 import { TransferDialog } from './TransferDialog';
 import { SubmitBar, checkBeforeSending, useCommitment } from './SubmitBar';
@@ -83,6 +83,35 @@ function AtTime({ time }: { time: string | null }) {
       <b>{formatDateTime(time)}</b>
     </>
   );
+}
+
+/**
+ * Hai dòng hạn xử lí ở đầu khung "Thông tin đơn": hạn (kèm thời gian xử lí tối đa), tình trạng hạn (kèm còn / trễ bao lâu).
+ * @param deadline  hạn của lá đơn
+ * @returns         các dòng [nhãn, giá trị]; loại đơn không giới hạn thì hạn ghi "Không giới hạn"
+ */
+function deadlineRows(deadline: FormDeadline): [string, ReactNode][] {
+  const detail = deadlineDetailText(deadline);
+  return [
+    [
+      'Hạn xử lí',
+      deadline.maxDays === null ? (
+        'Không giới hạn'
+      ) : (
+        <span className={styles.deadlineValue}>
+          {deadline.dueAt ? formatDateTime(deadline.dueAt) : 'Chưa có, chờ bổ sung'}
+          <span className={styles.deadlineNote}>Tối đa {deadline.maxDays} ngày làm việc</span>
+        </span>
+      ),
+    ],
+    [
+      'Tình trạng hạn',
+      <span className={styles.deadlineValue}>
+        <DeadlinePill state={deadline.state} />
+        {detail && <span className={styles.deadlineNote}>{detail}</span>}
+      </span>,
+    ],
+  ];
 }
 
 /**
@@ -152,12 +181,16 @@ function FormDetailView({ form }: { form: FormDetail }) {
           </div>
         )}
         <FormInfoPanel panel={infoPanel}>
-          <FormInfoSummary
+          <FormInfoSection
+            title="Thông tin chung"
+            storageKey={INFO_SECTION_STORAGE_KEY.general}
+            scrollable
             rows={[
               ['Trạng thái', <StatusPill status={form.status} />],
               ['Loại đơn', form.formTypeName],
               ['Nộp lúc', formatDateTime(form.submittedAt)],
               ['Cập nhật lúc', formatDateTime(form.updatedAt)],
+              ...deadlineRows(form.deadline),
             ]}
           />
           <ApplicantInfo form={form} />

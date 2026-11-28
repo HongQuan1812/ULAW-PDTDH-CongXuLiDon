@@ -105,6 +105,17 @@ model FormType {
   // Tiền tố mã đơn, vd XMR
   prefix String @unique
 
+  // Cấu hình thời gian (áp dụng cho mọi phiên bản, sửa không tạo phiên bản mới)
+  // Thời gian xử lí tối đa, ngày làm việc; null = không có hạn. Đơn chụp giá trị này lúc nộp
+  maxProcessingDays Int?
+  // Giờ tự mở và phiên bản sẽ mở; null = không hẹn. Done = đã tới giờ và đã chạy
+  autoOpenAt        DateTime? @db.Timestamptz(3)
+  autoOpenVersion   Int?
+  autoOpenDone      Boolean   @default(false)
+  // Giờ tự đóng (đóng phiên bản đang mở); null = không hẹn
+  autoCloseAt       DateTime? @db.Timestamptz(3)
+  autoCloseDone     Boolean   @default(false)
+
   versions        FormTypeVersion[]
   forms           Form[]
   exportTemplates ExportTemplate[]
@@ -151,6 +162,9 @@ model Form {
   answers          Json
   // Bản chụp cấu trúc loại đơn lúc nộp, để sửa loại đơn sau này không làm hỏng đơn cũ
   formTypeSnapshot Json
+  // Hạn xử lí đã gửi thư nhắc Sắp tới hạn / Quá hạn (null: chưa nhắc). Hạn lùi vì bổ sung thì khác giá trị này, nhắc lại theo hạn mới
+  dueSoonRemindedFor DateTime? @db.Timestamptz(3)
+  overdueRemindedFor DateTime? @db.Timestamptz(3)
 
   files  FileObject[]
   notes  FormNote[]
@@ -333,4 +347,18 @@ model BackupRun {
 
   @@index([startedAt])
   @@index([targetId, status])
+}
+
+// ---------- Ngày nghỉ (trang Ngày nghỉ của Admin) ----------
+
+// Ngày nghỉ ngoài Thứ Bảy, Chủ nhật (lễ, Tết, nghỉ bù): hạn xử lí đơn không tính những ngày này.
+// Một ngày hoặc một khoảng ngày liền nhau, tính cả hai đầu; các ngày nghỉ không trùng nhau (kiểm ở API)
+model Holiday {
+  id        String   @id
+  name      String
+  startDate DateTime @db.Date
+  endDate   DateTime @db.Date
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+
+  @@index([startDate])
 }

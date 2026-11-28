@@ -1,9 +1,9 @@
 /* Hộp "Chọn loại đơn", mở khi bấm "Nộp đơn mới":
-   các loại đơn đang nhận đơn, có ô tìm kiếm; chọn một loại thì sang trang nộp đơn của loại đó
+   các loại đơn đang nhận đơn (loại đơn có hẹn giờ tự đóng thì ghi "Nhận đơn đến …"), có ô tìm kiếm; chọn một loại thì sang trang nộp đơn của loại đó
    (của mình, hoặc thay cho người đang xem khi mở từ trang thông tin người khác). */
 import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import { useNavigate } from 'react-router';
-import type { OpenFormType } from '@ulaw/shared';
+import { FORM_TYPE_TIME_MESSAGES, type OpenFormTypeChoice } from '@ulaw/shared';
 import { newFormForApplicantPath, newFormPath, type ReturnState } from '../../app/paths';
 import { LoadError } from '../../components/LoadError';
 import { Modal } from '../../components/Modal';
@@ -17,7 +17,7 @@ interface FormTypePickerProps {
   open: boolean;
   onClose: () => void;
   /** Các loại đơn đang mở; undefined = chưa tải xong */
-  formTypes: OpenFormType[] | undefined;
+  formTypes: OpenFormTypeChoice[] | undefined;
   /** Câu báo khi không tải được danh sách (đóng hộp rồi mở lại để tải lại); null = không lỗi */
   loadError: string | null;
   /** Nộp thay: id người nộp đơn; bỏ trống = đơn của mình */
@@ -51,7 +51,7 @@ export function FormTypePicker({ open, onClose, formTypes, loadError, applicantI
  * @param query      chữ trong ô tìm kiếm
  * @returns          các loại đơn khớp, theo thứ tự tên kiểu tiếng Việt
  */
-function matchFormTypes(formTypes: OpenFormType[], query: string): OpenFormType[] {
+function matchFormTypes(formTypes: OpenFormTypeChoice[], query: string): OpenFormTypeChoice[] {
   const keyword = normalizeText(query.trim());
   return formTypes
     .filter(
@@ -73,7 +73,7 @@ function FormTypeList({
   formTypes,
   applicantId,
   previousPageLabel,
-}: { formTypes: OpenFormType[] } & Pick<FormTypePickerProps, 'applicantId' | 'previousPageLabel'>) {
+}: { formTypes: OpenFormTypeChoice[] } & Pick<FormTypePickerProps, 'applicantId' | 'previousPageLabel'>) {
   const navigate = useNavigate();
   const listId = useId();
   const listRef = useRef<HTMLDivElement>(null);
@@ -89,7 +89,7 @@ function FormTypeList({
   }, [shownIndex]);
 
   // Mở trang nộp đơn của loại đã chọn, của mình hoặc nộp thay (hộp thoại tự đóng khi rời trang)
-  const start = (formType: OpenFormType) =>
+  const start = (formType: OpenFormTypeChoice) =>
     navigate(applicantId ? newFormForApplicantPath(applicantId, formType.id) : newFormPath(formType.id), {
       state: { previousPageLabel } satisfies ReturnState,
     });
@@ -159,6 +159,7 @@ function FormTypeList({
                   <Highlight text={formType.description} query={query} />
                 </span>
               )}
+              {formType.acceptsUntil && <span className={styles.acceptsUntil}>{FORM_TYPE_TIME_MESSAGES.acceptsUntil(formType.acceptsUntil)}</span>}
             </button>
           ))
         ) : (

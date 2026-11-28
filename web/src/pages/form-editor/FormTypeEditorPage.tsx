@@ -6,19 +6,22 @@
    - Phiên bản Nháp sửa được; Lưu ở Nháp để soạn tiếp, hoặc ở Đang mở để mở (nội dung khóa lại).
    - Phiên bản đã khóa (Đang mở / Đã đóng) chỉ đổi được trạng thái. Sửa nội dung của nó thì trình soạn tự chép ra phiên bản mới;
      nếu đang có phiên bản Nháp thì phiên bản đã khóa chỉ xem được.
-   Mẫu xuất file (đơn và danh sách đơn; hai nút tròn nổi ở cạnh phải, mỗi nút mở một khung nổi) thuộc loại đơn (mọi phiên bản): thêm, đổi tên, xóa mẫu cũng là thay đổi chưa lưu, bấm Lưu thì gửi lên
-   sau khi lưu loại đơn (kể cả khi đang xem phiên bản đã khóa).
+   Cấu hình thời gian (thời gian xử lí, giờ tự mở / đóng) và mẫu xuất file (đơn và danh sách đơn) thuộc loại đơn (mọi phiên bản), mỗi thứ một nút tròn nổi
+   ở cạnh phải mở một khung nổi: sửa cũng là thay đổi chưa lưu, bấm Lưu thì gửi lên sau khi lưu loại đơn (kể cả khi đang xem phiên bản đã khóa).
    Thay đổi chưa lưu được giữ lại khi đi trang khác (formTypeDrafts.ts). */
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router';
 import {
   DRAFT_SAVE_STATUSES,
+  EMPTY_FORM_TYPE_TIME_SETTINGS,
   EXPORT_MESSAGES,
   FORM_TYPE_MESSAGES,
   FORM_TYPE_STATUS_LABEL,
+  FORM_TYPE_TIME_MESSAGES,
   LOCKED_VERSION_STATUSES,
   issueMessages,
   validateFormTypeDraft,
+  vietnamTimeOf,
   type FormSection,
   type FormTypeStatus,
   type ManagedFormType,
@@ -26,8 +29,10 @@ import {
 } from '@ulaw/shared';
 import {
   useDeleteFormTypeVersion,
+  useFormTypeTimeSettings,
   useFormTypes,
   useManagedFormType,
+  useSaveFormTypeTimeSettings,
   useSaveFormTypeVersion,
   useSetFormTypeVersionStatus,
   type SaveFormTypeVersionTarget,
@@ -41,7 +46,7 @@ import { RefreshButton } from '../../components/RefreshButton';
 import { useToast } from '../../components/Toast';
 import { DraftIssuesContext } from './draftIssues';
 import { FormListExportButton } from '../../features/export/FormListExportButton';
-import { ExportTemplatesDock } from './ExportTemplatesDock';
+import { EditorDock, type EditorDockPanel } from './EditorDock';
 import { NO_TEMPLATE_CHANGES, hasTemplateChanges, toSaveTemplatesRequest } from './exportTemplateChanges';
 import { FormTypeInfoCard } from './FormTypeInfoCard';
 import { FormInfoPanelToggle, useFormInfoPanel } from '../form/FormInfoPanel';
@@ -53,11 +58,15 @@ import {
   discardTemplateChanges,
   discardUnsavedEdit,
   keepTemplateChanges,
+  keepTimeChanges,
   keepUnsavedEdit,
   readTemplateChanges,
+  readTimeChanges,
   readUnsavedEdit,
   type UnsavedEdit,
 } from './formTypeDrafts';
+import { formOfTimeSettings, sameTimeSettings, timeSettingsIssues, toSaveTimeSettingsRequest, type TimeSettingsForm } from './timeSettingsForm';
+import type { AutoOpenVersionChoice } from './TimeSettingsPanel';
 import { SectionEditor, type SectionAction } from './SectionEditor';
 import styles from './FormTypeEditor.module.css';
 import { BackButton } from '../../components/BackButton';
@@ -199,12 +208,20 @@ function FormTypeEditor({ managed, requestedVersion }: FormTypeEditorProps) {
   const setVersionStatus = useSetFormTypeVersionStatus(formTypeId);
   const deleteVersion = useDeleteFormTypeVersion(formTypeId);
   const saveTemplates = useSaveExportTemplates();
+  const timeSettingsQuery = useFormTypeTimeSettings(formTypeId, !isNew);
+  const saveTimeSettings = useSaveFormTypeTimeSettings();
   const versionPanel = useFormInfoPanel(VERSION_PANEL_STORAGE_KEY);
 
   // Thay đổi chưa lưu (giữ lại từ lần trước nếu có), phiên bản đang xem, trạng thái mới chọn cho phiên bản đã khóa
   const [edit, setEdit] = useState<UnsavedEdit | null>(() => readUnsavedEdit(formTypeId) ?? null);
   // Thay đổi chưa lưu về mẫu xuất file (không theo phiên bản)
   const [templateChanges, setTemplateChanges] = useState(() => readTemplateChanges(formTypeId) ?? NO_TEMPLATE_CHANGES);
+  // Cấu hình thời gian chưa lưu (không theo phiên bản); null = không có thay đổi
+  const [timeForm, setTimeForm] = useState<TimeSettingsForm | null>(() => readTimeChanges(formTypeId) ?? null);
+  // Khung nổi đang mở ở cạnh phải (cấu hình thời gian, mẫu xuất file)
+  const [openDockPanel, setOpenDockPanel] = useState<EditorDockPanel | null>(null);
+  // Đã bấm Lưu mà cấu hình thời gian còn lỗi: từ đó kiểm tra lại mỗi lần sửa
+  const [showTimeIssues, setShowTimeIssues] = useState(false);
   const [selectedVersion, setSelectedVersion] = useState(() => {
     if (requestedVersion && versions.some((version) => version.version === requestedVersion)) return requestedVersion;
     return edit?.version ?? versions[0]?.version ?? 1;
@@ -242,6 +259,7 @@ function FormTypeEditor({ managed, requestedVersion }: FormTypeEditorProps) {
     setEdit(null);
   }, [formTypeId, edit]);
   useEffect(() => keepTemplateChanges(formTypeId, templateChanges), [formTypeId, templateChanges]);
+  useEffect(() => keepTimeChanges(formTypeId, timeForm), [formTypeId, timeForm]);
 
   // Phiên bản đang xem: đã lưu chưa, có đang sửa không, sửa được không
   const selectedSaved = versions.find((version) => version.version === selectedVersion) ?? null;
@@ -268,7 +286,31 @@ function FormTypeEditor({ managed, requestedVersion }: FormTypeEditorProps) {
   // (khung Phiên bản vẫn ghi "Chưa lưu" ở phiên bản đó). Thay đổi về mẫu xuất file thì tính ở mọi phiên bản.
   const statusChanged = isLockedVersion && statusChange?.version === selectedVersion;
   const templatesChanged = hasTemplateChanges(templateChanges);
-  const dirty = editingSelected || statusChanged || templatesChanged;
+  const timeChanged = timeForm !== null;
+  const dirty = editingSelected || statusChanged || templatesChanged || timeChanged;
+
+  // Cấu hình thời gian: đã lưu (loại đơn mới thì chưa có gì; đang tải thì null), các phiên bản chọn được làm phiên bản tự mở
+  const savedTimeSettings = isNew ? EMPTY_FORM_TYPE_TIME_SETTINGS : (timeSettingsQuery.data ?? null);
+  const autoOpenChoices: AutoOpenVersionChoice[] = useMemo(
+    () => (isNew ? [{ version: 1, status: 'draft' }] : versions.map(({ version, status }) => ({ version, status }))),
+    [isNew, versions],
+  );
+  const savedVersionNumbers = useMemo(() => autoOpenChoices.map((choice) => choice.version), [autoOpenChoices]);
+  const baseTimeForm = useMemo(
+    () => formOfTimeSettings(savedTimeSettings ?? EMPTY_FORM_TYPE_TIME_SETTINGS, savedVersionNumbers[0] ?? 1),
+    [savedTimeSettings, savedVersionNumbers],
+  );
+  const shownTimeForm = timeForm ?? baseTimeForm;
+  const timeIssues = useMemo(
+    () => (showTimeIssues && timeForm && savedTimeSettings ? timeSettingsIssues(timeForm, savedVersionNumbers, savedTimeSettings, vietnamTimeOf(new Date())) : []),
+    [showTimeIssues, timeForm, savedTimeSettings, savedVersionNumbers],
+  );
+
+  /**
+   * Sửa cấu hình thời gian; sửa về đúng như đã lưu thì coi như không còn thay đổi.
+   * @param nextTimeForm  các ô mới của khung Cấu hình thời gian
+   */
+  const changeTimeForm = (nextTimeForm: TimeSettingsForm) => setTimeForm(sameTimeSettings(nextTimeForm, baseTimeForm) ? null : nextTimeForm);
 
   // Lỗi của bản soạn (chỉ sau khi đã bấm Lưu); mã đơn so với các loại đơn khác trong danh sách đã tải
   const otherPrefixes = useMemo(
@@ -381,12 +423,13 @@ function FormTypeEditor({ managed, requestedVersion }: FormTypeEditorProps) {
    * 1. Phiên bản đã khóa: đổi trạng thái (mở thì phiên bản đang mở khác tự đóng).
    * 2. Phiên bản Nháp / loại đơn mới: kiểm tra bản soạn (còn lỗi: tô đỏ, liệt kê, đưa con trỏ tới ô lỗi đầu tiên, không lưu gì)
    *    rồi tạo loại đơn, thêm phiên bản mới, hoặc lưu đè phiên bản Nháp.
-   * 3. Mẫu xuất file: gửi mọi thay đổi cùng các file mới trong một lần (loại đơn mới thì sau khi đã tạo).
+   * 3. Cấu hình thời gian (loại đơn mới thì sau khi đã tạo). Còn lỗi thì kiểm tra ngay từ đầu, mở khung Cấu hình thời gian, không lưu gì.
+   * 4. Mẫu xuất file: gửi mọi thay đổi cùng các file mới trong một lần (loại đơn mới thì sau khi đã tạo).
    */
   const save = async () => {
     setEditorMode('edit');
     const contentChanged = !isLockedVersion && (editingSelected || isNew);
-    if (!contentChanged && !statusChanged && !templatesChanged) {
+    if (!contentChanged && !statusChanged && !templatesChanged && !timeChanged) {
       toast('Không có thay đổi để lưu.', 'info');
       return;
     }
@@ -399,6 +442,22 @@ function FormTypeEditor({ managed, requestedVersion }: FormTypeEditorProps) {
         const otherCount = draftIssues.length - 1;
         toast(`${draftIssues[0]}${otherCount ? ` (còn ${otherCount} lỗi khác, xem các ô tô đỏ)` : ''}`, 'error');
         setTimeout(focusFirstIssue);
+        return;
+      }
+    }
+
+    // Kiểm tra cấu hình thời gian trước khi gửi
+    if (timeForm) {
+      if (!savedTimeSettings) {
+        toast(FORM_TYPE_TIME_MESSAGES.notLoaded, 'info');
+        return;
+      }
+      const timeMessages = issueMessages(timeSettingsIssues(timeForm, savedVersionNumbers, savedTimeSettings, vietnamTimeOf(new Date())));
+      if (timeMessages.length) {
+        setShowTimeIssues(true);
+        setOpenDockPanel('time');
+        const otherCount = timeMessages.length - 1;
+        toast(`${timeMessages[0]}${otherCount ? ` (còn ${otherCount} lỗi khác, xem khung Cấu hình thời gian)` : ''}`, 'error');
         return;
       }
     }
@@ -448,7 +507,25 @@ function FormTypeEditor({ managed, requestedVersion }: FormTypeEditorProps) {
       );
     }
 
-    // 3. Mẫu xuất file. Lỗi thì giữ các thay đổi (loại đơn vừa tạo thì chuyển sang giữ theo mã mới) để bấm Lưu lại
+    // 3. Cấu hình thời gian. Lỗi thì giữ các thay đổi (loại đơn vừa tạo thì chuyển sang giữ theo mã mới) để bấm Lưu lại
+    if (timeForm) {
+      try {
+        await saveTimeSettings.mutateAsync({ formTypeId: savedFormTypeId, saveRequest: toSaveTimeSettingsRequest(timeForm) });
+        keepTimeChanges(formTypeId, null);
+        setTimeForm(null);
+        setShowTimeIssues(false);
+        if (!contentChanged && !statusChanged) toast(FORM_TYPE_TIME_MESSAGES.saved(versions[0]?.name ?? shownDraft.name.trim()), 'success');
+      } catch (error) {
+        const reason = error instanceof Error ? error.message : String(error);
+        toast(contentChanged || statusChanged ? FORM_TYPE_TIME_MESSAGES.notSaved(reason) : reason, 'error');
+        if (isNew) {
+          keepTimeChanges(savedFormTypeId, timeForm);
+          keepTimeChanges(formTypeId, null);
+        }
+      }
+    }
+
+    // 4. Mẫu xuất file. Lỗi thì giữ các thay đổi (loại đơn vừa tạo thì chuyển sang giữ theo mã mới) để bấm Lưu lại
     if (templatesChanged) {
       try {
         await saveTemplates.mutateAsync({ formTypeId: savedFormTypeId, ...toSaveTemplatesRequest(templateChanges) });
@@ -470,15 +547,18 @@ function FormTypeEditor({ managed, requestedVersion }: FormTypeEditorProps) {
     else if (savedVersion !== null) setSelectedVersion(savedVersion);
   };
 
-  /** Bỏ thay đổi (cả thay đổi về mẫu xuất file): về bản đã lưu; đang soạn phiên bản mới (chưa lưu) thì quay về phiên bản đã chép ra. */
+  /** Bỏ thay đổi (cả thay đổi về mẫu xuất file, cấu hình thời gian): về bản đã lưu; đang soạn phiên bản mới (chưa lưu) thì quay về phiên bản đã chép ra. */
   const discardChanges = () => {
     if (edit?.isNewVersion) setSelectedVersion(edit.baseVersion ?? versions[0]?.version ?? 1);
     discardUnsavedEdit(formTypeId);
     discardTemplateChanges(formTypeId);
+    keepTimeChanges(formTypeId, null);
     setEdit(null);
     setTemplateChanges(NO_TEMPLATE_CHANGES);
+    setTimeForm(null);
     setStatusChange(null);
     setShowIssues(false);
+    setShowTimeIssues(false);
     toast(FORM_TYPE_MESSAGES.discarded, 'info');
   };
 
@@ -493,6 +573,7 @@ function FormTypeEditor({ managed, requestedVersion }: FormTypeEditorProps) {
         setConfirmingDelete(false);
         if (!remaining) {
           discardTemplateChanges(formTypeId);
+          keepTimeChanges(formTypeId, null);
           toast(FORM_TYPE_MESSAGES.deleted(name), 'success');
           navigate(PAGE_PATH.formTypes, { replace: true });
           return;
@@ -573,7 +654,7 @@ function FormTypeEditor({ managed, requestedVersion }: FormTypeEditorProps) {
     );
   }
   const deletesWholeFormType = versions.length === 1;
-  const isSaving = saveVersion.isPending || setVersionStatus.isPending || saveTemplates.isPending;
+  const isSaving = saveVersion.isPending || setVersionStatus.isPending || saveTemplates.isPending || saveTimeSettings.isPending;
 
   return (
     <DraftIssuesContext.Provider value={invalidTargets}>
@@ -658,16 +739,29 @@ function FormTypeEditor({ managed, requestedVersion }: FormTypeEditorProps) {
               </div>
             </fieldset>
 
-            {/* Mẫu xuất đơn (Word) và danh sách đơn (Excel): hai nút tròn nổi ở cạnh phải, mỗi nút mở một khung nổi
+            {/* Cấu hình thời gian, mẫu xuất đơn (Word) và danh sách đơn (Excel): ba nút tròn nổi ở cạnh phải, mỗi nút mở một khung nổi
                 (nằm trong phần Soạn nên tab Xem trước thì ẩn). Thuộc loại đơn (mọi phiên bản) nên không bị khóa theo phiên bản;
-                hai khung dùng chung một bộ thay đổi, chờ bấm Lưu */}
-            <ExportTemplatesDock
-              formTypeId={managed?.id ?? null}
-              draft={exportDraft}
-              version={selectedVersion}
-              changes={templateChanges}
-              onChangesChange={setTemplateChanges}
-              saving={isSaving}
+                thay đổi chờ bấm Lưu */}
+            <EditorDock
+              templates={{
+                formTypeId: managed?.id ?? null,
+                draft: exportDraft,
+                version: selectedVersion,
+                changes: templateChanges,
+                onChangesChange: setTemplateChanges,
+                saving: isSaving,
+              }}
+              timeSettings={{
+                form: shownTimeForm,
+                settingsQuery: isNew ? null : timeSettingsQuery,
+                versionChoices: autoOpenChoices,
+                issues: timeIssues,
+                onFormChange: changeTimeForm,
+                saving: isSaving,
+                unsaved: timeChanged,
+              }}
+              openPanel={openDockPanel}
+              onOpenPanelChange={setOpenDockPanel}
             />
 
             {/* Hàng nút dính đáy màn hình khi cuộn (như trang chi tiết đơn): Xóa bên trái; Bỏ thay đổi · Lưu bên phải, chỉ hiện khi phiên bản đang xem có thay đổi */}

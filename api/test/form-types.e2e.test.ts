@@ -70,7 +70,7 @@ describe('form-types', () => {
     expect(open.formTypes.map((formType) => formType.id)).toContain('xmr');
 
     const detail = FormTypeSchema.parse((await request(server()).get('/api/form-types/xmr').set('Cookie', cookie).expect(200)).body);
-    expect(detail.status).toBe('open');
+    expect(detail).toMatchObject({ status: 'open', maxProcessingDays: 10 });
     expect(detail.sections.length).toBeGreaterThan(0);
 
     for (const call of [

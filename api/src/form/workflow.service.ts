@@ -35,7 +35,7 @@ export class WorkflowService {
   /**
    * @param prisma       kết nối database
    * @param formService  đọc đơn, dựng FormDetail
-   * @param formEmail    gửi thư báo quyết định cho người nộp đơn
+   * @param formEmail    gửi thư báo quyết định cho người nộp đơn, thư Được chuyển giao cho người nhận đơn
    */
   constructor(
     private readonly prisma: PrismaService,
@@ -126,6 +126,7 @@ export class WorkflowService {
 
   /**
    * Chuyển giao đơn: người nhận thành người xử lí, "Phụ trách từ" tính lại; trạng thái, người tiếp nhận, lí do không đổi.
+   * Lưu xong thì gửi thư Được chuyển giao cho người nhận (không chờ).
    * @param actor         cán bộ đang đăng nhập
    * @param code          mã đơn
    * @param readTransfer  cách đọc body
@@ -155,6 +156,9 @@ export class WorkflowService {
       return count > 0;
     });
     if (!saved) throw new ApiException(409, FORM_MESSAGES.notTransferable);
+
+    // Đã lưu: báo cho người nhận đơn
+    this.formEmail.notifyTransfer(code, actor.name);
     return this.formService.findDetail(code, actor);
   }
 

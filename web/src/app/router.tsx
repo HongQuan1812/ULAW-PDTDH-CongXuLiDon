@@ -3,6 +3,7 @@ import { createHashRouter } from 'react-router';
 import { AccountsPage } from '../pages/accounts/AccountsPage';
 import { BackupsPage } from '../pages/backups/BackupsPage';
 import { DataSourcesPage } from '../pages/data-sources/DataSourcesPage';
+import { HolidaysPage } from '../pages/holidays/HolidaysPage';
 import { EmailSettingsPage } from '../pages/email-settings/EmailSettingsPage';
 import { FormDetailPage } from '../pages/form/FormDetailPage';
 import { NewFormPage } from '../pages/form/NewFormPage';
@@ -72,6 +73,10 @@ export const router = createHashRouter([
       {
         path: PAGE_PATH.backups,
         element: <PageGuard page="backups" permission="manageBackups"><BackupsPage /></PageGuard>,
+      },
+      {
+        path: PAGE_PATH.holidays,
+        element: <PageGuard page="holidays" permission="manageHolidays"><HolidaysPage /></PageGuard>,
       },
       // Trang thử tạm của trình soạn văn bản (xóa khi đã gắn vào câu hỏi / mô tả phần)
       { path: '/thu-soan-van-ban', element: <RichTextDemoPage /> },

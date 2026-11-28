@@ -4,10 +4,11 @@
      - màn hình rộng: nằm bên phải nội dung đơn; bấm › để ẩn, nút "Thông tin đơn" ở đầu trang để hiện lại
        (nhớ lựa chọn trong trình duyệt này)
      - màn hình hẹp (≤ 1100px): ẩn sẵn, bấm "Thông tin đơn" để trượt ra từ bên phải; bấm ra ngoài, × hoặc Esc để đóng */
-import { useCallback, useId, useState, type ReactNode } from 'react';
+import { useCallback, useId, useRef, useState, type ReactNode } from 'react';
 import { Button } from '../../components/Button';
 import { Sheet } from '../../components/Sheet';
 import { useMediaQuery } from '../../lib/useMediaQuery';
+import { useWheelPassThrough } from '../../lib/useWheelPassThrough';
 import styles from './FormInfoPanel.module.css';
 
 /** Điều kiện màn hình hẹp: khung chuyển sang dạng trượt ra. */
@@ -118,6 +119,9 @@ export function FormInfoPanelToggle({ panel, label = DEFAULT_PANEL_TITLE }: { pa
  */
 export function FormInfoPanel({ panel, title = DEFAULT_PANEL_TITLE, children }: { panel: FormInfoPanelState; title?: string; children: ReactNode }) {
   const titleId = useId();
+  const sideRef = useRef<HTMLElement>(null);
+  // Màn hình rộng: các mục cuộn tới đáy / đỉnh thì lăn tiếp cuộn luôn trang, không phải rê chuột
+  useWheelPassThrough(sideRef, !panel.isNarrow && panel.isOpen);
   if (panel.isNarrow) {
     return (
       <Sheet open={panel.isOpen} onClose={panel.closePanel} title={title}>
@@ -127,7 +131,7 @@ export function FormInfoPanel({ panel, title = DEFAULT_PANEL_TITLE, children }: 
   }
   if (!panel.isOpen) return null;
   return (
-    <aside className={styles.side} aria-labelledby={titleId}>
+    <aside ref={sideRef} className={styles.side} aria-labelledby={titleId}>
       <section className={styles.card}>
         <div className={styles.head}>
           <h2 id={titleId}>{title}</h2>
@@ -184,7 +188,7 @@ interface PanelSectionProps {
   tightBody?: boolean;
   /** true: mục không co, không cuộn riêng, luôn hiện đủ dòng (vd Người nộp đơn); khung không đủ cao thì các mục khác co lại */
   fixed?: boolean;
-  /** true: co hết phần khung thiếu nhưng không thấp hơn hàng tiêu đề (vd Lịch sử, mục cuộn duy nhất khi các mục khác không co) */
+  /** true: co hết phần khung thiếu nhưng không thấp hơn hàng tiêu đề (vd Thông tin chung, Lịch sử: các mục cuộn riêng khi các mục khác không co) */
   keepMinHeight?: boolean;
   children: ReactNode;
 }
@@ -236,6 +240,7 @@ export function PanelSection({ title, count, action, add, storageKey, tightBody 
 
 /** Khóa localStorage nhớ việc thu gọn các mục của khung "Thông tin đơn"; trang nộp đơn mới và trang chi tiết đơn dùng chung. */
 export const INFO_SECTION_STORAGE_KEY = {
+  general: 'formInfoPanel.general.collapsed',
   applicant: 'formInfoPanel.applicant.collapsed',
   receiver: 'formInfoPanel.receiver.collapsed',
   handler: 'formInfoPanel.handler.collapsed',
@@ -264,29 +269,18 @@ function InfoRowList({ rows }: { rows: InfoRows }) {
 }
 
 /**
- * Mục tóm tắt ở đầu khung (trạng thái, loại đơn, ngày nộp): không có tiêu đề, luôn hiện.
- * @param rows  các dòng [nhãn, giá trị]
- * @returns     khối mục
- */
-export function FormInfoSummary({ rows }: { rows: InfoRows }) {
-  return (
-    <div className={styles.section}>
-      <InfoRowList rows={rows} />
-    </div>
-  );
-}
-
-/**
  * Một mục thông tin thu gọn được, vd "Người nộp đơn": tiêu đề, nút / liên kết bên phải (nếu có), các dòng nhãn – giá trị.
  * @param title       tiêu đề mục
  * @param action      nút hoặc liên kết bên phải tiêu đề, vd "Xem hồ sơ ›"
  * @param storageKey  khóa localStorage nhớ việc thu gọn
  * @param rows        các dòng [nhãn, giá trị]
+ * @param scrollable  true: mục co lại, cuộn riêng khi khung không đủ cao (vd Thông tin chung, nhiều dòng);
+ *                    mặc định giữ đủ dòng, không cuộn riêng (vd Người nộp đơn)
  * @returns           khối mục
  */
-export function FormInfoSection({ title, action, storageKey, rows }: { title: string; action?: ReactNode; storageKey: string; rows: InfoRows }) {
+export function FormInfoSection({ title, action, storageKey, rows, scrollable = false }: { title: string; action?: ReactNode; storageKey: string; rows: InfoRows; scrollable?: boolean }) {
   return (
-    <PanelSection title={title} action={action} storageKey={storageKey} fixed>
+    <PanelSection title={title} action={action} storageKey={storageKey} fixed={!scrollable} keepMinHeight={scrollable}>
       <InfoRowList rows={rows} />
     </PanelSection>
   );

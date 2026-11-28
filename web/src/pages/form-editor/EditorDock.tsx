@@ -1,13 +1,18 @@
-/* Hai nút tròn nổi ở cạnh phải màn hình của trình soạn loại đơn: "Mẫu xuất đơn" (Word) và "Mẫu xuất danh sách đơn" (Excel).
-   Bấm một nút thì mở khung nổi của mẫu đó (ExportTemplatesPanel), bấm lại hoặc bấm nút đóng thì đóng; mỗi lúc chỉ mở một khung.
-   Số ở góc nút là số mẫu đang có (kể cả mẫu chưa lưu); có thay đổi chưa lưu thì số đổi màu cam. */
-import { useRef, useState, type CSSProperties } from 'react';
+/* Cột nút tròn nổi ở cạnh phải màn hình của trình soạn loại đơn, trên xuống dưới: "Cấu hình thời gian" (đồng hồ),
+   "Mẫu xuất đơn" (Word) và "Mẫu xuất danh sách đơn" (Excel).
+   Bấm một nút thì mở khung nổi của nút đó (TimeSettingsPanel, ExportTemplatesPanel), bấm lại hoặc bấm nút đóng thì đóng; mỗi lúc chỉ mở một khung.
+   Số ở góc nút mẫu là số mẫu đang có (kể cả mẫu chưa lưu); có thay đổi chưa lưu thì số đổi màu cam. Nút đồng hồ có thay đổi chưa lưu thì có chấm cam. */
+import { useRef, type CSSProperties } from 'react';
 import type { ExportTemplate, ExportTemplatePurpose } from '@ulaw/shared';
 import { useExportTemplates } from '../../api/exports';
 import { useFloatingButtonBottom } from '../../lib/useFloatingButtonBottom';
 import { PANEL_TEXT, ExportTemplatesPanel, type ExportTemplatesPanelProps } from './ExportTemplatesPanel';
 import { templateRows, type ExportTemplateChanges } from './exportTemplateChanges';
-import styles from './ExportTemplatesPanel.module.css';
+import { TIME_SETTINGS_TITLE, TimeSettingsPanel, type TimeSettingsPanelProps } from './TimeSettingsPanel';
+import styles from './EditorDock.module.css';
+
+/** Khung nổi của trình soạn: cấu hình thời gian, hoặc mẫu xuất file theo mục đích. */
+export type EditorDockPanel = 'time' | ExportTemplatePurpose;
 
 /** Khoảng cách từ hai nút tròn tới đáy màn hình (px): màn hình rộng, màn hình hẹp (như CSS). */
 const DOCK_BOTTOM = { wide: 16, narrow: 16 };
@@ -38,6 +43,16 @@ function PurposeIcon({ purpose }: { purpose: ExportTemplatePurpose }) {
   );
 }
 
+/** Biểu tượng đồng hồ của nút Cấu hình thời gian. */
+function ClockIcon() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 7v5l3 2" />
+    </svg>
+  );
+}
+
 /**
  * Có thay đổi chưa lưu về mẫu của một mục đích không (thêm, đổi tên, xóa).
  * @param changes         các thay đổi chưa lưu (mọi mục đích)
@@ -54,14 +69,26 @@ function hasChangesFor(changes: ExportTemplateChanges, savedTemplates: readonly 
   );
 }
 
+interface EditorDockProps {
+  /** Như ExportTemplatesPanelProps, trừ purpose (mỗi nút mẫu một mục đích) */
+  templates: Omit<ExportTemplatesPanelProps, 'purpose'>;
+  /** Như TimeSettingsPanelProps; unsaved: có thay đổi chưa lưu */
+  timeSettings: TimeSettingsPanelProps & { unsaved: boolean };
+  /** Khung đang mở; null = không mở khung nào */
+  openPanel: EditorDockPanel | null;
+  /** Gọi khi mở khung khác hoặc đóng khung */
+  onOpenPanelChange: (panel: EditorDockPanel | null) => void;
+}
+
 /**
- * Hai nút tròn nổi và khung nổi đang mở.
- * @param props  như ExportTemplatesPanelProps, trừ purpose (mỗi nút một mục đích)
+ * Ba nút tròn nổi và khung nổi đang mở.
+ * @param props  xem EditorDockProps
  * @returns      các nút, và khung của nút đang mở
  */
-export function ExportTemplatesDock(props: Omit<ExportTemplatesPanelProps, 'purpose'>) {
-  const { formTypeId, changes } = props;
-  const [openPurpose, setOpenPurpose] = useState<ExportTemplatePurpose | null>(null);
+export function EditorDock({ templates, timeSettings, openPanel, onOpenPanelChange }: EditorDockProps) {
+  const { formTypeId, changes } = templates;
+  const { unsaved: timeUnsaved, ...timePanelProps } = timeSettings;
+  const isTimeOpen = openPanel === 'time';
   const savedTemplates = useExportTemplates(formTypeId ?? '', formTypeId !== null).data ?? [];
   // Có thanh dính đáy (Lưu…) chồng lên chỗ của hai nút thì nút và khung nâng lên đứng trên thanh
   const dockRef = useRef<HTMLDivElement>(null);
@@ -71,11 +98,22 @@ export function ExportTemplatesDock(props: Omit<ExportTemplatesPanelProps, 'purp
   return (
     <div className={styles.dockScope} style={dockBottomStyle}>
       <div className={styles.dock} ref={dockRef}>
+        <button
+          type="button"
+          className={`${styles.fab} ${styles.fabTime} ${isTimeOpen ? styles.fabOpen : ''}`}
+          aria-expanded={isTimeOpen}
+          aria-label={`${isTimeOpen ? 'Đóng' : 'Mở'} ${TIME_SETTINGS_TITLE}${timeUnsaved ? ', có thay đổi chưa lưu' : ''}`}
+          title={timeUnsaved ? `${TIME_SETTINGS_TITLE} · có thay đổi chưa lưu` : TIME_SETTINGS_TITLE}
+          onClick={() => onOpenPanelChange(isTimeOpen ? null : 'time')}
+        >
+          <ClockIcon />
+          {timeUnsaved && <span className={`${styles.fabBadge} ${styles.fabBadgeUnsaved} ${styles.fabDot}`} aria-hidden="true" />}
+        </button>
         {PURPOSES.map((purpose) => {
           const title = PANEL_TEXT[purpose].title;
           const count = templateRows(savedTemplates, changes, purpose).length;
           const unsaved = hasChangesFor(changes, savedTemplates, purpose);
-          const isOpen = openPurpose === purpose;
+          const isOpen = openPanel === purpose;
           return (
             <button
               key={purpose}
@@ -84,7 +122,7 @@ export function ExportTemplatesDock(props: Omit<ExportTemplatesPanelProps, 'purp
               aria-expanded={isOpen}
               aria-label={`${isOpen ? 'Đóng' : 'Mở'} ${title}${count ? `, ${count} mẫu` : ''}${unsaved ? ', có thay đổi chưa lưu' : ''}`}
               title={unsaved ? `${title} · có thay đổi chưa lưu` : title}
-              onClick={() => setOpenPurpose(isOpen ? null : purpose)}
+              onClick={() => onOpenPanelChange(isOpen ? null : purpose)}
             >
               <PurposeIcon purpose={purpose} />
               {count > 0 && <span className={`${styles.fabBadge} ${unsaved ? styles.fabBadgeUnsaved : ''}`}>{count}</span>}
@@ -94,7 +132,10 @@ export function ExportTemplatesDock(props: Omit<ExportTemplatesPanelProps, 'purp
       </div>
 
       {/* Khung của nút đang mở; đổi nút thì dựng lại khung mới */}
-      {openPurpose && <ExportTemplatesPanel key={openPurpose} purpose={openPurpose} {...props} onClose={() => setOpenPurpose(null)} />}
+      {isTimeOpen && <TimeSettingsPanel {...timePanelProps} onClose={() => onOpenPanelChange(null)} />}
+      {openPanel && openPanel !== 'time' && (
+        <ExportTemplatesPanel key={openPanel} purpose={openPanel} {...templates} onClose={() => onOpenPanelChange(null)} />
+      )}
     </div>
   );
 }

@@ -91,12 +91,12 @@
 
 /* chọn kiểu nơi lưu: hai thẻ */
 .kindCards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
-.kindCard{display:flex;align-items:flex-start;gap:10px;padding:12px 14px;border-radius:12px;border:1px solid var(--line-2);background:var(--surface);cursor:pointer}
+/* mỗi thẻ chiếm 2 dòng của lưới cha (subgrid): tên cùng một dòng, lời giải thích cùng một dòng, như thẻ trang Cấu hình */
+.kindCard{display:grid;grid-template-columns:auto minmax(0,1fr);grid-row:span 2;grid-template-rows:subgrid;gap:2px 10px;align-content:start;padding:12px 14px;border-radius:12px;border:1px solid var(--line-2);background:var(--surface);cursor:pointer}
 .kindCard:has(input:checked){border-color:var(--accent);background:var(--accent-soft)}
-.kindCard input{margin:2px 0 0;accent-color:var(--accent)}
-.kindCard span{display:grid;gap:2px}
-.kindCard strong{font-size:14px;font-weight:600}
-.kindCard small{font-size:12.5px;color:var(--muted)}
+.kindCard input{grid-column:1;grid-row:1;margin:2px 0 0;accent-color:var(--accent)}
+.kindCard strong{grid-column:2;font-size:14px;font-weight:600}
+.kindCard small{grid-column:2;font-size:12.5px;color:var(--muted)}
 @media (max-width:480px){.kindCards{grid-template-columns:minmax(0,1fr)}}
 
 /* ô thư mục máy chủ có chữ "backups/" đứng trước */

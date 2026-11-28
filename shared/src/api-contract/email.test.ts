@@ -1,20 +1,22 @@
 import { describe, expect, it } from 'vitest';
+import { EMAIL_EVENT_KINDS } from '../aux-schema/email--events';
 import { EMPTY_RICH_TEXT_DOC, plainTextToRichText } from '../aux-schema/rich-text';
 import { EmailSettingsSchema, type EmailSettings } from './email';
 
 const settings: EmailSettings = {
   sender: { name: 'Phòng Đào tạo', signature: '' },
-  events: (['nop', 'bs', 'tc', 'duyet'] as const).map((status) => ({ status, enabled: true, subject: 'Tiêu đề', body: plainTextToRichText('Nội dung') })),
+  events: EMAIL_EVENT_KINDS.map((kind) => ({ kind, enabled: true, subject: 'Tiêu đề', body: plainTextToRichText('Nội dung') })),
 };
 
 describe('EmailSettingsSchema', () => {
-  it('nhận cấu hình đủ bốn lúc gửi theo đúng thứ tự', () => {
+  it('nhận cấu hình đủ bảy lúc gửi theo đúng thứ tự', () => {
     expect(EmailSettingsSchema.safeParse(settings).success).toBe(true);
   });
 
   it('từ chối khi thiếu, thừa hoặc sai thứ tự lúc gửi', () => {
     expect(EmailSettingsSchema.safeParse({ ...settings, events: settings.events.slice(1) }).success).toBe(false);
     expect(EmailSettingsSchema.safeParse({ ...settings, events: [...settings.events].reverse() }).success).toBe(false);
+    expect(EmailSettingsSchema.safeParse({ ...settings, events: settings.events.slice(0, 4) }).success).toBe(false);
   });
 
   it('báo lỗi đúng ô: tên người gửi trống, tiêu đề và nội dung trống', () => {

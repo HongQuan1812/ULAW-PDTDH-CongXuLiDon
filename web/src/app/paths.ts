@@ -14,6 +14,7 @@ export const PAGE_PATH: Record<Page, string> = {
   emailSettings: '/cau-hinh/email',
   dataSources: '/cau-hinh/nguon-du-lieu',
   backups: '/cau-hinh/sao-luu',
+  holidays: '/cau-hinh/ngay-nghi',
 };
 
 /** Trang nộp đơn mới, khai báo trong router: /nop-don/<mã loại đơn>. */
@@ -125,6 +126,7 @@ export const PAGE_LABEL: Record<Page, string> = {
   emailSettings: 'Cấu hình email',
   dataSources: 'Nguồn dữ liệu',
   backups: 'Sao lưu',
+  holidays: 'Ngày nghỉ',
 };
 
 /**

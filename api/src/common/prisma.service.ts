@@ -1,7 +1,7 @@
-/* Kết nối database qua Prisma (driver adapter pg). Một kết nối dùng chung cho cả ứng dụng. */
+/* Kết nối database qua Prisma (driver adapter pg, phiên dùng giờ UTC: xem database-adapter.ts). Một kết nối dùng chung cho cả ứng dụng. */
 import { Injectable, type OnModuleDestroy } from '@nestjs/common';
-import { PrismaPg } from '@prisma/adapter-pg';
 import { AppConfig } from '../config/app-config';
+import { createDatabaseAdapter } from './database-adapter';
 import { PrismaClient } from '../generated/prisma/client';
 
 @Injectable()
@@ -11,7 +11,7 @@ export class PrismaService extends PrismaClient implements OnModuleDestroy {
    * @param appConfig  cấu hình backend, lấy chuỗi kết nối
    */
   constructor(appConfig: AppConfig) {
-    super({ adapter: new PrismaPg({ connectionString: appConfig.databaseUrl }) });
+    super({ adapter: createDatabaseAdapter(appConfig.databaseUrl) });
   }
 
   /** Đóng kết nối khi ứng dụng tắt. */

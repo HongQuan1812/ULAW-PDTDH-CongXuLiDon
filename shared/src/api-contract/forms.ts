@@ -2,7 +2,7 @@
    Một lá đơn (nộp, chi tiết, sửa, xử lí) nằm ở form.ts.
    API giả (MSW), frontend và backend cùng theo file này. */
 import { z } from 'zod';
-import { FORM_STATUSES, FORM_STATUS_LABEL, FORM_TYPE_STATUSES, type ListSortRule } from '../aux-schema';
+import { DEADLINE_STATES, DEADLINE_STATE_LABEL, FORM_STATUSES, FORM_STATUS_LABEL, FORM_TYPE_STATUSES, type DeadlineState, type ListSortRule } from '../aux-schema';
 import type { TableField } from '../business-rules/lists--query';
 import { ListPageMetaSchema } from './common';
 import { FormSummarySchema, StaffRefSchema, type FormSummary } from './form';
@@ -35,8 +35,12 @@ export const FORMS_ENDPOINTS = {
 export const MyFormsResponseSchema = ListPageMetaSchema.extend({ forms: z.array(FormSummarySchema) });
 export type MyFormsResponse = z.infer<typeof MyFormsResponseSchema>;
 
+/** Tình trạng hạn xử lí của đơn (cột Tình trạng hạn), máy chủ tính lúc trả trang (formDeadline). */
+const DeadlineStateSchema = z.enum(DEADLINE_STATES);
+
 /** Một dòng trong bảng "Đơn phụ trách": thông tin chính của đơn, kèm người tiếp nhận và người xử lí. */
 export const HandledFormSummarySchema = FormSummarySchema.extend({
+  deadlineState: DeadlineStateSchema,
   /** Cán bộ đã bấm "Tiếp nhận"; null = chưa tiếp nhận */
   receiver: StaffRefSchema.nullable(),
   /** Cán bộ đang xử lí (khác người tiếp nhận nếu đơn đã được chuyển giao); null = chưa tiếp nhận */
@@ -64,6 +68,7 @@ export type ManagedApplicant = z.infer<typeof ManagedApplicantSchema>;
 
 /** Một dòng trong bảng Quản lí đơn: thông tin chính của đơn, lúc tiếp nhận và thông tin người nộp. */
 export const ManagedFormSummarySchema = FormSummarySchema.extend({
+  deadlineState: DeadlineStateSchema,
   /** Lúc tiếp nhận gần nhất, giờ Việt Nam 'YYYY-MM-DDTHH:mm'; null = chưa tiếp nhận */
   receivedAt: z.string().nullable(),
   /** Số ghi chú nội bộ của đơn (cột Ghi chú) */
@@ -96,6 +101,8 @@ export const FormStatsSchema = z.object({
   /** Đủ mọi trạng thái, trạng thái chưa có đơn thì 0 */
   byStatus: z.object(Object.fromEntries(FORM_STATUSES.map((status) => [status, z.number().int().min(0)])) as Record<(typeof FORM_STATUSES)[number], z.ZodNumber>),
   byType: z.array(FormTypeCountSchema),
+  /** Số đơn theo tình trạng hạn (khung Theo tình trạng hạn), đủ mọi tình trạng, tình trạng chưa có đơn thì 0 */
+  byDeadline: z.object(Object.fromEntries(DEADLINE_STATES.map((state) => [state, z.number().int().min(0)])) as Record<DeadlineState, z.ZodNumber>),
 });
 export type FormStats = z.infer<typeof FormStatsSchema>;
 
@@ -133,9 +140,32 @@ function noteCountField<Row extends { noteCount: number }>(): TableField<Row> {
   return { key: NOTE_COUNT_FIELD_KEY, label: 'Ghi chú', type: 'number', getValue: (form) => form.noteCount };
 }
 
-/** Bảng "Đơn phụ trách": thông tin đơn, Ghi chú, rồi Người tiếp nhận, Người xử lí (lựa chọn lọc theo tên cán bộ có trong dữ liệu). */
+/** Tên cột Tình trạng hạn của bảng Đơn phụ trách và Quản lí đơn. */
+export const DEADLINE_STATE_FIELD_KEY = 'deadlineState';
+
+/** Thứ tự cột Tình trạng hạn khi sắp xếp tăng dần: gấp nhất trước (Quá hạn → Sắp tới hạn → Còn hạn → Không có hạn → Xong trễ hạn → Xong đúng hạn). */
+const DEADLINE_STATE_ORDER: Record<DeadlineState, number> = { overdue: 0, dueSoon: 1, onTrack: 2, none: 3, doneLate: 4, doneOnTime: 5 };
+
+/**
+ * Cột Tình trạng hạn: lọc theo tình trạng (lựa chọn cố định), sắp xếp gấp nhất trước.
+ * @returns  khai báo cột cho bảng có deadlineState
+ */
+function deadlineStateField<Row extends { deadlineState: DeadlineState }>(): TableField<Row> {
+  return {
+    key: DEADLINE_STATE_FIELD_KEY,
+    label: 'Tình trạng hạn',
+    type: 'select',
+    getValue: (form) => form.deadlineState,
+    getLabel: (form) => DEADLINE_STATE_LABEL[form.deadlineState],
+    options: DEADLINE_STATES.map((state) => ({ value: state, label: DEADLINE_STATE_LABEL[state] })),
+    getOrder: (form) => DEADLINE_STATE_ORDER[form.deadlineState],
+  };
+}
+
+/** Bảng "Đơn phụ trách": thông tin đơn, Tình trạng hạn, Ghi chú, rồi Người tiếp nhận, Người xử lí (lựa chọn lọc theo tên cán bộ có trong dữ liệu). */
 export const HANDLED_FORM_LIST_FIELDS: TableField<HandledFormSummary>[] = [
   ...FORM_LIST_FIELDS,
+  deadlineStateField(),
   noteCountField(),
   {
     key: 'receiver',
@@ -153,9 +183,10 @@ export const HANDLED_FORM_LIST_FIELDS: TableField<HandledFormSummary>[] = [
   },
 ];
 
-/** Bảng Quản lí đơn: thông tin đơn, lúc tiếp nhận, Ghi chú, rồi thông tin người nộp. */
+/** Bảng Quản lí đơn: thông tin đơn, Tình trạng hạn, lúc tiếp nhận, Ghi chú, rồi thông tin người nộp. */
 export const MANAGED_FORM_LIST_FIELDS: TableField<ManagedFormSummary>[] = [
   ...FORM_LIST_FIELDS,
+  deadlineStateField(),
   { key: 'receivedAt', label: 'Thời gian tiếp nhận', type: 'datetime', getValue: (form) => form.receivedAt },
   noteCountField(),
   { key: 'name', label: 'Họ và tên', type: 'text', getValue: (form) => form.applicant.name },

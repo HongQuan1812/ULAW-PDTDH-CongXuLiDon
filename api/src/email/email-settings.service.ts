@@ -4,8 +4,10 @@ import { Injectable } from '@nestjs/common';
 import {
   EMAIL_MESSAGES,
   EMAIL_SAMPLE_VALUES,
+  EMAIL_SETTINGS_SEED,
   formLink,
   TEST_EMAIL_SUBJECT_PREFIX,
+  withAllEmailEvents,
   type EmailSettings,
   type EmailSettingsResponse,
   type SendTestEmailRequest,
@@ -21,6 +23,15 @@ import { MailSenderService } from './mail-sender.service';
 
 /** Id dòng cấu hình email duy nhất. */
 export const SETTINGS_ROW_ID = 1;
+
+/**
+ * Đọc cấu hình đã lưu thành cấu hình đủ bảy lúc gửi (bản lưu trước khi có thư cho cán bộ thì thêm ba thư mặc định).
+ * @param storedSettings  cột settings của dòng EmailSettings
+ * @returns               theo EmailSettingsSchema
+ */
+export function readStoredEmailSettings(storedSettings: Prisma.JsonValue): EmailSettings {
+  return withAllEmailEvents(storedSettings, EMAIL_SETTINGS_SEED);
+}
 
 /** Lấy kèm cán bộ lưu lần gần nhất. */
 const WITH_UPDATED_BY = { updatedBy: { select: { id: true, name: true, email: true } } } as const;
@@ -48,7 +59,7 @@ export class EmailSettingsService {
    */
   private async toResponse(row: EmailSettingsRow): Promise<EmailSettingsResponse> {
     return {
-      settings: row.settings as unknown as EmailSettings,
+      settings: readStoredEmailSettings(row.settings),
       updatedAt: toVietnamTime(row.updatedAt),
       updatedBy: row.updatedBy,
       senderAddress: this.mailSender.senderAddress,
@@ -67,7 +78,7 @@ export class EmailSettingsService {
   }
 
   /**
-   * Lưu cả cấu hình (người gửi và bốn lúc gửi), ghi lại lúc lưu và người lưu.
+   * Lưu cả cấu hình (người gửi và bảy lúc gửi), ghi lại lúc lưu và người lưu.
    * @param settings  cấu hình mới (đã kiểm tra bằng EmailSettingsSchema)
    * @param editor    người đang đăng nhập
    * @returns         cấu hình sau khi lưu

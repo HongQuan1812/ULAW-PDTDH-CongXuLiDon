@@ -1,6 +1,7 @@
 /* Thẻ "Thông tin loại đơn" của trình soạn:
    tên loại đơn, mã đơn, mô tả ngắn của phiên bản đang xem, và trạng thái của phiên bản đó kèm câu giải thích.
-   Phiên bản Nháp chọn Nháp / Đang mở; phiên bản đã khóa chọn Đang mở / Đã đóng. */
+   Phiên bản Nháp chọn Nháp / Đang mở; phiên bản đã khóa chọn Đang mở / Đã đóng.
+   Thời gian xử lí tối đa thuộc loại đơn (mọi phiên bản) nên nằm ở khung Cấu hình thời gian (nút đồng hồ), không ở đây. */
 import { FORM_TYPE_ISSUE_TARGET, FORM_TYPE_STATUS_LABEL, type FormTypeStatus } from '@ulaw/shared';
 import { Field } from '../../components/Field';
 import { GrowingTextarea } from '../../features/form-renderer/GrowingTextarea';

@@ -89,7 +89,7 @@ Cổng xử lí đơn/
 │       ├── pages/                # mỗi trang một thư mục:
 │       │                         #   login · onboarding · profile · form (nộp / chi tiết / xử lí)
 │       │                         #   forms (Quản lí đơn) · form-types · form-editor · accounts
-│       │                         #   settings (Cấu hình: thẻ dẫn tới email-settings · data-sources · backups)
+│       │                         #   settings (Cấu hình: thẻ dẫn tới email-settings · data-sources · backups · holidays)
 │       ├── features/             # logic dùng lại giữa các trang:
 │       │                         #   auth (useAuth, useCan) · form-renderer
 │       │                         #   file-preview · export · transfer · receive (nút Tiếp nhận)
@@ -112,6 +112,8 @@ Cổng xử lí đơn/
 │   │   ├── forms/                # nộp, sửa, tìm kiếm, lọc + workflow.service.ts (tiếp nhận, bổ sung, duyệt, từ chối, chuyển giao)
 │   │   ├── files/                # tải lên / tải về tệp minh chứng
 │   │   ├── exports/              # mẫu Word, docxtemplater
+│   │   ├── email/                # cấu hình email, thư tự động, thư nhắc hạn (kiểm mỗi 10 phút)
+│   │   ├── holidays/             # ngày nghỉ, để tính hạn xử lí
 │   │   └── stats/                # số liệu theo trạng thái, theo loại đơn
 │   └── test/                     # e2e (Supertest)
 │

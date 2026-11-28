@@ -1,13 +1,19 @@
 import { beforeEach, describe, expect, test } from 'vitest';
-import { FORM_TYPE_SEED, MULTI_VERSION_SEED_FORM_TYPE_ID, type FileRef } from '@ulaw/shared';
+import { FORM_TYPE_SEED, MULTI_VERSION_SEED_FORM_TYPE_ID, formDeadline, holidayDatesOf, type FileRef } from '@ulaw/shared';
 import {
   addForm,
   addFormTypeVersion,
   createFormType,
   decideForm,
+  deleteHoliday,
+  getHolidays,
+  saveHoliday,
   deleteFormTypeVersion,
   getFormTypeSummaries,
+  getFormTypeTimeSettings,
   getManagedFormType,
+  runDueFormTypeSchedules,
+  saveFormTypeTimeSettings,
   saveFormTypeVersion,
   setFormTypeVersionStatus,
   getAllForms,
@@ -140,7 +146,7 @@ describe('loại đơn', () => {
   test('chỉ trả loại đơn Đang mở, không kèm trạng thái', () => {
     const openFormTypes = getOpenFormTypes();
     expect(openFormTypes.map((formType) => formType.id)).toEqual(FORM_TYPE_SEED.map((formType) => formType.id));
-    expect(openFormTypes[0]).toEqual({ id: 'dkhpm', name: 'Đăng ký học phần muộn', prefix: 'DKHPM', description: FORM_TYPE_SEED[0]!.description });
+    expect(openFormTypes[0]).toEqual({ id: 'dkhpm', name: 'Đăng ký học phần muộn', prefix: 'DKHPM', description: FORM_TYPE_SEED[0]!.description, acceptsUntil: null });
   });
 
   test('loại đơn đủ cấu trúc: loại đơn chính đủ các phần; loại đơn nhiều phiên bản trả phiên bản đang mở', () => {
@@ -149,6 +155,58 @@ describe('loại đơn', () => {
     expect(xmr?.sections[0]?.main).toBe(true);
     expect(getFormType(MULTI_VERSION_SEED_FORM_TYPE_ID)?.version).toBe(2);
     expect(getFormType('khong-co')).toBeNull();
+  });
+});
+
+describe('cấu hình thời gian của loại đơn', () => {
+  /* Giờ hẹn đặt ở năm 2099 để luôn sau thời điểm hiện tại; bộ hẹn giờ chạy bằng runDueFormTypeSchedules với "bây giờ" tự chọn */
+  const statusesOf = (formTypeId: string) => getManagedFormType(formTypeId)!.versions.map((version) => [version.version, version.status]);
+
+  test('thời gian xử lí lưu ở loại đơn: trang nộp đơn thấy; giờ đã qua thì 422', () => {
+    expect(getFormTypeTimeSettings('xmr')).toEqual({ maxProcessingDays: 10, autoOpen: null, autoClose: null });
+    expect(saveFormTypeTimeSettings('xmr', { maxProcessingDays: 3, autoOpen: null, autoClose: null })).toMatchObject({ ok: true });
+    expect(getFormType('xmr')?.maxProcessingDays).toBe(3);
+    expect(saveFormTypeTimeSettings('xmr', { maxProcessingDays: 3, autoOpen: null, autoClose: { at: '2020-01-01T08:00' } })).toMatchObject({ ok: false, status: 422 });
+    expect(saveFormTypeTimeSettings('khong-co', { maxProcessingDays: null, autoOpen: null, autoClose: null })).toMatchObject({ ok: false, status: 404 });
+  });
+
+  test('tới giờ thì mở phiên bản chọn (phiên bản đang mở tự đóng), rồi tới giờ đóng thì đóng; chạy xong đánh dấu ✓', () => {
+    const autoOpen = { at: '2099-01-01T08:00', version: 1 };
+    const autoClose = { at: '2099-01-02T17:00' };
+    expect(saveFormTypeTimeSettings(MULTI_VERSION_SEED_FORM_TYPE_ID, { maxProcessingDays: null, autoOpen, autoClose })).toMatchObject({ ok: true });
+
+    runDueFormTypeSchedules('2099-01-01T07:59');
+    expect(statusesOf(MULTI_VERSION_SEED_FORM_TYPE_ID)).toEqual([[2, 'open'], [1, 'closed']]);
+    runDueFormTypeSchedules('2099-01-01T08:00');
+    expect(statusesOf(MULTI_VERSION_SEED_FORM_TYPE_ID)).toEqual([[2, 'closed'], [1, 'open']]);
+    // Hộp chọn loại đơn ghi hạn nhận đơn; loại đơn không hẹn đóng thì null
+    const openChoices = getOpenFormTypes();
+    expect(openChoices.find((formType) => formType.id === MULTI_VERSION_SEED_FORM_TYPE_ID)?.acceptsUntil).toBe(autoClose.at);
+    expect(openChoices.find((formType) => formType.id === 'xmr')?.acceptsUntil).toBeNull();
+    runDueFormTypeSchedules('2099-01-03T00:00');
+    expect(statusesOf(MULTI_VERSION_SEED_FORM_TYPE_ID)).toEqual([[2, 'closed'], [1, 'closed']]);
+    expect(getFormTypeTimeSettings(MULTI_VERSION_SEED_FORM_TYPE_ID)).toMatchObject({ autoOpen: { ...autoOpen, done: true }, autoClose: { ...autoClose, done: true } });
+    expect(getOpenFormTypes().some((formType) => formType.id === MULTI_VERSION_SEED_FORM_TYPE_ID)).toBe(false);
+
+    // Mở tay lại sau đó: đã chạy rồi nên không đóng lại nữa
+    setFormTypeVersionStatus(MULTI_VERSION_SEED_FORM_TYPE_ID, 2, 'open', 'cb-1');
+    runDueFormTypeSchedules('2099-01-04T00:00');
+    expect(statusesOf(MULTI_VERSION_SEED_FORM_TYPE_ID)).toEqual([[2, 'open'], [1, 'closed']]);
+  });
+
+  test('tự mở bản Nháp hợp lệ; bản Nháp chưa hợp lệ thì không mở, vẫn đánh dấu đã chạy', () => {
+    const { prefix, name, description, sections } = getFormType('xmr')!;
+    addFormTypeVersion('xmr', { prefix, name, description, status: 'draft', sections: [{ id: 's1', title: ' ', main: false, questions: [] }] }, 'cb-1');
+    saveFormTypeTimeSettings('xmr', { maxProcessingDays: null, autoOpen: { at: '2099-01-01T08:00', version: 2 }, autoClose: null });
+    runDueFormTypeSchedules('2099-01-01T08:00');
+    expect(statusesOf('xmr')).toEqual([[2, 'draft'], [1, 'open']]);
+    expect(getFormTypeTimeSettings('xmr')?.autoOpen?.done).toBe(true);
+
+    // Sửa bản Nháp cho hợp lệ, hẹn giờ mới (bỏ dấu) thì tới giờ mở được
+    saveFormTypeVersion('xmr', 2, { prefix, name, description, status: 'draft', sections }, 'cb-1');
+    saveFormTypeTimeSettings('xmr', { maxProcessingDays: null, autoOpen: { at: '2099-02-01T08:00', version: 2 }, autoClose: null });
+    runDueFormTypeSchedules('2099-02-01T08:00');
+    expect(statusesOf('xmr')).toEqual([[2, 'open'], [1, 'closed']]);
   });
 });
 
@@ -165,6 +223,7 @@ describe('phiên bản loại đơn', () => {
       [2, 'draft'],
       [1, 'open'],
     ]);
+    expect(saveFormTypeVersion('xmr', 2, xmrInput('Xét miễn môn mới', 'draft'), 'cb-1')).toMatchObject({ ok: true });
     expect(addFormTypeVersion('xmr', xmrInput('Bản khác', 'draft'), 'cb-1')).toMatchObject({ ok: false, status: 409 });
     expect(saveFormTypeVersion('xmr', 1, xmrInput('Sửa bản đã khóa', 'draft'), 'cb-1')).toMatchObject({ ok: false, status: 409 });
 
@@ -271,6 +330,20 @@ describe('chi tiết đơn', () => {
     expect(form.receiver).not.toBeNull();
     expect(form.receivedAt! > form.submittedAt).toBe(true);
     expect(form.handlerSince! >= form.receivedAt!).toBe(true);
+  });
+
+  test('hạn xử lí tính theo bản chụp loại đơn (xmr: 10 ngày làm việc) và ngày nghỉ', () => {
+    const form = getFormDetail('XMR-2026-001-01520', { id: 'sv-1', role: 'nguoiNopDon' })!;
+    expect(form.deadline.maxDays).toBe(10);
+    expect(form.deadline.dueAt).toBe(formDeadline(10, form.history, form.submittedAt, holidayDatesOf(getHolidays())).dueAt);
+  });
+
+  test('bảng Quản lí đơn, Đơn phụ trách: tình trạng hạn mỗi dòng khớp chi tiết đơn', () => {
+    const staff = { id: 'cb-1', role: 'admin' as const };
+    for (const row of [...getAllForms(), ...getFormsHandledBy('cb-1')]) {
+      expect(row.deadlineState).toBe(getFormDetail(row.code, staff)!.deadline.state);
+    }
+    expect(getAllForms().some((row) => row.deadlineState !== 'none')).toBe(true);
   });
 
   test('người nộp đơn không xem được đơn người khác; cán bộ xem được; mã không có thì null', () => {
@@ -495,6 +568,8 @@ describe('thống kê đơn (Quản lí đơn)', () => {
     expect(stats.total).toBe(getAllForms().length);
     expect(Object.values(stats.byStatus).reduce((sum, count) => sum + count, 0)).toBe(stats.total);
     expect(Object.keys(stats.byStatus)).toHaveLength(6);
+    expect(Object.values(stats.byDeadline).reduce((sum, count) => sum + count, 0)).toBe(stats.total);
+    expect(stats.byDeadline.overdue).toBe(getAllForms().filter((row) => row.deadlineState === 'overdue').length);
   });
 
   test('số theo loại đơn cộng lại bằng tổng, kể cả loại chưa có đơn (đếm 0) và ghi trạng thái loại đơn', () => {
@@ -559,5 +634,26 @@ describe('tài khoản', () => {
     expect(demoAccountFor('nguoiXuLiDon')).toBe('cb-2');
     updateAccount('cb-2', { name: 'Trần Quốc Việt', cccd: '', phone: '', role: 'nguoiNopDon' }, admin);
     expect(demoAccountFor('nguoiXuLiDon')).toBeNull();
+  });
+});
+
+describe('ngày nghỉ', () => {
+  beforeEach(() => resetMockDb());
+
+  test('có sẵn ngày nghỉ mẫu, xếp theo lịch; thêm, sửa, xóa; trùng ngày thì báo tên ngày nghỉ bị trùng', () => {
+    const seeded = getHolidays();
+    expect(seeded.length).toBeGreaterThan(0);
+    expect(seeded.map((holiday) => holiday.startDate)).toEqual(seeded.map((holiday) => holiday.startDate).sort());
+
+    const added = saveHoliday({ name: 'Nghỉ thử', startDate: '2026-12-24', endDate: '2026-12-25' });
+    expect(added).toMatchObject({ name: 'Nghỉ thử' });
+    if (typeof added === 'string' || 'overlaps' in added) throw new Error('phải thêm được');
+    expect(saveHoliday({ name: 'Trùng', startDate: '2026-12-25', endDate: '2026-12-25' })).toEqual({ overlaps: 'Nghỉ thử' });
+    expect(saveHoliday({ name: 'Nghỉ thử', startDate: '2026-12-25', endDate: '2026-12-26' }, added.id)).toMatchObject({ endDate: '2026-12-26' });
+    expect(saveHoliday({ name: 'X', startDate: '2026-12-28', endDate: '2026-12-28' }, 'khong-co')).toBe('notFound');
+
+    expect(deleteHoliday(added.id)).toMatchObject({ id: added.id });
+    expect(deleteHoliday(added.id)).toBeNull();
+    expect(getHolidays()).toHaveLength(seeded.length);
   });
 });

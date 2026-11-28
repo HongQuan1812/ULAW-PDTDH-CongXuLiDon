@@ -1,39 +1,6 @@
-/* Mẫu xuất file của trình soạn: hai nút tròn nổi ở cạnh phải màn hình, mỗi nút mở một khung nổi. */
+/* Khung nổi Mẫu xuất đơn / Mẫu xuất danh sách đơn: phần riêng bên trong khung (khung, đầu khung dùng chung ở EditorDock.module.css). */
 
-/* Hai nút tròn xếp dọc ở góc phải dưới màn hình */
-/* chỉ để các nút và khung con thừa hưởng --dock-bottom (chỗ đứng đã tính để không đè thanh dính đáy) */
-.dockScope{display:contents}
-.dock{position:fixed;right:16px;bottom:calc(var(--dock-bottom,16px) + env(safe-area-inset-bottom,0px));transition:bottom .18s ease-out;z-index:41;display:flex;flex-direction:column;gap:12px}
-.fab{position:relative;width:52px;height:52px;border:0;border-radius:50%;display:grid;place-items:center;background:var(--accent);color:var(--on-accent);
-  box-shadow:var(--shadow-lg),var(--shadow);cursor:pointer;transition:transform .15s,background .15s}
-.fab:hover{background:var(--accent-ink);transform:translateY(-1px)}
-.fab:focus-visible{outline:3px solid color-mix(in srgb,var(--focus) 40%,transparent);outline-offset:3px}
-.fabOpen{background:var(--accent-ink)}
-/* nút mẫu danh sách đơn (Excel) màu xanh lá */
-.fabFormList{background:var(--ok)}
-.fabFormList:hover,.fabFormList.fabOpen{background:color-mix(in srgb,var(--ok) 80%,#000)}
-/* số mẫu ở góc nút; có thay đổi chưa lưu thì màu cam như nhãn "Chưa lưu" */
-.fabBadge{position:absolute;top:-2px;right:-2px;min-width:20px;height:20px;padding:0 6px;border-radius:999px;background:var(--surface);color:var(--accent-ink);
-  border:1px solid var(--line);font-size:11.5px;font-weight:700;line-height:18px;text-align:center}
-.fabBadgeUnsaved{background:var(--s-bs-bg);color:var(--s-bs-fg);border-color:var(--s-bs-fg)}
-
-/* Khung nổi: bên trái hai nút, cao từ dưới thanh menu tới đáy màn hình; nội dung cuộn riêng */
-.popup{position:fixed;right:84px;top:calc(var(--nav-h) + 16px);bottom:var(--dock-bottom,16px);z-index:40;width:min(760px,calc(100vw - 116px));
-  display:flex;flex-direction:column;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);
-  box-shadow:var(--shadow-lg),var(--shadow);overflow:hidden;animation:popupIn .16s ease-out}
-@keyframes popupIn{from{opacity:0;transform:translateX(8px) scale(.98)}to{opacity:1;transform:none}}
-.popupHead{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:20px 20px 16px 24px;border-bottom:1px solid var(--line)}
-.popupHead h2{font-size:17px;font-weight:600}
-.closeButton{flex:none;display:grid;place-items:center;width:32px;height:32px;border:0;border-radius:8px;background:transparent;color:var(--muted);cursor:pointer}
-.closeButton:hover{background:var(--hover);color:var(--fg)}
-.popupBody{flex:1;min-height:0;overflow-y:auto;display:grid;gap:20px;align-content:start;padding:0 24px 24px;min-width:0}
-.popupBody>*{min-width:0}
 .versionChip{padding:2px 10px;border-radius:999px;background:var(--accent-soft);color:var(--accent-ink);font-size:12px;font-weight:600}
-.intro{color:var(--muted);font-size:14px;margin-top:4px}
-
-@media (max-width:640px){
-  .popup{left:12px;right:12px;width:auto;bottom:calc(var(--dock-bottom,16px) + 128px + env(safe-area-inset-bottom,0px))}
-}
 
 /* mục con: Mẫu đã tải lên, Bảng mã */
 .block{display:grid;gap:12px;padding-top:20px;border-top:1px solid var(--line);min-width:0}
@@ -73,7 +40,8 @@
 .guide>summary:hover,.tagGroup>summary:hover{color:var(--accent)}
 .guideBody{display:grid;gap:12px;padding:0 18px 18px}
 .steps{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;counter-reset:step}
-.steps li{counter-increment:step;display:grid;gap:6px;align-content:start;padding:16px;border-radius:var(--r-lg);background:var(--surface);font-size:13px;color:var(--muted)}
+/* mỗi bước chiếm 2 dòng của lưới cha (subgrid): tên bước cùng một dòng, lời giải thích cùng một dòng, như thẻ trang Cấu hình */
+.steps li{counter-increment:step;display:grid;grid-row:span 2;grid-template-rows:subgrid;row-gap:6px;align-content:start;padding:16px;border-radius:var(--r-lg);background:var(--surface);font-size:13px;color:var(--muted)}
 .steps li b{color:var(--fg);font-size:14px;font-weight:600;display:flex;gap:8px;align-items:center}
 .steps li b::before{content:counter(step);display:inline-grid;place-items:center;width:22px;height:22px;border-radius:50%;background:var(--accent);color:var(--on-accent);font-size:12px;flex:none}
 /* ví dụ: 3 cột (trong file mẫu · → · trong file xuất ra); mỗi kiểu định dạng có tên ghi nhỏ trải hết bề ngang ở trên,

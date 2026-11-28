@@ -13,6 +13,7 @@ const SETTINGS_PAGE_DESCRIPTION: Record<(typeof SETTINGS_PAGES)[number], string>
   emailSettings: 'Người gửi, chữ kí, thư tự động khi đơn đổi trạng thái',
   dataSources: 'Kết nối tới database trường',
   backups: 'Nơi lưu, sao lưu ngay, lịch định kì, lịch sử',
+  holidays: 'Lễ, Tết, nghỉ bù: hạn xử lí đơn không tính các ngày này',
 };
 
 /**
@@ -30,10 +31,8 @@ export function SettingsPage() {
         {visiblePages.map((page) => (
           <Link key={page} to={PAGE_PATH[page]} className={styles.card}>
             <span className={styles.icon}>{PAGE_ICON[page]}</span>
-            <span className={styles.text}>
-              <strong>{PAGE_LABEL[page]}</strong>
-              <span>{SETTINGS_PAGE_DESCRIPTION[page]}</span>
-            </span>
+            <strong className={styles.title}>{PAGE_LABEL[page]}</strong>
+            <span className={styles.description}>{SETTINGS_PAGE_DESCRIPTION[page]}</span>
           </Link>
         ))}
       </nav>

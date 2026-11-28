@@ -1,0 +1,41 @@
+/* Cột nút tròn nổi ở cạnh phải màn hình của trình soạn (EditorDock.tsx) và khung nổi mỗi nút mở ra (EditorPopup.tsx):
+   cấu hình thời gian, mẫu xuất đơn, mẫu xuất danh sách đơn. */
+
+/* Các nút tròn xếp dọc ở góc phải dưới màn hình */
+/* chỉ để các nút và khung con thừa hưởng --dock-bottom (chỗ đứng đã tính để không đè thanh dính đáy) */
+.dockScope{display:contents}
+.dock{position:fixed;right:16px;bottom:calc(var(--dock-bottom,16px) + env(safe-area-inset-bottom,0px));transition:bottom .18s ease-out;z-index:41;display:flex;flex-direction:column;gap:12px}
+.fab{position:relative;width:52px;height:52px;border:0;border-radius:50%;display:grid;place-items:center;background:var(--accent);color:var(--on-accent);
+  box-shadow:var(--shadow-lg),var(--shadow);cursor:pointer;transition:transform .15s,background .15s}
+.fab:hover{background:var(--accent-ink);transform:translateY(-1px)}
+.fab:focus-visible{outline:3px solid color-mix(in srgb,var(--focus) 40%,transparent);outline-offset:3px}
+.fabOpen{background:var(--accent-ink)}
+/* nút mẫu danh sách đơn (Excel) màu xanh lá */
+.fabFormList{background:var(--ok)}
+.fabFormList:hover,.fabFormList.fabOpen{background:color-mix(in srgb,var(--ok) 80%,#000)}
+/* nút Cấu hình thời gian (đồng hồ) màu xám */
+.fabTime{background:var(--muted)}
+.fabTime:hover,.fabTime.fabOpen{background:color-mix(in srgb,var(--muted) 80%,#000)}
+/* số mẫu ở góc nút; có thay đổi chưa lưu thì màu cam như nhãn "Chưa lưu" */
+.fabBadge{position:absolute;top:-2px;right:-2px;min-width:20px;height:20px;padding:0 6px;border-radius:999px;background:var(--surface);color:var(--accent-ink);
+  border:1px solid var(--line);font-size:11.5px;font-weight:700;line-height:18px;text-align:center}
+.fabBadgeUnsaved{background:var(--s-bs-bg);color:var(--s-bs-fg);border-color:var(--s-bs-fg)}
+/* chấm cam không có số (nút đồng hồ có thay đổi chưa lưu) */
+.fabDot{min-width:14px;width:14px;height:14px;padding:0;background:var(--s-bs-fg)}
+
+/* Khung nổi: bên trái các nút, cao từ dưới thanh menu tới đáy màn hình; nội dung cuộn riêng */
+.popup{position:fixed;right:84px;top:calc(var(--nav-h) + 16px);bottom:var(--dock-bottom,16px);z-index:40;width:min(760px,calc(100vw - 116px));
+  display:flex;flex-direction:column;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);
+  box-shadow:var(--shadow-lg),var(--shadow);overflow:hidden;animation:popupIn .16s ease-out}
+@keyframes popupIn{from{opacity:0;transform:translateX(8px) scale(.98)}to{opacity:1;transform:none}}
+.popupHead{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:20px 20px 16px 24px;border-bottom:1px solid var(--line)}
+.popupHead h2{font-size:17px;font-weight:600}
+.closeButton{flex:none;display:grid;place-items:center;width:32px;height:32px;border:0;border-radius:8px;background:transparent;color:var(--muted);cursor:pointer}
+.closeButton:hover{background:var(--hover);color:var(--fg)}
+.popupBody{flex:1;min-height:0;overflow-y:auto;display:grid;gap:20px;align-content:start;padding:0 24px 24px;min-width:0}
+.popupBody>*{min-width:0}
+.intro{color:var(--muted);font-size:14px;margin-top:4px}
+
+@media (max-width:640px){
+  .popup{left:12px;right:12px;width:auto;bottom:calc(var(--dock-bottom,16px) + 192px + env(safe-area-inset-bottom,0px))}
+}

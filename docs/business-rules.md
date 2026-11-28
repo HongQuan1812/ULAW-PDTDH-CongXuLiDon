@@ -58,10 +58,11 @@ Giao diện ẩn / hiện nút theo quyền; **máy chủ kiểm tra lại mọi
 | Cấu hình email | `manageEmail` | ✗ | ✓ | ✓ |
 | Nguồn dữ liệu: xem cấu hình (không có mật khẩu) và tình trạng kết nối database trường | `manageDataSources` | ✗ | ✗ | ✓ |
 | Sao lưu: nơi lưu, sao lưu ngay, lịch định kì, lịch sử, tải bản sao lưu về | `manageBackups` | ✗ | ✗ | ✓ |
+| Ngày nghỉ: thêm, sửa, xóa ngày nghỉ (lễ, Tết, nghỉ bù) để tính hạn xử lí | `manageHolidays` | ✗ | ✗ | ✓ |
 
 Ghi chú:
-- Cấu hình email, Nguồn dữ liệu, Sao lưu không có mục riêng trên menu: menu có một mục **Cấu hình** (`#/cau-hinh`), trong đó mỗi trang một thẻ,
-  bấm thẻ thì mở trang đó (`#/cau-hinh/email`, `#/cau-hinh/nguon-du-lieu`, `#/cau-hinh/sao-luu`), đầu mỗi trang có nút "‹ Quay lại Cấu hình". Mỗi vai trò chỉ thấy thẻ của trang mình được vào;
+- Cấu hình email, Nguồn dữ liệu, Sao lưu, Ngày nghỉ không có mục riêng trên menu: menu có một mục **Cấu hình** (`#/cau-hinh`), trong đó mỗi trang một thẻ,
+  bấm thẻ thì mở trang đó (`#/cau-hinh/email`, `#/cau-hinh/nguon-du-lieu`, `#/cau-hinh/sao-luu`, `#/cau-hinh/ngay-nghi`), đầu mỗi trang có nút "‹ Quay lại Cấu hình". Mỗi vai trò chỉ thấy thẻ của trang mình được vào;
   không được vào trang nào thì không có mục Cấu hình.
 - **Admin không tự đổi được vai trò của chính mình**, để không tự khóa mình khỏi trang Quản lí tài khoản (`canChangeAccountRole`).
 - Tài khoản có quyền xử lí đơn tự có trong danh sách **Chuyển giao**. Đổi một cán bộ sang Người nộp đơn thì họ không còn trong danh sách đó,
@@ -118,6 +119,25 @@ Cần bổ sung / Đã duyệt / Từ chối thì câu thông báo ghi kèm lúc
 - Bảng Quản lí đơn và Đơn phụ trách có cột **Ghi chú**: số ghi chú của đơn (`noteCount`), sắp xếp và lọc như cột số (vd "= 0" là đơn chưa có ghi chú, khoảng "từ 1" là đơn đã có). Bấm ô đó thì mở trang chi tiết đơn và mở sẵn khung ghi chú.
 - Hợp đồng API: `shared/src/api-contract/form-notes.ts`. Backend: bảng `FormNote` (xóa đơn thì xóa ghi chú theo), module `api/src/form-notes/`.
 
+## Hạn xử lí đơn
+
+Luật tính hạn: `shared/src/business-rules/forms--deadlines.ts` (hàm thuần, API giả và backend cùng gọi). Tình trạng hạn tính ở máy chủ mỗi lần trả đơn, từ lịch sử đơn (`FormEvent`), không lưu riêng.
+
+- **Ngày làm việc** = trọn 24 giờ của Thứ Hai đến Thứ Sáu, theo giờ Việt Nam, **trừ ngày nghỉ** do Admin nhập. Không có ngày làm bù: Thứ Bảy, Chủ nhật luôn nghỉ.
+- **Hạn** = đồng hồ chạy từ đúng lúc nộp, chỉ chạy trong ngày làm việc, đủ N × 24 giờ là hết hạn (N = thời gian xử lí tối đa trong bản chụp loại đơn lúc nộp).
+  Vd nộp 10:00 Thứ Sáu, hạn 3 ngày → 10:00 Thứ Tư tuần sau; nộp 15:00 Thứ Bảy → đồng hồ chạy từ 00:00 Thứ Hai.
+- **Tạm dừng khi chờ bổ sung**: đồng hồ dừng từ lúc Yêu cầu bổ sung; sinh viên gửi bổ sung thì chạy tiếp phần còn lại, không tính lại từ đầu, nên hạn lùi ra.
+  Đang chờ bổ sung thì chưa có hạn, chỉ ghi còn bao lâu ("Còn 3 ngày, tính tiếp khi bổ sung xong"); tình trạng xếp theo thời gian còn lại lúc dừng.
+- **Tình trạng hạn** (`DEADLINE_STATES`), mỗi đơn đúng một: **Còn hạn** · **Sắp tới hạn** (còn 1 ngày làm việc trở xuống) · **Quá hạn** ·
+  **Xong đúng hạn** / **Xong trễ hạn** (đã Duyệt / Từ chối, so lúc ra quyết định với hạn) · **Không có hạn** (loại đơn lúc nộp không giới hạn, hoặc đơn nộp trước khi có hạn xử lí).
+- **Chỗ hiện**: khung Thông tin đơn ở chi tiết đơn (hạn, còn N ngày / trễ N ngày / tạm dừng chờ bổ sung; sinh viên và cán bộ cùng thấy) ·
+  cột **Tình trạng hạn** ở Quản lí đơn và Đơn phụ trách (lọc theo tình trạng; sắp xếp gấp nhất trước: Quá hạn → Sắp tới hạn → Còn hạn → Không có hạn → Xong trễ hạn → Xong đúng hạn) ·
+  khung thống kê **Theo tình trạng hạn**.
+- **Ngày nghỉ** (trang `#/cau-hinh/ngay-nghi`, quyền `manageHolidays`; hợp đồng `shared/src/api-contract/holidays.ts`, bảng `Holiday`): lịch cả năm, ngày nghỉ tô xanh, Thứ Bảy, Chủ nhật tô xám.
+  Bấm một ngày để thêm / sửa, nhấn giữ rồi kéo để chọn nhiều ngày. Mỗi ngày nghỉ là một ngày hoặc một khoảng (tối đa 31 ngày), có tên, không trùng nhau.
+  Thêm, sửa ngày nghỉ thì hạn của mọi đơn tính lại theo lịch mới. Seed dev có sẵn ngày nghỉ 2026–2027; bản thật để trống.
+- **Thư nhắc hạn** cho cán bộ: mục **Cấu hình email**.
+
 ## Loại đơn
 
 - Mỗi **loại đơn** là một form: các **phần**, trong phần là các **câu hỏi**. Loại đơn ban đầu là 32 mẫu đơn Word của Phòng Đào tạo Đại học (`shared/src/seed/school-form-types.ts`), sửa được như mọi loại khác; seed bản thật thêm cả 32 ở dạng Nháp, chừa mã nào thì khai ở `shared/src/seed/production-form-types.ts`.
@@ -127,6 +147,19 @@ Cần bổ sung / Đã duyệt / Từ chối thì câu thông báo ghi kèm lúc
   - **Đang mở**: nhận đơn; nội dung khóa cứng. Mỗi lúc chỉ một phiên bản mở; mở phiên bản khác thì phiên bản đang mở tự chuyển sang Đã đóng.
   - **Đã đóng**: không nhận đơn mới; đơn đã nộp vẫn xử lí bình thường. Phiên bản đã khóa chỉ đổi qua lại Đang mở / Đã đóng.
   - Muốn sửa nội dung đã khóa thì tạo phiên bản mới.
+- **Cấu hình thời gian** (nút tròn đồng hồ ở góc phải dưới trình soạn, khung **Cấu hình thời gian**; hợp đồng `GET/PUT /form-types/:id/time-settings`, luật ở `shared/src/business-rules/form-types--schedule.ts`):
+  thuộc **loại đơn**, áp dụng cho mọi phiên bản; sửa không tạo phiên bản mới, bấm Lưu ở hàng nút cuối như mẫu xuất file.
+  - **Thời gian xử lí tối đa** (số ngày làm việc, 1–365, để trống = không giới hạn). Đơn lưu kèm bản chụp lúc nộp, nên sửa chỉ áp dụng cho đơn nộp sau đó, đơn đã nộp giữ hạn cũ (mục **Hạn xử lí đơn**). Seed dev đặt sẵn cho mọi loại đơn; bản thật để trống, Phòng tự đặt.
+  - **Thời gian đóng mở**: mỗi loại đơn **một** giờ tự mở và **một** giờ tự đóng (giờ Việt Nam, tới phút), đều không bắt buộc; giờ đóng phải sau giờ mở. Hẹn đợt mới thì sửa giờ cũ; xóa trống là bỏ hẹn.
+    Giờ hẹn mới hoặc vừa sửa phải sau thời điểm hiện tại; giờ giữ nguyên thì không xét.
+  - **Tự mở** mở phiên bản chọn trong khung (mặc định phiên bản mới nhất, chọn được cả bản Nháp: tới giờ nội dung khóa lại như bấm Đang mở); phiên bản đang mở khác tự đóng. Bản Nháp chưa hợp lệ để mở thì không mở (ghi log).
+    **Tự đóng** đóng phiên bản đang mở; đơn đã nộp vẫn xử lí bình thường.
+  - Backend tự kiểm **mỗi phút** (`FormTypeScheduleService`); máy chủ tắt qua giờ hẹn thì lần kiểm đầu sau khi bật chạy bù, mở trước đóng sau.
+    Chạy xong chỉ **đánh dấu đã chạy** ("✓ đã mở" / "✓ đã đóng"), giờ vẫn hiện trong khung; restart không chạy lại. Sửa sang giờ khác thì bỏ dấu, tới giờ mới lại chạy; đổi phiên bản tự mở, sửa thời gian xử lí không ảnh hưởng dấu.
+    Hệ thống đổi trạng thái không ghi vào lần lưu của phiên bản (người lưu gần nhất giữ nguyên).
+  - **Bấm tay** mở / đóng ở thẻ Thông tin loại đơn vẫn làm được bất cứ lúc nào, giờ hẹn giữ nguyên; tới giờ hẹn mà trạng thái đã đúng thì không đổi gì (vd đã đóng sớm thì tới giờ đóng không làm gì).
+  - API giả không có bộ hẹn giờ chạy nền: mỗi lần đọc loại đơn thì chạy các giờ đã tới.
+  - Mọi thời điểm trong database lưu theo giờ chuẩn UTC (phiên kết nối đặt múi giờ UTC, `api/src/common/database-adapter.ts`); API và giao diện dùng giờ Việt Nam.
 - Mỗi phần có công tắc **Nội dung chính**: chỉ các phần này hiện ở xem nhanh (dòng xổ ra trong các bảng đơn).
 - **Các loại câu hỏi** (`shared/src/aux-schema/form-types--question-types.ts`): trả lời ngắn, đoạn văn, số, ngày, chọn một, chọn nhiều,
   danh sách thả xuống, tải tệp (đuôi tệp và dung lượng tối đa), bảng nhiều dòng (các cột kiểu chữ / số / ngày / chọn, cột số có thể tính tổng, cột ngày xuất file dạng dd/mm/yyyy), khối thông báo.
@@ -134,6 +167,7 @@ Cần bổ sung / Đã duyệt / Từ chối thì câu thông báo ghi kèm lúc
   Câu trả lời lưu theo **id câu hỏi**; kiểm tra câu trả lời ở `shared/src/validators/forms--answers.ts`.
 - Bảng học phần trong các mẫu đơn là câu hỏi bảng nhiều dòng.
 - Nộp đơn: nút **+ Nộp đơn mới** luôn mở hộp chọn loại đơn (kể cả khi chỉ có một loại), liệt kê các loại đang mở.
+  Loại đơn có giờ tự đóng chưa chạy thì ghi hạn nhận đơn, vd "Nhận đơn đến 17:00 05/12/2026".
   Quy trình xử lí dùng chung cho mọi loại đơn.
 
 ## Tệp đính kèm
@@ -194,6 +228,7 @@ Mỗi loại đơn có hai nhóm mẫu, lưu ở máy chủ theo loại đơn, d
 ## Thống kê ở trang Quản lí đơn
 
 - Theo trạng thái (số đơn và % của từng trạng thái) và theo loại đơn (vành khuyên: 5 loại nhiều đơn nhất mỗi loại một màu, còn lại gộp "Khác" màu xám, bấm để xem; lát từ 10% ghi phần trăm trên hình, số đơn và phần trăm đủ ở chú thích). Máy chủ đếm.
+- Theo tình trạng hạn: thanh ngang (mỗi tình trạng một hàng: tên, thanh dài theo phần trăm, số đơn, phần trăm), dưới khung Theo trạng thái, đủ 6 tình trạng (kể cả chưa có đơn), màu như nhãn ở bảng; bấm một hàng để lọc bảng.
 - Đếm trên **tất cả** đơn, không đổi theo ô tìm kiếm / bộ lọc. Bấm một mục để lọc bảng theo mục đó; bấm lại để bỏ lọc.
 
 ## Thống kê câu trả lời của loại đơn
@@ -218,15 +253,30 @@ API `GET /form-types/:formTypeId/stats`; máy chủ đếm và chia nhóm bằng
 
 ## Cấu hình email
 
-- Chỉ cấu hình phía **gửi**: tên người gửi, chữ kí. Địa chỉ gửi lấy từ cấu hình SMTP của máy chủ, chỉ hiện ra.
-  Người nhận luôn là email của người nộp đơn; bấm "Trả lời" thì thư về địa chỉ gửi.
-- **Bốn lúc gửi** (`shared/src/aux-schema/email--events.ts`): Đã nộp, Cần bổ sung, Từ chối, Đã duyệt. Mỗi lúc bật / tắt riêng, có tiêu đề và nội dung riêng.
-- Mã chèn vào thư (`shared/src/business-rules/email--tags.ts`): `{ho_ten}`, `{ma_don}`, `{loai_don}`, `{ngay_nop}`, `{nguoi_xu_li}`, `{ly_do}`, `{link_don}`, `{chu_ki}`.
+- Chỉ cấu hình phía **gửi**: tên người gửi, chữ kí. Địa chỉ gửi lấy từ cấu hình SMTP của máy chủ, chỉ hiện ra. Bấm "Trả lời" thì thư về địa chỉ gửi.
+- **Bảy lúc gửi** (`EMAIL_EVENT_KINDS`, `shared/src/aux-schema/email--events.ts`), mỗi lúc một tab, bật / tắt riêng, có tiêu đề và nội dung riêng; tab ghi rõ người nhận:
+
+  | Nhóm | Lúc gửi | Người nhận |
+  |---|---|---|
+  | Thư cho sinh viên | Đã nộp, Cần bổ sung, Từ chối, Đã duyệt | người nộp đơn |
+  | Thư cho cán bộ | Nhắc sắp tới hạn, Nhắc quá hạn | người xử lí đơn; đơn chưa tiếp nhận (chưa có người xử lí) thì mọi Admin |
+  | | Được chuyển giao | người nhận đơn (người xử lí mới) |
+
+- Mã chèn vào thư (`shared/src/business-rules/email--tags.ts`): `{ho_ten}`, `{ma_don}`, `{loai_don}`, `{ngay_nop}`, `{han_xu_li}` (hạn xử lí; "Không giới hạn", hoặc "Chưa có, chờ bổ sung"),
+  `{nguoi_xu_li}`, `{nguoi_chuyen_giao}`, `{ly_do}`, `{link_don}`, `{chu_ki}`.
 - Có xem trước bằng dữ liệu mẫu và gửi thư thử.
-- **Thư tự động**: nộp đơn xong (Đã nộp) và ra quyết định xong (Cần bổ sung, Từ chối, Đã duyệt) thì gửi thư tới email của người nộp đơn,
-  theo tiêu đề, nội dung của lúc gửi đó; đang tắt thì không gửi. Tiếp nhận, chuyển giao, sửa đơn không gửi thư.
-  Thư gửi sau khi đơn đã lưu; gửi lỗi chỉ ghi log, không làm hỏng việc nộp đơn, ra quyết định. `{link_don}` dựng từ `WEB_BASE_URL_DEV` khi `APP_ENV=dev`, còn lại `WEB_BASE_URL_PRODUCTION` (`api/.env`); thư thử cũng vậy.
-  Bản giả `dev-email` (`ENABLE_DEMO_APIS=true`, không có `dev-email` trong `ALWAYS_REAL_APIS`): thư tự động gửi về `DEV_EMAIL_REDIRECT_TO` thay vì người nộp đơn (bỏ trống thì chỉ in ra console), để không gửi nhầm tới email của người dùng mẫu. Bản thật gửi tới email người nộp đơn.
+- Cấu hình lưu ở một dòng JSON. Cấu hình đã lưu kiểu cũ (bốn lúc gửi, mỗi thư ghi `status`) đọc bằng `withAllEmailEvents`: giữ bốn thư cũ, tự thêm ba thư cho cán bộ mặc định, không cần migration.
+- **Thư tự động**, theo tiêu đề, nội dung của lúc gửi đó; đang tắt thì không gửi. Thư gửi sau khi đơn đã lưu; gửi lỗi chỉ ghi log, không làm hỏng việc nộp đơn, ra quyết định, chuyển giao.
+  - Nộp đơn xong (Đã nộp), ra quyết định xong (Cần bổ sung, Từ chối, Đã duyệt): gửi người nộp đơn. Tiếp nhận, sửa đơn không gửi thư.
+  - Chuyển giao xong: thư Được chuyển giao gửi người nhận đơn, `{nguoi_chuyen_giao}` là người bấm chuyển giao.
+  - **Thư nhắc**: backend tự kiểm **mỗi 10 phút** (`api/src/email/deadline-reminder.service.ts`), chỉ gửi **từ 07:00** (đơn tới lúc nhắc trong đêm thì 07:00 mới gửi).
+    Đơn đang có hạn chạy (Đã nộp, Đang xét, Đã bổ sung; Cần bổ sung thì đồng hồ dừng, không nhắc) mà Sắp tới hạn thì gửi Nhắc sắp tới hạn, Quá hạn thì gửi Nhắc quá hạn.
+    **Mỗi đơn, mỗi loại thư gửi một lần cho mỗi hạn**: hạn đã nhắc ghi ở cột `Form.dueSoonRemindedFor` / `overdueRemindedFor`, nên kiểm lại hay restart backend không gửi trùng;
+    hạn lùi vì bổ sung thì khác hạn đã ghi, nhắc lại theo hạn mới. Gửi lỗi thì không ghi, lần kiểm sau gửi lại. Lúc gửi đang tắt thì coi như đã nhắc (bật lại không gửi bù cho hạn đó).
+    Seed dev coi các đơn mẫu đang Sắp tới hạn / Quá hạn là đã nhắc, để bật dev không gửi cả loạt thư.
+  - `{link_don}` dựng từ `WEB_BASE_URL_DEV` khi `APP_ENV=dev`, còn lại `WEB_BASE_URL_PRODUCTION`; thư thử cũng vậy.
+  - Bản giả `dev-email` (`ENABLE_DEMO_APIS=true`, không có `dev-email` trong `ALWAYS_REAL_APIS`): mọi thư tự động gửi về `DEV_EMAIL_REDIRECT_TO` thay vì người nhận thật
+    (nhiều người nhận vẫn chỉ một thư; bỏ trống thì chỉ in ra console), để không gửi nhầm tới email của người dùng mẫu. Bản thật gửi tới người nhận thật, mỗi người một thư.
 - Backend: bảng `EmailSettings` (một dòng), module `api/src/email/`. Máy chủ thư đặt ở `.env.dev` / `.env.prod` (`SMTP_HOST`, `SMTP_PORT`, `SMTP_USER` là địa chỉ gửi, `SMTP_PASSWORD`).
   Chưa đặt `SMTP_HOST` thì chưa gửi được thư; riêng bản giả `dev-email` thì thư in ra console thay vì gửi đi.
 
