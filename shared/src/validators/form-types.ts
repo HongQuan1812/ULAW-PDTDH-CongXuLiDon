@@ -1,5 +1,6 @@
 /* Kiểm tra bản soạn loại đơn trước khi lưu.
    Trình soạn dùng để báo lỗi và tô đỏ ô sai; API giả và backend dùng lại để kiểm tra lần cuối, nên câu báo giống nhau. */
+import { FORM_TYPE_TIME_MESSAGES, type FormTypeTimeSettings, type SaveFormTypeTimeSettingsRequest } from '../api-contract/form-types';
 import type { FormSection } from '../aux-schema/form-types--sections';
 import { MaxProcessingDaysSchema } from '../aux-schema/forms--deadlines';
 import type { FormTypeStatus } from '../aux-schema/form-types--statuses';
@@ -154,6 +155,61 @@ export function validateFormTypeDraft(draft: FormTypeDraftInput, otherPrefixes: 
   // Loại đơn đang mở phải có câu hỏi để trả lời
   const questionCount = draft.sections.reduce((count, section) => count + section.questions.filter((question) => question.type !== 'info').length, 0);
   if (draft.status === 'open' && !questionCount) add(null, FORM_TYPE_DRAFT_MESSAGES.openWithoutQuestion);
+
+  return issues;
+}
+
+/** Ô của khung Cấu hình thời gian, để tô đỏ đúng ô. */
+export const FORM_TYPE_TIME_ISSUE_TARGET = {
+  maxProcessingDays: FORM_TYPE_ISSUE_TARGET.maxProcessingDays,
+  autoOpenAt: 'auto-open-at',
+  autoOpenVersion: 'auto-open-version',
+  autoCloseAt: 'auto-close-at',
+} as const;
+
+/**
+ * Kiểm tra cấu hình thời gian trước khi lưu (khung Cấu hình thời gian, API giả, backend cùng dùng).
+ * Giờ hẹn mới hoặc vừa sửa phải sau phút hiện tại (gõ nhầm ngày đã qua thì loại đơn tự mở / đóng ngay mà không ai hay);
+ * giờ giữ nguyên thì không xét (vd giờ đã chạy, có dấu ✓).
+ * @param settings  cấu hình gửi lên (dạng đã đúng theo SaveFormTypeTimeSettingsRequestSchema)
+ * @param versions  số các phiên bản hiện có của loại đơn
+ * @param previous  cấu hình đang lưu, để biết giờ nào vừa sửa
+ * @param now       lúc lưu, giờ Việt Nam 'YYYY-MM-DDTHH:mm' (phần giây trở đi bỏ qua)
+ * @returns         các lỗi theo thứ tự trong khung (từ trên xuống); hợp lệ thì []
+ */
+export function validateFormTypeTimeSettings(
+  settings: SaveFormTypeTimeSettingsRequest,
+  versions: readonly number[],
+  previous: FormTypeTimeSettings,
+  now: string,
+): FormTypeIssue[] {
+  const issues: FormTypeIssue[] = [];
+  const minute = now.slice(0, 16);
+
+  // Thời gian xử lí: để trống hoặc số nguyên 1–365
+  const maxDaysCheck = MaxProcessingDaysSchema.safeParse(settings.maxProcessingDays);
+  if (!maxDaysCheck.success) issues.push({ target: FORM_TYPE_TIME_ISSUE_TARGET.maxProcessingDays, message: maxDaysCheck.error.issues[0]!.message });
+
+  // Giờ tự mở: vừa sửa giờ thì phải sau thời điểm hiện tại; phiên bản phải có thật
+  const { autoOpen, autoClose } = settings;
+  const isOpenChanged = Boolean(autoOpen && previous.autoOpen?.at !== autoOpen.at);
+  if (autoOpen && isOpenChanged && autoOpen.at <= minute) {
+    issues.push({ target: FORM_TYPE_TIME_ISSUE_TARGET.autoOpenAt, message: FORM_TYPE_TIME_MESSAGES.inThePast });
+  }
+  if (autoOpen && !versions.includes(autoOpen.version)) {
+    issues.push({ target: FORM_TYPE_TIME_ISSUE_TARGET.autoOpenVersion, message: FORM_TYPE_TIME_MESSAGES.versionMissing(autoOpen.version) });
+  }
+
+  // Giờ tự đóng: vừa sửa thì phải sau thời điểm hiện tại
+  const isCloseChanged = Boolean(autoClose && previous.autoClose?.at !== autoClose.at);
+  if (autoClose && isCloseChanged && autoClose.at <= minute) {
+    issues.push({ target: FORM_TYPE_TIME_ISSUE_TARGET.autoCloseAt, message: FORM_TYPE_TIME_MESSAGES.inThePast });
+  }
+
+  // Giờ tự đóng: sau giờ tự mở (cả hai cùng dạng 'YYYY-MM-DDTHH:mm' nên so chuỗi là đủ)
+  if (autoOpen && autoClose && autoClose.at <= autoOpen.at) {
+    issues.push({ target: FORM_TYPE_TIME_ISSUE_TARGET.autoCloseAt, message: FORM_TYPE_TIME_MESSAGES.closeBeforeOpen });
+  }
 
   return issues;
 }

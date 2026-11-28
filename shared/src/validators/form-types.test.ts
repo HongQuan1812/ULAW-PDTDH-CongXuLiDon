@@ -2,7 +2,21 @@ import { describe, expect, it } from 'vitest';
 import { FormSectionSchema, type FormSection } from '../aux-schema/form-types--sections';
 import { MAX_PROCESSING_DAYS_LIMIT } from '../aux-schema/forms--deadlines';
 import { EMPTY_RICH_TEXT_DOC } from '../aux-schema/rich-text';
-import { FORM_TYPE_DRAFT_MESSAGES, FORM_TYPE_ISSUE_TARGET, issueMessages, validateFormTypeDraft, type FormTypeDraftInput } from './form-types';
+import {
+  EMPTY_FORM_TYPE_TIME_SETTINGS,
+  FORM_TYPE_TIME_MESSAGES,
+  SaveFormTypeTimeSettingsRequestSchema,
+  type SaveFormTypeTimeSettingsRequest,
+} from '../api-contract/form-types';
+import {
+  FORM_TYPE_DRAFT_MESSAGES,
+  FORM_TYPE_ISSUE_TARGET,
+  FORM_TYPE_TIME_ISSUE_TARGET,
+  issueMessages,
+  validateFormTypeDraft,
+  validateFormTypeTimeSettings,
+  type FormTypeDraftInput,
+} from './form-types';
 
 /** Bản soạn hợp lệ: một phần, một câu hỏi ngắn. */
 const validDraft = (): FormTypeDraftInput => ({
@@ -137,3 +151,65 @@ describe('validateFormTypeDraft', () => {
   });
 });
 
+
+describe('validateFormTypeTimeSettings', () => {
+  const noSchedule = { maxProcessingDays: null, autoOpen: null, autoClose: null };
+  /** Lúc lưu: 10:00 28/11/2026 */
+  const now = '2026-11-28T10:00';
+  const check = (settings: SaveFormTypeTimeSettingsRequest, previous = EMPTY_FORM_TYPE_TIME_SETTINGS) =>
+    validateFormTypeTimeSettings(settings, [1, 2], previous, now);
+
+  it('để trống hết, hoặc hẹn đúng luật thì không có lỗi', () => {
+    expect(check(noSchedule)).toEqual([]);
+    expect(check({ maxProcessingDays: 5, autoOpen: { at: '2026-12-01T08:00', version: 2 }, autoClose: { at: '2026-12-05T17:00' } })).toEqual([]);
+    // Chỉ hẹn đóng, không hẹn mở
+    expect(check({ ...noSchedule, autoClose: { at: '2026-12-05T17:00' } })).toEqual([]);
+  });
+
+  it('thời gian xử lí sai khoảng', () => {
+    expect(check({ ...noSchedule, maxProcessingDays: 0 }).map((issue) => issue.target)).toEqual([FORM_TYPE_TIME_ISSUE_TARGET.maxProcessingDays]);
+  });
+
+  it('phiên bản tự mở không có', () => {
+    expect(check({ ...noSchedule, autoOpen: { at: '2026-12-01T08:00', version: 3 } })).toEqual([
+      { target: FORM_TYPE_TIME_ISSUE_TARGET.autoOpenVersion, message: FORM_TYPE_TIME_MESSAGES.versionMissing(3) },
+    ]);
+  });
+
+  it('giờ đóng phải sau giờ mở (trùng phút cũng sai)', () => {
+    for (const closeAt of ['2026-12-01T08:00', '2026-11-30T17:00']) {
+      expect(check({ ...noSchedule, autoOpen: { at: '2026-12-01T08:00', version: 1 }, autoClose: { at: closeAt } })).toEqual([
+        { target: FORM_TYPE_TIME_ISSUE_TARGET.autoCloseAt, message: FORM_TYPE_TIME_MESSAGES.closeBeforeOpen },
+      ]);
+    }
+  });
+
+  it('giờ hẹn mới đã qua (kể cả đúng phút này) thì chặn', () => {
+    for (const at of ['2026-11-28T09:00', '2026-11-28T10:00']) {
+      expect(check({ ...noSchedule, autoClose: { at } })).toEqual([{ target: FORM_TYPE_TIME_ISSUE_TARGET.autoCloseAt, message: FORM_TYPE_TIME_MESSAGES.inThePast }]);
+      expect(check({ ...noSchedule, autoOpen: { at, version: 1 } })).toEqual([{ target: FORM_TYPE_TIME_ISSUE_TARGET.autoOpenAt, message: FORM_TYPE_TIME_MESSAGES.inThePast }]);
+    }
+  });
+
+  it('giờ đã chạy giữ nguyên thì lưu được (vd chỉ sửa thời gian xử lí)', () => {
+    const ran = {
+      maxProcessingDays: 5,
+      autoOpen: { at: '2026-11-20T08:00', version: 1, done: true },
+      autoClose: { at: '2026-11-25T17:00', done: true },
+    };
+    const request = { maxProcessingDays: 7, autoOpen: { at: '2026-11-20T08:00', version: 1 }, autoClose: { at: '2026-11-25T17:00' } };
+    expect(check(request, ran)).toEqual([]);
+    // Đổi phiên bản tự mở mà giữ giờ: dấu đã chạy vẫn giữ, không chặn
+    expect(check({ ...request, autoOpen: { at: '2026-11-20T08:00', version: 2 } }, ran)).toEqual([]);
+  });
+});
+
+describe('SaveFormTypeTimeSettingsRequestSchema', () => {
+  it('giờ hẹn phải là phút có thật', () => {
+    const request = (at: string) => ({ maxProcessingDays: null, autoOpen: null, autoClose: { at } });
+    expect(SaveFormTypeTimeSettingsRequestSchema.safeParse(request('2026-12-05T17:00')).success).toBe(true);
+    for (const at of ['2026-02-30T08:00', '2026-12-05T24:00', '2026-12-05 17:00', '2026-12-05T17:00:00']) {
+      expect(SaveFormTypeTimeSettingsRequestSchema.safeParse(request(at)).success).toBe(false);
+    }
+  });
+});

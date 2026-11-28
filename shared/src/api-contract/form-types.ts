@@ -40,6 +40,10 @@ export const FORM_TYPE_ENDPOINTS = {
   /** PUT: mở / đóng phiên bản đã khóa, body SetFormTypeVersionStatusRequest → ManagedFormType; phiên bản Nháp thì 409.
       Cần quyền manageFormTypes */
   versionStatus: '/form-types/:formTypeId/versions/:version/status',
+  /** GET: cấu hình thời gian của loại đơn (thời gian xử lí, giờ tự mở, tự đóng) → FormTypeTimeSettings.
+      PUT: lưu, body SaveFormTypeTimeSettingsRequest → FormTypeTimeSettings; không tạo phiên bản mới, áp dụng cho mọi phiên bản.
+      Sai luật (giờ đóng trước giờ mở, phiên bản không có…) thì 422 với câu của FORM_TYPE_TIME_MESSAGES. Cần quyền manageFormTypes */
+  timeSettings: '/form-types/:formTypeId/time-settings',
   /** GET ?<điều kiện thống kê> → FormTypeAnswerStats: thống kê câu trả lời các đơn của loại đơn (thẻ Thống kê ở trình soạn),
       tham số theo formTypeStatsQueryParams; tham số sai thì 422; phiên bản không có thì 404. Cần quyền manageFormTypes */
   stats: '/form-types/:formTypeId/stats',
@@ -90,6 +94,15 @@ export function formTypeVersionPath(formTypeId: string, version: number): string
  */
 export function formTypeVersionStatusPath(formTypeId: string, version: number): string {
   return `${formTypeVersionPath(formTypeId, version)}/status`;
+}
+
+/**
+ * Đường dẫn API cấu hình thời gian của một loại đơn.
+ * @param formTypeId  mã loại đơn
+ * @returns           vd '/form-types/xmr/time-settings'
+ */
+export function formTypeTimeSettingsPath(formTypeId: string): string {
+  return FORM_TYPE_ENDPOINTS.timeSettings.replace(':formTypeId', encodeURIComponent(formTypeId));
 }
 
 /* ---------- Dữ liệu gửi / nhận ---------- */
@@ -198,6 +211,71 @@ export type SaveFormTypeVersionRequest = z.infer<typeof SaveFormTypeVersionReque
 /** Gửi lên khi mở / đóng phiên bản đã khóa. Mở thì phiên bản đang mở khác tự đóng. */
 export const SetFormTypeVersionStatusRequestSchema = z.object({ status: z.enum(LOCKED_VERSION_STATUSES) });
 export type SetFormTypeVersionStatusRequest = z.infer<typeof SetFormTypeVersionStatusRequestSchema>;
+
+/* ---------- Cấu hình thời gian (nút đồng hồ ở trình soạn) ----------
+   Thuộc loại đơn, áp dụng cho mọi phiên bản; sửa không tạo phiên bản mới.
+   - Thời gian xử lí tối đa: đơn chụp giá trị lúc nộp, sửa chỉ áp dụng cho đơn nộp sau đó.
+   - Một giờ tự mở (kèm phiên bản sẽ mở, chọn được cả bản Nháp) và một giờ tự đóng; không phải danh sách, hẹn đợt mới thì sửa giờ cũ.
+   - Chạy xong chỉ đánh dấu đã chạy (done), giờ vẫn giữ; sửa sang giờ khác thì bỏ dấu.
+   Luật chạy: business-rules/form-types--schedule.ts. Kiểm tra: validateFormTypeTimeSettings (validators/form-types.ts). */
+
+/**
+ * Chuỗi có phải phút có thật, giờ Việt Nam dạng 'YYYY-MM-DDTHH:mm' không.
+ * @param text  chuỗi
+ * @returns     true nếu đúng dạng và có thật (vd '2026-02-30T08:00', '2026-12-01T24:00' là sai)
+ */
+export function isVietnamMinute(text: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(text)) return false;
+  const parsed = new Date(`${text}:00Z`);
+  return !Number.isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 16) === text;
+}
+
+/** Giờ hẹn: phút có thật, giờ Việt Nam 'YYYY-MM-DDTHH:mm'. */
+const ScheduleMinuteSchema = z.string().refine(isVietnamMinute, 'Giờ hẹn phải có dạng ngày giờ hợp lệ.');
+
+/** Giờ tự mở: lúc mở, phiên bản sẽ mở, đã chạy chưa. */
+export const AutoOpenSchema = z.object({
+  /** Giờ Việt Nam 'YYYY-MM-DDTHH:mm' */
+  at: ScheduleMinuteSchema,
+  /** Phiên bản sẽ mở (Nháp, Đang mở hoặc Đã đóng) */
+  version: z.number().int().positive(),
+  /** true = đã tới giờ và đã chạy ("✓ đã mở") */
+  done: z.boolean(),
+});
+export type AutoOpen = z.infer<typeof AutoOpenSchema>;
+
+/** Giờ tự đóng: đóng phiên bản đang mở. */
+export const AutoCloseSchema = z.object({
+  /** Giờ Việt Nam 'YYYY-MM-DDTHH:mm' */
+  at: ScheduleMinuteSchema,
+  /** true = đã tới giờ và đã chạy ("✓ đã đóng") */
+  done: z.boolean(),
+});
+export type AutoClose = z.infer<typeof AutoCloseSchema>;
+
+/** Trả về từ GET / PUT /form-types/:formTypeId/time-settings. */
+export const FormTypeTimeSettingsSchema = z.object({
+  /** Thời gian xử lí tối đa, ngày làm việc; null = không có hạn */
+  maxProcessingDays: MaxProcessingDaysSchema,
+  /** null = không hẹn giờ mở */
+  autoOpen: AutoOpenSchema.nullable(),
+  /** null = không hẹn giờ đóng */
+  autoClose: AutoCloseSchema.nullable(),
+});
+export type FormTypeTimeSettings = z.infer<typeof FormTypeTimeSettingsSchema>;
+
+/** Cấu hình thời gian khi loại đơn chưa đặt gì. */
+export const EMPTY_FORM_TYPE_TIME_SETTINGS: FormTypeTimeSettings = { maxProcessingDays: null, autoOpen: null, autoClose: null };
+
+/** Gửi lên khi lưu cấu hình thời gian. Dấu đã chạy do máy chủ giữ hoặc bỏ (timeSettingsAfterSave), không gửi lên.
+    Ngoài đúng dạng, máy chủ còn kiểm tra như khung Cấu hình thời gian bằng validateFormTypeTimeSettings. */
+export const SaveFormTypeTimeSettingsRequestSchema = z.object({
+  /** Khoảng cho phép do validateFormTypeTimeSettings kiểm tra (câu báo như trình soạn) */
+  maxProcessingDays: z.number().nullable(),
+  autoOpen: AutoOpenSchema.omit({ done: true }).nullable(),
+  autoClose: AutoCloseSchema.omit({ done: true }).nullable(),
+});
+export type SaveFormTypeTimeSettingsRequest = z.infer<typeof SaveFormTypeTimeSettingsRequestSchema>;
 
 /* ---------- Thống kê câu trả lời (thẻ Thống kê) ----------
    GET /form-types/:formTypeId/stats?version=2&submittedFrom=2026-09-01&submittedTo=2026-11-30&statuses=nop,xet
@@ -429,4 +507,16 @@ export const FORM_TYPE_MESSAGES = {
   invalidStatsQuery: 'Điều kiện thống kê không hợp lệ.',
   /** Bấm Bỏ thay đổi */
   discarded: 'Đã bỏ các thay đổi chưa lưu.',
+} as const;
+
+/** Câu thông báo của cấu hình thời gian. */
+export const FORM_TYPE_TIME_MESSAGES = {
+  /** Giờ đóng không sau giờ mở */
+  closeBeforeOpen: 'Giờ tự đóng phải sau giờ tự mở.',
+  /** Giờ hẹn mới hoặc vừa sửa không sau thời điểm hiện tại */
+  inThePast: 'Giờ hẹn đã qua, chọn giờ sau thời điểm hiện tại.',
+  /** Phiên bản tự mở không có (vd vừa xóa bản Nháp) */
+  versionMissing: (version: number) => `Loại đơn không có phiên bản ${version}. Chọn lại phiên bản sẽ mở.`,
+  /** Lưu xong */
+  saved: (name: string) => `Đã lưu cấu hình thời gian của ${name}.`,
 } as const;
