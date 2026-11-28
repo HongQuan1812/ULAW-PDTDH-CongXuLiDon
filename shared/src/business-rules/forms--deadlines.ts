@@ -230,3 +230,31 @@ export function countDeadlineStates(states: readonly DeadlineState[]): Record<De
   for (const state of states) byDeadline[state] += 1;
   return byDeadline;
 }
+
+/* ---------- Thư nhắc hạn ---------- */
+
+/** Hai loại thư nhắc hạn gửi cho cán bộ. */
+export type DeadlineReminderKind = 'dueSoon' | 'overdue';
+
+/** Thư nhắc chỉ gửi từ giờ này trong ngày (giờ Việt Nam), để không gửi lúc nửa đêm. */
+export const REMINDER_START_HOUR = 7;
+
+/**
+ * Lá đơn cần thư nhắc nào lúc này.
+ * @param deadline  hạn của lá đơn (formDeadline)
+ * @returns         loại thư nhắc và hạn được nhắc; còn hạn, đã xong, không có hạn, đang chờ bổ sung (chưa có hạn) thì null
+ */
+export function deadlineReminderOf(deadline: FormDeadline): { kind: DeadlineReminderKind; dueAt: string } | null {
+  if (deadline.dueAt === null) return null;
+  if (deadline.state !== 'dueSoon' && deadline.state !== 'overdue') return null;
+  return { kind: deadline.state, dueAt: deadline.dueAt };
+}
+
+/**
+ * Đã tới giờ được gửi thư nhắc trong ngày chưa.
+ * @param now  bây giờ, giờ Việt Nam 'YYYY-MM-DDTHH:mm'
+ * @returns    true từ 07:00 tới hết ngày
+ */
+export function isReminderTime(now: string): boolean {
+  return Number(now.slice(11, 13)) >= REMINDER_START_HOUR;
+}

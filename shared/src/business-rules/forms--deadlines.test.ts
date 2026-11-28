@@ -5,6 +5,8 @@ import {
   addWorkingMinutes,
   countDeadlineStates,
   deadlineDetailText,
+  deadlineReminderOf,
+  isReminderTime,
   formDeadline,
   isWorkingDay,
   vietnamTimeOf,
@@ -191,5 +193,28 @@ describe('đếm đơn theo tình trạng hạn', () => {
       none: 3,
     });
     expect(Object.values(countDeadlineStates([]))).toEqual([0, 0, 0, 0, 0, 0]);
+  });
+});
+
+describe('thư nhắc hạn', () => {
+  it('Sắp tới hạn, Quá hạn: nhắc theo hạn hiện tại', () => {
+    expect(deadlineReminderOf({ state: 'dueSoon', maxDays: 3, dueAt: '2026-12-02T10:00', remainingMinutes: 60 })).toEqual({ kind: 'dueSoon', dueAt: '2026-12-02T10:00' });
+    expect(deadlineReminderOf({ state: 'overdue', maxDays: 3, dueAt: '2026-12-02T10:00', remainingMinutes: -60 })).toEqual({ kind: 'overdue', dueAt: '2026-12-02T10:00' });
+  });
+
+  it('còn hạn, đã xong, không có hạn, đang chờ bổ sung: không nhắc', () => {
+    expect(deadlineReminderOf({ state: 'onTrack', maxDays: 3, dueAt: '2026-12-02T10:00', remainingMinutes: 3 * DAY })).toBeNull();
+    expect(deadlineReminderOf({ state: 'doneLate', maxDays: 3, dueAt: '2026-12-02T10:00', remainingMinutes: -60 })).toBeNull();
+    expect(deadlineReminderOf({ state: 'none', maxDays: null, dueAt: null, remainingMinutes: null })).toBeNull();
+    expect(deadlineReminderOf({ state: 'overdue', maxDays: 3, dueAt: null, remainingMinutes: -60 })).toBeNull();
+  });
+
+  test.each([
+    ['2026-12-02T06:59', false],
+    ['2026-12-02T07:00', true],
+    ['2026-12-02T23:50', true],
+    ['2026-12-02T00:10', false],
+  ])('giờ gửi thư nhắc: %s → %s', (now, expected) => {
+    expect(isReminderTime(now)).toBe(expected);
   });
 });
