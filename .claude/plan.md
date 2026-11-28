@@ -221,6 +221,34 @@ Luật tính hạn (đã chốt):
 | 6 | Thư cho cán bộ: gửi | **thư chuyển giao**: gửi ngay khi Chuyển giao xong (`workflow.service.ts`, như thư khi ra quyết định), cho người nhận đơn; gửi lỗi không làm hỏng việc chuyển giao · **thư nhắc**: backend tự kiểm mỗi 10 phút, chỉ gửi từ 07:00: "sắp tới hạn" (trước 1 ngày làm việc) và "quá hạn" · người nhận: **người xử lí**; đơn chưa tiếp nhận (chưa có người xử lí) thì gửi **mọi Admin** · mỗi đơn mỗi loại thư gửi một lần cho mỗi hạn (hạn lùi vì bổ sung thì nhắc lại theo hạn mới), ghi vào cột mới của `Form` để restart không gửi trùng · `dev-email` gửi về `DEV_EMAIL_REDIRECT_TO` như thư khác · test · đã làm: `DeadlineReminderService` (kiểm mỗi 10 phút), cột `dueSoonRemindedFor` / `overdueRemindedFor` ghi hạn đã nhắc, gửi lỗi thì lần sau gửi lại; seed dev coi đơn mẫu đang Sắp tới hạn / Quá hạn là đã nhắc (bật dev không gửi cả loạt thư) | ✓ |
 | 7 | Tài liệu | `docs/business-rules.md`, README (nếu có biến mới), cây thư mục trong `.claude/CLAUDE.md` nếu thêm tệp · đã làm: mục mới **Hạn xử lí đơn** (luật tính hạn, tình trạng hạn, ngày nghỉ), mục Cấu hình email bảy lúc gửi và thư nhắc, quyền `manageHolidays`; README sửa `DEV_EMAIL_REDIRECT_TO`; cây thư mục thêm `email/`, `holidays/` | ✓ |
 
+## Cấu hình thời gian của loại đơn (chưa làm)
+
+Trình soạn loại đơn thêm nút tròn thứ ba ở góc phải dưới (icon đồng hồ, cạnh hai nút mẫu xuất file), mở khung nổi **Cấu hình thời gian** gồm hai mục: **Thời gian xử lí** và **Thời gian đóng mở**.
+Cấu hình này thuộc **loại đơn**, áp dụng cho mọi phiên bản; sửa không tạo phiên bản mới, bấm Lưu ở hàng nút cuối như mẫu xuất file.
+Trạng thái phiên bản (Nháp / Đang mở / Đã đóng) vẫn ở thẻ Thông tin loại đơn như cũ; chỉ ô Thời gian xử lí tối đa chuyển ra khung mới.
+
+Làm **từng bước một** như mục Hạn xử lí đơn: xong bước nào thì chạy test, cậu bấm thử, cậu cho phép thì mới commit.
+
+Luật (đã chốt):
+
+- **Thời gian xử lí tối đa** chuyển từ phiên bản lên loại đơn (migration lấy giá trị của phiên bản mới nhất). Đơn vẫn chụp giá trị lúc nộp: sửa chỉ áp dụng cho đơn nộp sau đó, đơn đã nộp giữ hạn cũ.
+- **Thời gian đóng mở**: mỗi loại đơn **một** giờ tự mở và **một** giờ tự đóng (giờ Việt Nam, tới phút), đều không bắt buộc, giờ đóng phải sau giờ mở. Không phải danh sách: hẹn đợt mới thì sửa giờ cũ; xóa trống ô là bỏ hẹn.
+- **Tự mở mở phiên bản nào**: người dùng chọn phiên bản trong khung (mặc định phiên bản mới nhất), **chọn được cả bản Nháp**: tới giờ bản Nháp tự mở, nội dung khóa lại như bấm Đang mở. Mở thì phiên bản đang mở khác tự đóng, như bấm tay.
+- **Tự đóng**: đóng phiên bản đang mở. Đơn đã nộp vẫn xử lí bình thường.
+- Backend tự kiểm **mỗi phút**, tới giờ thì đổi trạng thái (như cán bộ bấm tay, ghi người đổi là hệ thống).
+- **Chạy xong chỉ đánh dấu đã chạy**, giờ vẫn hiện trong khung kèm "✓ đã mở" / "✓ đã đóng"; restart không chạy lại. Sửa sang giờ khác thì bỏ dấu, tới giờ mới lại chạy. Dấu chỉ theo giờ: đổi phiên bản tự mở, sửa thời gian xử lí không ảnh hưởng dấu.
+- **Giờ hẹn mới hoặc vừa sửa phải sau thời điểm hiện tại** (gõ nhầm ngày đã qua thì báo lỗi, không cho lưu); giờ giữ nguyên thì không xét.
+- **Cán bộ bấm tay** mở / đóng: làm theo bấm tay ngay, giờ hẹn vẫn giữ; tới giờ hẹn mà trạng thái đã đúng thì không đổi gì (vd đã đóng sớm thì tới giờ đóng không làm gì; mở sớm thì tới giờ đóng vẫn tự đóng).
+- **Sinh viên thấy** hạn nhận đơn khi chọn loại đơn (hộp **+ Nộp đơn mới**), vd "Nhận đơn đến 17:00 05/12/2026", khi loại đơn có giờ tự đóng chưa chạy.
+
+| # | Bước | Gồm | |
+|---|---|---|---|
+| 0 | Luật, hợp đồng | `shared/`: `maxProcessingDays` chuyển sang loại đơn; giờ tự mở, phiên bản tự mở, giờ tự đóng, dấu đã chạy · hợp đồng lưu cấu hình thời gian (endpoint riêng của loại đơn, không tạo phiên bản) · kiểm tra (1–365 ngày, giờ đóng sau giờ mở, phiên bản có thật) · hàm thuần "tới giờ chưa, cần làm gì" · test · đã làm: endpoint `GET/PUT /form-types/:id/time-settings`, `validateFormTypeTimeSettings` (thêm: giờ mới phải sau thời điểm hiện tại), `business-rules/form-types--schedule.ts`; ô `maxProcessingDays` ở phiên bản bỏ ở bước 1, 2 (bỏ ngay thì api, web hỏng biên dịch) | ✓ |
+| 1 | Backend | migration (cột mới ở `FormType`, chuyển `maxProcessingDays` từ `FormTypeVersion`, lấy giá trị phiên bản mới nhất) · lưu, trả về · lúc nộp đơn chụp hạn từ loại đơn · bộ hẹn giờ kiểm mỗi phút, mở / đóng qua cùng chỗ với bấm tay · seed dev / bản thật · test | |
+| 2 | API giả, giao diện trình soạn | MSW · hook · nút đồng hồ và khung Cấu hình thời gian (chọn ngày giờ, chọn phiên bản tự mở, dấu đã chạy) · bỏ ô Thời gian xử lí khỏi thẻ Thông tin loại đơn · thay đổi chưa lưu, Bỏ thay đổi như mẫu xuất file · test | |
+| 3 | Sinh viên thấy hạn nhận đơn | hộp chọn loại đơn hiện "Nhận đơn đến …" · hợp đồng danh sách loại đơn đang mở thêm giờ tự đóng · test | |
+| 4 | Tài liệu | `docs/business-rules.md` (mục Loại đơn, Hạn xử lí đơn), cây thư mục nếu thêm tệp | |
+
 ## Loại đơn theo mẫu Word ✓
 
 Mẫu Word ở Google Drive, thư mục `CongXuLiDon/Mẫu Đơn` (32 mẫu), đánh số theo ngày sửa, cũ trước. Đơn 1, 2 làm lần lượt; ngày 18/11/2026 đã soạn sẵn cả 30 đơn còn lại vào database dev ở dạng **Nháp**. Ngày 18/11/2026 cậu đã duyệt, sửa xong cả 32 đơn; đã đưa cả 32 vào seed. Seed dev và seed bản thật đều có đủ 32 (muốn chừa mã nào khỏi bản thật thì thêm vào `PRODUCTION_EXCLUDED_FORM_TYPE_PREFIXES` trong `shared/src/seed/production-form-types.ts`). Còn hỏi Phòng: giữ cả `DN` và `DNPA` hay bỏ một.
