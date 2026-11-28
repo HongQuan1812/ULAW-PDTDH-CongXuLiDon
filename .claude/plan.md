@@ -195,7 +195,7 @@ Workflow đã đổi (commit `aa00be2`): push vào `main` thì máy dev nào đa
 - Mật khẩu SMTP, `GOOGLE_CLIENT_SECRET`, mật khẩu Postgres bản thật chỉ nằm trong `.env.prod` trên máy chủ, không commit, không đóng gói vào image.
 - Không dùng `down -v` (`pnpm prod:wipe`) trên máy chủ thật: xóa luôn volume, mất dữ liệu và tệp tải lên (dev thì không sao, bật lại là seed lại).
 
-## Hạn xử lí đơn (đang làm)
+## Hạn xử lí đơn ✓
 
 Người soạn loại đơn đặt **thời gian xử lí tối đa** (số ngày làm việc) cho từng phiên bản loại đơn. Mỗi lá đơn có hạn xử lí; sinh viên và cán bộ thấy hạn, cán bộ lọc được đơn sắp tới hạn / quá hạn, người xử lí nhận thư nhắc. Kèm theo: chuyển giao đơn thì người nhận đơn nhận thư báo.
 
@@ -219,7 +219,7 @@ Luật tính hạn (đã chốt):
 | 4 | Bảng đơn | chỉ thêm cột Tình trạng hạn (lọc: sắp tới hạn, quá hạn…; không có cột ngày hạn) ở Quản lí đơn và Đơn phụ trách · API giả, backend, test · sắp xếp gấp nhất trước (Quá hạn → Sắp tới hạn → Còn hạn → Không có hạn → Xong trễ hạn → Xong đúng hạn) · khung thống kê **Theo tình trạng hạn** (vành khuyên, dưới khung Theo trạng thái; bấm để lọc bảng) | ✓ |
 | 5 | Thư cho cán bộ: cấu hình | trang Cấu hình email thêm ba tab **Nhắc sắp tới hạn**, **Nhắc quá hạn**, **Được chuyển giao** (bật / tắt, tiêu đề, nội dung như bốn thư cho sinh viên) · mã chèn mới `{han_xu_li}`; thư chuyển giao thêm mã người chuyển giao · ghi rõ người nhận của từng tab: thư cho sinh viên gửi người nộp đơn, thư nhắc gửi người xử lí, thư chuyển giao gửi người nhận đơn · hợp đồng `email.ts` đổi từ "bốn lúc gửi theo trạng thái" sang bảy lúc gửi · API giả, backend lưu, gửi thư thử · dữ liệu cấu hình email đã lưu ở bản thật tự thêm ba tab mặc định (không mất bốn thư cũ) · test · đã làm: mỗi thư ghi `kind` thay cho `status`, mã `{nguoi_chuyen_giao}`, đọc cấu hình cũ bằng `withAllEmailEvents` (không cần migration) | ✓ |
 | 6 | Thư cho cán bộ: gửi | **thư chuyển giao**: gửi ngay khi Chuyển giao xong (`workflow.service.ts`, như thư khi ra quyết định), cho người nhận đơn; gửi lỗi không làm hỏng việc chuyển giao · **thư nhắc**: backend tự kiểm mỗi 10 phút, chỉ gửi từ 07:00: "sắp tới hạn" (trước 1 ngày làm việc) và "quá hạn" · người nhận: **người xử lí**; đơn chưa tiếp nhận (chưa có người xử lí) thì gửi **mọi Admin** · mỗi đơn mỗi loại thư gửi một lần cho mỗi hạn (hạn lùi vì bổ sung thì nhắc lại theo hạn mới), ghi vào cột mới của `Form` để restart không gửi trùng · `dev-email` gửi về `DEV_EMAIL_REDIRECT_TO` như thư khác · test · đã làm: `DeadlineReminderService` (kiểm mỗi 10 phút), cột `dueSoonRemindedFor` / `overdueRemindedFor` ghi hạn đã nhắc, gửi lỗi thì lần sau gửi lại; seed dev coi đơn mẫu đang Sắp tới hạn / Quá hạn là đã nhắc (bật dev không gửi cả loạt thư) | ✓ |
-| 7 | Tài liệu | `docs/business-rules.md`, README (nếu có biến mới), cây thư mục trong `.claude/CLAUDE.md` nếu thêm tệp | |
+| 7 | Tài liệu | `docs/business-rules.md`, README (nếu có biến mới), cây thư mục trong `.claude/CLAUDE.md` nếu thêm tệp · đã làm: mục mới **Hạn xử lí đơn** (luật tính hạn, tình trạng hạn, ngày nghỉ), mục Cấu hình email bảy lúc gửi và thư nhắc, quyền `manageHolidays`; README sửa `DEV_EMAIL_REDIRECT_TO`; cây thư mục thêm `email/`, `holidays/` | ✓ |
 
 ## Loại đơn theo mẫu Word ✓
 

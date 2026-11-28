@@ -161,7 +161,7 @@ Chỉ email trường (`SCHOOL_EMAIL_DOMAINS`, `shared/src/validators/auth.ts`) 
 | `BACKUP_DIR` | thư mục sao lưu (dev): mỗi nơi lưu kiểu "Thư mục trên máy chủ" là một thư mục con. Bản thật compose đặt `/app/api/backups` (volume `backups`) |
 | `WEB_BASE_URL_DEV`, `WEB_BASE_URL_PRODUCTION` | địa chỉ cổng, dùng cho đường dẫn trong thư và redirect URI của Google · trống: `https://localhost:5173`, `https://localhost` |
 | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD` | máy chủ gửi thư · `SMTP_HOST` trống: không gửi |
-| `DEV_EMAIL_REDIRECT_TO` | bản giả `dev-email`: thư tự động gửi về địa chỉ này thay cho người nộp đơn · trống: chỉ in ra console |
+| `DEV_EMAIL_REDIRECT_TO` | bản giả `dev-email`: mọi thư tự động (cho người nộp đơn, thư chuyển giao, thư nhắc hạn cho cán bộ) gửi về địa chỉ này thay cho người nhận thật · trống: chỉ in ra console |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | OAuth client của Google · trống: chưa bật đăng nhập Google |
 | `GOOGLE_PICKER_API_KEY` | API key cho Google Picker (chọn thư mục Drive của nơi lưu sao lưu) · trống: chưa chọn được thư mục Drive |
 | `SCHOOL_DB_HOST`, `SCHOOL_DB_PORT`, `SCHOOL_DB_USER`, `SCHOOL_DB_PASSWORD` | database trường (SQL Server, chỉ đọc) cho thông tin sinh viên; tên database, bảng, cột ở `api/src/student-directory/school-database.json` · `SCHOOL_DB_HOST` trống: chưa kết nối, trang hồ sơ báo chưa lấy được thông tin sinh viên. Bản thật dùng tài khoản chỉ có quyền SELECT |
